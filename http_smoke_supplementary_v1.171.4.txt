@@ -1,0 +1,56 @@
+setup ok
+PASS — coordinator cannot verify a document (documents.verify) status 403
+PASS — staff can verify a document status 302
+PASS — coordinator credential page has no Verify/Mark verified controls status 200
+PASS — staff credential page offers verification status 200
+PASS — restricted user cannot POST-edit P2 credential status 404
+PASS — restricted dashboard never names P2 (Bravo) 
+PASS — owner dashboard shows both providers/expiries 
+PASS — restricted credentials list hides P2 status 200
+PASS — restricted holders list hides P2 status 200
+PASS — restricted tasks list hides P2 status 200
+PASS — restricted calendar list hides P2 status 200
+PASS — restricted cases list hides P2 status 200
+PASS — custom portal role cannot edit another provider credential status 403
+PASS — custom portal role cannot read another provider document status 404
+PASS — custom portal role is redirected from the dashboard to /me status 302 /me
+PASS — manager cannot promote a user to tenant_owner status 302, role now staff
+PASS — S2 victim can use the app before suspension status 200
+PASS — S2 suspending a user ends their live session on the very next request status 302 /login
+PASS — S2 a password reset ends the user's other sessions status 302
+PASS — S2 a role change applies immediately (manager -> read-only loses /team) before 200 after 403
+PASS — S1 manager POST creating a role with a capability they lack is refused status 302, rows 0
+PASS — B4 restricted user gets 403 on the organization-wide /audit log status 403
+PASS — B4 restricted user cannot export the audit log status 403
+PASS — B4 restricted /notifications shows P1 notice and hides P2 notice status 200
+PASS — B1 editing a provider as PA keeps type=pa and saves specialty / CAQH / PTAN status 302 row pa|Cardiology|99887766|PTAN1
+PASS — S3 platform admin WITHOUT 2FA is sent to their profile, not the console status 302 /profile
+PASS — S3 once 2FA is on, the console opens status 200
+PASS — S3/K System page renders with the encryption-key backup panel + reminder (no PHP warnings) status 200
+PASS — K banner reminds the platform admin to back up the keys status 200
+PASS — K key backup refuses a wrong current password status 302
+PASS — K key backup refuses a weak passphrase status 302
+PASS — K key backup downloads as an attachment, hides the keys, and decrypts back to the installed keys status 200
+PASS — K after confirming, the reminder banner is gone status 200
+PASS — D6 sealed dump refuses a weak passphrase status 302
+PASS — D6 sealed dump refuses a wrong account password status 302
+PASS — D6 sealed dump downloads as an attachment with the FLXDUMP1 header status 200
+PASS — E HTTP upload stores the file sealed (header present, no plaintext on disk) 
+PASS — E HTTP download returns the original bytes status=200
+PASS — D-5 PR tenant: CE panel totals the last 36 months status=200
+PASS — D-5 non-PR tenant: CE panel totals the last 24 months; PR-only readiness items absent status=200 24m=True ocs_ctx=''
+PASS — B-8 staff menu does not list Groups / Locations / Applications / Regulators status=200 found=[]
+PASS — B-8 owner menu still lists them status=200
+PASS — S7 manager without 2FA is sent to /profile from / /billing /holders /team when the policy is on {'/': (302, '/profile'), '/billing': (302, '/profile'), '/holders': (302, '/profile'), '/team': (302, '/profile')}
+PASS — S7 the profile page (where they enrol) stays reachable status=200
+PASS — S7 staff (no privileged capability) is not gated status=200
+PASS — S7 policy off again: manager reaches the dashboard status=200
+PASS — crawl as owner: pages=220 codes={200: 219, 302: 1}
+PASS — crawl as manager: pages=220 codes={200: 218, 302: 1, 403: 1}
+PASS — crawl as staff: pages=220 codes={200: 209, 403: 6, 302: 4, 404: 1}
+PASS — crawl as coord: pages=220 codes={200: 209, 403: 6, 302: 4, 404: 1}
+PASS — crawl as readonly: pages=220 codes={200: 199, 403: 16, 302: 4, 404: 1}
+PASS — crawl as restricted: pages=220 codes={200: 211, 403: 6, 302: 2, 404: 1}
+PASS — crawl as padmin: pages=220 codes={200: 218, 302: 2}
+
+ALL PASS
