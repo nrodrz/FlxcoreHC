@@ -4,7 +4,7 @@ This app is a **Microsoft-services-only** product of Indisse-BTS. It was made on
 the install package of the owner's reference IT-operations app (build 0621-BT169). It keeps that app's whole platform
 (sign-in, users, roles, settings, Audit Log, licensing, updates, data dictionary, Deleted items, Terms of Use, About &
 ownership, API keys, scheduled jobs, Help) and only its Microsoft modules. Read `docs/NEW-APP-SPEC.md` before the first
-change and `STARTER-REPORT.md` for what the script removed and what is left to prune.
+change and `STARTER-REPORT.md` for what the script removed and what is left to prune. The order of work is in `docs/DEVELOPMENT-PLAN.md`.
 
 Product name: **ITOps** (owner decision, build 0001-A002; set in `api/lib/Brand.php` → `ITOPS_PRODUCT`; screens use the
 app-name helpers). Owner: **Indisse-BTS**. The owner's development standards are in `docs/standards/`
