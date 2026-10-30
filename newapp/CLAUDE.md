@@ -28,6 +28,9 @@ and are binding.
   holds the app only (no docs, no guides, no `dev/`).
 - **Results.** Report test results as they came out; never say something passed that did not run. A failing test is
   investigated to its cause (test or code) and said which.
+- **Findings for the reference app.** A problem found here that the reference app also has goes into
+  `docs/FINDINGS-FOR-REFERENCE-APP.md` (next R-number: where, what breaks, fix, whether ITOps fixed it). It is passed on,
+  never fixed in the reference app from here.
 - **Microsoft only.** New features use Microsoft services (Graph, Exchange Online admin API, Intune, Defender, Entra,
   Teams, Azure Resource Manager for billing). No other vendor's integration is added without the owner's decision.
 
@@ -47,7 +50,7 @@ and are binding.
 | `install/index.php`, `install/hub.php` | Installer for every organization; installer of this app's own License Hub |
 | `cron-*.php` | Scheduled jobs (command line); steps of an off module are skipped |
 | `dev/` | Not shipped: `make-ms-app.py`, `fresh-install.sh`, `check-app.mjs`, `router.php`, `package.sh`, `unused.js` (unused top-level declarations of `app.jsx`: list or `--remove`), `prune-guide.js` (0001-A003, run once) |
-| `docs/` | Not shipped: spec, standards, reference documents |
+| `docs/` | Not shipped: spec, development plan, findings for the reference app, standards, reference documents |
 
 Code identifiers use the `itops_` prefix (functions, tables, settings; `ITOPS_` constants; `Itops` classes; headers such
 as `X-ITOps-CSRF`). The reference app's `opsh_` / `OpsHub` names were renamed in build 0001-A002 (owner decision). A
