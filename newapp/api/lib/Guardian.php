@@ -2,14 +2,14 @@
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 if (is_file(__DIR__ . '/Graph.php')) require_once __DIR__ . '/Graph.php';
 /**
- * OpsHub — Server Guardian (view tier).
+ * ITOps — Server Guardian (view tier).
  *
- * A read-only server health/security surface for the host OpsHub runs on. This
+ * A read-only server health/security surface for the host ITOps runs on. This
  * is a focused, self-contained implementation of a server guardian's *job* — surface
  * the signals that matter on a cPanel/WHM shared host — implemented natively
- * against OpsHub's conventions rather than a separate package engine.
+ * against ITOps's conventions rather than a separate package engine.
  *
- * Sources (each optional, lit up only when configured in opsh_settings):
+ * Sources (each optional, lit up only when configured in itops_settings):
  *   - Server vitals: disk free, load average, memory (from the PHP process/OS).
  *   - WHM API: account count + suspended accounts (needs guardian_whm_* settings).
  *   - Imunify: newest scan-report signal (needs guardian_imunify_path).
@@ -18,18 +18,18 @@ if (is_file(__DIR__ . '/Graph.php')) require_once __DIR__ . '/Graph.php';
  * Every function returns plain arrays (no secrets) suitable for JSON. Nothing
  * here writes to the server or the tenant.
  *
- * Depends on OpsHub config.php: getDB() (PDO).
+ * Depends on ITOps config.php: getDB() (PDO).
  */
 
-if (!function_exists('opsh_guardian_settings')) {
+if (!function_exists('itops_guardian_settings')) {
 
     /** Read all guardian_* settings as an associative array. */
-    function opsh_guardian_settings(PDO $db): array {
-        $rows = $db->query("SELECT skey, sval FROM opsh_settings WHERE skey LIKE 'guardian\\_%'")
+    function itops_guardian_settings(PDO $db): array {
+        $rows = $db->query("SELECT skey, sval FROM itops_settings WHERE skey LIKE 'guardian\\_%'")
                    ->fetchAll(PDO::FETCH_KEY_PAIR);
         $rows = is_array($rows) ? $rows : [];
         require_once __DIR__ . '/Secrets.php';   // BT14: WHM token / IMAP password are stored encrypted
-        foreach (opsh_secret_setting_keys() as $k) if (isset($rows[$k])) { try { $rows[$k] = opsh_secret_unwrap($rows[$k]); } catch (\Throwable $e) { $rows[$k] = ''; } }
+        foreach (itops_secret_setting_keys() as $k) if (isset($rows[$k])) { try { $rows[$k] = itops_secret_unwrap($rows[$k]); } catch (\Throwable $e) { $rows[$k] = ''; } }
         return $rows;
     }
 
@@ -37,8 +37,8 @@ if (!function_exists('opsh_guardian_settings')) {
      * Which sources are configured — booleans only, never the secret values.
      * This is what the /status endpoint returns.
      */
-    function opsh_guardian_status(PDO $db): array {
-        $s = opsh_guardian_settings($db);
+    function itops_guardian_status(PDO $db): array {
+        $s = itops_guardian_settings($db);
         $label = trim((string)($s['guardian_host_label'] ?? ''));
         if ($label === '') $label = gethostname() ?: 'this-host';
         return [
@@ -62,9 +62,9 @@ if (!function_exists('opsh_guardian_settings')) {
                 'imunify' => trim((string)($s['guardian_imunify_path'] ?? '')) !== '',
                 'imap'    => trim((string)($s['guardian_imap_host'] ?? '')) !== ''
                              && trim((string)($s['guardian_imap_user'] ?? '')) !== '',
-                'defender' => opsh_guardian_m365_ready(),
-                'intune'   => opsh_guardian_m365_ready(),
-                'mfa'      => opsh_guardian_m365_ready(),
+                'defender' => itops_guardian_m365_ready(),
+                'intune'   => itops_guardian_m365_ready(),
+                'mfa'      => itops_guardian_m365_ready(),
                 'ssl'      => trim((string)($s['guardian_ssl_hosts'] ?? '')) !== '',
                 'backup'   => true,
                 'php_eol'  => true,
@@ -75,12 +75,12 @@ if (!function_exists('opsh_guardian_settings')) {
     // ---- individual sections (each returns a normalized section array) --------
 
     /** Server vitals: disk, load, memory. Always available. */
-    function opsh_guardian_vitals(): array {
+    function itops_guardian_vitals(): array {
         $findings = [];
         $level = 'ok';
 
         // Disk free on the app's own filesystem.
-        $root = defined('OPSH_ROOT') ? OPSH_ROOT : __DIR__;
+        $root = defined('ITOPS_ROOT') ? ITOPS_ROOT : __DIR__;
         $free = @disk_free_space($root);
         $total = @disk_total_space($root);
         if ($free !== false && $total && $total > 0) {
@@ -89,7 +89,7 @@ if (!function_exists('opsh_guardian_settings')) {
             if ($sev !== 'ok') $level = $sev === 'error' ? 'error' : ($level === 'error' ? 'error' : 'warning');
             $findings[] = [
                 'label' => 'Disk free',
-                'value' => $pctFree.'% free ('.opsh_guardian_bytes($free).' of '.opsh_guardian_bytes($total).')',
+                'value' => $pctFree.'% free ('.itops_guardian_bytes($free).' of '.itops_guardian_bytes($total).')',
                 'severity' => $sev,
             ];
         }
@@ -98,7 +98,7 @@ if (!function_exists('opsh_guardian_settings')) {
         if (function_exists('sys_getloadavg')) {
             $la = sys_getloadavg();
             if (is_array($la) && isset($la[0])) {
-                $cpus = opsh_guardian_cpu_count();
+                $cpus = itops_guardian_cpu_count();
                 $per = $cpus > 0 ? round($la[0] / $cpus, 2) : $la[0];
                 $sev = $per > 2 ? 'error' : ($per > 1 ? 'warning' : 'ok');
                 if ($sev !== 'ok') $level = $sev === 'error' ? 'error' : ($level === 'error' ? 'error' : 'warning');
@@ -113,7 +113,7 @@ if (!function_exists('opsh_guardian_settings')) {
         // PHP process memory (informational).
         $findings[] = [
             'label' => 'PHP memory in use',
-            'value' => opsh_guardian_bytes(memory_get_usage(true)).' (peak '.opsh_guardian_bytes(memory_get_peak_usage(true)).')',
+            'value' => itops_guardian_bytes(memory_get_usage(true)).' (peak '.itops_guardian_bytes(memory_get_peak_usage(true)).')',
             'severity' => 'ok',
         ];
 
@@ -122,7 +122,7 @@ if (!function_exists('opsh_guardian_settings')) {
 
 
     /** Imunify: newest scan report signal. Requires guardian_imunify_path (a file the scanner writes). */
-    function opsh_guardian_imunify(array $s): array {
+    function itops_guardian_imunify(array $s): array {
         $path = trim((string)($s['guardian_imunify_path'] ?? ''));
         if ($path === '') {
             return ['name' => 'imunify', 'title' => 'Malware scan (Imunify)', 'level' => 'off',
@@ -146,12 +146,12 @@ if (!function_exists('opsh_guardian_settings')) {
         $sev = $infected > 0 ? 'error' : ($ageH > 48 ? 'warning' : 'ok');
         return ['name' => 'imunify', 'title' => 'Malware scan (Imunify)', 'level' => $sev, 'findings' => [
             ['label' => 'Detected items', 'value' => (string)$infected, 'severity' => $infected > 0 ? 'error' : 'ok'],
-            ['label' => 'Report age', 'value' => opsh_guardian_age($ageH), 'severity' => $ageH > 48 ? 'warning' : 'ok'],
+            ['label' => 'Report age', 'value' => itops_guardian_age($ageH), 'severity' => $ageH > 48 ? 'warning' : 'ok'],
         ]];
     }
 
     /** IMAP: can we reach and log into the monitoring mailbox? Requires the php-imap extension. */
-    function opsh_guardian_imap(array $s): array {
+    function itops_guardian_imap(array $s): array {
         $host = trim((string)($s['guardian_imap_host'] ?? ''));
         $user = trim((string)($s['guardian_imap_user'] ?? ''));
         $pass = (string)($s['guardian_imap_pass'] ?? '');
@@ -181,19 +181,19 @@ if (!function_exists('opsh_guardian_settings')) {
     /** Run all configured sections and return them. */
     // ---- Microsoft 365 security checks (reuse the existing Graph connection) ----
 
-    function opsh_guardian_m365_ready(): bool {
-        return function_exists('opsh_graph_configured') && opsh_graph_configured();
+    function itops_guardian_m365_ready(): bool {
+        return function_exists('itops_graph_configured') && itops_graph_configured();
     }
 
     /** Microsoft Defender: Secure Score %, active incidents, new high/medium alerts. */
-    function opsh_guardian_defender(): array {
-        if (!opsh_guardian_m365_ready()) {
+    function itops_guardian_defender(): array {
+        if (!itops_guardian_m365_ready()) {
             return ['name' => 'defender', 'title' => 'Microsoft Defender', 'level' => 'off',
                     'findings' => [['label' => 'Defender', 'value' => 'connect Microsoft 365 to enable', 'severity' => 'off']]];
         }
         try {
             $level = 'ok'; $findings = [];
-            $sc = opsh_graph_get('security/secureScores?$top=1');
+            $sc = itops_graph_get('security/secureScores?$top=1');
             $row = $sc['value'][0] ?? null;
             if ($row) {
                 $cur = (float)($row['currentScore'] ?? 0); $max = (float)($row['maxScore'] ?? 0);
@@ -205,7 +205,7 @@ if (!function_exists('opsh_guardian_settings')) {
             // Incidents/alerts need SecurityIncident.Read.All / SecurityEvents.Read.All. If a
             // call is not permitted, skip that line instead of failing the whole card.
             try {
-                $inc = opsh_graph_get("security/incidents?\$filter=status eq 'active'");
+                $inc = itops_graph_get("security/incidents?\$filter=status eq 'active'");
                 $nInc = count($inc['value'] ?? []);
                 $findings[] = ['label' => 'Active incidents', 'value' => (string)$nInc, 'severity' => $nInc > 0 ? 'error' : 'ok'];
                 if ($nInc > 0) $level = 'error';
@@ -213,7 +213,7 @@ if (!function_exists('opsh_guardian_settings')) {
                 $findings[] = ['label' => 'Active incidents', 'value' => 'needs SecurityIncident.Read.All', 'severity' => 'off'];
             }
             try {
-                $al = opsh_graph_get("security/alerts_v2?\$filter=status eq 'new'");
+                $al = itops_graph_get("security/alerts_v2?\$filter=status eq 'new'");
                 $high = 0; $med = 0;
                 foreach (($al['value'] ?? []) as $a) { $sv = strtolower((string)($a['severity'] ?? '')); if ($sv === 'high') $high++; elseif ($sv === 'medium') $med++; }
                 $findings[] = ['label' => 'New alerts', 'value' => $high.' high / '.$med.' medium', 'severity' => $high > 0 ? 'error' : ($med > 0 ? 'warning' : 'ok')];
@@ -229,13 +229,13 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Intune: managed device compliance breakdown. */
-    function opsh_guardian_intune(): array {
-        if (!opsh_guardian_m365_ready()) {
+    function itops_guardian_intune(): array {
+        if (!itops_guardian_m365_ready()) {
             return ['name' => 'intune', 'title' => 'Device compliance (Intune)', 'level' => 'off',
                     'findings' => [['label' => 'Intune', 'value' => 'connect Microsoft 365 to enable', 'severity' => 'off']]];
         }
         try {
-            $r = opsh_graph_get('deviceManagement/managedDevices?$select=complianceState&$top=200');
+            $r = itops_graph_get('deviceManagement/managedDevices?$select=complianceState&$top=200');
             $total = 0; $ok = 0; $bad = 0; $grace = 0;
             foreach (($r['value'] ?? []) as $d) {
                 $total++;
@@ -260,20 +260,20 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Email security (SPF / DKIM / DMARC) across verified domains — DNS only, cheap. */
-    function opsh_guardian_mailsec(): array {
-        if (!opsh_guardian_m365_ready()) {
+    function itops_guardian_mailsec(): array {
+        if (!itops_guardian_m365_ready()) {
             return ['name' => 'mailsec', 'title' => 'Email security (SPF/DKIM/DMARC)', 'level' => 'off',
                     'findings' => [['label' => 'Email security', 'value' => 'connect Microsoft 365 to enable', 'severity' => 'off']]];
         }
         try {
             require_once __DIR__ . '/EmailSecurity.php';
-            $r = opsh_graph_get('domains?$select=id,isVerified,supportedServices');
+            $r = itops_graph_get('domains?$select=id,isVerified,supportedServices');
             $level = 'ok'; $findings = [];
             foreach (($r['value'] ?? []) as $d) {
                 $name = strtolower((string)($d['id'] ?? ''));
                 if ($name === '' || empty($d['isVerified'])) continue;
-                if (opsh_mailsec_skip_reason($name, isset($d['supportedServices']) ? (array)$d['supportedServices'] : null) !== '') continue;   // vendor / Microsoft / non-mail domains
-                $c = opsh_mailsec_domain($name);
+                if (itops_mailsec_skip_reason($name, isset($d['supportedServices']) ? (array)$d['supportedServices'] : null) !== '') continue;   // vendor / Microsoft / non-mail domains
+                $c = itops_mailsec_domain($name);
                 $bits = [];
                 $bits[] = 'SPF ' . ($c['spf']['ok'] ? 'ok' : 'MISSING/WRONG');
                 $bits[] = 'DKIM ' . ($c['dkim']['ok'] ? 'ok' : 'MISSING');
@@ -291,13 +291,13 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** MFA / 2FA registration adoption across the tenant. */
-    function opsh_guardian_mfa(): array {
-        if (!opsh_guardian_m365_ready()) {
+    function itops_guardian_mfa(): array {
+        if (!itops_guardian_m365_ready()) {
             return ['name' => 'mfa', 'title' => '2FA adoption', 'level' => 'off',
                     'findings' => [['label' => '2FA', 'value' => 'connect Microsoft 365 to enable', 'severity' => 'off']]];
         }
         try {
-            $r = opsh_graph_get('reports/authenticationMethods/userRegistrationDetails?$top=500');
+            $r = itops_graph_get('reports/authenticationMethods/userRegistrationDetails?$top=500');
             $total = 0; $reg = 0;
             foreach (($r['value'] ?? []) as $u) { $total++; if (!empty($u['isMfaRegistered'])) $reg++; }
             if ($total === 0) return ['name' => 'mfa', 'title' => '2FA adoption', 'level' => 'ok',
@@ -316,7 +316,7 @@ if (!function_exists('opsh_guardian_settings')) {
     // ---- Server-side checks ----------------------------------------------------
 
     /** TLS certificate expiry for a configured list of hostnames (guardian_ssl_hosts). */
-    function opsh_guardian_ssl(array $s): array {
+    function itops_guardian_ssl(array $s): array {
         $hosts = array_values(array_filter(array_map('trim', explode(',', (string)($s['guardian_ssl_hosts'] ?? '')))));
         if (!$hosts) {
             return ['name' => 'ssl', 'title' => 'TLS certificates', 'level' => 'off',
@@ -351,11 +351,11 @@ if (!function_exists('opsh_guardian_settings')) {
         return ['name' => 'ssl', 'title' => 'TLS certificates', 'level' => $level, 'findings' => $findings];
     }
 
-    /** Backup assurance: derived from logged backup verifications (opsh_event_log channel=backup). */
-    function opsh_guardian_backup(PDO $db): array {
+    /** Backup assurance: derived from logged backup verifications (itops_event_log channel=backup). */
+    function itops_guardian_backup(PDO $db): array {
         try {
             $st = $db->query("SELECT MAX(ts) AS last, SUM(CASE WHEN level='error' THEN 1 ELSE 0 END) AS fails
-                              FROM opsh_event_log WHERE channel='backup' AND ts >= (NOW() - INTERVAL 8 DAY)");
+                              FROM itops_event_log WHERE channel='backup' AND ts >= (NOW() - INTERVAL 8 DAY)");
             $r = $st ? $st->fetch() : null;
         } catch (\Throwable $e) {
             return ['name' => 'backup', 'title' => 'Backup assurance', 'level' => 'off',
@@ -371,13 +371,13 @@ if (!function_exists('opsh_guardian_settings')) {
         $ageH = (time() - strtotime($last)) / 3600;
         $sev = $ageH > 48 ? 'error' : ($ageH > 26 ? 'warning' : 'ok');
         $fails = (int)($r['fails'] ?? 0);
-        $findings = [['label' => 'Last verified', 'value' => opsh_guardian_age($ageH).' ago ('.substr($last, 0, 16).')', 'severity' => $sev]];
+        $findings = [['label' => 'Last verified', 'value' => itops_guardian_age($ageH).' ago ('.substr($last, 0, 16).')', 'severity' => $sev]];
         if ($fails > 0) $findings[] = ['label' => 'Failures (8d)', 'value' => (string)$fails, 'severity' => 'error'];
         return ['name' => 'backup', 'title' => 'Backup assurance', 'level' => $fails > 0 ? 'error' : $sev, 'findings' => $findings];
     }
 
     /** PHP end-of-life: the running PHP version against known EOL dates. */
-    function opsh_guardian_php_eol(): array {
+    function itops_guardian_php_eol(): array {
         $eol = ['5.6' => '2018-12-31', '7.0' => '2019-01-10', '7.1' => '2019-12-01', '7.2' => '2020-11-30',
                 '7.3' => '2021-12-06', '7.4' => '2022-11-28', '8.0' => '2023-11-26', '8.1' => '2025-12-31',
                 '8.2' => '2026-12-31', '8.3' => '2027-12-31', '8.4' => '2028-12-31'];
@@ -398,7 +398,7 @@ if (!function_exists('opsh_guardian_settings')) {
     // ---- WHM / cPanel server + accounts (uses the WHM API token) ----------------
 
     /** Resolve + sanitize WHM connection settings once. Returns [host,port,user,token] or null. */
-    function opsh_whm_conn(array $s): ?array {
+    function itops_whm_conn(array $s): ?array {
         $host  = trim((string)($s['guardian_whm_host'] ?? ''));
         $token = trim((string)($s['guardian_whm_token'] ?? ''));
         $user  = trim((string)($s['guardian_whm_user'] ?? 'root')) ?: 'root';
@@ -416,14 +416,14 @@ if (!function_exists('opsh_guardian_settings')) {
      * site; a WHM with a self-signed certificate is trusted by pinning ITS key (Guardian → Configure server checks →
      * "Trust this certificate", Super Admin): then only a server holding that key gets the token.
      */
-    function opsh_whm_tls_opts(array $c): array {
+    function itops_whm_tls_opts(array $c): array {
         $pin = trim((string)($c['pin'] ?? ''));
         if ($pin !== '' && preg_match('~^sha256//[A-Za-z0-9+/=]{40,64}$~', $pin) && defined('CURLOPT_PINNEDPUBLICKEY'))
             return [CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => 0, CURLOPT_PINNEDPUBLICKEY => $pin];
         return [CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2];
     }
     /** The certificate WHM shows now: subject, issuer, expiry, whether a trusted authority signed it, and its key pin. */
-    function opsh_whm_cert_info(string $host, int $port): array {
+    function itops_whm_cert_info(string $host, int $port): array {
         $ctx = stream_context_create(['ssl' => ['capture_peer_cert' => true, 'verify_peer' => false, 'verify_peer_name' => false, 'SNI_enabled' => true, 'peer_name' => $host]]);
         $fp = @stream_socket_client('ssl://' . $host . ':' . $port, $en, $es, 8, STREAM_CLIENT_CONNECT, $ctx);
         if (!$fp) return ['ok' => false, 'error' => 'Could not reach ' . $host . ':' . $port . ' (' . trim((string)$es) . ').'];
@@ -442,7 +442,7 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Call a WHM API 1 function. Returns ['ok'=>bool,'code'=>int,'data'=>array,'meta'=>array,'error'=>?]. */
-    function opsh_whm_call(array $c, string $fn, array $params = [], int $timeout = 8): array {
+    function itops_whm_call(array $c, string $fn, array $params = [], int $timeout = 8): array {
         $qs = http_build_query(array_merge(['api.version' => 1], $params));
         $url = 'https://'.$c['host'].':'.$c['port'].'/json-api/'.$fn.($qs ? ('?'.$qs) : '');
         $ch = curl_init($url);
@@ -450,7 +450,7 @@ if (!function_exists('opsh_guardian_settings')) {
             CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 6,
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_HTTPHEADER => ['Authorization: whm '.$c['user'].':'.$c['token']],
-        ] + opsh_whm_tls_opts($c));
+        ] + itops_whm_tls_opts($c));
         $resp = curl_exec($ch);
         $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $errno = curl_errno($ch);
@@ -469,10 +469,10 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Try several WHM function names (versions differ); return the first that succeeds. */
-    function opsh_whm_call_first(array $c, array $fns, array $params = [], int $timeout = 12): array {
+    function itops_whm_call_first(array $c, array $fns, array $params = [], int $timeout = 12): array {
         $last = ['ok' => false, 'code' => 0, 'data' => [], 'meta' => [], 'error' => 'no functions tried'];
         foreach ($fns as $fn) {
-            $r = opsh_whm_call($c, $fn, $params, $timeout);
+            $r = itops_whm_call($c, $fn, $params, $timeout);
             if ($r['ok']) return $r;
             $last = $r;
             // If the error is anything other than "unknown app", stop — the function exists but failed.
@@ -482,13 +482,13 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** WHM accounts (enriched): totals, suspended, disk pressure, largest, resellers. */
-    function opsh_guardian_whm(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_whm(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) {
             return ['name' => 'whm', 'title' => 'cPanel accounts', 'level' => 'off',
                     'findings' => [['label' => 'WHM', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
         }
-        $r = opsh_whm_call($c, 'listaccts');
+        $r = itops_whm_call($c, 'listaccts');
         if (!$r['ok']) {
             return ['name' => 'whm', 'title' => 'cPanel accounts', 'level' => 'warning',
                     'findings' => [['label' => 'WHM API', 'value' => 'unreachable ('.($r['error'] ?: ('HTTP '.$r['code'])).')', 'severity' => 'warning']]];
@@ -522,11 +522,11 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Server services up/down (httpd, mysql, exim, dovecot, named, cpsrvd, ...). */
-    function opsh_guardian_services(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_services(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'services', 'title' => 'Server services', 'level' => 'off',
                          'findings' => [['label' => 'Services', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
-        $r = opsh_whm_call($c, 'servicestatus');
+        $r = itops_whm_call($c, 'servicestatus');
         if (!$r['ok']) return ['name' => 'services', 'title' => 'Server services', 'level' => 'warning',
                                'findings' => [['label' => 'WHM API', 'value' => 'servicestatus unavailable ('.($r['error'] ?: $r['code']).')', 'severity' => 'warning']]];
         $svcs = $r['data']['service'] ?? [];
@@ -546,11 +546,11 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Server load average vs CPU count. */
-    function opsh_guardian_server_load(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_server_load(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'srvload', 'title' => 'Server load', 'level' => 'off',
                          'findings' => [['label' => 'Load', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
-        $r = opsh_whm_call($c, 'loadavg');
+        $r = itops_whm_call($c, 'loadavg');
         if (!$r['ok']) return ['name' => 'srvload', 'title' => 'Server load', 'level' => 'warning',
                                'findings' => [['label' => 'WHM API', 'value' => 'loadavg unavailable ('.($r['error'] ?: $r['code']).')', 'severity' => 'warning']]];
         $d = $r['data'];
@@ -565,11 +565,11 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Server backup configuration (is backup enabled + retention). */
-    function opsh_guardian_server_backups(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_server_backups(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'srvbackup', 'title' => 'Server backups (cPanel)', 'level' => 'off',
                          'findings' => [['label' => 'Backups', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
-        $r = opsh_whm_call($c, 'backup_config_get');
+        $r = itops_whm_call($c, 'backup_config_get');
         if (!$r['ok']) return ['name' => 'srvbackup', 'title' => 'Server backups (cPanel)', 'level' => 'warning',
                                'findings' => [['label' => 'WHM API', 'value' => 'backup_config_get unavailable ('.($r['error'] ?: $r['code']).')', 'severity' => 'warning']]];
         $d = $r['data'];
@@ -583,11 +583,11 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** cPHulk brute-force protection status. */
-    function opsh_guardian_cphulk(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_cphulk(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'cphulk', 'title' => 'Brute-force protection (cPHulk)', 'level' => 'off',
                          'findings' => [['label' => 'cPHulk', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
-        $r = opsh_whm_call_first($c, ['load_cphulk_config','read_cphulk_config','get_cphulk_config'], [], 12);
+        $r = itops_whm_call_first($c, ['load_cphulk_config','read_cphulk_config','get_cphulk_config'], [], 12);
         if (!$r['ok']) return ['name' => 'cphulk', 'title' => 'Brute-force protection (cPHulk)', 'level' => 'warning',
                                'findings' => [['label' => 'WHM API', 'value' => 'get_cphulk_config unavailable ('.($r['error'] ?: $r['code']).')', 'severity' => 'warning']]];
         $cfg = $r['data']['cphulk_config'] ?? $r['data'];
@@ -598,11 +598,11 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** cPanel / WHM version (informational, warns if a major update is available). */
-    function opsh_guardian_cpanel_version(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_cpanel_version(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'cpver', 'title' => 'cPanel version', 'level' => 'off',
                          'findings' => [['label' => 'cPanel', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
-        $r = opsh_whm_call($c, 'version');
+        $r = itops_whm_call($c, 'version');
         if (!$r['ok']) return ['name' => 'cpver', 'title' => 'cPanel version', 'level' => 'off',
                                'findings' => [['label' => 'cPanel', 'value' => 'version unavailable', 'severity' => 'off']]];
         $ver = (string)($r['data']['version'] ?? '');
@@ -612,12 +612,12 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Per-account bandwidth this month (top talkers) via WHM showbw. */
-    function opsh_guardian_bandwidth(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_bandwidth(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'bandwidth', 'title' => 'Bandwidth (this month)', 'level' => 'off',
                          'findings' => [['label' => 'Bandwidth', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
         $now = getdate();
-        $r = opsh_whm_call($c, 'showbw', ['month' => $now['mon'], 'year' => $now['year']], 15);
+        $r = itops_whm_call($c, 'showbw', ['month' => $now['mon'], 'year' => $now['year']], 15);
         if (!$r['ok']) return ['name' => 'bandwidth', 'title' => 'Bandwidth (this month)', 'level' => 'off',
                                'findings' => [['label' => 'WHM API', 'value' => 'showbw unavailable ('.($r['error'] ?: $r['code']).')', 'severity' => 'off']]];
         // showbw returns data.acct[] each with user, totalbytes (and a bwlimit sometimes)
@@ -634,8 +634,8 @@ if (!function_exists('opsh_guardian_settings')) {
         }
         usort($rows, fn($x, $y) => $y['bytes'] <=> $x['bytes']);
         $top = array_slice($rows, 0, 5);
-        $findings = [['label' => 'Server total', 'value' => opsh_guardian_bytes($total), 'severity' => 'ok']];
-        foreach ($top as $t) $findings[] = ['label' => $t['user'], 'value' => opsh_guardian_bytes($t['bytes']), 'severity' => 'ok'];
+        $findings = [['label' => 'Server total', 'value' => itops_guardian_bytes($total), 'severity' => 'ok']];
+        foreach ($top as $t) $findings[] = ['label' => $t['user'], 'value' => itops_guardian_bytes($t['bytes']), 'severity' => 'ok'];
         $level = 'ok';
         if ($overLimit) { $findings[] = ['label' => 'Near BW limit', 'value' => implode(', ', array_slice($overLimit, 0, 6)), 'severity' => 'warning']; $level = 'warning'; }
         if (!$rows) $findings = [['label' => 'Bandwidth', 'value' => 'no per-account data returned', 'severity' => 'ok']];
@@ -643,19 +643,19 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** MySQL footprint: database + DB-user counts via WHM. */
-    function opsh_guardian_mysql(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_mysql(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'mysql', 'title' => 'MySQL databases', 'level' => 'off',
                          'findings' => [['label' => 'MySQL', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
         // list_mysql_databases_and_users is per-account (needs user=), so iterate accounts.
-        $acc = opsh_whm_call($c, 'listaccts', [], 20);
+        $acc = itops_whm_call($c, 'listaccts', [], 20);
         if (!$acc['ok']) return ['name' => 'mysql', 'title' => 'MySQL databases', 'level' => 'off',
                                'findings' => [['label' => 'WHM API', 'value' => 'account listing unavailable ('.($acc['error'] ?: $acc['code']).')', 'severity' => 'off']]];
         $users = [];
         foreach ((array)($acc['data']['acct'] ?? []) as $a) { if (!empty($a['user'])) $users[] = (string)$a['user']; }
         $cap = 100; $dbCount = 0; $userCount = 0; $done = 0; $anyOk = false;
         foreach (array_slice($users, 0, $cap) as $u) {
-            $r = opsh_whm_call($c, 'list_mysql_databases_and_users', ['user' => $u], 10);
+            $r = itops_whm_call($c, 'list_mysql_databases_and_users', ['user' => $u], 10);
             if (!$r['ok']) continue;
             $anyOk = true;
             $d = $r['data']['payload'] ?? $r['data'];
@@ -675,12 +675,12 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** AutoSSL / per-domain certificate expiry across every account. */
-    function opsh_guardian_autossl(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_autossl(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'autossl', 'title' => 'SSL certificates (all domains)', 'level' => 'off',
                          'findings' => [['label' => 'AutoSSL', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
         // Server-wide installed TLS hosts (each carries the certificate's not_after).
-        $r = opsh_whm_call_first($c, ['installed_hosts','get_installed_ssl_hosts'], [], 20);
+        $r = itops_whm_call_first($c, ['installed_hosts','get_installed_ssl_hosts'], [], 20);
         if (!$r['ok']) return ['name' => 'autossl', 'title' => 'SSL certificates (all domains)', 'level' => 'off',
                                'findings' => [['label' => 'WHM API', 'value' => 'SSL host listing unavailable ('.($r['error'] ?: $r['code']).')', 'severity' => 'off']]];
         $hosts = $r['data']['hosts'] ?? $r['data']['installed_hosts'] ?? $r['data'];
@@ -716,11 +716,11 @@ if (!function_exists('opsh_guardian_settings')) {
      * calls live here so the main scan stays fast.
      */
     /** Inodes per account (from listaccts); mailboxes shown in Details. */
-    function opsh_guardian_inodes(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_inodes(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'inodes', 'title' => 'Inodes & mailboxes', 'level' => 'off',
                          'findings' => [['label' => 'Inodes', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
-        $r = opsh_whm_call($c, 'listaccts', [], 20);
+        $r = itops_whm_call($c, 'listaccts', [], 20);
         if (!$r['ok']) return ['name' => 'inodes', 'title' => 'Inodes & mailboxes', 'level' => 'warning',
                                'findings' => [['label' => 'WHM API', 'value' => 'listaccts unavailable ('.($r['error'] ?: $r['code']).')', 'severity' => 'warning']]];
         $accts = $r['data']['acct'] ?? [];
@@ -745,11 +745,11 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Domains & subdomains across the server (get_domain_info). */
-    function opsh_guardian_domains(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_domains(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'domains', 'title' => 'Domains & subdomains', 'level' => 'off',
                          'findings' => [['label' => 'Domains', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
-        $r = opsh_whm_call($c, 'get_domain_info', [], 20);
+        $r = itops_whm_call($c, 'get_domain_info', [], 20);
         if (!$r['ok']) return ['name' => 'domains', 'title' => 'Domains & subdomains', 'level' => 'off',
                                'findings' => [['label' => 'WHM API', 'value' => 'get_domain_info unavailable ('.($r['error'] ?: $r['code']).')', 'severity' => 'off']]];
         $domains = $r['data']['domains'] ?? [];
@@ -768,10 +768,10 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Exim mail queue depth (best-effort: logged value first, then WHM). */
-    function opsh_guardian_mailqueue(PDO $db, array $s): array {
+    function itops_guardian_mailqueue(PDO $db, array $s): array {
         // Option 1: a server cron can POST the depth to the 'mailq' channel like backups.
         try {
-            $st = $db->query("SELECT message, ts FROM opsh_event_log WHERE channel='mailq' ORDER BY ts DESC LIMIT 1");
+            $st = $db->query("SELECT message, ts FROM itops_event_log WHERE channel='mailq' ORDER BY ts DESC LIMIT 1");
             $row = $st ? $st->fetch() : null;
         } catch (\Throwable $e) { $row = null; }
         if ($row && is_numeric($row['message']) && (time() - strtotime($row['ts'])) < 3600) {
@@ -779,14 +779,14 @@ if (!function_exists('opsh_guardian_settings')) {
             $sev = $n > 1000 ? 'error' : ($n > 100 ? 'warning' : 'ok');
             return ['name' => 'mailqueue', 'title' => 'Mail queue (Exim)', 'level' => $sev, 'findings' => [
                 ['label' => 'Queued messages', 'value' => (string)$n, 'severity' => $sev],
-                ['label' => 'Source', 'value' => 'reported '.opsh_guardian_age((time() - strtotime($row['ts'])) / 3600).' ago', 'severity' => 'off'],
+                ['label' => 'Source', 'value' => 'reported '.itops_guardian_age((time() - strtotime($row['ts'])) / 3600).' ago', 'severity' => 'off'],
             ]];
         }
         // Option 2: best-effort via WHM.
-        $c = opsh_whm_conn($s);
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'mailqueue', 'title' => 'Mail queue (Exim)', 'level' => 'off',
                          'findings' => [['label' => 'Mail queue', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
-        $r = opsh_whm_call($c, 'exim_mailq', [], 12);
+        $r = itops_whm_call($c, 'exim_mailq', [], 12);
         if ($r['ok']) {
             $items = $r['data']['messages'] ?? $r['data']['queue'] ?? $r['data']['records'] ?? null;
             $n = is_array($items) ? count($items) : (isset($r['data']['count']) ? (int)$r['data']['count'] : null);
@@ -803,15 +803,15 @@ if (!function_exists('opsh_guardian_settings')) {
     }
 
     /** Pending cPanel updates, update policy, reboot-required (best-effort). */
-    function opsh_guardian_updates(array $s): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_updates(array $s): array {
+        $c = itops_whm_conn($s);
         if (!$c) return ['name' => 'updates', 'title' => 'Updates & reboot', 'level' => 'off',
                          'findings' => [['label' => 'Updates', 'value' => 'add WHM host + token in Server actions', 'severity' => 'off']]];
         $findings = []; $level = 'ok';
-        $vr = opsh_whm_call($c, 'version', [], 10);
+        $vr = itops_whm_call($c, 'version', [], 10);
         $installed = $vr['ok'] ? (string)($vr['data']['version'] ?? '') : '';
         if ($installed !== '') $findings[] = ['label' => 'Installed', 'value' => $installed, 'severity' => 'ok'];
-        $lr = opsh_whm_call($c, 'get_current_lts_version', [], 10);
+        $lr = itops_whm_call($c, 'get_current_lts_version', [], 10);
         if ($lr['ok']) {
             $latest = (string)($lr['data']['version'] ?? $lr['data']['lts'] ?? '');
             if ($latest !== '') {
@@ -820,14 +820,14 @@ if (!function_exists('opsh_guardian_settings')) {
                 if ($behind) $level = 'warning';
             }
         }
-        $ur = opsh_whm_call($c, 'getupdateconf', [], 10);
+        $ur = itops_whm_call($c, 'getupdateconf', [], 10);
         if ($ur['ok']) {
             $pol = strtolower((string)($ur['data']['updates'] ?? $ur['data']['UPDATES'] ?? ''));
             if ($pol !== '') $findings[] = ['label' => 'Update policy', 'value' => $pol, 'severity' => $pol === 'never' || $pol === 'manual' ? 'warning' : 'ok'];
             if ($pol === 'never' || $pol === 'manual') $level = ($level === 'ok') ? 'warning' : $level;
         }
         // Reboot-required is not consistently exposed; try, but never hard-fail.
-        $rb = opsh_whm_call($c, 'get_reboot_status', [], 8);
+        $rb = itops_whm_call($c, 'get_reboot_status', [], 8);
         if ($rb['ok']) {
             $need = $rb['data']['reboot_required'] ?? $rb['data']['needs_reboot'] ?? null;
             if ($need !== null) { $nb = ((string)$need === '1' || $need === true); $findings[] = ['label' => 'Reboot required', 'value' => $nb ? 'YES' : 'no', 'severity' => $nb ? 'warning' : 'ok']; if ($nb) $level = 'warning'; }
@@ -836,13 +836,13 @@ if (!function_exists('opsh_guardian_settings')) {
         return ['name' => 'updates', 'title' => 'Updates & reboot', 'level' => $level, 'findings' => $findings];
     }
 
-    function opsh_guardian_detail(array $s, string $name): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_detail(array $s, string $name): array {
+        $c = itops_whm_conn($s);
         $needWhm = in_array($name, ['whm','services','autossl','bandwidth','mysql','inodes','domains'], true);
         if ($needWhm && !$c) return ['title' => 'Details', 'columns' => [], 'rows' => [], 'note' => 'WHM host + token not configured.'];
         try {
             if ($name === 'whm') {
-                $r = opsh_whm_call($c, 'listaccts', [], 20);
+                $r = itops_whm_call($c, 'listaccts', [], 20);
                 if (!$r['ok']) return ['title' => 'cPanel accounts', 'columns' => [], 'rows' => [], 'note' => 'WHM listaccts unavailable.'];
                 $rows = [];
                 foreach ((array)($r['data']['acct'] ?? []) as $a) {
@@ -861,7 +861,7 @@ if (!function_exists('opsh_guardian_settings')) {
                 return ['title' => 'All cPanel accounts ('.count($rows).')', 'columns' => ['User','Primary domain','Disk','Disk %','Plan','Status'], 'rows' => $rows];
             }
             if ($name === 'services') {
-                $r = opsh_whm_call($c, 'servicestatus', [], 15);
+                $r = itops_whm_call($c, 'servicestatus', [], 15);
                 if (!$r['ok']) return ['title' => 'Server services', 'columns' => [], 'rows' => [], 'note' => 'WHM servicestatus unavailable.'];
                 $rows = [];
                 foreach ((array)($r['data']['service'] ?? []) as $sv) {
@@ -872,7 +872,7 @@ if (!function_exists('opsh_guardian_settings')) {
                 return ['title' => 'All monitored services ('.count($rows).')', 'columns' => ['Service','Name','Status'], 'rows' => $rows];
             }
             if ($name === 'autossl') {
-                $r = opsh_whm_call_first($c, ['installed_hosts','get_installed_ssl_hosts'], [], 25);
+                $r = itops_whm_call_first($c, ['installed_hosts','get_installed_ssl_hosts'], [], 25);
                 if (!$r['ok']) return ['title' => 'SSL certificates', 'columns' => [], 'rows' => [], 'note' => 'WHM get_installed_ssl_hosts unavailable.'];
                 $hosts = $r['data']['hosts'] ?? $r['data']['installed_hosts'] ?? $r['data'];
                 $rows = []; $now = time();
@@ -890,28 +890,28 @@ if (!function_exists('opsh_guardian_settings')) {
             }
             if ($name === 'bandwidth') {
                 $now = getdate();
-                $r = opsh_whm_call($c, 'showbw', ['month' => $now['mon'], 'year' => $now['year']], 20);
+                $r = itops_whm_call($c, 'showbw', ['month' => $now['mon'], 'year' => $now['year']], 20);
                 if (!$r['ok']) return ['title' => 'Bandwidth', 'columns' => [], 'rows' => [], 'note' => 'WHM showbw unavailable.'];
                 $rows = [];
                 foreach ((array)($r['data']['acct'] ?? []) as $a) {
                     $bytes = (float)($a['totalbytes'] ?? $a['bytes'] ?? 0);
                     $lim = isset($a['bwlimit']) && stripos((string)$a['bwlimit'], 'unlim') === false ? (float)$a['bwlimit'] : 0;
                     $pct = $lim > 0 ? round(100 * $bytes / $lim).'%' : '';
-                    $rows[] = [(string)($a['user'] ?? $a['acct'] ?? '?'), opsh_guardian_bytes($bytes), $lim > 0 ? opsh_guardian_bytes($lim) : 'unlimited', $pct, (($pct !== '' && (int)$pct >= 90) ? 'warning' : 'ok'), $bytes];
+                    $rows[] = [(string)($a['user'] ?? $a['acct'] ?? '?'), itops_guardian_bytes($bytes), $lim > 0 ? itops_guardian_bytes($lim) : 'unlimited', $pct, (($pct !== '' && (int)$pct >= 90) ? 'warning' : 'ok'), $bytes];
                 }
                 usort($rows, fn($x, $y) => $y[5] <=> $x[5]);
                 foreach ($rows as &$rr) array_pop($rr);
                 return ['title' => 'Bandwidth by account ('.count($rows).')', 'columns' => ['Account','Used','Limit','Used %'], 'rows' => $rows];
             }
             if ($name === 'mysql') {
-                $acc = opsh_whm_call($c, 'listaccts', [], 20);
+                $acc = itops_whm_call($c, 'listaccts', [], 20);
                 if (!$acc['ok']) return ['title' => 'MySQL', 'columns' => [], 'rows' => [], 'note' => 'WHM account listing unavailable.'];
                 $rows = []; $cap = 100; $i = 0;
                 foreach ((array)($acc['data']['acct'] ?? []) as $a) {
                     if ($i >= $cap) break;
                     $u = (string)($a['user'] ?? '');
                     if ($u === '') continue;
-                    $r = opsh_whm_call($c, 'list_mysql_databases_and_users', ['user' => $u], 8);
+                    $r = itops_whm_call($c, 'list_mysql_databases_and_users', ['user' => $u], 8);
                     if (!$r['ok']) { $i++; continue; }
                     $d = $r['data']['payload'] ?? $r['data'];
                     $dbs = $d['mysql_databases'] ?? $d['databases'] ?? [];
@@ -926,7 +926,7 @@ if (!function_exists('opsh_guardian_settings')) {
             return ['title' => 'Details', 'columns' => [], 'rows' => [], 'note' => 'Error: '.$e->getMessage()];
         }
             if ($name === 'inodes') {
-                $r = opsh_whm_call($c, 'listaccts', [], 20);
+                $r = itops_whm_call($c, 'listaccts', [], 20);
                 if (!$r['ok']) return ['title' => 'Inodes & mailboxes', 'columns' => [], 'rows' => [], 'note' => 'WHM listaccts unavailable.'];
                 $accts = $r['data']['acct'] ?? [];
                 // Mailbox counts are one cpanel call per account — cap to keep it responsive.
@@ -937,7 +937,7 @@ if (!function_exists('opsh_guardian_settings')) {
                     $ipct = ($il !== null && (float)$il > 0) ? round(100 * (float)($iu ?? 0) / (float)$il).'%' : '';
                     $mbox = '';
                     if ($i < $cap) {
-                        $mr = opsh_whm_call($c, 'cpanel', ['cpanel_jsonapi_user' => $user, 'cpanel_jsonapi_module' => 'Email', 'cpanel_jsonapi_func' => 'list_pops', 'cpanel_jsonapi_apiversion' => 2], 8);
+                        $mr = itops_whm_call($c, 'cpanel', ['cpanel_jsonapi_user' => $user, 'cpanel_jsonapi_module' => 'Email', 'cpanel_jsonapi_func' => 'list_pops', 'cpanel_jsonapi_apiversion' => 2], 8);
                         $md = $mr['data']['cpanelresult']['data'] ?? ($mr['data']['result']['data'] ?? null);
                         if (is_array($md)) $mbox = (string)count($md);
                     }
@@ -948,7 +948,7 @@ if (!function_exists('opsh_guardian_settings')) {
                 return ['title' => 'Per-account inodes & mailboxes'.($i >= $cap ? ' (first '.$cap.')' : ''), 'columns' => ['Account','Inodes','Inode %','Mailboxes'], 'rows' => $rows];
             }
             if ($name === 'domains') {
-                $r = opsh_whm_call($c, 'get_domain_info', [], 20);
+                $r = itops_whm_call($c, 'get_domain_info', [], 20);
                 if (!$r['ok']) return ['title' => 'Domains', 'columns' => [], 'rows' => [], 'note' => 'WHM get_domain_info unavailable.'];
                 $rows = [];
                 foreach ((array)($r['data']['domains'] ?? []) as $d) {
@@ -958,28 +958,28 @@ if (!function_exists('opsh_guardian_settings')) {
                 return ['title' => 'All domains ('.count($rows).')', 'columns' => ['Domain','Type','Owner'], 'rows' => $rows];
             }
         // Fallback: expose the section's own findings as rows.
-        $sec = opsh_guardian_section_for_detail($s, $name);
+        $sec = itops_guardian_section_for_detail($s, $name);
         $rows = [];
         foreach (($sec['findings'] ?? []) as $f) $rows[] = [(string)$f['label'], (string)$f['value'], (string)($f['severity'] ?? 'ok')];
         return ['title' => $sec['title'] ?? 'Details', 'columns' => ['Item','Value'], 'rows' => $rows];
     }
 
     /** Helper for detail fallback: get a section by name without a DB where possible. */
-    function opsh_guardian_section_for_detail(array $s, string $name): array {
+    function itops_guardian_section_for_detail(array $s, string $name): array {
         switch ($name) {
-            case 'ssl':     return opsh_guardian_ssl($s);
-            case 'imunify': return opsh_guardian_imunify($s);
-            case 'imap':    return opsh_guardian_imap($s);
-            case 'srvload': return opsh_guardian_server_load($s);
-            case 'srvbackup': return opsh_guardian_server_backups($s);
-            case 'cphulk':  return opsh_guardian_cphulk($s);
-            case 'cpver':   return opsh_guardian_cpanel_version($s);
-            case 'defender': return opsh_guardian_defender();
-            case 'intune':  return opsh_guardian_intune();
-            case 'mfa':     return opsh_guardian_mfa();
-            case 'mailsec': return opsh_guardian_mailsec();
-            case 'php_eol': return opsh_guardian_php_eol();
-            case 'vitals':  return opsh_guardian_vitals();
+            case 'ssl':     return itops_guardian_ssl($s);
+            case 'imunify': return itops_guardian_imunify($s);
+            case 'imap':    return itops_guardian_imap($s);
+            case 'srvload': return itops_guardian_server_load($s);
+            case 'srvbackup': return itops_guardian_server_backups($s);
+            case 'cphulk':  return itops_guardian_cphulk($s);
+            case 'cpver':   return itops_guardian_cpanel_version($s);
+            case 'defender': return itops_guardian_defender();
+            case 'intune':  return itops_guardian_intune();
+            case 'mfa':     return itops_guardian_mfa();
+            case 'mailsec': return itops_guardian_mailsec();
+            case 'php_eol': return itops_guardian_php_eol();
+            case 'vitals':  return itops_guardian_vitals();
             default:        return ['title' => 'Details', 'findings' => []];
         }
     }
@@ -988,94 +988,94 @@ if (!function_exists('opsh_guardian_settings')) {
      * BT124 (code review OPS-9): a full scan makes many calls to the server; the result is kept and reused for $maxAge
      * seconds (the scheduler and the alerts reuse it; a person asking again within that time gets the kept one).
      */
-    function opsh_guardian_run_cached(PDO $db, int $maxAge, bool &$fresh = null): array {
+    function itops_guardian_run_cached(PDO $db, int $maxAge, bool &$fresh = null): array {
         $fresh = false;
-        require_once __DIR__ . '/SafeCache.php'; $cf = opsh_cache_dir('guardian') . '/last_scan.json';
-        $j = json_decode((string)opsh_cache_read($cf), true);
+        require_once __DIR__ . '/SafeCache.php'; $cf = itops_cache_dir('guardian') . '/last_scan.json';
+        $j = json_decode((string)itops_cache_read($cf), true);
         if (is_array($j) && isset($j['at'], $j['sections']) && time() - (int)$j['at'] < $maxAge) return $j['sections'];
-        if ((int)$db->query("SELECT GET_LOCK('opsh_guardian_scan', 0)")->fetchColumn() !== 1) return is_array($j) && isset($j['sections']) ? $j['sections'] : [];   // one scan at a time
+        if ((int)$db->query("SELECT GET_LOCK('itops_guardian_scan', 0)")->fetchColumn() !== 1) return is_array($j) && isset($j['sections']) ? $j['sections'] : [];   // one scan at a time
         try {
-            $s = opsh_guardian_run($db); $fresh = true;
-            opsh_cache_write($cf, (string)json_encode(['at' => time(), 'sections' => $s], JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR));
+            $s = itops_guardian_run($db); $fresh = true;
+            itops_cache_write($cf, (string)json_encode(['at' => time(), 'sections' => $s], JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR));
             return $s;
-        } finally { $db->query("SELECT RELEASE_LOCK('opsh_guardian_scan')"); }
+        } finally { $db->query("SELECT RELEASE_LOCK('itops_guardian_scan')"); }
     }
-    function opsh_guardian_run(PDO $db): array {
-        $s = opsh_guardian_settings($db);
+    function itops_guardian_run(PDO $db): array {
+        $s = itops_guardian_settings($db);
         $sections = [];
-        $sections[] = opsh_guardian_vitals();
-        $sections[] = opsh_guardian_whm($s);
-        $sections[] = opsh_guardian_services($s);
-        $sections[] = opsh_guardian_server_load($s);
-        $sections[] = opsh_guardian_server_backups($s);
-        $sections[] = opsh_guardian_cphulk($s);
-        $sections[] = opsh_guardian_cpanel_version($s);
-        $sections[] = opsh_guardian_bandwidth($s);
-        $sections[] = opsh_guardian_mysql($s);
-        $sections[] = opsh_guardian_autossl($s);
-        $sections[] = opsh_guardian_inodes($s);
-        $sections[] = opsh_guardian_domains($s);
-        $sections[] = opsh_guardian_mailqueue($db, $s);
-        $sections[] = opsh_guardian_updates($s);
-        $sections[] = opsh_guardian_imunify($s);
-        $sections[] = opsh_guardian_imap($s);
-        $sections[] = opsh_guardian_defender();
-        $sections[] = opsh_guardian_intune();
-        $sections[] = opsh_guardian_mfa();
-        $sections[] = opsh_guardian_mailsec();
-        $sections[] = opsh_guardian_ssl($s);
-        $sections[] = opsh_guardian_backup($db);
-        $sections[] = opsh_guardian_php_eol();
+        $sections[] = itops_guardian_vitals();
+        $sections[] = itops_guardian_whm($s);
+        $sections[] = itops_guardian_services($s);
+        $sections[] = itops_guardian_server_load($s);
+        $sections[] = itops_guardian_server_backups($s);
+        $sections[] = itops_guardian_cphulk($s);
+        $sections[] = itops_guardian_cpanel_version($s);
+        $sections[] = itops_guardian_bandwidth($s);
+        $sections[] = itops_guardian_mysql($s);
+        $sections[] = itops_guardian_autossl($s);
+        $sections[] = itops_guardian_inodes($s);
+        $sections[] = itops_guardian_domains($s);
+        $sections[] = itops_guardian_mailqueue($db, $s);
+        $sections[] = itops_guardian_updates($s);
+        $sections[] = itops_guardian_imunify($s);
+        $sections[] = itops_guardian_imap($s);
+        $sections[] = itops_guardian_defender();
+        $sections[] = itops_guardian_intune();
+        $sections[] = itops_guardian_mfa();
+        $sections[] = itops_guardian_mailsec();
+        $sections[] = itops_guardian_ssl($s);
+        $sections[] = itops_guardian_backup($db);
+        $sections[] = itops_guardian_php_eol();
         return $sections;
     }
 
     /** Run a single named section. */
-    function opsh_guardian_section(PDO $db, string $name): array {
-        $s = opsh_guardian_settings($db);
+    function itops_guardian_section(PDO $db, string $name): array {
+        $s = itops_guardian_settings($db);
         switch ($name) {
-            case 'vitals':  return opsh_guardian_vitals();
-            case 'whm':     return opsh_guardian_whm($s);
-            case 'services': return opsh_guardian_services($s);
-            case 'srvload':  return opsh_guardian_server_load($s);
-            case 'srvbackup': return opsh_guardian_server_backups($s);
-            case 'cphulk':   return opsh_guardian_cphulk($s);
-            case 'cpver':    return opsh_guardian_cpanel_version($s);
-            case 'bandwidth': return opsh_guardian_bandwidth($s);
-            case 'mysql':    return opsh_guardian_mysql($s);
-            case 'autossl':  return opsh_guardian_autossl($s);
-            case 'inodes':   return opsh_guardian_inodes($s);
-            case 'domains':  return opsh_guardian_domains($s);
-            case 'mailqueue': return opsh_guardian_mailqueue($db, $s);
-            case 'updates':  return opsh_guardian_updates($s);
-            case 'imunify': return opsh_guardian_imunify($s);
-            case 'imap':    return opsh_guardian_imap($s);
-            case 'defender': return opsh_guardian_defender();
-            case 'intune':   return opsh_guardian_intune();
-            case 'mfa':      return opsh_guardian_mfa();
-            case 'mailsec':  return opsh_guardian_mailsec();
-            case 'ssl':      return opsh_guardian_ssl($s);
-            case 'backup':   return opsh_guardian_backup($db);
-            case 'php_eol':  return opsh_guardian_php_eol();
+            case 'vitals':  return itops_guardian_vitals();
+            case 'whm':     return itops_guardian_whm($s);
+            case 'services': return itops_guardian_services($s);
+            case 'srvload':  return itops_guardian_server_load($s);
+            case 'srvbackup': return itops_guardian_server_backups($s);
+            case 'cphulk':   return itops_guardian_cphulk($s);
+            case 'cpver':    return itops_guardian_cpanel_version($s);
+            case 'bandwidth': return itops_guardian_bandwidth($s);
+            case 'mysql':    return itops_guardian_mysql($s);
+            case 'autossl':  return itops_guardian_autossl($s);
+            case 'inodes':   return itops_guardian_inodes($s);
+            case 'domains':  return itops_guardian_domains($s);
+            case 'mailqueue': return itops_guardian_mailqueue($db, $s);
+            case 'updates':  return itops_guardian_updates($s);
+            case 'imunify': return itops_guardian_imunify($s);
+            case 'imap':    return itops_guardian_imap($s);
+            case 'defender': return itops_guardian_defender();
+            case 'intune':   return itops_guardian_intune();
+            case 'mfa':      return itops_guardian_mfa();
+            case 'mailsec':  return itops_guardian_mailsec();
+            case 'ssl':      return itops_guardian_ssl($s);
+            case 'backup':   return itops_guardian_backup($db);
+            case 'php_eol':  return itops_guardian_php_eol();
             default:        throw new RuntimeException('Unknown Guardian section: '.$name);
         }
     }
 
     // ---- small helpers --------------------------------------------------------
 
-    function opsh_guardian_bytes(float $b): string {
+    function itops_guardian_bytes(float $b): string {
         $u = ['B','KB','MB','GB','TB'];
         $i = 0;
         while ($b >= 1024 && $i < count($u) - 1) { $b /= 1024; $i++; }
         return round($b, 1).' '.$u[$i];
     }
 
-    function opsh_guardian_age(float $hours): string {
+    function itops_guardian_age(float $hours): string {
         if ($hours < 1) return 'under 1h ago';
         if ($hours < 48) return round($hours).'h ago';
         return round($hours / 24).'d ago';
     }
 
-    function opsh_guardian_cpu_count(): int {
+    function itops_guardian_cpu_count(): int {
         if (@is_readable('/proc/cpuinfo')) {
             $n = substr_count((string)@file_get_contents('/proc/cpuinfo'), "\nprocessor");
             if ($n > 0) return $n + 1; // first entry has no leading newline

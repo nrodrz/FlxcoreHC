@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — /api/sent_emails   (BT62: Logs & Integrations → Sent emails — every email the app tried to send)
+ * ITOps — /api/sent_emails   (BT62: Logs & Integrations → Sent emails — every email the app tried to send)
  *
  * GET /sent_emails?q=&result=sent|failed&kind=&from=&to=&page=     the list (50 a page), newest first, with counts   (Event Log · View)
  * GET /sent_emails/export?…same filters…&preview=1                  CSV of the filtered list (up to 10,000 rows);
@@ -13,9 +13,9 @@
 $db = getDB();
 $what = (string)($segments[1] ?? '');
 if ($method !== 'GET') error_response('Not found', 404);
-opsh_require($currentUser, 'event_log', 'view');
+itops_require($currentUser, 'event_log', 'view');
 require_once __DIR__ . '/../lib/EmailTemplates.php';
-$names = []; try { foreach (opsh_tpl_catalog() as $k => $t) $names[$k] = (string)($t[1] ?? $k); } catch (Throwable $e) {}
+$names = []; try { foreach (itops_tpl_catalog() as $k => $t) $names[$k] = (string)($t[1] ?? $k); } catch (Throwable $e) {}
 $names += ['mail_ack' => 'Acknowledgement of a new email', 'mail_notify_reply' => 'Reply on a ticket', 'mail_notify_status' => 'Ticket status changed', 'mail_notify_assign' => 'Ticket assigned', 'test' => 'Test email'];
 $kindName = fn(string $k) => $k === '' ? 'Other' : ($names[$k] ?? ucfirst(str_replace('_', ' ', $k)));
 
@@ -27,7 +27,7 @@ $from = (string)($_GET['from'] ?? ''); if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $
 $to = (string)($_GET['to'] ?? ''); if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) { $where[] = 'l.created_at < ?'; $bind[] = date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00'; }
 $W = $where ? ' WHERE ' . implode(' AND ', $where) : '';
 $sel = 'SELECT l.id, l.created_at, l.to_email, l.subject, l.kind, l.method, l.ok, l.error, l.ticket_id, t.ticket_number, u.display_name AS sent_by_name
-        FROM opsh_mail_log l LEFT JOIN opsh_users u ON u.id = l.sent_by LEFT JOIN opsh_tickets t ON t.id = l.ticket_id' . $W . ' ORDER BY l.id DESC';
+        FROM itops_mail_log l LEFT JOIN itops_users u ON u.id = l.sent_by LEFT JOIN itops_tickets t ON t.id = l.ticket_id' . $W . ' ORDER BY l.id DESC';
 $row = fn(array $r) => ['id' => (int)$r['id'], 'at' => $r['created_at'], 'to' => (string)$r['to_email'], 'subject' => (string)$r['subject'], 'kind' => (string)$r['kind'], 'kind_name' => $kindName((string)$r['kind']),
     'method' => (string)$r['method'], 'ok' => (bool)$r['ok'], 'error' => (string)($r['error'] ?? ''), 'ticket_id' => $r['ticket_id'] ? (int)$r['ticket_id'] : null, 'ticket_number' => $r['ticket_number'], 'sent_by' => $r['sent_by_name']];
 
@@ -44,10 +44,10 @@ if ($what === 'export') {
 }
 if ($what !== '') error_response('Not found', 404);
 $page = max(1, (int)($_GET['page'] ?? 1)); $per = 50;
-$c = $db->prepare('SELECT COUNT(*) FROM opsh_mail_log l' . $W); $c->execute($bind); $total = (int)$c->fetchColumn();
+$c = $db->prepare('SELECT COUNT(*) FROM itops_mail_log l' . $W); $c->execute($bind); $total = (int)$c->fetchColumn();
 $s = $db->prepare($sel . ' LIMIT ' . $per . ' OFFSET ' . (($page - 1) * $per)); $s->execute($bind);
-$cnt = function (string $w, array $b = []) use ($db) { $x = $db->prepare('SELECT COUNT(*) FROM opsh_mail_log WHERE ' . $w); $x->execute($b); return (int)$x->fetchColumn(); };
-$kinds = []; foreach ($db->query("SELECT kind, COUNT(*) n FROM opsh_mail_log GROUP BY kind ORDER BY n DESC")->fetchAll(PDO::FETCH_ASSOC) as $k) $kinds[] = [(string)$k['kind'], $kindName((string)$k['kind']) . ' (' . number_format((int)$k['n']) . ')'];
+$cnt = function (string $w, array $b = []) use ($db) { $x = $db->prepare('SELECT COUNT(*) FROM itops_mail_log WHERE ' . $w); $x->execute($b); return (int)$x->fetchColumn(); };
+$kinds = []; foreach ($db->query("SELECT kind, COUNT(*) n FROM itops_mail_log GROUP BY kind ORDER BY n DESC")->fetchAll(PDO::FETCH_ASSOC) as $k) $kinds[] = [(string)$k['kind'], $kindName((string)$k['kind']) . ' (' . number_format((int)$k['n']) . ')'];
 json_response(['emails' => array_map($row, $s->fetchAll(PDO::FETCH_ASSOC)), 'total' => $total, 'page' => $page, 'per_page' => $per, 'kinds' => $kinds,
     'counts' => ['today' => $cnt('created_at >= ?', [date('Y-m-d 00:00:00')]), 'failed_7d' => $cnt('ok=0 AND created_at >= ?', [date('Y-m-d H:i:s', time() - 7 * 86400)]),
                  'month' => $cnt('created_at >= ?', [date('Y-m-01 00:00:00')]), 'all' => $cnt('1=1')]]);

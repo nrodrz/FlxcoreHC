@@ -1,4 +1,4 @@
-# OpsHub — Root .htaccess (works at domain root OR in a subfolder like /itops/)
+# ITOps — Root .htaccess (works at domain root OR in a subfolder like /itops/)
 Options -Indexes
 DirectoryIndex index.html index.php
 

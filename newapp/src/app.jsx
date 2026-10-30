@@ -3,71 +3,71 @@ const {useState,useEffect,useCallback,useRef} = React;
 
 /* ====== API LAYER (talks to the real backend) ====== */
 function detectBase(){
-  let saved = null; try { saved = localStorage.getItem('opsh_api_base'); } catch(_) {}
+  let saved = null; try { saved = localStorage.getItem('itops_api_base'); } catch(_) {}
   if(saved && /^\/(?!\/)[A-Za-z0-9_\-\/.]*$/.test(saved)) return saved;   // review UI1-18: only a path on this site, never another site
   let p = location.pathname.replace(/\/(index\.html?)?$/i,'');
   return (p||'') + '/api';
 }
 let API_BASE = detectBase();
-const APP_BUILD='0001-A001';
+const APP_BUILD='0001-A002';
 /* BT96: the product and its owner — fixed, not a setting (the name people see is appName()). */
-const OPSH_PRODUCT='OpsHub', OPSH_OWNER='Indisse-BTS', OPSH_YEARS='2026';   /* BT100: the owner is named as the business */
-/* BT20: the product is sold as "OpsHub", but each client can rename it (Settings → Branding → App name).
- * Every place that SHOWS the name calls appName(); opshSetAppName() is called whenever branding loads or changes. */
-function appName(){ try{ return window.__opshAppName||'OpsHub'; }catch(_){ return 'OpsHub'; } }
-/* Two-letter badge from the name: "Acme Desk" → AD, "OpsHub" → OH, "Helpdesk" → HE. */
+const ITOPS_PRODUCT='ITOps', ITOPS_OWNER='Indisse-BTS', ITOPS_YEARS='2026';   /* BT100: the owner is named as the business */
+/* BT20: the product is sold as "ITOps", but each client can rename it (Settings → Branding → App name).
+ * Every place that SHOWS the name calls appName(); itopsSetAppName() is called whenever branding loads or changes. */
+function appName(){ try{ return window.__itopsAppName||'ITOps'; }catch(_){ return 'ITOps'; } }
+/* Two-letter badge from the name: "Acme Desk" → AD, "ITOps" → OH, "Helpdesk" → HE. */
 function appInitials(n){ n=String(n||appName()).trim(); const w=n.split(/\s+/).filter(Boolean); if(w.length>1) return (w[0][0]+w[1][0]).toUpperCase(); const caps=n.replace(/[^A-Z]/g,''); return (caps.length>=2?caps.slice(0,2):n.slice(0,2)).toUpperCase(); }
-function opshSetAppName(n){
-  n=String(n||'').trim()||'OpsHub'; window.__opshAppName=n;
+function itopsSetAppName(n){
+  n=String(n||'').trim()||'ITOps'; window.__itopsAppName=n;
   try{ document.title=n; }catch(_){}
   try{ // labels built once at load time (Integration Audit lanes / types)
-    (typeof IA_LANES!=='undefined'?IA_LANES:[]).forEach(x=>{ if(x[0]==='opshub') x[1]=n+' (own log)'; });
-    (typeof IA_TYPES!=='undefined'?IA_TYPES:[]).forEach(x=>{ if(x[0]==='opshub') x[1]=n; });
+    (typeof IA_LANES!=='undefined'?IA_LANES:[]).forEach(x=>{ if(x[0]==='itops') x[1]=n+' (own log)'; });
+    (typeof IA_TYPES!=='undefined'?IA_TYPES:[]).forEach(x=>{ if(x[0]==='itops') x[1]=n; });
   }catch(_){}
   return n;
 }
 /* Deep link from emails: …/#tickets/123 opens that ticket (kept through the sign-in screen and Microsoft sign-in). */
-(function(){ try{ const m=(location.hash||'').match(/^#(tickets|calendar|cases|improvements)\/(\d+)$/); if(m){ sessionStorage.setItem('opsh_open',JSON.stringify({res:m[1],id:+m[2]})); history.replaceState(null,'',location.pathname+location.search+'#'+m[1]); }
-  else if(location.hash==='#announcements') sessionStorage.setItem('opsh_open',JSON.stringify({res:'announcements',page:1}));   /* BT28: the link in announcement emails and Teams cards */ }catch(_){} })();
+(function(){ try{ const m=(location.hash||'').match(/^#(tickets|calendar|cases|improvements)\/(\d+)$/); if(m){ sessionStorage.setItem('itops_open',JSON.stringify({res:m[1],id:+m[2]})); history.replaceState(null,'',location.pathname+location.search+'#'+m[1]); }
+  else if(location.hash==='#announcements') sessionStorage.setItem('itops_open',JSON.stringify({res:'announcements',page:1}));   /* BT28: the link in announcement emails and Teams cards */ }catch(_){} })();
 /* BT29: opened inside Microsoft Teams? The tab address in the app package carries ?host=teams (and &pg=<page> for the second tab). */
-const OPSH_HOST=(function(){ try{ const q=new URLSearchParams(location.search); if(q.get('host')==='teams'){ sessionStorage.setItem('opsh_host','teams'); const pg=q.get('pg'); if(pg&&/^[a-z0-9_]{1,40}$/.test(pg)) sessionStorage.setItem('opsh_open',JSON.stringify({res:pg,page:1})); } return sessionStorage.getItem('opsh_host')||''; }catch(_){ return ''; } })();
+const ITOPS_HOST=(function(){ try{ const q=new URLSearchParams(location.search); if(q.get('host')==='teams'){ sessionStorage.setItem('itops_host','teams'); const pg=q.get('pg'); if(pg&&/^[a-z0-9_]{1,40}$/.test(pg)) sessionStorage.setItem('itops_open',JSON.stringify({res:pg,page:1})); } return sessionStorage.getItem('itops_host')||''; }catch(_){ return ''; } })();
 /* The Teams library is only loaded inside Teams, from this site. Teams shows an error page unless app.initialize() is called. */
-let opshTeamsP=null;
-function opshTeams(){ if(OPSH_HOST!=='teams')return Promise.resolve(null); if(opshTeamsP)return opshTeamsP;
-  opshTeamsP=new Promise(res=>{ let done=false; const fin=v=>{ if(!done){ done=true; res(v); } };
+let itopsTeamsP=null;
+function itopsTeams(){ if(ITOPS_HOST!=='teams')return Promise.resolve(null); if(itopsTeamsP)return itopsTeamsP;
+  itopsTeamsP=new Promise(res=>{ let done=false; const fin=v=>{ if(!done){ done=true; res(v); } };
     const go=()=>{ const mt=window.microsoftTeams; if(!mt||!mt.app){ fin(null); return; } const to=setTimeout(()=>fin(null),8000);
       mt.app.initialize().then(()=>{ clearTimeout(to); try{ mt.app.notifySuccess(); }catch(_){} fin(mt); }).catch(()=>{ clearTimeout(to); fin(null); }); };
     if(window.microsoftTeams){ go(); return; }
     const sc=document.createElement('script'); sc.src='public/teams/MicrosoftTeams.min.js'; sc.onload=go; sc.onerror=()=>fin(null); document.head.appendChild(sc); });
-  return opshTeamsP; }
+  return itopsTeamsP; }
 /* What the browser says about the device (Device inventory). The exact OS version only exists in Chromium browsers, and only when the page is allowed to ask. */
-async function opshClientFacts(){ const f={host:OPSH_HOST==='teams'?'teams':'browser',touch:navigator.maxTouchPoints||0};
+async function itopsClientFacts(){ const f={host:ITOPS_HOST==='teams'?'teams':'browser',touch:navigator.maxTouchPoints||0};
   try{ const u=navigator.userAgentData; if(u){ f.platform=u.platform||''; const b=(u.brands||[]).filter(x=>!/not.?a.?brand/i.test(x.brand)&&x.brand!=='Chromium'); if(b[0])f.browser=b[0].brand+' '+b[0].version;
       try{ const h=await u.getHighEntropyValues(['platformVersion']); f.platform_version=h.platformVersion||''; }catch(_){} } }catch(_){}
-  if(OPSH_HOST==='teams'){ try{ const mt=await opshTeams(); if(mt){ const c=await mt.app.getContext(); f.client_type=(c&&c.app&&c.app.host&&c.app.host.clientType)||''; } }catch(_){} }
+  if(ITOPS_HOST==='teams'){ try{ const mt=await itopsTeams(); if(mt){ const c=await mt.app.getContext(); f.client_type=(c&&c.app&&c.app.host&&c.app.host.clientType)||''; } }catch(_){} }
   return f; }
-function setBase(b){ if(!/^\/(?!\/)[A-Za-z0-9_\-\/.]*$/.test(String(b||'')))return; API_BASE=b; try{ localStorage.setItem('opsh_api_base',b); }catch(_){} }
+function setBase(b){ if(!/^\/(?!\/)[A-Za-z0-9_\-\/.]*$/.test(String(b||'')))return; API_BASE=b; try{ localStorage.setItem('itops_api_base',b); }catch(_){} }
 
 /* BT90 (code audit M-40): the session lives in an HttpOnly cookie the page cannot read; nothing about it is kept in browser
    storage. Only inside Teams (a frame of another site, where the cookie does not travel) the token Teams sign-in returns is
    kept in this page's memory for as long as the page is open. */
-function opshMemTok(){ return window.__opshMemTok||null; }
-function opshIsSuper(){ try{ const u=window.__opshUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } }
-function opshAuth(hd){ hd=hd||{}; const t=opshMemTok(); if(t) hd['X-OpsHub-Token']=t;
+function itopsMemTok(){ return window.__itopsMemTok||null; }
+function itopsIsSuper(){ try{ const u=window.__itopsUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } }
+function itopsAuth(hd){ hd=hd||{}; const t=itopsMemTok(); if(t) hd['X-ITOps-Token']=t;
   return hd; }
 /* _bg: a background call (the bell, the session tick) — it does not count as activity for the idle sign-out on the server */
 async function api(method, path, body, _again, _bg){
-  const headers={'Content-Type':'application/json','X-OpsHub-CSRF':'1'};
-  const _tk=opshMemTok(); if(_tk) headers['X-OpsHub-Token']=_tk;
-  if(_bg) headers['X-OpsHub-Background']='1';
+  const headers={'Content-Type':'application/json','X-ITOps-CSRF':'1'};
+  const _tk=itopsMemTok(); if(_tk) headers['X-ITOps-Token']=_tk;
+  if(_bg) headers['X-ITOps-Background']='1';
   let res, text;
   try{
     res=await fetch(API_BASE+path,{method,headers,credentials:'same-origin',cache:'no-store',body:body?JSON.stringify(body):undefined});   /* BT167: never a kept copy */
     text=await res.text();
     /* BT72: an older copy kept on the server was shown at once: ask the server to read Microsoft again in the background */
-    try{ if(method==='GET'&&res.ok&&res.headers.get('X-OpsHub-Cache')==='stale') opshWarmOne(path); }catch(_){}
+    try{ if(method==='GET'&&res.ok&&res.headers.get('X-ITOps-Cache')==='stale') itopsWarmOne(path); }catch(_){}
     /* BT124 (review M365A-6): Microsoft cut a list at the page limit: the screen is told once */
-    try{ if(res.ok&&res.headers.get('X-OpsHub-Truncated')==='1') window.dispatchEvent(new CustomEvent('opsh-truncated',{detail:path})); }catch(_){}
+    try{ if(res.ok&&res.headers.get('X-ITOps-Truncated')==='1') window.dispatchEvent(new CustomEvent('itops-truncated',{detail:path})); }catch(_){}
   }catch(netErr){
     const e=new Error('Cannot reach the API at '+API_BASE+'. Check the address and that the server is up.');
     e.network=true; throw e;
@@ -78,9 +78,9 @@ async function api(method, path, body, _again, _bg){
   if(!res.ok){
     const msg=(data&&data.error&&data.error.message)|| (data&&data.raw? 'Server error (non-JSON response)':'HTTP '+res.status);
     /* BT14: the server ended this session (logout elsewhere, password change, deactivation) → back to sign-in */
-    if(res.status===401 && /^(Session ended|Invalid or expired token|User not found or inactive)/.test(msg) && path.indexOf('/auth/logout')!==0){ try{window.dispatchEvent(new CustomEvent('opsh-session-ended'));}catch(_){ } }
-    if(res.status===403 && msg==='Two-factor enrollment required'){ try{window.dispatchEvent(new CustomEvent('opsh-mfa-enroll'));}catch(_){ } }
-    if(res.status===403 && msg==='Terms of Use acceptance required'){ try{window.dispatchEvent(new CustomEvent('opsh-terms'));}catch(_){ } }   /* BT97 */
+    if(res.status===401 && /^(Session ended|Invalid or expired token|User not found or inactive)/.test(msg) && path.indexOf('/auth/logout')!==0){ try{window.dispatchEvent(new CustomEvent('itops-session-ended'));}catch(_){ } }
+    if(res.status===403 && msg==='Two-factor enrollment required'){ try{window.dispatchEvent(new CustomEvent('itops-mfa-enroll'));}catch(_){ } }
+    if(res.status===403 && msg==='Terms of Use acceptance required'){ try{window.dispatchEvent(new CustomEvent('itops-terms'));}catch(_){ } }   /* BT97 */
     const e=new Error(msg); e.status=res.status; e.data=data; throw e;
   }
   return data;
@@ -90,21 +90,21 @@ async function api(method, path, body, _again, _bg){
    15 minutes while the app is open and visible) the app asks the server to read, for that role, what the Microsoft 365
    pages show; the server keeps each answer (api/lib/ReadStore.php) and pages then open from those copies at once. Two at a
    time, at low priority; the answers are not kept in the browser. One tab does it for all (shared time mark). A page that
-   was shown an older copy asks for that read the same way (opshWarmOne from api()). */
-const OPSH_WARM={q:[],busy:{},failed:{},active:0,max:2,done:0};
-function opshWarmFetch(path){ const h=opshAuth({'X-OpsHub-Warm':'1','X-OpsHub-Background':'1'});
+   was shown an older copy asks for that read the same way (itopsWarmOne from api()). */
+const ITOPS_WARM={q:[],busy:{},failed:{},active:0,max:2,done:0};
+function itopsWarmFetch(path){ const h=itopsAuth({'X-ITOps-Warm':'1','X-ITOps-Background':'1'});
   return fetch(API_BASE+path,{headers:h,credentials:'same-origin',priority:'low'}).then(r=>r.ok?r.json():null).then(d=>{
     if(d&&d.warm==='read'&&path.indexOf('/m365hub/')===0){ try{ const k=path.slice(9); delete MH_C[k.indexOf('?')<0?k+'?':k]; }catch(_){} }   /* the next look reads the new copy */
-    OPSH_WARM.done++; return d; }); }
-function opshWarmPump(){ while(OPSH_WARM.active<OPSH_WARM.max&&OPSH_WARM.q.length){ const p=OPSH_WARM.q.shift(); OPSH_WARM.active++;
-    opshWarmFetch(p).catch(()=>null).then(d=>{ if(!d) OPSH_WARM.failed[p]=Date.now(); }).finally(()=>{ delete OPSH_WARM.busy[p]; OPSH_WARM.active--; opshWarmPump(); }); } }
+    ITOPS_WARM.done++; return d; }); }
+function itopsWarmPump(){ while(ITOPS_WARM.active<ITOPS_WARM.max&&ITOPS_WARM.q.length){ const p=ITOPS_WARM.q.shift(); ITOPS_WARM.active++;
+    itopsWarmFetch(p).catch(()=>null).then(d=>{ if(!d) ITOPS_WARM.failed[p]=Date.now(); }).finally(()=>{ delete ITOPS_WARM.busy[p]; ITOPS_WARM.active--; itopsWarmPump(); }); } }
 /* one request per read at a time; a read that failed is not asked again for a minute */
-function opshWarmOne(path){ if(OPSH_WARM.busy[path]) return; const t=OPSH_WARM.failed[path]; if(t&&Date.now()-t<60000) return; OPSH_WARM.busy[path]=1; OPSH_WARM.q.push(path); opshWarmPump(); }
-function opshM365Warm(force){
-  let last=0; try{ last=+(localStorage.getItem('opsh_m365_warm_at')||0); }catch(_){}
+function itopsWarmOne(path){ if(ITOPS_WARM.busy[path]) return; const t=ITOPS_WARM.failed[path]; if(t&&Date.now()-t<60000) return; ITOPS_WARM.busy[path]=1; ITOPS_WARM.q.push(path); itopsWarmPump(); }
+function itopsM365Warm(force){
+  let last=0; try{ last=+(localStorage.getItem('itops_m365_warm_at')||0); }catch(_){}
   if(!force&&Date.now()-last<10*60000) return Promise.resolve(false);   /* another tab (or this one) did it a moment ago */
-  try{ localStorage.setItem('opsh_m365_warm_at',String(Date.now())); }catch(_){}
-  return api('GET','/m365hub/m365-warm-list').then(d=>{ (d&&d.urls||[]).forEach(opshWarmOne); return true; }).catch(()=>false); }
+  try{ localStorage.setItem('itops_m365_warm_at',String(Date.now())); }catch(_){}
+  return api('GET','/m365hub/m365-warm-list').then(d=>{ (d&&d.urls||[]).forEach(itopsWarmOne); return true; }).catch(()=>false); }
 
 /* ====== ICONS ====== */
 function shtml(html){
@@ -113,7 +113,7 @@ function shtml(html){
   try{ if(window.DOMPurify) return {__html:window.DOMPurify.sanitize(s,{ADD_ATTR:['target','rel']})}; }catch(_){}
   var d0=document.createElement('div'); d0.textContent=s.replace(/<[^>]*>/g,' '); return {__html:d0.innerHTML};
 }
-function opshSafeHtml(html){
+function itopsSafeHtml(html){
   var s=String(html==null?'':html);
   try{ if(window.DOMPurify) return window.DOMPurify.sanitize(s,{ADD_ATTR:['target','rel']}); }catch(_){}
   /* BT91: without DOMPurify only the text is shown (a pattern-based cleaner can be got round) */
@@ -123,35 +123,35 @@ function opshSafeHtml(html){
 function safeHref(u){ var v=String(u==null?'':u).trim(); var c=v.replace(/[\u0000-\u0020\u007f]+/g,''); var m=/^([a-z][a-z0-9+.\-]*):/i.exec(c); if(m&&['http','https','mailto','tel'].indexOf(m[1].toLowerCase())<0) return '#'; return v||'#'; }
 async function uploadDocImage(file){
   const fd=new FormData(); fd.append('file',file);
-  const res=await fetch(API_BASE+'/kb/image',{method:'POST',headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin',body:fd});
+  const res=await fetch(API_BASE+'/kb/image',{method:'POST',headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin',body:fd});
   if(!res.ok){ let m='Upload failed'; try{m=(JSON.parse(await res.text()).error||{}).message||m}catch(_){} throw new Error(m); }
   return (await res.json()).url;
 }
 async function uploadBranding(kind,file){
   const fd=new FormData(); fd.append('file',file);
-  const res=await fetch(API_BASE+'/settings/'+kind,{method:'POST',headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin',body:fd});
+  const res=await fetch(API_BASE+'/settings/'+kind,{method:'POST',headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin',body:fd});
   if(!res.ok){ let m='Upload failed'; try{m=(JSON.parse(await res.text()).error||{}).message||m}catch(_){} throw new Error(m); }
   return (await res.json()).url;
 }
 /* BT60: download a file the server builds (PDF, Word, CSV, calendar). GET, or POST with a JSON body. */
-async function opshFetchFile(path,body,fallbackName){
-  const opt={method:body?'POST':'GET',headers:opshAuth(body?{'Content-Type':'application/json','X-OpsHub-CSRF':'1'}:{}),credentials:'same-origin'};
+async function itopsFetchFile(path,body,fallbackName){
+  const opt={method:body?'POST':'GET',headers:itopsAuth(body?{'Content-Type':'application/json','X-ITOps-CSRF':'1'}:{}),credentials:'same-origin'};
   if(body) opt.body=JSON.stringify(body);
   const r=await fetch(API_BASE+path,opt);
   if(!r.ok){ let m='The file could not be made ('+r.status+').'; try{ m=(JSON.parse(await r.text()).error||{}).message||m; }catch(_){} throw new Error(m); }
   let name=fallbackName||'download'; try{ const cd=r.headers.get('Content-Disposition')||''; const mm=cd.match(/filename="([^"]+)"/); if(mm) name=mm[1]; }catch(_){}
-  opshDownload(name, await r.blob()); return name;
+  itopsDownload(name, await r.blob()); return name;
 }
 /* BT61: get a file the server builds without saving it (for a preview). */
-async function opshFetchBlob(path,body){
-  const opt={method:body?'POST':'GET',headers:opshAuth(body?{'Content-Type':'application/json','X-OpsHub-CSRF':'1'}:{}),credentials:'same-origin'};
+async function itopsFetchBlob(path,body){
+  const opt={method:body?'POST':'GET',headers:itopsAuth(body?{'Content-Type':'application/json','X-ITOps-CSRF':'1'}:{}),credentials:'same-origin'};
   if(body) opt.body=JSON.stringify(body);
   const r=await fetch(API_BASE+path,opt);
   if(!r.ok){ let m='The file could not be made ('+r.status+').'; try{ m=(JSON.parse(await r.text()).error||{}).message||m; }catch(_){} throw new Error(m); }
   let name='file'; try{ const mm=(r.headers.get('Content-Disposition')||'').match(/filename="([^"]+)"/); if(mm) name=mm[1]; }catch(_){}
   return {blob:await r.blob(),name,type:r.headers.get('Content-Type')||''};
 }
-function opshCsvRows(text,max){ const rows=[]; let row=[], f='', q=false; text=text.replace(/^\uFEFF/,'');
+function itopsCsvRows(text,max){ const rows=[]; let row=[], f='', q=false; text=text.replace(/^\uFEFF/,'');
   for(let i=0;i<text.length;i++){ const c=text[i];
     if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; continue; }
     if(c==='"'){ q=true; continue; } if(c===','){ row.push(f); f=''; continue; }
@@ -162,16 +162,16 @@ function opshCsvRows(text,max){ const rows=[]; let row=[], f='', q=false; text=t
    the preview (PDF, Word, CSV or calendar file), so nothing is downloaded before it has been looked at. */
 /* BT61: pdf.js (shipped in vendor/pdfjs since BT90, loaded once, only when a preview is opened) draws the pages as images, so the preview looks the
    same in every browser, on phones and in Teams. The worker script runs on the page (no worker from another site). */
-const OPSH_PDFJS='vendor/pdfjs/';   /* BT90: shipped with the app (vendor/pdfjs, PDF.js 3.11.174) — no script from another site */
-let opshPdfjsP=null;
-function opshPdfjs(){ if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
-  if(!opshPdfjsP) opshPdfjsP=new Promise((ok,bad)=>{ const add=(f,next)=>{ const t=document.createElement('script'); t.src=OPSH_PDFJS+f; t.onload=next; t.onerror=()=>{ opshPdfjsP=null; bad(new Error('The preview viewer could not load.')); }; document.head.appendChild(t); };
-    add('pdf.worker.min.js',()=>add('pdf.min.js',()=>{ try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc=OPSH_PDFJS+'pdf.worker.min.js'; }catch(_){} ok(window.pdfjsLib); })); });
-  return opshPdfjsP; }
+const ITOPS_PDFJS='vendor/pdfjs/';   /* BT90: shipped with the app (vendor/pdfjs, PDF.js 3.11.174) — no script from another site */
+let itopsPdfjsP=null;
+function itopsPdfjs(){ if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(!itopsPdfjsP) itopsPdfjsP=new Promise((ok,bad)=>{ const add=(f,next)=>{ const t=document.createElement('script'); t.src=ITOPS_PDFJS+f; t.onload=next; t.onerror=()=>{ itopsPdfjsP=null; bad(new Error('The preview viewer could not load.')); }; document.head.appendChild(t); };
+    add('pdf.worker.min.js',()=>add('pdf.min.js',()=>{ try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc=ITOPS_PDFJS+'pdf.worker.min.js'; }catch(_){} ok(window.pdfjsLib); })); });
+  return itopsPdfjsP; }
 function PdfPages({blob,url}){
   const ref=React.useRef(null); const [n,setN]=React.useState(null); const [fail,setFail]=React.useState(false);
   React.useEffect(()=>{ let live=true;
-    (async()=>{ try{ const lib=await opshPdfjs(); const data=new Uint8Array(await blob.arrayBuffer());
+    (async()=>{ try{ const lib=await itopsPdfjs(); const data=new Uint8Array(await blob.arrayBuffer());
       const doc=await lib.getDocument({data,disableWorker:true,isEvalSupported:false}).promise; if(!live)return; setN(doc.numPages);
       const box=ref.current; const w=Math.min(1000,(box&&box.clientWidth)||900)-24; const ratio=Math.min(2,window.devicePixelRatio||1);
       for(let i=1;i<=doc.numPages&&live;i++){ const pg=await doc.getPage(i); const v0=pg.getViewport({scale:1}); const sc=w/v0.width; const v=pg.getViewport({scale:sc*ratio});
@@ -192,7 +192,7 @@ function DocPreview({title,load,downloads,onClose,note}){
   React.useEffect(()=>{ let live=true, u='';
     load().then(async x=>{ if(!live)return; setF(x);
       if(/pdf/.test(x.type)){ u=URL.createObjectURL(x.blob); setUrl(u); }
-      else { const t=await x.blob.text(); setRows(opshCsvRows(t,500)); } }).catch(e=>live&&setErr(e.message));
+      else { const t=await x.blob.text(); setRows(itopsCsvRows(t,500)); } }).catch(e=>live&&setErr(e.message));
     return ()=>{ live=false; if(u) setTimeout(()=>URL.revokeObjectURL(u),2000); }; },[]);
   const run=async(k,fn)=>{ setBusy(k); try{ await fn(); }catch(e){ setErr(e.message); } setBusy(''); };
   return <EditPage title={'Preview · '+title} badge="Preview" onClose={busy?()=>{}:onClose}
@@ -211,10 +211,10 @@ function DocPreview({title,load,downloads,onClose,note}){
 /* BT60: Settings → Branding → Documents: what PDF and Word documents carry (organization, logo, footer, colour). */
 /* ═══ BT147: installing the app on a computer or phone. The device keeps a shortcut, the icon and one "no connection"
    page (sw.js keeps only that page); no app code or records. The install prompt is caught once for the whole app. ═══ */
-let opshInstallEvt=null; const opshInstallSubs=new Set();
-try{ window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); opshInstallEvt=e; opshInstallSubs.forEach(f=>{ try{ f(); }catch(_){} }); });
-     window.addEventListener('appinstalled',()=>{ opshInstallEvt=null; opshInstallSubs.forEach(f=>{ try{ f(); }catch(_){} }); }); }catch(_){}
-function opshPlatform(){
+let itopsInstallEvt=null; const itopsInstallSubs=new Set();
+try{ window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); itopsInstallEvt=e; itopsInstallSubs.forEach(f=>{ try{ f(); }catch(_){} }); });
+     window.addEventListener('appinstalled',()=>{ itopsInstallEvt=null; itopsInstallSubs.forEach(f=>{ try{ f(); }catch(_){} }); }); }catch(_){}
+function itopsPlatform(){
   const ua=navigator.userAgent||''; const ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
   const android=/Android/.test(ua); const firefox=/Firefox\//.test(ua)||/FxiOS/.test(ua); const edge=/Edg\//.test(ua); const chromium=/Chrome\/|Chromium\/|CriOS\//.test(ua)&&!edge;
   const safari=/Safari\//.test(ua)&&!/Chrome|Chromium|CriOS|Edg|Firefox|FxiOS/.test(ua);
@@ -223,7 +223,7 @@ function opshPlatform(){
   return {os,browser:edge?'edge':firefox?'firefox':safari?'safari':chromium?'chrome':'other',standalone};
 }
 /* registers the helper while installing is on (keeps its "no connection" page fresh); removes it when switched off */
-function opshInstallBoot(b){
+function itopsInstallBoot(b){
   try{ const on=!!(b&&b.install&&b.install.enabled); const nm=(b&&b.app_name)||'';
     const tc=document.querySelector('meta[name="theme-color"]'); if(tc&&b&&b.install&&b.install.theme_color) tc.setAttribute('content',b.install.theme_color);
     const at=document.querySelector('meta[name="apple-mobile-web-app-title"]'); if(at&&(b&&b.install&&b.install.short_name||nm)) at.setAttribute('content',(b.install&&b.install.short_name)||nm);
@@ -234,13 +234,13 @@ function opshInstallBoot(b){
 }
 function AppInstallCard({name,compact,enabled,centered}){
   const [,force]=React.useState(0); const [busy,setBusy]=React.useState(false); const [done,setDone]=React.useState('');
-  React.useEffect(()=>{ const f=()=>force(x=>x+1); opshInstallSubs.add(f); return ()=>opshInstallSubs.delete(f); },[]);
-  const P=opshPlatform(); const nm=name||appName();
+  React.useEffect(()=>{ const f=()=>force(x=>x+1); itopsInstallSubs.add(f); return ()=>itopsInstallSubs.delete(f); },[]);
+  const P=itopsPlatform(); const nm=name||appName();
   if(enabled===false) return <div className="mh-mut" style={{fontSize:13}} data-install-off="1">Installing {nm} as an app is switched off by your administrator.</div>;
-  const install=async()=>{ if(!opshInstallEvt)return; setBusy(true); try{ opshInstallEvt.prompt(); const r=await opshInstallEvt.userChoice; setDone(r&&r.outcome==='accepted'?'Installed. Open '+nm+' from your Start menu, Dock, app menu or home screen.':''); opshInstallEvt=null; }catch(_){ } setBusy(false); };
+  const install=async()=>{ if(!itopsInstallEvt)return; setBusy(true); try{ itopsInstallEvt.prompt(); const r=await itopsInstallEvt.userChoice; setDone(r&&r.outcome==='accepted'?'Installed. Open '+nm+' from your Start menu, Dock, app menu or home screen.':''); itopsInstallEvt=null; }catch(_){ } setBusy(false); };
   let steps=null;
   if(P.standalone) steps=<div data-install-state="installed">You are using the installed app on this device.</div>;
-  else if(opshInstallEvt) steps=<div data-install-state="prompt"><button type="button" className="btn btn-p" disabled={busy} onClick={install} data-install-btn="1">⤓ Install {nm} on this device</button>
+  else if(itopsInstallEvt) steps=<div data-install-state="prompt"><button type="button" className="btn btn-p" disabled={busy} onClick={install} data-install-btn="1">⤓ Install {nm} on this device</button>
     <div className="mh-mut" style={{fontSize:12.5,marginTop:6}}>It opens in its own window, from the {P.os==='windows'?'Start menu (pin it to the taskbar if you like)':P.os==='mac'?'Applications folder and the Dock':P.os==='linux'?'applications menu':'home screen'}.</div></div>;
   else if(P.os==='ios') steps=<ol data-install-state="ios" style={{margin:'0 0 0 18px',lineHeight:1.65}}><li>In <b>Safari</b> (or Chrome), tap <b>Share</b> (the square with an arrow).</li><li>Choose <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>. {nm} is now on your home screen.</li></ol>;
   else if(P.os==='mac'&&P.browser==='safari') steps=<ol data-install-state="mac-safari" style={{margin:'0 0 0 18px',lineHeight:1.65}}><li>In Safari's menu bar choose <b>File → Add to Dock…</b></li><li>Click <b>Add</b>. {nm} opens from the Dock and Launchpad.</li></ol>;
@@ -249,12 +249,12 @@ function AppInstallCard({name,compact,enabled,centered}){
   else if(P.browser==='edge') steps=<div data-install-state="edge">In Edge's menu <b>…</b> choose <b>Apps → Install this site as an app</b>. If you do not see it, {nm} is already installed on this computer.</div>;
   else if(P.browser==='chrome') steps=<div data-install-state="chrome">In the browser menu <b>⋮</b> choose <b>Cast, save and share → Install page as app</b>, or click the install icon in the address bar. If you do not see it, {nm} is already installed on this computer.</div>;
   else steps=<div data-install-state="other">Open {nm} in Edge, Chrome or Safari to install it.</div>;
-  return <div data-install-card="1" style={{fontSize:13.5,lineHeight:1.55,textAlign:centered?(opshInstallEvt||P.standalone?'center':'left'):undefined}}>
+  return <div data-install-card="1" style={{fontSize:13.5,lineHeight:1.55,textAlign:centered?(itopsInstallEvt||P.standalone?'center':'left'):undefined}}>
     {steps}{done&&<div style={{color:'var(--green)',marginTop:6}}>{done}</div>}
     {!compact&&<div className="mh-mut" style={{fontSize:12.5,marginTop:10}}>Only a shortcut is installed: the icon, and one page that says you need an Internet connection. Your work stays on the server; nothing else is kept on this device{P.os==='linux'||P.os==='windows'||P.os==='mac'?'':' or phone'}, and signing out removes what the browser kept.</div>}
   </div>;
 }
-try{ setTimeout(()=>{ fetch(API_BASE+'/branding',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(b=>{ if(b) opshInstallBoot(b); }).catch(()=>{}); },1500); }catch(_){}
+try{ setTimeout(()=>{ fetch(API_BASE+'/branding',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(b=>{ if(b) itopsInstallBoot(b); }).catch(()=>{}); },1500); }catch(_){}
 function ProfileInstallCard(){
   const [b,setB]=React.useState(null);
   React.useEffect(()=>{ api('GET','/branding').then(setB).catch(()=>setB({})); },[]);
@@ -291,9 +291,9 @@ function DocBrandCard({toast}){
   if(!s) return <div className="mh-mut" style={{fontSize:13}}>Loading…</div>;
   const set=(k,v)=>setS(x=>Object.assign({},x,{[k]:v}));
   const save=async()=>{ setBusy('save'); try{ await api('PUT','/settings',{doc_org_name:s.doc_org_name,doc_footer:s.doc_footer,doc_accent:s.doc_accent}); toast('Document branding saved','ok'); load(); }catch(e){ toast(e.message); } setBusy(''); };
-  const up=async()=>{ const fs=await opshUpload({title:'Document logo',accept:'image/png,image/jpeg,image/gif,image/webp'}); if(!fs||!fs[0])return; setBusy('logo'); try{ const url=await uploadBranding('doclogo',fs[0]); set('doc_logo_url',url); toast('Document logo saved','ok'); load(); }catch(e){ toast(e.message); } setBusy(''); };
+  const up=async()=>{ const fs=await itopsUpload({title:'Document logo',accept:'image/png,image/jpeg,image/gif,image/webp'}); if(!fs||!fs[0])return; setBusy('logo'); try{ const url=await uploadBranding('doclogo',fs[0]); set('doc_logo_url',url); toast('Document logo saved','ok'); load(); }catch(e){ toast(e.message); } setBusy(''); };
   const rm=async()=>{ setBusy('logo'); try{ await api('PUT','/settings',{doc_logo_url:''}); set('doc_logo_url',''); toast('Document logo removed','ok'); load(); }catch(e){ toast(e.message); } setBusy(''); };
-  const sample=async(f)=>{ await opshFetchFile('/docs/sample?format='+f,null,'sample-document.'+f); };
+  const sample=async(f)=>{ await itopsFetchFile('/docs/sample?format='+f,null,'sample-document.'+f); };
   const SW=['#1D4D7A','#2F7F86','#3D6B4F','#5E4B8B','#7A3B3B','#2E3A44'];
   return <div data-docbrand="1">
     <div style={{fontSize:13,color:'var(--t4)',marginBottom:10,lineHeight:1.5}}>What every PDF and Word document made here carries (the IT budget document, calendar reports): the organization's name, its logo on the cover and on each page, the footer and the colour of headings and tables.</div>
@@ -313,7 +313,7 @@ function DocBrandCard({toast}){
       <button type="button" className="btn btn-p btn-sm" data-docbrand-save="1" disabled={!!busy} onClick={save}>{busy==='save'?'Saving…':'Save'}</button>
       <button type="button" className="btn btn-g btn-sm" data-docbrand-sample="pdf" disabled={!!busy} onClick={()=>setPrev(true)}>Preview a sample</button>
     </div>
-    {prev&&<DocPreview title="Sample document" load={()=>opshFetchBlob('/docs/sample?format=pdf&preview=1')} onClose={()=>setPrev(false)} note="Save the name, footer and colour first; the sample uses what is saved."
+    {prev&&<DocPreview title="Sample document" load={()=>itopsFetchBlob('/docs/sample?format=pdf&preview=1')} onClose={()=>setPrev(false)} note="Save the name, footer and colour first; the sample uses what is saved."
       downloads={[['pdf','Download PDF',()=>sample('pdf')],['docx','Download Word',()=>sample('docx')]]}/>}
   </div>;
 }
@@ -323,11 +323,11 @@ function RichEditor({value,onChange,placeholder,toast}){
   const [full,setFull]=React.useState(false);
   const [imgBusy,setImgBusy]=React.useState(false);
   const [pal,setPal]=React.useState(null);
-  React.useEffect(()=>{ const el=ref.current; if(mode==='rich'&&el&&document.activeElement!==el&&el.innerHTML!==(value||'')) el.innerHTML=opshSafeHtml(value||''); },[value,mode,full]);
+  React.useEffect(()=>{ const el=ref.current; if(mode==='rich'&&el&&document.activeElement!==el&&el.innerHTML!==(value||'')) el.innerHTML=itopsSafeHtml(value||''); },[value,mode,full]);
   const emit=()=>{ if(ref.current) onChange(ref.current.innerHTML); };
   const exec=(cmd,val)=>{ if(ref.current)ref.current.focus(); document.execCommand(cmd,false,val); emit(); };
   const onImg=async(file)=>{ if(!file)return; setImgBusy(true); try{ const url=await uploadDocImage(file); if(ref.current)ref.current.focus(); document.execCommand('insertHTML',false,'<img src="'+String(url).replace(/["'<>]/g,'')+'" style="max-width:100%;border-radius:8px" alt=""/>'); emit(); if(toast)toast('Image added','ok'); }catch(e){ if(toast)toast(e.message||'Upload failed'); } setImgBusy(false); };
-  const addLink=async()=>{ const sel=window.getSelection(); const rng=(sel&&sel.rangeCount)?sel.getRangeAt(0).cloneRange():null; const u=await opshPrompt('Link URL (https://...)'); if(u){ if(rng){ try{ const s2=window.getSelection(); s2.removeAllRanges(); s2.addRange(rng); }catch(_){} } exec('createLink',u); } };
+  const addLink=async()=>{ const sel=window.getSelection(); const rng=(sel&&sel.rangeCount)?sel.getRangeAt(0).cloneRange():null; const u=await itopsPrompt('Link URL (https://...)'); if(u){ if(rng){ try{ const s2=window.getSelection(); s2.removeAllRanges(); s2.addRange(rng); }catch(_){} } exec('createLink',u); } };
   const addTable=()=>exec('insertHTML','<table><tr><th>Item</th><th>Detail</th></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr></table><p><br/></p>');
   const COLORS=['#111111','#1D4D7A','#2E7D32','#C0392B','#B7950B','#6C3483','#7B7D7D','#FFFFFF'];
   const HLS=['#FFF3A3','#BFE3FF','#C8F2D0','#FFD6D6','#E8D6FF','transparent'];
@@ -404,34 +404,34 @@ const EMO={data:'🗃️',recycle:'🗑️',updates:'🔄',invoices:'🧾',g_m36
 /* BT18: icons saved for the old "Microsoft 365" group carry over to IT Operations. */
 const navEmojiMap=(saved)=>{ const m=Object.assign({},EMO,saved||{}); if(saved&&saved.g_ms&&!saved.g_itops)m.g_itops=saved.g_ms; return m; };
 function NavIco({id,map}){ return <span className="nav-ico">{(map&&map[id])||EMO[id]||'•'}</span>; }
-console.log('%cOpsHub build '+APP_BUILD,'color:#2F6FAE;font-weight:700');   // BT19: was a fixed old label ("2026-06-21-S") — now the real build
+console.log('%cITOps build '+APP_BUILD,'color:#2F6FAE;font-weight:700');   // BT19: was a fixed old label ("2026-06-21-S") — now the real build
 const ICON_CHOICES=['🏠','📊','📈','📉','🗂️','📁','📂','📋','📝','📄','📑','🗒️','📓','📚','📖','🔖','🏷️','🎫','🎟️','📅','📆','⏰','⏱️','⌛','🔔','📣','📌','📍','🧭','🗺️','👤','👥','🧑‍💼','🛡️','🔐','🔑','🗝️','🔒','🔓','🛠️','⚙️','🔧','🔌','🧰','🖥️','💻','⌨️','🖨️','💾','🧮','📦','🏢','🏬','🏦','💼','🗃️','🧾','💳','💰','📨','📧','✉️','📬','✅','☑️','✔️','⭐','🌟','❤️','🔥','⚡','💡','🚀','🎯','📡','🔍','🧪','🩺','📐','🔗','🕳️','🧱','📋','🎨','📷','📱','❓','❗','💬','📟','🌓','🌙','☀️','🚪','🔆','🧑‍💻','👩‍💼','🧑‍🔧','🔩','☎️','📞','📠','🌐','🛰️','💿','🗄️','🚚','🏥','🏫','💵','📇','📏','✏️','🖊️','🖋️','✒️','📎','🖇️','✂️','🧷','🔎','🧬','🚦','🚧','🚨','🛎️','⚠️','❌','⭕','🔴','🟠','🟡','🟢','🔵','🟣','⚫','🏁','🛫','🗓️','📤','📥','📩','🗨️','🧩','🎓','🏆','🤝','🙋','👋','♻️','🌱','🌎','🗳️'];
 
 /* ---- Permission evaluator shared by the app (sidebar/buttons) and the Roles editor preview.
- *      Mirrors api/index.php opsh_can() exactly — keep the two in sync. ---- */
+ *      Mirrors api/index.php itops_can() exactly — keep the two in sync. ---- */
 const PERM_INHERIT={security_assessment:['m365_admin','edit'],m365_mail:['m365_admin','edit'],calendar:['tickets','view'],kb_assist:['kb','view'],kb_gaps:['kb','edit'],event_log:['audit','view'],integrations:['settings','edit'],
   branding:['settings','edit'],email_cfg:['settings','edit'],sla_cfg:['settings','edit'],   // BT18: Settings areas follow the old grant on legacy roles
   m365_users:['m365_admin','edit'],m365_credentials:['m365_admin','edit'],m365_licenses:['m365_admin','edit'],m365_groups:['m365_admin','edit'],   // BT21: Microsoft 365 area
   provision_onboard:['onboarding','edit'],provision_offboard:['onboarding','edit'],
   license:['settings','edit']};   // BT97: License details follows Settings on a role saved before BT97
-function opshWild(w){ return !!w&&w!=='0'&&!(Array.isArray(w)&&!w.length)&&!(typeof w==='object'&&!Array.isArray(w)&&!Object.keys(w).length); }
+function itopsWild(w){ return !!w&&w!=='0'&&!(Array.isArray(w)&&!w.length)&&!(typeof w==='object'&&!Array.isArray(w)&&!Object.keys(w).length); }
 /* BT101: the modules of this installation (from /lookups). A permission or page of a module that is off is refused for
-   everyone, Super Admin included — the same rule as opsh_can() on the server. */
-const OPSH_MODS={permOff:{},pageOff:{},on:null,labels:{},pageMod:{}};
-function opshSetModules(m){ OPSH_MODS.permOff={}; OPSH_MODS.pageOff={}; OPSH_MODS.pageMod={}; if(!m||!m.all){ OPSH_MODS.on=null; return; }
-  OPSH_MODS.on=m.on||[]; OPSH_MODS.labels=m.labels||{};
-  m.all.forEach(k=>{ ((m.pages||{})[k]||[]).forEach(pg=>{ OPSH_MODS.pageMod[pg]=k; }); if(OPSH_MODS.on.indexOf(k)<0){ ((m.perms||{})[k]||[]).forEach(x=>{ OPSH_MODS.permOff[x]=k; }); ((m.pages||{})[k]||[]).forEach(x=>{ OPSH_MODS.pageOff[x]=k; }); } }); }
-function opshModOn(k){ return !OPSH_MODS.on||OPSH_MODS.on.indexOf(k)>=0; }
-function opshCanFrom(roleSlug,p,mod,act,noMods){
-  act=act||'view'; if(!noMods&&OPSH_MODS.permOff[mod])return false; if(roleSlug==='super_admin')return true; p=p||{};
-  if(opshWild(p['*']))return true;   // same rule as PHP: any non-empty "*" = full access
+   everyone, Super Admin included — the same rule as itops_can() on the server. */
+const ITOPS_MODS={permOff:{},pageOff:{},on:null,labels:{},pageMod:{}};
+function itopsSetModules(m){ ITOPS_MODS.permOff={}; ITOPS_MODS.pageOff={}; ITOPS_MODS.pageMod={}; if(!m||!m.all){ ITOPS_MODS.on=null; return; }
+  ITOPS_MODS.on=m.on||[]; ITOPS_MODS.labels=m.labels||{};
+  m.all.forEach(k=>{ ((m.pages||{})[k]||[]).forEach(pg=>{ ITOPS_MODS.pageMod[pg]=k; }); if(ITOPS_MODS.on.indexOf(k)<0){ ((m.perms||{})[k]||[]).forEach(x=>{ ITOPS_MODS.permOff[x]=k; }); ((m.pages||{})[k]||[]).forEach(x=>{ ITOPS_MODS.pageOff[x]=k; }); } }); }
+function itopsModOn(k){ return !ITOPS_MODS.on||ITOPS_MODS.on.indexOf(k)>=0; }
+function itopsCanFrom(roleSlug,p,mod,act,noMods){
+  act=act||'view'; if(!noMods&&ITOPS_MODS.permOff[mod])return false; if(roleSlug==='super_admin')return true; p=p||{};
+  if(itopsWild(p['*']))return true;   // same rule as PHP: any non-empty "*" = full access
   if(mod==='dashboard')return true;
   const v=p[mod];
   if(v==null){
     if(mod==='my_signatures'||mod==='my_equipment')return act==='view';          // personal pages: on unless explicitly []
     if(Object.keys(p).some(k=>Array.isArray(p[k])))return false;                  // granular role = exactly what's checked
     if(mod==='changelog')return act==='view';                                     // legacy-format roles only
-    const inh=PERM_INHERIT[mod]; if(inh)return opshCanFrom(roleSlug,p,inh[0],act==='view'?'view':inh[1]);
+    const inh=PERM_INHERIT[mod]; if(inh)return itopsCanFrom(roleSlug,p,inh[0],act==='view'?'view':inh[1]);
     return false; }
   if(Array.isArray(v))return act==='view'?v.length>0:v.includes(act);
   if(v==='none'||v===false)return false;
@@ -519,7 +519,7 @@ const NAVGROUPS=[
 /* BT21: old page ids (bookmarks, links) → the new Microsoft 365 pages */
 const PG_ALIAS={m365:'m365_overview',m365_admin:'m365_accounts',onboarding_runs:'m365_accounts',access:'settings',help_visuals:'settings'};   /* BT50: #help_visuals → Settings → Help visuals */   /* BT48: the old Company systems page → Settings → Company systems */
 /* Review UI2-4: one place resolves an old page id (bell links, Back, setPg), with the tab it stands for. */
-function pgResolve(p){ if(typeof p==='string'&&/^announcements\/\d+$/.test(p))return 'announcements'; if(typeof p!=='string'||!PG_ALIAS[p])return p; if(p==='onboarding_runs')window.__mhNext={page:'m365_accounts',tab:'history'}; if(p==='access')window.__opshSettingsTab='systems'; if(p==='help_visuals')window.__opshSettingsTab='visuals'; return PG_ALIAS[p]; }
+function pgResolve(p){ if(typeof p==='string'&&/^announcements\/\d+$/.test(p))return 'announcements'; if(typeof p!=='string'||!PG_ALIAS[p])return p; if(p==='onboarding_runs')window.__mhNext={page:'m365_accounts',tab:'history'}; if(p==='access')window.__itopsSettingsTab='systems'; if(p==='help_visuals')window.__itopsSettingsTab='visuals'; return PG_ALIAS[p]; }
 const navCan=(can,perm)=>!perm||(Array.isArray(perm)?perm.some(x=>can(x)):can(perm));
 
 /* ====== APP ====== */
@@ -527,9 +527,9 @@ function ChangelogView(){
   const [txt,setTxt]=React.useState(null);
   const [err,setErr]=React.useState('');
   React.useEffect(()=>{
-    fetch(API_BASE+'/changelog?t='+Date.now(),{credentials:'same-origin',headers:opshAuth({'X-OpsHub-CSRF':'1'})})   // review UI1-19: through the API, signed in
+    fetch(API_BASE+'/changelog?t='+Date.now(),{credentials:'same-origin',headers:itopsAuth({'X-ITOps-CSRF':'1'})})   // review UI1-19: through the API, signed in
       .then(function(r){ if(!r.ok)throw new Error('HTTP '+r.status); return r.text(); })
-      .then(function(t){ setTxt(t.replace(/(^|[^-\w])OpsHub(?![-\w\u2060])/g,function(m,p){ return p+appName(); })); })   // BT20: client's app name
+      .then(function(t){ setTxt(t.replace(/(^|[^-\w])ITOps(?![-\w\u2060])/g,function(m,p){ return p+appName(); })); })   // BT20: client's app name
       .catch(function(e){ setErr(e.message||'load failed'); });
   },[]);
   /* BT49: the file is cut into its builds (they are separated by a line of ====): the builds are listed on the left,
@@ -564,21 +564,21 @@ function ChangelogView(){
             </div>}
   </div>;
 }
-function opshDocWindow(opts){
+function itopsDocWindow(opts){
   var w=window.open('','_blank','width=940,height=950');
-  if(!w){ opshAlert('Please allow pop-ups to open the editor in a separate window.'); return; }
+  if(!w){ itopsAlert('Please allow pop-ups to open the editor in a separate window.'); return; }
   var label=opts.label||'document';
   var curId=opts.id||null; var creating=!curId; var blocked=false;
-  var safe=opshEsc(opts.title|| (creating?('New '+label):'Document'));
+  var safe=itopsEsc(opts.title|| (creating?('New '+label):'Document'));
   var tval=(opts.title||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-  var html=opshSafeHtml(opts.content)|| '<p><br></p>';
+  var html=itopsSafeHtml(opts.content)|| '<p><br></p>';
   var sw=function(attr,col,ttl){ return '<button class="sw" '+attr+'="'+col+'" style="background:'+col+'" title="'+ttl+'"></button>'; };
   var metaHtml='';
   if(opts.meta&&opts.meta.length){ var mrows='';
     opts.meta.forEach(function(f){ var inp;
-      if(f.type==='select'||f.type==='lookup'){ var ops='<option value="">—</option>'; (f.options||[]).forEach(function(o){ var ov=String(o[0]); ops+='<option value="'+ov.replace(/"/g,'&quot;')+'"'+(String(f.value)===ov?' selected':'')+'>'+opshEsc(String(o[1]))+'</option>'; }); inp='<select id="m_'+f.key+'" class="mi">'+ops+'</select>'; }
+      if(f.type==='select'||f.type==='lookup'){ var ops='<option value="">—</option>'; (f.options||[]).forEach(function(o){ var ov=String(o[0]); ops+='<option value="'+ov.replace(/"/g,'&quot;')+'"'+(String(f.value)===ov?' selected':'')+'>'+itopsEsc(String(o[1]))+'</option>'; }); inp='<select id="m_'+f.key+'" class="mi">'+ops+'</select>'; }
       else { var ty=(f.type==='number')?'number':((f.type==='date')?'date':'text'); var vv=f.value!=null?String(f.value):''; if(f.type==='date')vv=vv.slice(0,10); inp='<input id="m_'+f.key+'" class="mi" type="'+ty+'" value="'+vv.replace(/"/g,'&quot;')+'"/>'; }
-      mrows+='<label class="mf"><span>'+opshEsc(f.label)+'</span>'+inp+'</label>'; });
+      mrows+='<label class="mf"><span>'+itopsEsc(f.label)+'</span>'+inp+'</label>'; });
     metaHtml='<div class="metabar"><button id="mToggle" type="button">▸ Details</button></div><div id="metap" class="metapanel" style="display:none">'+mrows+'</div>'; }
   var page='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+safe+' — Edit</title><style>'
     +'*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#2E3A44}'
@@ -594,7 +594,7 @@ function opshDocWindow(opts){
     +'.metabar{padding:6px 16px;border-bottom:1px solid #DCE4EC;background:#fff}.metabar button{font:inherit;font-size:12px;border:none;background:none;color:#1D4D7A;cursor:pointer;padding:3px 0}.metapanel{padding:11px 16px;border-bottom:1px solid #DCE4EC;background:#FBFCFD;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}.mf{display:flex;flex-direction:column;font-size:12px;color:#7A8794;gap:3px}.mi{font:inherit;font-size:13px;padding:6px 9px;border:1px solid #C7D2DE;border-radius:7px;color:#2E3A44;background:#fff}'+'#ed{max-width:820px;margin:0 auto;padding:26px 30px 90px;min-height:62vh;line-height:1.7;font-size:15px;outline:none}'
     +'table{border-collapse:collapse;width:100%}td,th{border:1px solid #C7D2DE;padding:6px 9px;text-align:left}img{max-width:100%}h2,h3{margin:18px 0 6px}ul,ol{margin:6px 0 6px 22px}'
     +'</style></head><body>'
-    +'<div class="top"><input id="tt" value="'+tval+'" placeholder="'+(creating?('Untitled '+opshEsc(label)):'')+'"/><span id="st"></span>'
+    +'<div class="top"><input id="tt" value="'+tval+'" placeholder="'+(creating?('Untitled '+itopsEsc(label)):'')+'"/><span id="st"></span>'
     +'<button class="p" id="bSave">Save</button><button id="bPrint">Print</button><button id="bClose">Close</button></div>'
     +'<div class="tb">'
     +'<button data-cmd="bold" title="Bold"><b>B</b></button><button data-cmd="italic" title="Italic"><i>I</i></button><button data-cmd="underline" title="Underline"><u>U</u></button><button data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>'
@@ -618,8 +618,8 @@ function opshDocWindow(opts){
     +'<div id="ed" contenteditable="true">'+html+'</div>'
     +'</body></html>';
   w.document.open(); w.document.write(page); w.document.close();
-  /* BT37: this window is a plain page driven from here, so its Details dropdowns are given the app's look from here too (opsh-select.js works on any document it is handed) */
-  try{ if(window.opshSelect) window.opshSelect.scan(w.document); }catch(e){}
+  /* BT37: this window is a plain page driven from here, so its Details dropdowns are given the app's look from here too (itops-select.js works on any document it is handed) */
+  try{ if(window.itopsSelect) window.itopsSelect.scan(w.document); }catch(e){}
   setTimeout(function(){
     var D=w.document; if(!D)return;
     var ed=D.getElementById('ed'), tt=D.getElementById('tt'), st=D.getElementById('st');
@@ -649,7 +649,7 @@ function opshDocWindow(opts){
       setSt('Saving…','#7A8794');
       var payload={title:(tt.value||'Untitled'),content:ed.innerHTML};
       if(opts.meta){ opts.meta.forEach(function(f){ var el=D.getElementById('m_'+f.key); if(!el)return; var v=el.value; if(v!==''&&v!=null){ payload[f.key]=(f.type==='number')?(parseInt(v,10)||0):v; } }); }
-      var hd=opshAuth({'Content-Type':'application/json','X-OpsHub-CSRF':'1'});
+      var hd=itopsAuth({'Content-Type':'application/json','X-ITOps-CSRF':'1'});
       var method=curId?'PUT':'POST'; var path=curId?('/'+opts.resource+'/'+curId):('/'+opts.resource);
       fetch(API_BASE+path,{method:method,headers:hd,credentials:'same-origin',body:JSON.stringify(payload)})
         .then(function(r){ if(!r.ok)throw new Error('HTTP '+r.status); return r.text(); })
@@ -657,7 +657,7 @@ function opshDocWindow(opts){
           var wasCreate=!curId;
           if(wasCreate){ var nid=j&&(j.id||(j.data&&j.data.id)); if(nid){ curId=nid; creating=false; } else { blocked=true; } }
           dirty=false; setSt(blocked?'Saved ✓ (reopen from list to keep editing)':'Saved ✓','#2E7D32');
-          try{ window.dispatchEvent(new CustomEvent('opsh-doc-saved',{detail:{resource:opts.resource,id:curId,fields:payload,created:wasCreate}})); }catch(e){}
+          try{ window.dispatchEvent(new CustomEvent('itops-doc-saved',{detail:{resource:opts.resource,id:curId,fields:payload,created:wasCreate}})); }catch(e){}
           try{ D.title=(tt.value||'Untitled')+' — Edit'; }catch(e){}
         })
         .catch(function(e){ setSt('Save failed ('+e.message+')','#C0392B'); });
@@ -671,15 +671,15 @@ function opshDocWindow(opts){
   },40);
 }
 
-function opshPopout(title,html){
-  html=opshSafeHtml(html);
+function itopsPopout(title,html){
+  html=itopsSafeHtml(html);
   var w=window.open('','_blank','width=860,height=940');
-  if(!w){ opshAlert('Please allow pop-ups to open this in a separate window.'); return; }
-  var safe=opshEsc(title||'Document');
-  var doc='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+safe+'</title><style>*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#2E3A44;max-width:780px;margin:0 auto;padding:0 30px 48px;line-height:1.7}h1{font-size:23px;margin:22px 0 4px}.bar{position:sticky;top:0;background:#fff;border-bottom:1px solid #C7D2DE;padding:11px 0;margin:0 -30px 14px;padding-left:30px;display:flex;gap:8px}.bar button{font:inherit;font-size:13px;padding:6px 13px;border:1px solid #C7D2DE;border-radius:8px;background:#1D4D7A;color:#fff;cursor:pointer}.bar .g{background:#fff;color:#46535F}table{border-collapse:collapse;width:100%}td,th{border:1px solid #C7D2DE;padding:6px 9px;text-align:left}img{max-width:100%}h2,h3{margin:18px 0 6px}ul,ol{margin:6px 0 6px 22px}</style></head><body><div class="bar"><button id="opsh-print">Print</button><button class="g" id="opsh-close">Close</button></div><h1>'+safe+'</h1>'+(html||'<em>No content.</em>')+'</body></html>';
+  if(!w){ itopsAlert('Please allow pop-ups to open this in a separate window.'); return; }
+  var safe=itopsEsc(title||'Document');
+  var doc='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+safe+'</title><style>*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#2E3A44;max-width:780px;margin:0 auto;padding:0 30px 48px;line-height:1.7}h1{font-size:23px;margin:22px 0 4px}.bar{position:sticky;top:0;background:#fff;border-bottom:1px solid #C7D2DE;padding:11px 0;margin:0 -30px 14px;padding-left:30px;display:flex;gap:8px}.bar button{font:inherit;font-size:13px;padding:6px 13px;border:1px solid #C7D2DE;border-radius:8px;background:#1D4D7A;color:#fff;cursor:pointer}.bar .g{background:#fff;color:#46535F}table{border-collapse:collapse;width:100%}td,th{border:1px solid #C7D2DE;padding:6px 9px;text-align:left}img{max-width:100%}h2,h3{margin:18px 0 6px}ul,ol{margin:6px 0 6px 22px}</style></head><body><div class="bar"><button id="itops-print">Print</button><button class="g" id="itops-close">Close</button></div><h1>'+safe+'</h1>'+(html||'<em>No content.</em>')+'</body></html>';
   w.document.write(doc); w.document.close(); try{ w.focus(); }catch(e){}
   /* BT90: the buttons are wired from here (the page policy allows no inline handlers, also in pop-out windows) */
-  try{ w.document.getElementById('opsh-print').addEventListener('click',function(){ w.print(); }); w.document.getElementById('opsh-close').addEventListener('click',function(){ w.close(); }); }catch(e){}
+  try{ w.document.getElementById('itops-print').addEventListener('click',function(){ w.print(); }); w.document.getElementById('itops-close').addEventListener('click',function(){ w.close(); }); }catch(e){}
 }
 function FloatWin({title,badge,width,onClose,onPopout,ribbon,children}){
   // Inline detail panel (replaces the old floating/modal window). Same props, so call sites are unchanged.
@@ -707,21 +707,21 @@ function FloatWin({title,badge,width,onClose,onPopout,ribbon,children}){
 function EditPage({title,badge,onClose,ribbon,children}){
   const [host,setHost]=React.useState(null);
   React.useLayoutEffect(()=>{
-    const h=document.getElementById('opsh-pg-edit'); if(!h) return;
+    const h=document.getElementById('itops-pg-edit'); if(!h) return;
     const c=h.parentNode; const n=(+(c.getAttribute('data-edits')||0))+1;
     const prev=c.scrollTop; c.setAttribute('data-edits',String(n)); c.classList.add('has-edit'); c.scrollTop=0; setHost(h);
     return ()=>{ const m=Math.max(0,(+(c.getAttribute('data-edits')||1))-1); c.setAttribute('data-edits',String(m));
       if(!m){ c.classList.remove('has-edit'); try{ c.scrollTop=prev; }catch(_){} } };
   },[]);
   const page=<div className="ep"><FloatWin title={title} badge={badge} onClose={onClose} ribbon={ribbon}><div className="ep-wrap">{children}</div></FloatWin></div>;
-  if(!host) return document.getElementById('opsh-pg-edit')?null:page;
+  if(!host) return document.getElementById('itops-pg-edit')?null:page;
   return ReactDOM.createPortal(page,host);
 }
 
 /* ====== BT26: DATABASE HEALTH (Settings → Maintenance, Super Admin) ======
  * Server facts, size and growth, health checks, per-table maintenance, log housekeeping and a SQL backup —
- * so the database can be watched and looked after without going to the server. Only OpsHub's own tables
- * (opsh_*) can be changed from here; the audit log is never purged. */
+ * so the database can be watched and looked after without going to the server. Only ITOps's own tables
+ * (itops_*) can be changed from here; the audit log is never purged. */
 const dbhB=n=>{ n=+n||0; const u=['B','KB','MB','GB','TB']; let i=0; while(n>=1024&&i<u.length-1){ n/=1024; i++; } return (i?n.toFixed(n<10?1:0):n)+' '+u[i]; };
 const dbhN=n=>(+n||0).toLocaleString();
 const dbhUp=s=>{ s=+s||0; const d=Math.floor(s/86400), h=Math.floor(s%86400/3600), m=Math.floor(s%3600/60); return d?d+'d '+h+'h':(h?h+'h '+m+'m':m+'m'); };
@@ -731,7 +731,7 @@ function SampleRecords({toast}){
   const [d,setD]=React.useState(null); const [err,setErr]=React.useState(''); const [busy,setBusy]=React.useState(false); const [open,setOpen]=React.useState(false);
   const load=React.useCallback(async()=>{ setErr(''); try{ setD(await api('GET','/dbupdate/sample')); }catch(e){ setErr(e.message); } },[]);
   React.useEffect(()=>{ load(); },[load]);
-  const remove=async()=>{ const t=await opshPrompt('Remove '+d.remove+' sample record'+(d.remove===1?'':'s')+'? Their comments, votes, attendees and reminders go with them. This cannot be undone.\n\nType REMOVE to confirm.','');
+  const remove=async()=>{ const t=await itopsPrompt('Remove '+d.remove+' sample record'+(d.remove===1?'':'s')+'? Their comments, votes, attendees and reminders go with them. This cannot be undone.\n\nType REMOVE to confirm.','');
     if(t===null||t===undefined)return; if((t+'').trim()!=='REMOVE'){ toast('Not removed: type REMOVE to confirm.'); return; }
     setBusy(true); try{ const r=await api('POST','/dbupdate/sample',{confirm:'REMOVE'}); toast('Removed '+r.removed+' sample record'+(r.removed===1?'':'s')+(r.kept&&r.kept.length?' · '+r.kept.length+' kept (in use)':''),'ok'); }catch(e){ toast(e.message); } setBusy(false); load(); };
   return <div className="card" style={{marginTop:14}} data-sample-card="1">
@@ -763,20 +763,20 @@ function DbHealth({toast,onChanged}){
   const S=d.server, T=d.totals, H=d.history||{points:[],growth:{}}, G=H.growth||{};
   const g7=G._total&&G._total.d7!=null?G._total.d7:null;
   const tableOp=async(t,op)=>{ const warn={optimize:'Optimize rebuilds "'+t+'" to reclaim space. The table is locked briefly while it runs — best done outside working hours. Continue?',collation:'Convert "'+t+'" to utf8mb4_unicode_ci like the other tables? The table is locked while it is rebuilt. Continue?'};
-    if(warn[op]&&!await opshConfirm(warn[op]))return;
+    if(warn[op]&&!await itopsConfirm(warn[op]))return;
     setBusy(op+':'+t); try{ const r=await api('POST','/dbupdate/table',{table:t,op}); setRes(x=>Object.assign({},x,{[t]:{ok:r.ok,txt:op+' · '+(r.messages||[]).join(' · ')+' · '+r.ms+' ms'}})); toast(t+': '+op+' '+(r.ok?'done':'reported a problem'),r.ok?'ok':undefined); if(op!=='check')load(); }catch(e){ toast(e.message); } setBusy(''); };
   const purge=async(k,h)=>{ const dd=h.fixed?0:(+days[k]||h.days); if(!h.fixed&&dd<h.min){ toast(h.label+' keeps at least '+h.min+' days'); return; }
-    if(!await opshConfirm('Remove '+(h.fixed?'all expired sign-in sessions':('"'+h.label+'" rows older than '+dd+' days'))+'? This cannot be undone.'))return;
+    if(!await itopsConfirm('Remove '+(h.fixed?'all expired sign-in sessions':('"'+h.label+'" rows older than '+dd+' days'))+'? This cannot be undone.'))return;
     setBusy('purge:'+k); try{ const r=await api('POST','/dbupdate/purge',{key:k,days:dd}); toast('Removed '+dbhN(r.removed)+' row'+(r.removed===1?'':'s'),'ok'); load(); }catch(e){ toast(e.message); } setBusy(''); };
   const saveRet=async()=>{ setBusy('ret'); try{ const b={enabled:!!ret.enabled}; Object.keys(d.housekeeping).forEach(k=>{ if(!d.housekeeping[k].fixed) b[k]=+days[k]; }); await api('PUT','/dbupdate/retention',b); toast('Automatic cleanup saved','ok'); load(); }catch(e){ toast(e.message); } setBusy(''); };
-  const backup=async()=>{ const t=await opshPrompt('The backup holds every '+appName()+' table, including password hashes and encrypted secrets. Keep the file as safe as the server itself.\n\nType BACKUP to download it.',''); if(((t||'')+'').trim().toUpperCase()!=='BACKUP')return;
-    setBusy('backup'); try{ const res=await fetch(API_BASE+'/dbupdate/backup?confirm=BACKUP',{headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin'});
+  const backup=async()=>{ const t=await itopsPrompt('The backup holds every '+appName()+' table, including password hashes and encrypted secrets. Keep the file as safe as the server itself.\n\nType BACKUP to download it.',''); if(((t||'')+'').trim().toUpperCase()!=='BACKUP')return;
+    setBusy('backup'); try{ const res=await fetch(API_BASE+'/dbupdate/backup?confirm=BACKUP',{headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin'});
       if(!res.ok){ let m='Backup failed'; try{ m=(JSON.parse(await res.text()).error||{}).message||m; }catch(_){} throw new Error(m); }
       const cd=res.headers.get('Content-Disposition')||''; const fn=(cd.match(/filename="([^"]+)"/)||[])[1]||(appName().toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-db.sql.gz');
       const blob=await res.blob(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
       toast('Backup downloaded ('+dbhB(blob.size)+')','ok'); load(); }catch(e){ toast(e.message); } setBusy(''); };
-  const mainCol=(()=>{ const c={}; d.tables.filter(t=>t.opshub).forEach(t=>c[t.collation]=(c[t.collation]||0)+1); return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]; })();
-  let rows=d.tables.filter(t=>showAll||t.opshub).filter(t=>!q||(t.name+' '+t.about).toLowerCase().indexOf(q.toLowerCase())>=0);
+  const mainCol=(()=>{ const c={}; d.tables.filter(t=>t.itops).forEach(t=>c[t.collation]=(c[t.collation]||0)+1); return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]; })();
+  let rows=d.tables.filter(t=>showAll||t.itops).filter(t=>!q||(t.name+' '+t.about).toLowerCase().indexOf(q.toLowerCase())>=0);
   const sv=(t,k)=>k==='g7'?((G[t.name]||{}).d7||0):(k==='name'?t.name:(+t[k]||0));
   rows=rows.slice().sort((a,b)=>{ const x=sv(a,sort[0]), y=sv(b,sort[0]); return (x<y?-1:x>y?1:0)*sort[1]; });
   const th=(k,l,al)=><th style={{cursor:'pointer',textAlign:al||'left',whiteSpace:'nowrap'}} onClick={()=>setSort(s=>[k,s[0]===k?-s[1]:(k==='name'?1:-1)])}>{l}{sort[0]===k?(sort[1]>0?' ▲':' ▼'):''}</th>;
@@ -826,9 +826,9 @@ function DbHealth({toast,onChanged}){
       </div>
       <div style={{overflow:'auto',maxHeight:520,border:'1px solid var(--b1)',borderRadius:10}}><table className="tbl dbh-tbl" style={{fontSize:13}}>
         <thead><tr>{th('name','Table')}{th('rows','Rows ≈','right')}{th('total','Size','right')}{th('index','Index','right')}{th('free','Free','right')}{H.available&&th('g7','7 days','right')}{th('updated','Last change')}<th></th></tr></thead>
-        <tbody>{rows.map(t=>{ const g=(G[t.name]||{}).d7; const r=res[t.name]; const odd=t.opshub&&t.collation!==mainCol;
+        <tbody>{rows.map(t=>{ const g=(G[t.name]||{}).d7; const r=res[t.name]; const odd=t.itops&&t.collation!==mainCol;
           return <tr key={t.name}>
-          <td style={{minWidth:200}}><div style={{fontFamily:'monospace',fontSize:12.5,fontWeight:600}}>{t.name}{!t.opshub&&<span style={{marginLeft:6,fontFamily:'var(--font)',fontSize:11,color:'var(--t4)'}}>other app</span>}</div>
+          <td style={{minWidth:200}}><div style={{fontFamily:'monospace',fontSize:12.5,fontWeight:600}}>{t.name}{!t.itops&&<span style={{marginLeft:6,fontFamily:'var(--font)',fontSize:11,color:'var(--t4)'}}>other app</span>}</div>
             {t.about&&<div style={{fontSize:12,color:'var(--t4)'}}>{t.about}</div>}
             {(t.engine!=='InnoDB'||odd)&&<div style={{fontSize:12,color:'var(--amber)'}}>{t.engine!=='InnoDB'?t.engine+' · ':''}{odd?t.collation:''}</div>}
             {r&&<div style={{fontSize:12,color:r.ok?'var(--green)':'var(--red)'}}>{r.txt}</div>}</td>
@@ -836,7 +836,7 @@ function DbHealth({toast,onChanged}){
           <td style={{textAlign:'right',whiteSpace:'nowrap',color:t.free>50*1048576?'var(--amber)':'var(--t4)'}}>{t.free?dbhB(t.free):'—'}</td>
           {H.available&&<td style={{textAlign:'right',whiteSpace:'nowrap',color:g>0?'var(--t2)':'var(--t4)'}}>{g==null?'—':(g>0?'+':g<0?'−':'')+(g?dbhB(Math.abs(g)):'0')}</td>}
           <td style={{whiteSpace:'nowrap',color:'var(--t4)'}}>{t.updated?mhDateTime(t.updated):'—'}</td>
-          <td style={{whiteSpace:'nowrap',textAlign:'right'}}>{t.opshub&&(busy&&busy.split(':')[1]===t.name?<span style={{fontSize:12,color:'var(--t3)'}}>Working…</span>:
+          <td style={{whiteSpace:'nowrap',textAlign:'right'}}>{t.itops&&(busy&&busy.split(':')[1]===t.name?<span style={{fontSize:12,color:'var(--t3)'}}>Working…</span>:
             <DSel className="isel" value="" disabled={!!busy} title="Maintain this table" aria-label={'Maintain '+t.name} onChange={e=>{ const v=e.target.value; e.target.value=''; if(v) tableOp(t.name,v); }} style={{background:'var(--s3)',color:'var(--t2)',width:112}}>
               <option value="">Maintain…</option><option value="check">Check for errors</option><option value="analyze">Analyze (refresh statistics)</option><option value="optimize">Optimize (reclaim space)</option>{odd&&<option value="collation">Fix collation</option>}
             </DSel>)}</td></tr>; })}</tbody></table></div>
@@ -872,7 +872,7 @@ function DbHealth({toast,onChanged}){
   </div>;
 }
 function SysSettings({toast}){
-  const isSuper=(()=>{ try{ var u=window.__opshUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } })();
+  const isSuper=(()=>{ try{ var u=window.__itopsUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } })();
   const [s,setS]=React.useState(null); const [busy,setBusy]=React.useState(false);
   React.useEffect(()=>{ (async()=>{ try{ const r=await api('GET','/settings'); setS({queue:(r&&r.webhook_queue_mode)==='1',text:(r&&r.announcement_text)||'',level:(r&&r.announcement_level)||'info'}); }catch(e){ setS({queue:false,text:'',level:'info'}); } })(); },[]);
   if(!isSuper) return <div style={{fontSize:14,color:'var(--t4)'}}>Super-admin only.</div>;
@@ -894,15 +894,15 @@ function SysSettings({toast}){
     <div className="card" style={{marginTop:14}} data-sys-moved="1">
       <div style={{fontSize:15,fontWeight:700,marginBottom:4}}>Microsoft 365 and vTiger connections</div>
       <div style={{fontSize:13,color:'var(--t4)',marginBottom:10,lineHeight:1.5}}>They moved to one place with every other system: Settings → Company systems → the system → Set up…</div>
-      <button className="btn btn-g btn-sm" onClick={()=>opshOpenSystem('m365')}>Open Microsoft 365</button>{' '}<button className="btn btn-g btn-sm" onClick={()=>opshOpenSystem('vtiger')}>Open vTiger</button>
+      <button className="btn btn-g btn-sm" onClick={()=>itopsOpenSystem('m365')}>Open Microsoft 365</button>{' '}<button className="btn btn-g btn-sm" onClick={()=>itopsOpenSystem('vtiger')}>Open vTiger</button>
     </div>
   </div>;
 }
 /* ═══ BT125: one place for every connection — Settings → Company systems → a system → Set up… ═══ */
-function opshSettingsTab(t){ try{ window.__opshSettingsTab=t; window.dispatchEvent(new CustomEvent('opsh-settings-tab',{detail:t})); }catch(_){ } }
-function opshOpenSystem(key){ try{ if(key) window.__opshSysOpen=key; window.__opshSettingsTab='systems'; }catch(_){ }
-  try{ window.dispatchEvent(new CustomEvent('opsh-settings-tab',{detail:'systems'})); if(key) window.dispatchEvent(new CustomEvent('opsh-sys-open',{detail:key})); }catch(_){ }
-  try{ if(window.__opshSetPg) window.__opshSetPg('settings'); else location.hash='settings'; }catch(_){ } }
+function itopsSettingsTab(t){ try{ window.__itopsSettingsTab=t; window.dispatchEvent(new CustomEvent('itops-settings-tab',{detail:t})); }catch(_){ } }
+function itopsOpenSystem(key){ try{ if(key) window.__itopsSysOpen=key; window.__itopsSettingsTab='systems'; }catch(_){ }
+  try{ window.dispatchEvent(new CustomEvent('itops-settings-tab',{detail:'systems'})); if(key) window.dispatchEvent(new CustomEvent('itops-sys-open',{detail:key})); }catch(_){ }
+  try{ if(window.__itopsSetPg) window.__itopsSetPg('settings'); else location.hash='settings'; }catch(_){ } }
 function M365ConnCard({toast}){
   const [m3,setM3]=React.useState(null); const [busy,setBusy]=React.useState(false);
   React.useEffect(()=>{ api('GET','/settings').then(r=>setM3({tenant:(r&&(r.o365_tenant_id||r.o365_tenant))||'',client:(r&&r.o365_client_id)||'',secret:'',saved:!!(r&&(r.o365_client_secret||r.o365_client_secret_enc||r.o365_graph_secret_enc)),split:!!(r&&r.o365_graph_secret_enc)})).catch(e=>toast(e.message)); },[]);
@@ -1008,7 +1008,7 @@ function M365PermTable({toast}){
 }
 function SystemConnPage({which,toast,onClose}){
   const [t,setT]=React.useState('conn');
-  const go=(pg,tab)=>{ onClose(); try{ if(tab&&typeof mhGo==='function'){ mhGo(pg,tab); } if(window.__opshSetPg) window.__opshSetPg(pg); else location.hash=pg; }catch(_){ } };
+  const go=(pg,tab)=>{ onClose(); try{ if(tab&&typeof mhGo==='function'){ mhGo(pg,tab); } if(window.__itopsSetPg) window.__itopsSetPg(pg); else location.hash=pg; }catch(_){ } };
   const T=({id,label})=><div className={'conn-tab'+(t===id?' on':'')} onClick={()=>setT(id)} data-sysconn-tab={id}>{label}</div>;
   if(which==='vtiger') return <EditPage title="vTiger" badge="Company systems" onClose={onClose}><div data-sysconn="vtiger"><VTigerConfig toast={toast}/></div></EditPage>;
   return <EditPage title="Microsoft 365" badge="Company systems" onClose={onClose}>
@@ -1019,7 +1019,7 @@ function SystemConnPage({which,toast,onClose}){
           <div className="mh-mut" style={{fontSize:12.5,marginTop:6}}>Microsoft invoices (billing account) are set up in Assets & Vendors → Invoices → Microsoft billing; the Exchange role and the billing role are listed under Permissions.</div></div></>}
       {t==='perms'&&<M365PermList toast={toast}/>}
       {t==='signin'&&<div className="card" style={{fontSize:13.5,lineHeight:1.55}}>Signing in with Microsoft uses the same app registration (Connection tab) with the delegated sign-in permissions listed under Permissions. Who may sign in that way, and the redirect address, are in Settings → Sign-in & AI.
-        <div style={{marginTop:8}}><button className="btn btn-g btn-sm" onClick={()=>{ onClose(); try{ window.__opshSettingsTab='integrations'; window.dispatchEvent(new CustomEvent('opsh-settings-tab',{detail:'integrations'})); }catch(_){ } }}>Open Settings → Sign-in & AI</button></div></div>}
+        <div style={{marginTop:8}}><button className="btn btn-g btn-sm" onClick={()=>{ onClose(); try{ window.__itopsSettingsTab='integrations'; window.dispatchEvent(new CustomEvent('itops-settings-tab',{detail:'integrations'})); }catch(_){ } }}>Open Settings → Sign-in & AI</button></div></div>}
       {t==='teams'&&<TeamsAppCard toast={toast}/>}
     </div>
   </EditPage>;
@@ -1033,7 +1033,7 @@ function TeamsAppCard({toast}){
   if(d.error) return <div className="card" style={{maxWidth:620}}>{d.error}</div>;
   const put=async(body,okMsg)=>{ setBusy('put'); try{ setD(await api('PUT','/teams_app',body)); toast(okMsg||'Saved','ok'); }catch(e){ toast(e.message); } setBusy(''); };
   const copy=t=>{ try{ navigator.clipboard.writeText(t); toast('Copied','ok'); }catch(_){ toast('Select the text and copy it by hand.'); } };
-  const download=async()=>{ setBusy('pkg'); try{ const res=await fetch(API_BASE+'/teams_app/package',{headers:opshAuth({}),credentials:'same-origin'});
+  const download=async()=>{ setBusy('pkg'); try{ const res=await fetch(API_BASE+'/teams_app/package',{headers:itopsAuth({}),credentials:'same-origin'});
       if(!res.ok){ let m='Download failed'; try{ m=(JSON.parse(await res.text()).error||{}).message||m; }catch(_){} throw new Error(m); }
       const cd=res.headers.get('Content-Disposition')||''; const fn=(cd.match(/filename="([^"]+)"/)||[])[1]||'Teams-app.zip';
       const blob=await res.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fn; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
@@ -1077,7 +1077,7 @@ function TeamsAppCard({toast}){
       <H n="3">Switch it on and add the app to Teams</H>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:10}}>
         {ed&&(d.enabled
-          ?<button className="btn btn-g btn-sm" disabled={!!busy} onClick={async()=>{ if(await opshConfirm('Switch the Teams app off? Sign-in from Teams and Teams notifications stop at once. The app stays in Teams until you remove it there.'))put({enabled:false},'Switched off'); }}>Switch off</button>
+          ?<button className="btn btn-g btn-sm" disabled={!!busy} onClick={async()=>{ if(await itopsConfirm('Switch the Teams app off? Sign-in from Teams and Teams notifications stop at once. The app stays in Teams until you remove it there.'))put({enabled:false},'Switched off'); }}>Switch off</button>
           :<button className="btn btn-p btn-sm" disabled={!!busy||!d.ready} title={d.ready?'':'Fix the items under “Before you start” first'} onClick={()=>put({enabled:true},'Switched on')}>Switch on</button>)}
         {ed&&<button className="btn btn-p btn-sm" disabled={!!busy||!d.ready} onClick={download}>{busy==='pkg'?'Preparing…':'⬇ Download the app package'}</button>}
         {d.package_version&&<span className="tm-mut" style={{fontSize:12.5}}>package version {d.package_version}</span>}
@@ -1141,16 +1141,16 @@ function Integrations({toast}){
     try{ const r=await api('POST','/integrations/keys',{name:kf.name,scopes:sc,expires_at:kf.expires_at||null});
       setNewKey(r.key); setKOpen(false); setKf({name:'',scopes:{},expires_at:''}); load();
     }catch(e){ toast(e.message); } };
-  const revoke=async(k)=>{ if(!await opshConfirm('Revoke "'+k.name+'"? Any system using it stops working immediately.'))return;
+  const revoke=async(k)=>{ if(!await itopsConfirm('Revoke "'+k.name+'"? Any system using it stops working immediately.'))return;
     try{ await api('DELETE','/integrations/keys/'+k.id); toast('Key revoked','ok'); load(); }catch(e){ toast(e.message); } };
   const createHook=async()=>{ if(!hf.name.trim()||!hf.url.trim())return toast('Name and URL are required');
     if(!hf.events.length)return toast('Select at least one event');
     try{ const r=await api('POST','/integrations/webhooks',hf); toast('Webhook created','ok'); setHOpen(false); setHf({name:'',url:'',events:[]}); if(r&&r.secret)setNewKey(r.secret); load(); }catch(e){ toast(e.message); } };
-  const newHookSecret=async(w)=>{ if(!await opshConfirm('Make a new signing secret for "'+w.name+'"? The receiver must be given the new one: deliveries signed with it fail there until then.'))return;
+  const newHookSecret=async(w)=>{ if(!await itopsConfirm('Make a new signing secret for "'+w.name+'"? The receiver must be given the new one: deliveries signed with it fail there until then.'))return;
     try{ const r=await api('POST','/integrations/webhooks/'+w.id+'/secret',{}); setNewKey(r.secret); toast('New signing secret made','ok'); }catch(e){ toast(e.message); } };
   const testHook=async(w)=>{ try{ const r=await api('POST','/integrations/webhooks/'+w.id+'/test'); toast(r.ok?'Test delivered ('+r.response_status+')':'Failed: '+(r.error||r.response_status),r.ok?'ok':undefined); load(); }catch(e){ toast(e.message); } };
   const toggleHook=async(w)=>{ try{ await api('PUT','/integrations/webhooks/'+w.id,{status:w.status==='active'?'paused':'active'}); load(); }catch(e){ toast(e.message); } };
-  const delHook=async(w)=>{ if(!await opshConfirm('Delete webhook "'+w.name+'"?'))return;
+  const delHook=async(w)=>{ if(!await itopsConfirm('Delete webhook "'+w.name+'"?'))return;
     try{ await api('DELETE','/integrations/webhooks/'+w.id); toast('Deleted','ok'); load(); }catch(e){ toast(e.message); } };
   const base=location.origin+location.pathname.replace(/[^/]*$/,'')+'api';
   const T=({id,label})=><button className={'btn btn-sm '+(tab===id?'btn-p':'btn-g')} onClick={()=>setTab(id)}>{label}</button>;
@@ -1192,14 +1192,14 @@ function Integrations({toast}){
     {tab==='hooks'&&<div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,gap:10,flexWrap:'wrap'}}>
         <div style={{fontSize:14,color:'var(--t4)',lineHeight:1.55,flex:1,minWidth:220}}>{appName()} POSTs to your URL when something happens. Each request is signed — verify the signature before trusting it.</div>
-        {opshIsSuper()&&<button className="btn btn-p btn-sm" onClick={()=>setHOpen(true)}>+ New webhook</button>}
+        {itopsIsSuper()&&<button className="btn btn-p btn-sm" onClick={()=>setHOpen(true)}>+ New webhook</button>}
       </div>
       <table className="tbl"><thead><tr><th>Name</th><th>URL</th><th>Events</th><th>Signing secret</th><th>Status</th><th></th></tr></thead><tbody>
         {hooks.map(w=><tr key={w.id}>
           <td style={{fontWeight:600}}>{w.name}</td>
           <td style={{fontSize:13,wordBreak:'break-all',maxWidth:220}}>{w.url}</td>
           <td style={{fontSize:13,color:'var(--t3)'}}>{(w.events||[]).join(', ')}</td>
-          <td style={{fontSize:12.5,color:'var(--t4)'}}>Shown once when made{opshIsSuper()&&<> · <button className="btn btn-g btn-sm" style={{padding:'2px 7px',fontSize:12}} onClick={()=>newHookSecret(w)} data-wh-secret={w.id}>New secret</button></>}</td>
+          <td style={{fontSize:12.5,color:'var(--t4)'}}>Shown once when made{itopsIsSuper()&&<> · <button className="btn btn-g btn-sm" style={{padding:'2px 7px',fontSize:12}} onClick={()=>newHookSecret(w)} data-wh-secret={w.id}>New secret</button></>}</td>
           <td><B v={w.status}>{w.status}</B></td>
           <td style={{whiteSpace:'nowrap'}}>
             {intEd&&<><button className="btn btn-g btn-sm" onClick={()=>testHook(w)}>Test</button>{' '}
@@ -1235,7 +1235,7 @@ function Integrations({toast}){
       <p style={{margin:'10px 0 8px',color:'var(--t3)'}}>The same key works for any module its scopes allow (GET to read, POST to create, PUT to update, DELETE to remove) — e.g. <code>/vendors</code>, <code>/contracts</code>, <code>/sops</code>, <code>/kb</code>.</p>
       <h3 style={{margin:'18px 0 8px',fontSize:16}}>Receiving events from {appName()}</h3>
       <p style={{margin:'0 0 8px',color:'var(--t3)'}}>Add a webhook above. Each POST carries these headers:</p>
-      <pre style={{background:'var(--bg2)',border:'1px solid var(--b1)',borderRadius:9,padding:'12px 14px',fontSize:13,overflow:'auto'}}>{'X-OpsHub-Event: ticket.created\nX-OpsHub-Delivery: <unique id>\nX-OpsHub-Timestamp: <unix seconds>\nX-OpsHub-Signature: sha256=<hmac>'}</pre>
+      <pre style={{background:'var(--bg2)',border:'1px solid var(--b1)',borderRadius:9,padding:'12px 14px',fontSize:13,overflow:'auto'}}>{'X-ITOps-Event: ticket.created\nX-ITOps-Delivery: <unique id>\nX-ITOps-Timestamp: <unix seconds>\nX-ITOps-Signature: sha256=<hmac>'}</pre>
       <p style={{margin:'10px 0 8px',color:'var(--t3)'}}>Verify it before trusting the payload — compute HMAC-SHA256 over <code>timestamp + "." + rawBody</code> using the webhook’s signing secret and compare:</p>
       <pre style={{background:'var(--bg2)',border:'1px solid var(--b1)',borderRadius:9,padding:'12px 14px',fontSize:13,overflow:'auto'}}>{'$expected = \'sha256=\' . hash_hmac(\'sha256\', $ts . \'.\' . $rawBody, $secret);\nif (!hash_equals($expected, $sigHeader)) { http_response_code(401); exit; }'}</pre>
       <p style={{margin:'10px 0 0',color:'var(--t4)',fontSize:14}}>Reject requests whose timestamp is more than a few minutes old to prevent replay. Reply 2xx quickly; anything else is retried up to 5 times.</p>
@@ -1334,7 +1334,7 @@ const SIG_MOD={sops:'sops',job_descriptions:'job_descriptions',kb:'kb',kb_articl
 function SignaturePanel({docType,docId,docTitle,users,toast}){
   const sigCan=usePerm();   // review UI1-12: the button only for those who may send (the document's module · Edit)
   const [reqs,setReqs]=React.useState(null); const [reqOpen,setReqOpen]=React.useState(false); const [signReq,setSignReq]=React.useState(null); const [viewSig,setViewSig]=React.useState(null);
-  const me=(window.__opshUser&&window.__opshUser.id)||0;
+  const me=(window.__itopsUser&&window.__itopsUser.id)||0;
   const load=React.useCallback(async()=>{ try{ const r=await api('GET','/signatures?doc_type='+encodeURIComponent(docType)+'&doc_id='+docId); setReqs(r.data||[]); }catch(e){ setReqs([]); } },[docType,docId]);
   React.useEffect(()=>{ load(); },[load]);
   const loadSig=async(reqId,signerId)=>{ try{ const d=await api('GET','/signatures/'+reqId); const full=(d.signers||[]).find(x=>String(x.id)===String(signerId)); if(full&&full.signature_data) setViewSig(full); else toast('Signature image not available'); }catch(e){ toast(e.message); } };
@@ -1430,9 +1430,9 @@ function RelatedItems({res,id,title,toast,targets,heading}){
   </div>;
 }
 /* ============================================================================
- * OpsHub M365 + Guardian package — frontend screens
+ * ITOps M365 + Guardian package — frontend screens
  * ----------------------------------------------------------------------------
- * These three components match OpsHub's existing style: React 18 + JSX (Babel),
+ * These three components match ITOps's existing style: React 18 + JSX (Babel),
  * the api() helper, the <I n="…"/> icon component, and the .card/.tbl/.btn/
  * .empty/.spin CSS classes with var(--accent) theming.
  *
@@ -1450,7 +1450,7 @@ function RelatedItems({res,id,title,toast,targets,heading}){
    Step ids are stored — never renumber; add new ids instead. */
 // BT15 — the rollout as 5 big steps. Each item keeps its original id, so progress recorded before BT15 is preserved.
 // Item: [id, text, tab | 'kb' | 'readiness' | null, email template | null, audience | null, 'req' | 'rec' | 'opt']
-const OPSH_ROLLOUT_STEPS = [
+const ITOPS_ROLLOUT_STEPS = [
   { n: 1, title: 'Prepare', when: 'Week 0', who: 'IT and leadership', forced: 'Nothing changes for staff yet',
     parts: [[null, [
       ['p0.breakglass', 'Create 2 emergency (“break-glass”) admin accounts — long random passwords kept offline, excluded from every sign-in rule', null, null, null, 'req'],
@@ -1518,15 +1518,15 @@ const OPSH_ROLLOUT_STEPS = [
       ['op.monthly', '30-minute review: Secure Score actions, non-compliant company PCs, Defender alerts, attack-surface detections, readiness, security-key stock, unused licences and Copilot seats', null, null, null, 'rec'],
     ]]] },
 ];
-const OPSH_ROLLOUT_OPTIONAL = [
+const ITOPS_ROLLOUT_OPTIONAL = [
   ['x.desktop', '“Desktop apps need a compliant company device” — only once personal-computer users are comfortable in the browser', 'security', null, null, 'opt'],
   ['x.browser', '“Personal computers: browser-only, no downloads” + SharePoint unmanaged devices → web-only (announce the date first)', 'security', 'personal_computer_notice', 'group', 'opt'],
   ['x.phones', '“Phones must use protected apps” — leave OFF (or report-only) while phone use is voluntary', 'security', null, null, 'opt'],
   ['x.sms_off', 'Turn text-message MFA off once everyone has the app or a key', 'security', null, null, 'opt'],
 ];
-const OPSH_ROLLOUT_ITEMS = (st) => st.parts.reduce((a, p) => a.concat(p[1]), []);
-const OPSH_ROLLOUT_LEVEL = { req: ['REQUIRED', 'var(--red)', 'var(--redL)'], rec: ['RECOMMENDED', '#6b541a', '#fbf3e0'], opt: ['OPTIONAL', 'var(--t3)', 'var(--s3)'] };
-const OPSH_ROLLOUT_EMAILS = [
+const ITOPS_ROLLOUT_ITEMS = (st) => st.parts.reduce((a, p) => a.concat(p[1]), []);
+const ITOPS_ROLLOUT_LEVEL = { req: ['REQUIRED', 'var(--red)', 'var(--redL)'], rec: ['RECOMMENDED', '#6b541a', '#fbf3e0'], opt: ['OPTIONAL', 'var(--t3)', 'var(--s3)'] };
+const ITOPS_ROLLOUT_EMAILS = [
   ['rollout_announce', 'Announcement — what is changing and why'],
   ['rollout_manager_brief', 'Manager briefing'],
   ['mfa_setup_request', 'Set up sign-in approval (app, key or text)'],
@@ -1539,7 +1539,7 @@ const OPSH_ROLLOUT_EMAILS = [
   ['device_enforce_notice', 'Company-computer rules take effect on a date'],
   ['rollout_complete', 'Rollout complete — thank you'],
 ];
-const OPSH_ROLLOUT_VARS = { rollout_announce: ['start_date', 'sender_name'], rollout_manager_brief: ['start_date'], mfa_setup_request: ['deadline'], mfa_enforce_notice: ['start_date'],
+const ITOPS_ROLLOUT_VARS = { rollout_announce: ['start_date', 'sender_name'], rollout_manager_brief: ['start_date'], mfa_setup_request: ['deadline'], mfa_enforce_notice: ['start_date'],
   personal_computer_notice: ['note'], rollout_reminder: ['deadline', 'task'], device_enforce_notice: ['start_date'], rollout_complete: [], device_enroll_computer: ['note'], device_enroll_phone: ['note'], security_key_setup: ['note'] };
 
 /* Group picker for Microsoft 365 groups (server-side search). */
@@ -1549,14 +1549,14 @@ const OPSH_ROLLOUT_VARS = { rollout_announce: ['start_date', 'sender_name'], rol
  * Times are stored in UTC and shown in SERVER time (the zone the audit windows are defined in).
  */
 const IA_LANES=[['fabric','Microsoft Fabric','#7B61FF'],['db','Database (MariaDB)','#2E7DD1'],['http','API / PHP (Apache)','#1F9E89'],['cron','Scheduled jobs','#B7791F'],
-  ['backup','Backups','#8A6D3B'],['opshub','OpsHub (own log)','#64748B'],['other','Other','#94A3B8'],['unknown','Unknown / unattributed','#D14343'],['unexpected','Unexpected (off-schedule / scope)','#E07B00']];
+  ['backup','Backups','#8A6D3B'],['itops','ITOps (own log)','#64748B'],['other','Other','#94A3B8'],['unknown','Unknown / unattributed','#D14343'],['unexpected','Unexpected (off-schedule / scope)','#E07B00']];
 const IA_ATTR={confirmed:['CONFIRMED','var(--green)','var(--greenL)','Identifier evidence: DB account, source host, job id or the integration’s own history.'],
   probable:['PROBABLE','#2E7DD1','#E6F0FB','Pattern match (endpoint / user agent) without an identifier.'],
   unknown:['UNKNOWN','var(--red)','var(--redL)','No identifier matches the registry.'],
   investigate:['REQUIRES INVESTIGATION','#B45309','#FEF3C7','Identifiers point to more than one integration, or evidence conflicts.']};
 const IA_CONF={expected:['EXPECTED','var(--green)','var(--greenL)'],unexpected:['UNEXPECTED','#B45309','#FEF3C7'],not_evaluated:['NOT EVALUATED','var(--t3)','var(--s3)']};
 const IA_SCHED=[['cron','Cron expression'],['window','Fixed time window'],['interval','Recurring interval'],['event','Event-driven'],['business_hours','Business hours'],['adhoc','Ad hoc / manual'],['continuous','Continuous'],['unknown','Unknown / under investigation']];
-const IA_TYPES=[['fabric','Microsoft Fabric'],['powerbi','Power BI'],['power_automate','Power Automate'],['n8n','n8n'],['script','Script'],['report','Report'],['backup','Backup'],['api','API client'],['cron','Cron job'],['database','Database client'],['opshub','OpsHub'],['custom','Other / custom']];
+const IA_TYPES=[['fabric','Microsoft Fabric'],['powerbi','Power BI'],['power_automate','Power Automate'],['n8n','n8n'],['script','Script'],['report','Report'],['backup','Backup'],['api','API client'],['cron','Cron job'],['database','Database client'],['itops','ITOps'],['custom','Other / custom']];
 const IA_FREQ=[['','— not set —'],['0','Off in this period'],['60','Every minute'],['120','Every 2 minutes'],['300','Every 5 minutes'],['600','Every 10 minutes'],['900','Every 15 minutes'],['1800','Every 30 minutes'],['3600','Every hour']];
 function iaChip(map,k,title){ const c=map[k]||[String(k||'—').toUpperCase(),'var(--t3)','var(--s3)']; return <span title={title||c[3]||''} style={{fontSize:10.5,fontWeight:800,color:c[1],background:c[2],padding:'2px 6px',borderRadius:5,whiteSpace:'nowrap'}}>{c[0]}</span>; }
 function iaUtc(s){ if(!s)return null; const t=String(s).replace(' ','T'); return new Date(/Z$|[+-]\d\d:?\d\d$/.test(t)?t:t+'Z'); }
@@ -1600,7 +1600,7 @@ function IaCronFill({toast,onClose,onDone}){
         {(plan.targets||[]).length>0&&<div className="card" style={{padding:12}} data-ia-crontargets="1"><b>Where the jobs go</b>
           <div className="mh-mut" style={{fontSize:12.5,margin:'2px 0 8px'}}>Wrong name? Type the right one here — it is saved when you click Apply. Each entry's old cron schedules are replaced by the ones on the server.</div>
           {plan.targets.map(t=><div key={t.id} style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap',padding:'6px 0',borderTop:'1px solid var(--b1)'}}>
-            <input className="mh-in" data-ia-cronname={t.id} style={{flex:'1 1 320px',fontWeight:600}} value={names[t.id]??t.name} maxLength={190} disabled={t.opsh_managed} onChange={e=>setNames(x=>Object.assign({},x,{[t.id]:e.target.value}))}/>
+            <input className="mh-in" data-ia-cronname={t.id} style={{flex:'1 1 320px',fontWeight:600}} value={names[t.id]??t.name} maxLength={190} disabled={t.itops_managed} onChange={e=>setNames(x=>Object.assign({},x,{[t.id]:e.target.value}))}/>
             <span className="mh-mut" style={{fontSize:12.5}}>{t.jobs} job{t.jobs===1?'':'s'}{t.old_schedules?' · replaces '+t.old_schedules+' old schedule'+(t.old_schedules===1?'':'s'):''}{t.status==='candidate'?' · Candidate → Active':''}</span>
             {(t.adds||[]).length>0&&<div className="mh-mut" style={{flexBasis:'100%',fontSize:12.5}} data-ia-cronadds={t.id}>New jobs of the same script — their names are added to this entry's job identifiers: <b>{t.adds.join(', ')}</b></div>}</div>)}
         </div>}
@@ -1780,7 +1780,7 @@ function IntegrationAuditScreen({toast}){
     <textarea rows={3} style={{width:'100%'}} value={regEd.tablesText||''} onChange={e=>setRegEd(r=>({...r,tablesText:e.target.value}))} placeholder={'vtigercrm.vtiger_potential read\nvtigercrm.vtiger_servicecf read'}/>
     <div className="fld"><label>Data scope / notes</label><textarea rows={2} value={regEd.notes||''} onChange={e=>setRegEd(r=>({...r,notes:e.target.value}))}/></div>
     <div style={{display:'flex',justifyContent:'space-between',gap:8,marginTop:10}}>
-      <div>{regEd.id&&regEd.status!=='retired'&&<button className="btn btn-d btn-sm" onClick={async()=>{ if(!await opshConfirm('Retire "'+regEd.name+'"? It stays in the records; new evidence will no longer be attributed to it.'))return; try{ await api('DELETE','/integration_audit/registry/'+regEd.id); toast('Retired','ok'); setRegEd(null); loadReg(); }catch(e){ toast(e.message); } }}>Retire</button>}</div>
+      <div>{regEd.id&&regEd.status!=='retired'&&<button className="btn btn-d btn-sm" onClick={async()=>{ if(!await itopsConfirm('Retire "'+regEd.name+'"? It stays in the records; new evidence will no longer be attributed to it.'))return; try{ await api('DELETE','/integration_audit/registry/'+regEd.id); toast('Retired','ok'); setRegEd(null); loadReg(); }catch(e){ toast(e.message); } }}>Retire</button>}</div>
       <div style={{display:'flex',gap:8}}><button className="btn btn-g btn-sm" disabled={regEd.busy} onClick={()=>setRegEd(null)}>Cancel</button>
       <button className="btn btn-p btn-sm" disabled={regEd.busy} onClick={async()=>{ setRegEd(r=>({...r,busy:true}));
         const lines=v=>(Array.isArray(v)?v:String(v||'').split('\n')).map(x=>String(x).trim()).filter(Boolean);
@@ -1819,7 +1819,7 @@ function IntegrationAuditScreen({toast}){
     setUp(u=>({...u,busy:true})); setPrev(null);
     try{ let r;
       if(up.file){ const fd=new FormData(); fd.append('file',up.file); fd.append('parser',up.parser); fd.append('title',up.title); fd.append('source',up.source); fd.append('notes',up.notes); Object.keys(up.opts).forEach(k=>fd.append(k,up.opts[k]===true?'1':up.opts[k]===false?'':String(up.opts[k])));
-        const res=await fetch(API_BASE+'/integration_audit/evidence',{method:'POST',headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin',body:fd}); const t=await res.text(); let d={}; try{d=JSON.parse(t)}catch(_){}
+        const res=await fetch(API_BASE+'/integration_audit/evidence',{method:'POST',headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin',body:fd}); const t=await res.text(); let d={}; try{d=JSON.parse(t)}catch(_){}
         if(!res.ok)throw new Error((d.error&&d.error.message)||'Upload failed'); r=d; }
       else r=await api('POST','/integration_audit/evidence',Object.assign({parser:up.parser,text:up.text,title:up.title,source:up.source,notes:up.notes,file_name:up.title||'pasted.txt'},up.opts));
       setPrev({id:r.id,dup:r.duplicate_of,p:r.preview}); loadEv();
@@ -1836,7 +1836,7 @@ function IntegrationAuditScreen({toast}){
     return <div key={k} className="fld" style={{flex:'1 1 45%'}}>{t!=='bool'&&<label>{l}{req&&<span style={{color:'var(--red)'}}> *</span>}</label>}{el}{help&&<div style={{fontSize:11.5,color:'var(--t4)',marginTop:2}}>{help}</div>}</div>; };
   const Preview=prev&&prev.p&&<div className="card" style={{...card,borderLeft:'3px solid var(--accent)'}}>
     <div style={hdr}><span>Preview — evidence #{prev.id} (nothing imported yet)</span>
-      <span style={{display:'flex',gap:8}}>{!prev.p.error&&canEdit&&<button className="btn btn-p btn-sm" onClick={async()=>{ if(prev.dup&&!await opshConfirm('The same file was already imported as evidence #'+prev.dup.id+'. Import again anyway (double counting)?'))return; try{ const r=await api('POST','/integration_audit/evidence/'+prev.id+'/import',Object.assign({},up.opts,prev.dup?{force:true}:{})); toast('Imported: '+(r.imported_observations||0)+' observation(s), '+(r.imported_metrics||0)+' sample(s)','ok'); setPrev(null); loadEv(); loadOv(); }catch(e){ toast(e.message); } }}>Import</button>}
+      <span style={{display:'flex',gap:8}}>{!prev.p.error&&canEdit&&<button className="btn btn-p btn-sm" onClick={async()=>{ if(prev.dup&&!await itopsConfirm('The same file was already imported as evidence #'+prev.dup.id+'. Import again anyway (double counting)?'))return; try{ const r=await api('POST','/integration_audit/evidence/'+prev.id+'/import',Object.assign({},up.opts,prev.dup?{force:true}:{})); toast('Imported: '+(r.imported_observations||0)+' observation(s), '+(r.imported_metrics||0)+' sample(s)','ok'); setPrev(null); loadEv(); loadOv(); }catch(e){ toast(e.message); } }}>Import</button>}
         <button className="btn btn-g btn-sm" onClick={()=>reprev(prev.id,false)}>Preview again with these options</button><button className="btn btn-g btn-sm" onClick={()=>setPrev(null)}>Close</button></span></div>
     {prev.dup&&<div style={{...note,color:'#6b541a',background:'#fbf3e0'}}>This exact file was already imported as evidence #{prev.dup.id} ({prev.dup.title}).</div>}
     {prev.p.error?<div style={{...note,color:'var(--red)'}}>{prev.p.error}</div>:<>
@@ -1904,7 +1904,7 @@ function IntegrationAuditScreen({toast}){
             <td style={{fontSize:12}}>{f.window_start?iaShow(f.window_start,tz)+' → '+iaTime(f.window_end,tz):'—'}</td>
             <td style={{fontSize:12}}>{f.status==='reviewed'?<span style={{color:'var(--green)',fontWeight:700}}>REVIEWED</span>:f.status==='superseded'?'superseded':<span style={{color:'#B45309',fontWeight:700}}>DRAFT</span>}{f.reviewer_name?<div style={{color:'var(--t4)'}}>by {f.reviewer_name}</div>:null}</td>
             {canEdit&&<td style={{whiteSpace:'nowrap'}}><button className="btn btn-g btn-sm" style={{marginRight:4}} onClick={()=>setFEd({...f,integration_id:f.integration_id||'',window_start:f.window_start?iaFmt(f.window_start,tz).replace(' ','T'):'',window_end:f.window_end?iaFmt(f.window_end,tz).replace(' ','T'):''})}>Edit</button>
-              {f.status==='draft'&&<button className="btn btn-g btn-sm" onClick={async()=>{ try{ await api('POST','/integration_audit/findings/'+f.id+'/review',{}); toast('Reviewed','ok'); loadFinds(); }catch(e){ if(/Ask a second person/.test(e.message)&&await opshConfirm(e.message+'\n\nReview your own finding anyway?')){ try{ await api('POST','/integration_audit/findings/'+f.id+'/review',{self_review_ack:true}); toast('Reviewed (self-review recorded)','ok'); loadFinds(); }catch(e2){ toast(e2.message); } } else toast(e.message); } }}>Review</button>}</td>}</tr>)}</tbody></table>}
+              {f.status==='draft'&&<button className="btn btn-g btn-sm" onClick={async()=>{ try{ await api('POST','/integration_audit/findings/'+f.id+'/review',{}); toast('Reviewed','ok'); loadFinds(); }catch(e){ if(/Ask a second person/.test(e.message)&&await itopsConfirm(e.message+'\n\nReview your own finding anyway?')){ try{ await api('POST','/integration_audit/findings/'+f.id+'/review',{self_review_ack:true}); toast('Reviewed (self-review recorded)','ok'); loadFinds(); }catch(e2){ toast(e2.message); } } else toast(e.message); } }}>Review</button>}</td>}</tr>)}</tbody></table>}
       </div>
     </>}
 
@@ -1915,7 +1915,7 @@ function IntegrationAuditScreen({toast}){
       {!reg?<div className="empty">Loading…</div>:
       <table className="tbl" style={{margin:0}}><thead><tr><th>Integration</th><th>Status</th><th>Connection</th><th>Identifiers</th><th>Schedule</th><th style={{textAlign:'right'}}>Obs. 30 d</th></tr></thead>
         <tbody>{reg.map(r=><tr key={r.id} onClick={()=>editReg(r)} style={{cursor:'pointer',opacity:r.status==='retired'?0.55:1}}>
-          <td><div style={{fontWeight:600}}>{r.name}{+r.opsh_managed?<span style={{marginLeft:6,fontSize:9.5,fontWeight:800,color:'var(--t3)',background:'var(--s3)',padding:'1px 5px',borderRadius:4}}>OPSHUB</span>:null}</div><div style={{fontSize:11.5,color:'var(--t4)'}}>{(IA_TYPES.find(t=>t[0]===r.type)||[0,r.type])[1]}{r.owner?' · '+r.owner:''}</div></td>
+          <td><div style={{fontWeight:600}}>{r.name}{+r.itops_managed?<span style={{marginLeft:6,fontSize:9.5,fontWeight:800,color:'var(--t3)',background:'var(--s3)',padding:'1px 5px',borderRadius:4}}>ITOPS</span>:null}</div><div style={{fontSize:11.5,color:'var(--t4)'}}>{(IA_TYPES.find(t=>t[0]===r.type)||[0,r.type])[1]}{r.owner?' · '+r.owner:''}</div></td>
           <td style={{fontSize:12}}><span style={{fontWeight:700,color:r.status==='active'?'var(--green)':r.status==='candidate'?'#B45309':'var(--t4)'}}>{r.status.toUpperCase()}</span><div style={{color:'var(--t4)'}}>{r.verification}</div></td>
           <td style={{fontSize:12.5,color:'var(--t3)'}}>{r.connection_method||'—'}</td>
           <td style={{fontSize:12}}>{[['db_accounts','account'],['source_hosts','host'],['job_identifiers','job'],['endpoints','endpoint'],['user_agents','UA']].map(([k,l])=>r[k]&&r[k].length?<div key={k}>{l}: {r[k].slice(0,3).join(', ')}{r[k].length>3?' …':''}</div>:null)}{!['db_accounts','source_hosts','job_identifiers','endpoints','user_agents'].some(k=>r[k]&&r[k].length)&&<span style={{color:'var(--red)'}}>none — nothing can be attributed yet</span>}</td>
@@ -1939,9 +1939,9 @@ function IntegrationAuditScreen({toast}){
           {canEdit&&<td style={{whiteSpace:'nowrap'}}>
             <button className="btn btn-g btn-sm" style={{marginRight:4}} onClick={()=>{ setTab('timeline'); setRng(r=>({...r,preset:'custom',start:iaFmt(new Date(iaUtc(u.first_seen).getTime()-60000).toISOString(),tz).replace(' ','T'),end:iaFmt(new Date(Math.min(iaUtc(u.last_seen).getTime()+60000,iaUtc(u.first_seen).getTime()+30*86400000)).toISOString(),tz).replace(' ','T')})); setFlt(f=>({...f,fingerprint:u.fingerprint,lane:'',bstart:''})); }}>Activity</button>
             {['open','investigating'].includes(u.status)?<>
-              <button className="btn btn-g btn-sm" style={{marginRight:4}} onClick={async()=>{ const n=await opshPrompt('Investigation notes',u.investigation_notes||''); if(n===null||n===undefined)return; try{ await api('PUT','/integration_audit/unknowns/'+u.id,{status:'investigating',investigation_notes:n}); loadUnk(); }catch(e){ toast(e.message); } }}>Notes</button>
+              <button className="btn btn-g btn-sm" style={{marginRight:4}} onClick={async()=>{ const n=await itopsPrompt('Investigation notes',u.investigation_notes||''); if(n===null||n===undefined)return; try{ await api('PUT','/integration_audit/unknowns/'+u.id,{status:'investigating',investigation_notes:n}); loadUnk(); }catch(e){ toast(e.message); } }}>Notes</button>
               <button className="btn btn-p btn-sm" style={{marginRight:4}} onClick={()=>{ if(!reg)loadReg(); setResolve({u,integration_id:'',attribution:'probable',identifying_evidence:'',note:'',add_identifier:'',create_name:'',create_type:'custom'}); }}>Resolve…</button>
-              <button className="btn btn-g btn-sm" onClick={async()=>{ const why=await opshPrompt('Dismiss — why is this not relevant? (kept as the record of the decision)',''); if(!why)return; try{ await api('POST','/integration_audit/unknowns/'+u.id+'/dismiss',{reason:why}); loadUnk(); loadOv(); }catch(e){ toast(e.message); } }}>Dismiss…</button></>
+              <button className="btn btn-g btn-sm" onClick={async()=>{ const why=await itopsPrompt('Dismiss — why is this not relevant? (kept as the record of the decision)',''); if(!why)return; try{ await api('POST','/integration_audit/unknowns/'+u.id+'/dismiss',{reason:why}); loadUnk(); loadOv(); }catch(e){ toast(e.message); } }}>Dismiss…</button></>
             :<button className="btn btn-g btn-sm" onClick={async()=>{ try{ await api('POST','/integration_audit/unknowns/'+u.id+'/reopen',{}); loadUnk(); }catch(e){ toast(e.message); } }}>Reopen</button>}
           </td>}</tr>)}</tbody></table>}
     </div>}
@@ -1976,8 +1976,8 @@ function IntegrationAuditScreen({toast}){
             <td style={{fontSize:12,fontWeight:700,color:e.status==='imported'?'var(--green)':e.status==='failed'?'var(--red)':e.status==='deleted'?'var(--t4)':'#B45309'}}>{e.status.toUpperCase()}</td>
             <td style={{whiteSpace:'nowrap'}}>
               {canEdit&&!['imported','deleted'].includes(e.status)&&<button className="btn btn-g btn-sm" style={{marginRight:4}} onClick={async()=>{ const d=await api('GET','/integration_audit/evidence/'+e.id); setUp(u=>({...u,parser:d.parser,opts:Object.assign({},d.options||{})})); reprev(e.id,false); }}>Preview</button>}
-              {canEdit&&e.status!=='deleted'&&<button className="btn btn-g btn-sm" style={{marginRight:4}} onClick={async()=>{ try{ const res=await fetch(API_BASE+'/integration_audit/evidence/'+e.id+'/download',{headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin'}); if(!res.ok)throw new Error('Download failed'); opshDownload(e.file_name||('evidence-'+e.id+'.txt'),await res.blob()); }catch(x){ toast(x.message); } }}>Download</button>}
-              {canAdmin&&e.status!=='deleted'&&<button className="btn btn-d btn-sm" onClick={async()=>{ const why=await opshPrompt('Delete evidence #'+e.id+' and everything imported from it? Why (kept in the record)?',''); if(!why)return; try{ const r=await api('DELETE','/integration_audit/evidence/'+e.id+'?reason='+encodeURIComponent(why)); toast('Deleted — '+r.observations_removed+' observation(s), '+r.metrics_removed+' sample(s) removed','ok'); loadEv(); loadOv(); }catch(x){ toast(x.message); } }}>Delete</button>}
+              {canEdit&&e.status!=='deleted'&&<button className="btn btn-g btn-sm" style={{marginRight:4}} onClick={async()=>{ try{ const res=await fetch(API_BASE+'/integration_audit/evidence/'+e.id+'/download',{headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin'}); if(!res.ok)throw new Error('Download failed'); itopsDownload(e.file_name||('evidence-'+e.id+'.txt'),await res.blob()); }catch(x){ toast(x.message); } }}>Download</button>}
+              {canAdmin&&e.status!=='deleted'&&<button className="btn btn-d btn-sm" onClick={async()=>{ const why=await itopsPrompt('Delete evidence #'+e.id+' and everything imported from it? Why (kept in the record)?',''); if(!why)return; try{ const r=await api('DELETE','/integration_audit/evidence/'+e.id+'?reason='+encodeURIComponent(why)); toast('Deleted — '+r.observations_removed+' observation(s), '+r.metrics_removed+' sample(s) removed','ok'); loadEv(); loadOv(); }catch(x){ toast(x.message); } }}>Delete</button>}
             </td></tr>)}</tbody></table>}
       </div>
       <div className="card" style={card}>
@@ -1997,11 +1997,11 @@ function IntegrationAuditScreen({toast}){
                 <span style={{fontSize:11.5}}>Intensive</span><Sel value={c.state.night_sec==null?'':String(c.state.night_sec)} onChange={async v=>{ try{ await api('PUT','/integration_audit/collectors/'+c.key,{night_sec:v===''?null:+v}); loadCols(); }catch(e){ toast(e.message); } }} options={IA_FREQ}/>
                 <span style={{fontSize:11.5}}>Daytime</span><Sel value={c.state.day_sec==null?'':String(c.state.day_sec)} onChange={async v=>{ try{ await api('PUT','/integration_audit/collectors/'+c.key,{day_sec:v===''?null:+v}); loadCols(); }catch(e){ toast(e.message); } }} options={IA_FREQ}/>
                 {c.prereq_ok&&<button className="btn btn-g btn-sm" onClick={async()=>{ try{ const r=await api('POST','/integration_audit/collectors/'+c.key+'/test',{}); toast(r.message,r.ok?'ok':undefined); }catch(e){ toast(e.message); } }}>Test connection</button>}
-                {!c.state.approved?<button className="btn btn-g btn-sm" disabled={!c.prereq_ok} onClick={async()=>{ const ref=await opshPrompt('Record the approval (Super Admin): who approved reading production with this collector, and where (change ticket / email)?',''); if(!ref)return; try{ await api('PUT','/integration_audit/collectors/'+c.key,{approved:true,approval_ref:ref}); toast('Approved — still OFF','ok'); loadCols(); }catch(e){ toast(e.message); } }}>Record approval…</button>
+                {!c.state.approved?<button className="btn btn-g btn-sm" disabled={!c.prereq_ok} onClick={async()=>{ const ref=await itopsPrompt('Record the approval (Super Admin): who approved reading production with this collector, and where (change ticket / email)?',''); if(!ref)return; try{ await api('PUT','/integration_audit/collectors/'+c.key,{approved:true,approval_ref:ref}); toast('Approved — still OFF','ok'); loadCols(); }catch(e){ toast(e.message); } }}>Record approval…</button>
                   :<><button className="btn btn-g btn-sm" onClick={async()=>{ try{ const r=await api('POST','/integration_audit/collectors/'+c.key+'/run',{}); toast('Run '+r.status+': '+r.imported+' stored'+(r.error?' — '+r.error:''),r.status==='ok'?'ok':undefined); loadCols(); }catch(e){ toast(e.message); } }}>Run once</button>
-                    {!c.state.enabled?<button className="btn btn-d btn-sm" onClick={async()=>{ const t=await opshPrompt('Enable the scheduled '+c.label+'? It will read production at the frequencies above whenever cron-audit.php runs. Type ENABLE.'); if(t!=='ENABLE')return; try{ await api('PUT','/integration_audit/collectors/'+c.key,{enabled:true,confirm:'ENABLE'}); toast('Enabled','ok'); loadCols(); }catch(e){ toast(e.message); } }}>Enable…</button>
+                    {!c.state.enabled?<button className="btn btn-d btn-sm" onClick={async()=>{ const t=await itopsPrompt('Enable the scheduled '+c.label+'? It will read production at the frequencies above whenever cron-audit.php runs. Type ENABLE.'); if(t!=='ENABLE')return; try{ await api('PUT','/integration_audit/collectors/'+c.key,{enabled:true,confirm:'ENABLE'}); toast('Enabled','ok'); loadCols(); }catch(e){ toast(e.message); } }}>Enable…</button>
                       :<button className="btn btn-g btn-sm" onClick={async()=>{ try{ await api('PUT','/integration_audit/collectors/'+c.key,{enabled:false}); toast('Disabled','ok'); loadCols(); }catch(e){ toast(e.message); } }}>Disable</button>}
-                    <button className="btn btn-g btn-sm" onClick={async()=>{ if(!await opshConfirm('Withdraw the approval? The collector is also switched off.'))return; try{ await api('PUT','/integration_audit/collectors/'+c.key,{approved:false}); loadCols(); }catch(e){ toast(e.message); } }}>Withdraw approval</button></>}
+                    <button className="btn btn-g btn-sm" onClick={async()=>{ if(!await itopsConfirm('Withdraw the approval? The collector is also switched off.'))return; try{ await api('PUT','/integration_audit/collectors/'+c.key,{approved:false}); loadCols(); }catch(e){ toast(e.message); } }}>Withdraw approval</button></>}
               </div>}
             </td>
             <td style={{fontSize:11.5,whiteSpace:'nowrap'}}>{c.last_run?<>{iaShow(c.last_run.started_at,tz)}<div style={{color:c.last_run.status==='failed'?'var(--red)':'var(--t4)'}}>{c.last_run.status} · {c.last_run.records_imported} stored</div></>:'—'}</td></tr>)}</tbody></table>}
@@ -2018,7 +2018,7 @@ function IntegrationAuditScreen({toast}){
           {mon&&<div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
             {[['host','Host'],['port','Port'],['user','User'],['pass','Password'+(mon.password_set?' (set — leave blank to keep)':'')],['label','Label']].map(([k,l])=><div key={k} className="fld" style={{flex:k==='port'?'0 1 80px':'1 1 45%',margin:0}}><label>{l}</label><input type={k==='pass'?'password':'text'} value={mon[k]||''} onChange={e=>{ const v=e.target.value; setMon(m=>({...m,[k]:v})); }}/></div>)}
             <button className="btn btn-g btn-sm" onClick={async()=>{ try{ await api('PUT','/integration_audit/collectors/monitor_db',{host:mon.host,port:mon.port,user:mon.user,pass:mon.pass,label:mon.label}); toast('Saved','ok'); loadCols(); }catch(e){ toast(e.message); } }}>Save account</button>
-            {mon.user&&<button className="btn btn-g btn-sm" onClick={async()=>{ if(!await opshConfirm('Remove the monitoring account from '+appName()+'?'))return; try{ await api('PUT','/integration_audit/collectors/monitor_db',{clear:true}); loadCols(); }catch(e){ toast(e.message); } }}>Remove</button>}
+            {mon.user&&<button className="btn btn-g btn-sm" onClick={async()=>{ if(!await itopsConfirm('Remove the monitoring account from '+appName()+'?'))return; try{ await api('PUT','/integration_audit/collectors/monitor_db',{clear:true}); loadCols(); }catch(e){ toast(e.message); } }}>Remove</button>}
           </div>}
         </div>
         {ret&&<div className="card" style={{padding:14}}>
@@ -2040,7 +2040,7 @@ function IntegrationAuditScreen({toast}){
         <Sel value={rep.type} onChange={v=>setRep({type:v,data:null,busy:false})} options={[['window','Window report (per integration)'],['activity','Activity (all observations)'],['unknowns','Unexplained activity'],['gaps','Evidence gaps'],['inventory','Integration inventory'],['findings','Findings']]}/>
         <button className="btn btn-p btn-sm" disabled={rep.busy} onClick={async()=>{ setRep(r=>({...r,busy:true})); try{ const d=await api('GET','/integration_audit/reports/'+rep.type+'?'+iaQS(rq())); setRep(r=>({...r,data:d,busy:false})); }catch(e){ toast(e.message); setRep(r=>({...r,busy:false})); } }}>View</button>
         <button className="btn btn-g btn-sm" disabled={!rep.data} onClick={()=>iaPrint(rep.data)}>Print / PDF</button>
-        <button className="btn btn-g btn-sm" onClick={async()=>{ try{ const res=await fetch(API_BASE+'/integration_audit/reports/'+rep.type+'?'+iaQS(Object.assign({format:'csv'},rq())),{headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin'}); if(!res.ok)throw new Error('Export failed'); opshDownload('opshub-integration-'+rep.type+'.csv',await res.blob()); }catch(e){ toast(e.message); } }}>CSV</button></span></div>
+        <button className="btn btn-g btn-sm" onClick={async()=>{ try{ const res=await fetch(API_BASE+'/integration_audit/reports/'+rep.type+'?'+iaQS(Object.assign({format:'csv'},rq())),{headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin'}); if(!res.ok)throw new Error('Export failed'); itopsDownload('itops-integration-'+rep.type+'.csv',await res.blob()); }catch(e){ toast(e.message); } }}>CSV</button></span></div>
       {!rep.data?<div className="empty">Choose a report and press View.</div>:<div className="ia-print" style={{padding:'12px 14px'}}>
         <div style={{fontSize:17,fontWeight:800}}>{rep.data.title}</div>
         <div style={{fontSize:12.5,color:'var(--t4)',marginBottom:8}}>{rep.data.range.start_local} → {rep.data.range.end_local} ({rep.data.range.display_tz}) · generated {mhDateTime(new Date().toISOString())}</div>
@@ -2065,7 +2065,7 @@ function iaPrint(d){ /* printable copy in its own window (the app's print CSS hi
     +d.rows.slice(0,5000).map(r=>'<tr>'+cols.map(c=>'<td>'+esc(typeof r[c]==='boolean'?(r[c]?'yes':'NO'):r[c])+'</td>').join('')+'</tr>').join('')+'</tbody></table>'
     +(d.findings&&d.findings.length?'<h2 style="font-size:14px">Findings</h2>'+d.findings.map(f=>'<div>#'+esc(f.id)+' '+esc(f.title)+' — '+esc(f.attribution)+', '+esc(f.confidence)+' ('+esc(f.status)+')</div>').join(''):'')
     +'</body></html>';
-  const w=window.open('','_blank'); if(!w){ opshAlert('Allow pop-ups to print the report.'); return; } w.document.open(); w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>w.print(),300); }
+  const w=window.open('','_blank'); if(!w){ itopsAlert('Allow pop-ups to print the report.'); return; } w.document.open(); w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>w.print(),300); }
 function MonWin({cols,toast,reload}){ const [w,setW]=React.useState(cols.windows);
   return <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
     <div className="fld" style={{margin:0}}><label>Intensive from</label><input type="time" value={w.night_start} onChange={e=>setW({...w,night_start:e.target.value})}/></div>
@@ -2077,7 +2077,7 @@ function RetForm({ret,toast,reload}){ const [r,setR]=React.useState(ret);
     <label style={{display:'flex',gap:6,alignItems:'center',fontSize:13,flex:'1 1 100%'}}><input type="checkbox" checked={!!r.enabled} onChange={e=>setR({...r,enabled:e.target.checked})}/>Purge automatically (daily, via cron-audit.php)</label>
     {[['raw_days','Raw observations (days)'],['metric_days','Server metrics (days)'],['evidence_days','Evidence files (days)'],['runs_days','Collector runs (days)']].map(([k,l])=><div key={k} className="fld" style={{margin:0,flex:'1 1 40%'}}><label>{l}</label><input type="number" value={r[k]} onChange={e=>setR({...r,[k]:+e.target.value})}/></div>)}
     <button className="btn btn-g btn-sm" onClick={async()=>{ try{ await api('PUT','/integration_audit/retention',r); toast('Retention policy saved','ok'); reload(); }catch(e){ toast(e.message); } }}>Save policy</button>
-    <button className="btn btn-g btn-sm" disabled={!ret.enabled} onClick={async()=>{ if(!await opshConfirm('Purge now according to the saved policy?'))return; try{ const x=await api('POST','/integration_audit/retention/purge',{}); toast(x.ran?('Purged: '+x.observations+' observations, '+x.metrics+' samples, '+x.evidence_files+' files'):x.reason,'ok'); reload(); }catch(e){ toast(e.message); } }}>Purge now</button>
+    <button className="btn btn-g btn-sm" disabled={!ret.enabled} onClick={async()=>{ if(!await itopsConfirm('Purge now according to the saved policy?'))return; try{ const x=await api('POST','/integration_audit/retention/purge',{}); toast(x.ran?('Purged: '+x.observations+' observations, '+x.metrics+' samples, '+x.evidence_files+' files'):x.reason,'ok'); reload(); }catch(e){ toast(e.message); } }}>Purge now</button>
     <div style={{fontSize:11.5,color:'var(--t4)',flex:'1 1 100%'}}>{ret.saved_at?'Saved by '+ret.saved_by+' · '+mhDateTime(String(ret.saved_at).replace(' ','T')+'Z'):'No policy saved — purge disabled.'}{ret.last_purge?' · last purge '+mhDateTime(String(ret.last_purge).replace(' ','T')+'Z'):''}</div></div>; }
 
 function M365GroupPick({ value, onChange, placeholder }) {
@@ -2097,7 +2097,7 @@ function M365GroupPick({ value, onChange, placeholder }) {
   </div>;
 }
 
-/* BT21: the OpsHub-only Microsoft 365 screens (Rollout, Access & sign-in, Device policies, Email security,
+/* BT21: the ITOps-only Microsoft 365 screens (Rollout, Access & sign-in, Device policies, Email security,
  * Coverage, Diagnose) now appear as tabs of the new Microsoft 365 area. `only` = the one tab to show;
  * `onGo(tab)` = open another tab of the area (the Rollout checklist links to them). */
 const M365_OLD_TO_HUB={security:'access',devices:'devpolicies',email:'emailsec',licenses:'licenses',users:'console',health:'health',usage:'exchange',overview:'overview'};
@@ -2117,7 +2117,7 @@ function M365Screen({ toast, only, onGo, part }) {
     ['devices', 'Devices'],
     ['security', 'Security'],
     ['email', 'Email Security'],
-  ].concat((function(){ try{ var u=window.__opshUser||{}; return (u.role==='super_admin'||u.role_slug==='super_admin')?[['diagnose','Diagnose']]:[]; }catch(e){ return []; } })());
+  ].concat((function(){ try{ var u=window.__itopsUser||{}; return (u.role==='super_admin'||u.role_slug==='super_admin')?[['diagnose','Diagnose']]:[]; }catch(e){ return []; } })());
   const [uq, setUq] = React.useState('');           // Users: server-side search text
   const [skuOpen, setSkuOpen] = React.useState(null); // Licenses: {skuId,name,rows|null}
   const [reclaim, setReclaim] = React.useState(null); // Licenses: license-report result
@@ -2142,7 +2142,7 @@ function M365Screen({ toast, only, onGo, part }) {
   const [evEdit, setEvEdit] = React.useState(null);     // Email Security: evidence modal {c, status, note}
   const [ready, setReady] = React.useState(null); const [readyBusy, setReadyBusy] = React.useState(false); const [readyQ, setReadyQ] = React.useState('');
   const [readyF, setReadyF] = React.useState('');   // BT112: a readiness count filters the list under it
-  const canM365Admin = (function(){ try{ var u=window.__opshUser||{}; return u.role==='super_admin'||opshCanFrom(u.role,u.role_permissions||{},'m365_admin','edit'); }catch(e){ return false; } })();
+  const canM365Admin = (function(){ try{ var u=window.__itopsUser||{}; return u.role==='super_admin'||itopsCanFrom(u.role,u.role_permissions||{},'m365_admin','edit'); }catch(e){ return false; } })();
   const [diag, setDiag] = React.useState(null);
   const [diagBusy, setDiagBusy] = React.useState(false);
   const runDiag = async (clear) => {
@@ -2282,21 +2282,21 @@ function M365Screen({ toast, only, onGo, part }) {
       {tab === 'rollout' && (() => {
         const ro = data.rollout || {}; const steps = ro.steps || {};
         const settled = (x) => steps[x[0]] && (steps[x[0]].done || steps[x[0]].skipped);
-        const allItems = OPSH_ROLLOUT_STEPS.reduce((a5, st5) => a5.concat(OPSH_ROLLOUT_ITEMS(st5)), []);
+        const allItems = ITOPS_ROLLOUT_STEPS.reduce((a5, st5) => a5.concat(ITOPS_ROLLOUT_ITEMS(st5)), []);
         const all = allItems.length, done = allItems.filter(settled).length;
         const reqAll = allItems.filter(x => x[5] === 'req').length, reqDone = allItems.filter(x => x[5] === 'req' && steps[x[0]] && steps[x[0]].done).length;
         const nextItem = allItems.find(x => !settled(x) && x[5] !== 'opt') || allItems.find(x => !settled(x)) || null;
-        const curStep = nextItem ? (OPSH_ROLLOUT_STEPS.find(st5 => OPSH_ROLLOUT_ITEMS(st5).includes(nextItem)) || {}).n : 0;
+        const curStep = nextItem ? (ITOPS_ROLLOUT_STEPS.find(st5 => ITOPS_ROLLOUT_ITEMS(st5).includes(nextItem)) || {}).n : 0;
         const isOpen = (n) => roOpen[n] !== undefined ? roOpen[n] : n === curStep;
         const tick = async (id, on, extra) => { try { const r = await api('POST', '/m365_admin/rollout_step', Object.assign({ id, done: on }, extra || {})); setData(d => ({ ...d, rollout: { ...(d.rollout || {}), steps: r.steps || {} } })); } catch (e) { toast(e.message); } };
-        const skip = async (id, text) => { const why = await opshPrompt('Skip this step — later or never? Write the reason; it becomes the record of the decision.\n\n' + text, ''); if (!why || !why.trim()) return; tick(id, false, { skipped: true, note: why.trim() }); };
+        const skip = async (id, text) => { const why = await itopsPrompt('Skip this step — later or never? Write the reason; it becomes the record of the decision.\n\n' + text, ''); if (!why || !why.trim()) return; tick(id, false, { skipped: true, note: why.trim() }); };
         const loadReady = async () => { setReadyBusy(true); try { const r = await api('GET', '/m365/rollout?readiness=1'); setReady(r.readiness || { value: [], summary: {}, notes: [] }); } catch (e) { toast(e.message); } setReadyBusy(false); };
-        const seedKb = async () => { if (!await opshConfirm('Add the staff and manager guides (English & Spanish) to the Knowledge Base as DRAFTS? Guides that are still drafts are refreshed to the latest wording; published ones are never touched. Review them, fill in the [bracketed] contact details, then publish.')) return;
+        const seedKb = async () => { if (!await itopsConfirm('Add the staff and manager guides (English & Spanish) to the Knowledge Base as DRAFTS? Guides that are still drafts are refreshed to the latest wording; published ones are never touched. Review them, fill in the [bracketed] contact details, then publish.')) return;
           try { const r = await api('POST', '/kb/seed_rollout', {}); toast(r.created + ' guide(s) added as drafts' + (r.updated ? ' · ' + r.updated + ' draft(s) refreshed' : '') + (r.skipped ? ' · ' + r.skipped + ' published (left alone)' : ''), 'ok'); } catch (e) { toast(e.message); } };
         const openComm = (tpl, aud) => { const t = { all: 'all', managers: 'managers', group: 'group', emails: 'emails', incomplete_mfa: 'incomplete', incomplete_phone: 'incomplete' }[aud] || 'all';
           setComm({ template: tpl || 'rollout_announce', type: t, missing: aud === 'incomplete_phone' ? 'phone' : 'mfa', group: null, emails: '', vars: { start_date: '', deadline: '', task: '', sender_name: '', note: '' }, preview: null, busy: false }); };
         const go = (k) => { if (k === 'kb') return seedKb(); if (k === 'readiness') return loadReady(); setTab(k); };
-        const row = (x, hi) => { const [id, text, tabK, tpl, aud, lvl] = x; const st = steps[id]; const L = OPSH_ROLLOUT_LEVEL[lvl || 'req'];
+        const row = (x, hi) => { const [id, text, tabK, tpl, aud, lvl] = x; const st = steps[id]; const L = ITOPS_ROLLOUT_LEVEL[lvl || 'req'];
                 const sk = !!(st && st.skipped), dn = !!(st && st.done);
                 return <div key={id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '9px 14px', borderBottom: hi ? 'none' : '1px solid var(--b1)', background: sk ? 'var(--s3)' : 'transparent' }}>
                   <input type="checkbox" checked={dn} disabled={!canM365Admin} onChange={e => tick(id, e.target.checked)} style={{ marginTop: 3 }} aria-label={text}/>
@@ -2323,7 +2323,7 @@ function M365Screen({ toast, only, onGo, part }) {
               <div>
                 <div style={{ fontSize: 16, fontWeight: 700 }}>Business Premium rollout — 5 steps</div>
                 <div style={{ fontSize: 13, color: 'var(--t4)', marginTop: 2, maxWidth: 680, lineHeight: 1.5 }}>Do the steps in order. Only step 2 (sign-in approval) is required of everyone. Step 4 touches company PCs only — using a personal phone or computer for work stays voluntary and IT never installs anything on one. Open a step to see its tasks; “Next up” always shows the next thing to do.</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 7 }}>{Object.keys(OPSH_ROLLOUT_LEVEL).map(k => <span key={k} style={{ fontSize: 10.5, fontWeight: 800, color: OPSH_ROLLOUT_LEVEL[k][1], background: OPSH_ROLLOUT_LEVEL[k][2], padding: '2px 7px', borderRadius: 5 }}>{OPSH_ROLLOUT_LEVEL[k][0]}</span>)}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 7 }}>{Object.keys(ITOPS_ROLLOUT_LEVEL).map(k => <span key={k} style={{ fontSize: 10.5, fontWeight: 800, color: ITOPS_ROLLOUT_LEVEL[k][1], background: ITOPS_ROLLOUT_LEVEL[k][2], padding: '2px 7px', borderRadius: 5 }}>{ITOPS_ROLLOUT_LEVEL[k][0]}</span>)}
                   <span style={{ fontSize: 12, color: 'var(--t4)' }}>Optional tasks can wait or never happen — use Skip and record why.</span></div>
               </div>
               <div style={{ textAlign: 'right' }}><div style={{ fontSize: 24, fontWeight: 800 }}>{done}/{all}</div><div style={{ fontSize: 12, color: 'var(--t4)' }}>tasks done or decided</div><div style={{ fontSize: 12, color: reqDone === reqAll ? 'var(--green)' : 'var(--t3)', fontWeight: 600 }}>required: {reqDone}/{reqAll}</div></div>
@@ -2359,7 +2359,7 @@ function M365Screen({ toast, only, onGo, part }) {
           </div>}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(165px,1fr))', gap: 10, marginBottom: 14 }}>
-            {OPSH_ROLLOUT_STEPS.map(st5 => { const it = OPSH_ROLLOUT_ITEMS(st5); const d5 = it.filter(settled).length; const full = d5 === it.length; const cur = st5.n === curStep;
+            {ITOPS_ROLLOUT_STEPS.map(st5 => { const it = ITOPS_ROLLOUT_ITEMS(st5); const d5 = it.filter(settled).length; const full = d5 === it.length; const cur = st5.n === curStep;
               return <div key={st5.n} className="card ro-ov" role="button" tabIndex={0} onClick={() => { setRoOpen(o => ({ ...o, [st5.n]: true })); setTimeout(() => { const el = document.getElementById('ro-step-' + st5.n); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30); }}
                 style={{ padding: '12px 13px', cursor: 'pointer', borderTop: '3px solid ' + (full ? 'var(--green)' : cur ? 'var(--accent)' : 'var(--b1)') }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -2372,11 +2372,11 @@ function M365Screen({ toast, only, onGo, part }) {
           </div>
 
           {nextItem ? <div className="card ro-next" style={{ padding: 0, marginBottom: 14, borderLeft: '3px solid var(--accent)' }}>
-            <div style={{ padding: '9px 14px 0', fontSize: 11.5, fontWeight: 800, color: 'var(--accent)', letterSpacing: '.05em' }}>NEXT UP — STEP {curStep}: {(OPSH_ROLLOUT_STEPS.find(x => x.n === curStep) || {}).title}</div>
+            <div style={{ padding: '9px 14px 0', fontSize: 11.5, fontWeight: 800, color: 'var(--accent)', letterSpacing: '.05em' }}>NEXT UP — STEP {curStep}: {(ITOPS_ROLLOUT_STEPS.find(x => x.n === curStep) || {}).title}</div>
             {row(nextItem, true)}
           </div> : <div className="card" style={{ padding: '12px 15px', marginBottom: 14, borderLeft: '3px solid var(--green)', fontWeight: 600 }}>Every step is done or decided. Keep the monthly review going.</div>}
 
-          {OPSH_ROLLOUT_STEPS.map(st5 => { const it = OPSH_ROLLOUT_ITEMS(st5); const d5 = it.filter(settled).length; const op = isOpen(st5.n);
+          {ITOPS_ROLLOUT_STEPS.map(st5 => { const it = ITOPS_ROLLOUT_ITEMS(st5); const d5 = it.filter(settled).length; const op = isOpen(st5.n);
             return <div key={st5.n} id={'ro-step-' + st5.n} className="card ro-step" style={{ padding: 0, marginBottom: 12, overflow: 'auto' }}>
               <div role="button" tabIndex={0} onClick={() => setRoOpen(o => ({ ...o, [st5.n]: !op }))} style={{ padding: '11px 14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, borderBottom: op ? '1px solid var(--b1)' : 'none' }}>
                 <div><div style={{ fontWeight: 700, fontSize: 14.5 }}>Step {st5.n} — {st5.title} <span style={{ fontWeight: 500, fontSize: 12.5, color: 'var(--t4)' }}>{st5.when}</span></div>
@@ -2388,24 +2388,24 @@ function M365Screen({ toast, only, onGo, part }) {
                 {list.map(x => row(x))}</div>)}
             </div>; })}
 
-          {(() => { const op = !!roOpen.opt; const d5 = OPSH_ROLLOUT_OPTIONAL.filter(settled).length;
+          {(() => { const op = !!roOpen.opt; const d5 = ITOPS_ROLLOUT_OPTIONAL.filter(settled).length;
             return <div className="card ro-step" style={{ padding: 0, marginBottom: 12, overflow: 'auto' }}>
               <div role="button" tabIndex={0} onClick={() => setRoOpen(o => ({ ...o, opt: !op }))} style={{ padding: '11px 14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, borderBottom: op ? '1px solid var(--b1)' : 'none' }}>
                 <div><div style={{ fontWeight: 700, fontSize: 14.5 }}>Optional tightening <span style={{ fontWeight: 500, fontSize: 12.5, color: 'var(--t4)' }}>later or never</span></div>
                   <div style={{ fontSize: 12.5, color: 'var(--t3)', marginTop: 2 }}>Not part of the 5 steps. Decide each one, then mark it Done or Skip it with the reason.</div></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}><span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--t4)' }}>{d5}/{OPSH_ROLLOUT_OPTIONAL.length} decided</span><span style={{ color: 'var(--t4)' }}>{op ? '▾' : '▸'}</span></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}><span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--t4)' }}>{d5}/{ITOPS_ROLLOUT_OPTIONAL.length} decided</span><span style={{ color: 'var(--t4)' }}>{op ? '▾' : '▸'}</span></div>
               </div>
-              {op && OPSH_ROLLOUT_OPTIONAL.map(x => row(x))}
+              {op && ITOPS_ROLLOUT_OPTIONAL.map(x => row(x))}
             </div>; })()}
           {comm && <EditPage title={'Send a rollout communication'} onClose={() => !comm.busy && setComm(null)}><div style={{maxWidth:600}}>
             <div style={{ fontSize: 12.5, color: 'var(--t4)', marginBottom: 12, lineHeight: 1.5 }}>Each person gets the email in their language (English or Spanish). Wording is editable under Settings → Email templates → Security rollout. Preview first — nothing is sent until you press Send.</div>
-            <div className="fld"><label>Email</label><Sel value={comm.template} onChange={v => setComm(c => ({ ...c, template: v, preview: null }))} options={OPSH_ROLLOUT_EMAILS}/></div>
+            <div className="fld"><label>Email</label><Sel value={comm.template} onChange={v => setComm(c => ({ ...c, template: v, preview: null }))} options={ITOPS_ROLLOUT_EMAILS}/></div>
             <div className="fld"><label>Send to</label><Sel value={comm.type === 'incomplete' ? 'incomplete_' + comm.missing : comm.type} onChange={v => setComm(c => ({ ...c, type: v.indexOf('incomplete_') === 0 ? 'incomplete' : v, missing: v === 'incomplete_phone' ? 'phone' : 'mfa', preview: null }))}
               options={[['all', 'Everyone with a license'], ['managers', 'All managers (from Entra “manager” field)'], ['group', 'Members of a group (e.g. the pilot)'], ['incomplete_mfa', 'People who have NOT set up a sign-in method (MFA)'], ['emails', 'Specific people (type emails)']]}/></div>
             {comm.type === 'group' && <div className="fld"><label>Group</label><M365GroupPick value={comm.group} onChange={g => setComm(c => ({ ...c, group: g, preview: null }))}/></div>}
             {comm.type === 'emails' && <div className="fld"><label>Emails (one per line or comma-separated)</label><textarea rows={3} value={comm.emails} onChange={e => setComm(c => ({ ...c, emails: e.target.value, preview: null }))}/></div>}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              {(OPSH_ROLLOUT_VARS[comm.template] || []).map(vk => { const L = { start_date: [comm.template === 'rollout_announce' || comm.template === 'rollout_manager_brief' ? 'Kick-off date' : 'Date the rule takes effect', 'date'], deadline: ['Deadline', 'date'],
+              {(ITOPS_ROLLOUT_VARS[comm.template] || []).map(vk => { const L = { start_date: [comm.template === 'rollout_announce' || comm.template === 'rollout_manager_brief' ? 'Kick-off date' : 'Date the rule takes effect', 'date'], deadline: ['Deadline', 'date'],
                   task: ['What is still to do (short)', 'text', 'e.g. Set up Microsoft Authenticator'], sender_name: ['Signed by (name and title)', 'text', 'e.g. Name, Title'], note: comm.template === 'security_key_setup' ? ['When / where to collect the key', 'text', 'e.g. Come to the front office on Tuesday at 10:00 AM'] : comm.template === 'personal_computer_notice' ? ['Only if you turn on the browser-only rule: the date (leave empty to send as advice)', 'text', 'e.g. From Nov 16, work files will open in the browser only on personal computers.'] : ['Extra note (optional)', 'text', 'e.g. IT will book a 15-minute slot with you'] }[vk];
                 return <div key={vk} className="fld" style={{ flex: L[1] === 'date' ? '1 1 45%' : '1 1 100%' }}><label>{L[0]}</label>
                   <input type={L[1]} value={comm.vars[vk]} placeholder={L[2] || ''} onChange={e => { const v5 = e.target.value; setComm(c => ({ ...c, vars: { ...c.vars, [vk]: v5 } })); }}/></div>; })}
@@ -2421,10 +2421,10 @@ function M365Screen({ toast, only, onGo, part }) {
                   <button className="btn btn-g btn-sm" disabled={comm.busy || (comm.type === 'group' && !comm.group)} onClick={async () => { setComm(c => ({ ...c, busy: true }));
                     try { const r = await api('POST', '/m365_admin/send_rollout', body(true)); setComm(c => ({ ...c, busy: false, preview: r })); } catch (e) { toast(e.message); setComm(c => ({ ...c, busy: false })); } }}>Preview recipients</button>
                   <button className="btn btn-p btn-sm" disabled={comm.busy || !comm.preview} title={!comm.preview ? 'Preview first' : ''} onClick={async () => {
-                    if (!await opshConfirm('Send "' + ((OPSH_ROLLOUT_EMAILS.find(x => x[0] === comm.template) || [])[1] || comm.template) + '" to ' + comm.preview.count + ' people now?')) return;
+                    if (!await itopsConfirm('Send "' + ((ITOPS_ROLLOUT_EMAILS.find(x => x[0] === comm.template) || [])[1] || comm.template) + '" to ' + comm.preview.count + ' people now?')) return;
                     setComm(c => ({ ...c, busy: true }));
                     try { const r = await api('POST', '/m365_admin/send_rollout', body(false)); toast('Sent ' + r.sent + ' email(s)' + (r.failed.length ? ' · ' + r.failed.length + ' failed' : ''), r.failed.length ? undefined : 'ok');
-                      if (r.failed.length) { await opshAlert('Not sent:\n' + r.failed.join('\n')); setComm(c => ({ ...c, busy: false })); } else setComm(null); }
+                      if (r.failed.length) { await itopsAlert('Not sent:\n' + r.failed.join('\n')); setComm(c => ({ ...c, busy: false })); } else setComm(null); }
                     catch (e) { toast(e.message); setComm(c => ({ ...c, busy: false })); } }}>{comm.busy ? 'Working…' : 'Send'}</button>
                 </>; })()}
             </div>
@@ -2440,7 +2440,7 @@ function M365Screen({ toast, only, onGo, part }) {
         const CS = { compliant: ['COMPLIANT', 'var(--green)', 'var(--greenL)'], noncompliant: ['NON-COMPLIANT', 'var(--red)', 'var(--redL)'],
           ingraceperiod: ['GRACE PERIOD', '#6b541a', '#fbf3e0'], error: ['ERROR', 'var(--red)', 'var(--redL)'] };
         const act = async (d, a) => {
-          if (a === 'lock') { const typed = await opshPrompt('Remote-lock "' + (d.deviceName || d.id) + '"? The user unlocks it with their own PIN. Type LOCK to confirm.'); if (typed !== 'LOCK') return; }
+          if (a === 'lock') { const typed = await itopsPrompt('Remote-lock "' + (d.deviceName || d.id) + '"? The user unlocks it with their own PIN. Type LOCK to confirm.'); if (typed !== 'LOCK') return; }
           try { const r = await api('POST', '/m365_admin/intune_action', { device_id: d.id, device_name: d.deviceName, action: a, confirm: a === 'lock' ? 'LOCK' : undefined }); toast(r.note || 'Done', 'ok'); }
           catch (e) { toast(e.message); }
         };
@@ -2474,8 +2474,8 @@ function M365Screen({ toast, only, onGo, part }) {
                 {ds.asr_mode && <span style={{ fontSize: 12.5, fontWeight: 600 }}>Attack-surface rules: <span style={{ fontWeight: 800, color: ds.asr_mode === 'enforce' ? 'var(--green)' : '#b47b00' }}>{ds.asr_mode === 'enforce' ? 'BLOCK' : 'AUDIT'}</span>
                   {canM365Admin && <button className="btn btn-g btn-sm" style={{ marginLeft: 8 }} onClick={async () => {
                     const to = ds.asr_mode === 'enforce' ? 'audit' : 'enforce'; let confirm;
-                    if (to === 'enforce') { confirm = await opshPrompt('Switch attack-surface rules to BLOCK?\n\nFirst check security.microsoft.com → Reports → Attack surface reduction rules → Detections for 2 weeks and add exclusions for anything legitimate.\n\nType BLOCK to confirm.'); if (confirm !== 'BLOCK') return; }
-                    else if (!await opshConfirm('Switch attack-surface rules back to AUDIT (report only, nothing blocked)?')) return;
+                    if (to === 'enforce') { confirm = await itopsPrompt('Switch attack-surface rules to BLOCK?\n\nFirst check security.microsoft.com → Reports → Attack surface reduction rules → Detections for 2 weeks and add exclusions for anything legitimate.\n\nType BLOCK to confirm.'); if (confirm !== 'BLOCK') return; }
+                    else if (!await itopsConfirm('Switch attack-surface rules back to AUDIT (report only, nothing blocked)?')) return;
                     try { const r = await api('POST', '/m365_admin/device_security_asr_mode', { mode: to, confirm }); toast(r.note, 'ok'); load('devices'); } catch (e) { toast(e.message); } }}>{ds.asr_mode === 'enforce' ? 'Back to Audit' : 'Switch to Block…'}</button>}</span>}
               </div>
               <div style={{ padding: '7px 14px', fontSize: 12.5, color: 'var(--t4)', borderBottom: '1px solid var(--b1)' }}>The compliance policies below only <i>check</i> a PC. These <i>configure</i> it. They go to a device group of company PCs — never to personal computers. Step-by-step reference: INTUNE-DEFENDER-SETUP.md (support files pack, Reference).</div>
@@ -2528,7 +2528,7 @@ function M365Screen({ toast, only, onGo, part }) {
                         ...(PL[p2.platform] === 'windows' ? { defender_risk: st.deviceThreatProtectionEnabled ? (st.deviceThreatProtectionRequiredSecurityLevel || '') : '' } : {}) },
                       grace_hours: p2.grace_hours == null ? 168 : p2.grace_hours,
                       assignTo: (p2.assignments || []).some(a3 => a3.type === 'all_users') ? 'all_users' : ((p2.assignments || []).some(a3 => a3.type === 'all_devices') ? 'all_devices' : 'keep') }); }}>Edit</button>
-                  <button className="btn btn-d btn-sm" onClick={async () => { const typed = await opshPrompt('Delete the policy "' + p2.name + '"? Devices it applied to stop being evaluated against it. Type DELETE to confirm.'); if (typed !== 'DELETE') return;
+                  <button className="btn btn-d btn-sm" onClick={async () => { const typed = await itopsPrompt('Delete the policy "' + p2.name + '"? Devices it applied to stop being evaluated against it. Type DELETE to confirm.'); if (typed !== 'DELETE') return;
                     try { await api('POST', '/m365_admin/compliance_policy_delete', { id: p2.id, confirm: 'DELETE' }); toast('Policy deleted', 'ok'); load('devices'); } catch (e) { toast(e.message); } }}>Delete</button>
                 </td>}
               </tr>; })}</tbody></table>}
@@ -2556,11 +2556,11 @@ function M365Screen({ toast, only, onGo, part }) {
               try { const r = await api('POST', '/m365_admin/policy_backup', p4 ? { kind: p4.kind, id: p4.id } : {}); toast('Backed up ' + r.saved + ' polic' + (r.saved === 1 ? 'y' : 'ies') + (r.failed && r.failed.length ? ' · ' + r.failed.length + ' failed' : ''), r.failed && r.failed.length ? undefined : 'ok');
                 const b1 = await api('GET', '/m365/policy-backups'); setBackups(b1); } catch (e) { toast(e.message); } setInvBusy(false); };
             const copyFrom = async (mode, src) => { const def = mode === 'clone' ? src.name + ' (copy)' : src.name + ' (restored ' + mhToday() + ')';
-              const nm = await opshPrompt((mode === 'clone' ? 'Clone' : 'Restore') + ' "' + src.name + '" as a NEW policy (the original is never changed). Name:', def); if (!nm) return;
-              const cp = await opshConfirm('Copy the original’s assignments too?\n\nOK = same people/devices as the original.\nCancel = create it unassigned (safest — assign it when ready).');
+              const nm = await itopsPrompt((mode === 'clone' ? 'Clone' : 'Restore') + ' "' + src.name + '" as a NEW policy (the original is never changed). Name:', def); if (!nm) return;
+              const cp = await itopsConfirm('Copy the original’s assignments too?\n\nOK = same people/devices as the original.\nCancel = create it unassigned (safest — assign it when ready).');
               setInvBusy(true);
               try { const r = await api('POST', '/m365_admin/' + (mode === 'clone' ? 'policy_clone' : 'policy_restore'), mode === 'clone' ? { kind: src.kind, id: src.id, name: nm, copy_assignments: cp } : { backup_id: src.id, name: nm, copy_assignments: cp });
-                await opshAlert('Created "' + r.name + '".\n\n' + (r.note || '')); await loadInv(); } catch (e) { toast(e.message); } setInvBusy(false); };
+                await itopsAlert('Created "' + r.name + '".\n\n' + (r.note || '')); await loadInv(); } catch (e) { toast(e.message); } setInvBusy(false); };
             const rows4 = (inv && inv.value) || [];
             return <div className="card" style={{ padding: 0, overflow: 'auto', marginTop: 14 }}>
               <div style={{ padding: '10px 14px', fontWeight: 700, fontSize: 14, borderBottom: '1px solid var(--b1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -2613,7 +2613,7 @@ function M365Screen({ toast, only, onGo, part }) {
                 setDevsecDlg(d5 => ({ ...d5, busy: true }));
                 try { const r = await api('POST', '/m365_admin/seed_device_security', { group_id: devsecDlg.group.id, mode: 'audit', items: Object.keys(devsecDlg.items).filter(k => devsecDlg.items[k]) });
                   setDevsecDlg(null);
-                  await opshAlert('Device security — ' + devsecDlg.group.name + '\n\n' + [].concat((r.made || []).map(x => '✔ created: ' + x), (r.assigned || []).map(x => '✔ assigned: ' + x), (r.failed || []).map(x => '✖ ' + x)).join('\n'));
+                  await itopsAlert('Device security — ' + devsecDlg.group.name + '\n\n' + [].concat((r.made || []).map(x => '✔ created: ' + x), (r.assigned || []).map(x => '✔ assigned: ' + x), (r.failed || []).map(x => '✖ ' + x)).join('\n'));
                   load('devices'); } catch (e) { toast(e.message); setDevsecDlg(d5 => d5 && ({ ...d5, busy: false })); } }}>{devsecDlg.busy ? 'Creating…' : 'Create & assign'}</button>
             </div>
           </div></EditPage>}
@@ -2626,7 +2626,7 @@ function M365Screen({ toast, only, onGo, part }) {
               <button className="btn btn-g btn-sm" disabled={seedBusy} onClick={() => setSeedDlg(null)}>Cancel</button>
               <button className="btn btn-p btn-sm" disabled={seedBusy || (seedDlg.scope === 'group' && !seedDlg.group)} onClick={async () => {
                 setSeedBusy(true); try { const r = await api('POST', '/m365_admin/seed_baseline', { mode: seedDlg.mode, group_id: seedDlg.scope === 'group' && seedDlg.group ? seedDlg.group.id : '' });
-                  setSeedDlg(null); await opshAlert('Baseline result:\n\n' + (r.made.concat((r.skipped || []).map(x => x + ' — already existed')).join('\n') || 'nothing to do')); load('devices'); } catch (e) { toast(e.message); } setSeedBusy(false); }}>{seedBusy ? 'Seeding…' : 'Create baseline'}</button>
+                  setSeedDlg(null); await itopsAlert('Baseline result:\n\n' + (r.made.concat((r.skipped || []).map(x => x + ' — already existed')).join('\n') || 'nothing to do')); load('devices'); } catch (e) { toast(e.message); } setSeedBusy(false); }}>{seedBusy ? 'Seeding…' : 'Create baseline'}</button>
             </div>
           </div></EditPage>}
           {mamEdit && <EditPage title={'Edit app protection (' + (mamEdit.platform === 'android' ? 'Android' : 'iOS / iPadOS') + ')'} onClose={() => setMamEdit(null)}><div style={{maxWidth:560}}>
@@ -2689,7 +2689,7 @@ function M365Screen({ toast, only, onGo, part }) {
               <button className="btn btn-p btn-sm" onClick={async () => { const to = invite.to.split(/[\s,;]+/).filter(Boolean); if (!to.length) return toast('Add at least one email');
                 try { const r = await api('POST', '/m365_admin/send_enrollment', { kind: invite.kind, upns: to, note: invite.note });
                   toast('Sent ' + r.sent + ' invitation(s)' + (r.failed.length ? ' · ' + r.failed.length + ' failed' : ''), r.failed.length ? undefined : 'ok');
-                  if (r.failed.length) await opshAlert('Not sent:\n' + r.failed.join('\n')); else setInvite(null); } catch (e) { toast(e.message); } }}>Send invitations</button>
+                  if (r.failed.length) await itopsAlert('Not sent:\n' + r.failed.join('\n')); else setInvite(null); } catch (e) { toast(e.message); } }}>Send invitations</button>
             </div>
           </div></EditPage>}
         </>;
@@ -2792,7 +2792,7 @@ function M365Screen({ toast, only, onGo, part }) {
             </div>; })()}
           {(() => { const am = data.authMethods || {}; const ADV = { on: ['recommended: allow', 'var(--green)'], optional: ['your choice', 'var(--t3)'], off: ['not needed', 'var(--t4)'] };
             const setM = async (m3, on) => { let confirm;
-              if (!on) { const t = await opshPrompt('Stop allowing "' + m3.name + '"? People who use it will have to set up another method at their next sign-in.' + (m3.id === 'temporaryAccessPass' ? ' Without Temporary Access Pass, the only way to help someone who lost their phone or key is Reset MFA.' : '') + ' Type OFF to confirm.'); if (t !== 'OFF') return; confirm = 'OFF'; }
+              if (!on) { const t = await itopsPrompt('Stop allowing "' + m3.name + '"? People who use it will have to set up another method at their next sign-in.' + (m3.id === 'temporaryAccessPass' ? ' Without Temporary Access Pass, the only way to help someone who lost their phone or key is Reset MFA.' : '') + ' Type OFF to confirm.'); if (t !== 'OFF') return; confirm = 'OFF'; }
               try { await api('POST', '/m365_admin/auth_method_set', { id: m3.id, enabled: on, confirm }); toast(on ? 'Allowed' : 'Turned off', 'ok'); load('security'); } catch (e) { toast(e.message); } };
             return <div className="card" style={{ padding: 0, overflow: 'auto', marginTop: 14 }}>
               <div style={{ padding: '10px 14px', fontWeight: 700, fontSize: 14, borderBottom: '1px solid var(--b1)' }}>Sign-in methods people can use (MFA)</div>
@@ -2934,7 +2934,7 @@ function M365Screen({ toast, only, onGo, part }) {
                     ? <span style={{ color: 'var(--red)', fontWeight: 700 }}>forwards outside → {(r3.targets || []).join(', ')}</span>
                     : <span style={{ color: '#b47b00', fontWeight: 700 }}>deletes mail</span>}</td>
                   {canM365Admin && <td>{r3.enabled && <button className="btn btn-d btn-sm" onClick={async () => {
-                    if (!await opshConfirm('Disable the rule "' + r3.rule + '" in ' + r3.upn + '\u2019s mailbox? If this looks like a compromise, also reset their password and sign them out everywhere (Microsoft 365 → People).')) return;
+                    if (!await itopsConfirm('Disable the rule "' + r3.rule + '" in ' + r3.upn + '\u2019s mailbox? If this looks like a compromise, also reset their password and sign them out everywhere (Microsoft 365 → People).')) return;
                     try { const r4 = await api('POST', '/m365_admin/disable_rule', { user_id: r3.user_id, rule_id: r3.rule_id, upn: r3.upn, rule: r3.rule }); toast(r4.note || 'Rule disabled', 'ok');
                       setRules(await api('GET', '/m365/mailbox-rules?max=300')); } catch (e) { toast(e.message); }
                   }}>Disable</button>}</td>}
@@ -3089,7 +3089,7 @@ function UptimeEdit({mon,d,toast,onClose,onSaved}){
   const body=()=>({name:f.name,url:f.url,method:f.method,expect_status:f.expect_status,keyword:f.keyword,interval_min:num('interval_min'),timeout_s:num('timeout_s'),verify_ssl:!!f.verify_ssl,ssl_warn_days:num('ssl_warn_days'),fail_threshold:num('fail_threshold'),alert:!!f.alert,active:!!f.active,notes:f.notes});
   const doTest=async()=>{ setBusy('test'); setTest(null); try{ const r=await api('POST','/uptime/test',body()); setTest(r.result); }catch(e){ setTest({ok:false,error:e.message}); } setBusy(''); };
   const save=async()=>{ setBusy('save'); try{ if(isNew) await api('POST','/uptime',body()); else await api('PUT','/uptime/'+mon.id,body()); toast(isNew?'Monitor added and checked':'Saved','ok'); onSaved(); }catch(e){ toast(e.message); setBusy(''); } };
-  const del=async()=>{ if(!await opshConfirm('Remove "'+mon.name+'" and its history?'))return; try{ await api('DELETE','/uptime/'+mon.id); toast('Removed','ok'); onSaved(); }catch(e){ toast(e.message); } };
+  const del=async()=>{ if(!await itopsConfirm('Remove "'+mon.name+'" and its history?'))return; try{ await api('DELETE','/uptime/'+mon.id); toast('Removed','ok'); onSaved(); }catch(e){ toast(e.message); } };
   const saveNote=async i=>{ try{ await api('PUT','/uptime/incidents/'+i.id,{note:note[i.id]||''}); toast('Note saved','ok'); }catch(e){ toast(e.message); } };
   return <EditPage title={isNew?'Add a website to monitor':mon.name} badge="Uptime" onClose={busy?()=>{}:onClose}
     ribbon={<>{!ro&&<button className="btn btn-p btn-sm" data-up-save="1" disabled={!!busy} onClick={save}>{busy==='save'?'Saving…':(isNew?'Add and check':'Save')}</button>}
@@ -3200,7 +3200,7 @@ function Mon360View({toast}){
   const load=React.useCallback(fresh=>{ api('GET','/mon360').then(x=>{ setD(x); if(x.connected){ api('GET','/mon360/servers'+(fresh?'?fresh=1':'')).then(setSrv).catch(e=>setSrv({rows:[],error:e.message})); api('GET','/mon360/monitors'+(fresh?'?fresh=1':'')).then(setMon).catch(e=>setMon({rows:[],error:e.message})); } }).catch(e=>toast(e.message)); },[]);
   React.useEffect(()=>{ load(false); },[load]);
   if(!d) return <MhLoading/>;
-  if(!d.connected) return <div className="card" data-m360-off="1" style={{fontSize:13.5}}>360 Monitoring is not connected. {d.can_set?<button className="btn btn-g btn-sm" onClick={()=>opshOpenSystemTool('mon360')}>Set it up in Company systems</button>:'A Super Admin connects it in Settings → Company systems.'}</div>;
+  if(!d.connected) return <div className="card" data-m360-off="1" style={{fontSize:13.5}}>360 Monitoring is not connected. {d.can_set?<button className="btn btn-g btn-sm" onClick={()=>itopsOpenSystemTool('mon360')}>Set it up in Company systems</button>:'A Super Admin connects it in Settings → Company systems.'}</div>;
   const ql=q.trim().toLowerCase(); const f=(r,t)=>!ql||t.toLowerCase().includes(ql);
   const pc=v=>v==null?'—':<span style={{color:v>=90?'var(--red)':v>=80?'var(--amber)':'inherit'}}>{v}%</span>;
   return <div data-m360-view="1">
@@ -3296,8 +3296,8 @@ const SP_LINES=[['cpu','CPU (average)','var(--accent)',2.4],['cpu_max','CPU high
 function SpChart({pts,level,onPick}){
   const W=1000,H=260,L=44,R=12,T=14,B=30; const iw=W-L-R, ih=H-T-B;
   const [hov,setHov]=React.useState(null);
-  const [on,setOn0]=React.useState(()=>{ try{ const v=JSON.parse(localStorage.getItem('opsh_sp_lines')||'null'); if(Array.isArray(v)&&v.length) return v; }catch(_){ } return SP_LINES.map(l=>l[0]); });
-  const setOn=v=>{ setOn0(v); try{ localStorage.setItem('opsh_sp_lines',JSON.stringify(v)); }catch(_){ } };
+  const [on,setOn0]=React.useState(()=>{ try{ const v=JSON.parse(localStorage.getItem('itops_sp_lines')||'null'); if(Array.isArray(v)&&v.length) return v; }catch(_){ } return SP_LINES.map(l=>l[0]); });
+  const setOn=v=>{ setOn0(v); try{ localStorage.setItem('itops_sp_lines',JSON.stringify(v)); }catch(_){ } };
   const tog=k=>setOn(on.includes(k)?on.filter(x=>x!==k):on.concat([k])); const only=k=>setOn([k]); const all=on.length===SP_LINES.length;
   if(!pts.length) return <div className="mh-mut" style={{padding:'40px 0',textAlign:'center'}} data-sp-empty="1">No samples in this period yet. The first ones appear a few minutes after the update.</div>;
   const t0=new Date(pts[0].t).getTime(), t1=new Date(pts[pts.length-1].t).getTime()||t0+1; const span=Math.max(1,t1-t0);
@@ -3501,7 +3501,7 @@ function SpDayBars({d,lv}){
   </svg>;
 }
 function SpDaily({lv}){
-  const [dmode,setDmode0]=React.useState(()=>{ try{ return localStorage.getItem('opsh_sp_dmode')==='days'?'days':'week'; }catch(_){ return 'week'; } }); const setDmode=v=>{ setDmode0(v); try{ localStorage.setItem('opsh_sp_dmode',v); }catch(_){ } };
+  const [dmode,setDmode0]=React.useState(()=>{ try{ return localStorage.getItem('itops_sp_dmode')==='days'?'days':'week'; }catch(_){ return 'week'; } }); const setDmode=v=>{ setDmode0(v); try{ localStorage.setItem('itops_sp_dmode',v); }catch(_){ } };
   const [days,setDays]=React.useState('90'); const [d,setD]=React.useState(null); const [err,setErr]=React.useState(null); const [pick,setPick]=React.useState(null);
   const load=n=>{ setD(null); setErr(null); api('GET','/server_perf/daily?days='+(n||days)).then(x=>{ setD(x); setPick(x.days[0]||null); }).catch(e=>setErr(e.message)); };
   React.useEffect(()=>{ load(days); },[]);
@@ -3593,7 +3593,7 @@ const SP_VTCOLS_NOW=[['person','Person'],['user','vTiger user'],['ip','From (IP)
 const SP_VTCOLS_HIST=[['in','When'],['person','Person'],['user','vTiger user'],['ip','From (IP)'],['where','Where'],['off','Signed off'],['status','Status']];
 /* BT167: a list that folds away, with a column chooser kept on this device */
 function SpVtList({attr,title,rows,cols,cell,empty,limit}){
-  const lk='opsh_vt_'+attr; const get=(k,d)=>{ try{ const v=localStorage.getItem(k); return v===null?d:v; }catch(_){ return d; } }; const put=(k,v)=>{ try{ localStorage.setItem(k,v); }catch(_){ } };
+  const lk='itops_vt_'+attr; const get=(k,d)=>{ try{ const v=localStorage.getItem(k); return v===null?d:v; }catch(_){ return d; } }; const put=(k,v)=>{ try{ localStorage.setItem(k,v); }catch(_){ } };
   const [open,setOpen0]=React.useState(()=>get(lk+'_open','1')!=='0'); const setOpen=v=>{ setOpen0(v); put(lk+'_open',v?'1':'0'); };
   const [sel,setSel0]=React.useState(()=>{ const v=get(lk+'_cols',''); const l=v?v.split(',').filter(k=>cols.some(c=>c[0]===k)):[]; return l.length?l:cols.map(c=>c[0]); });
   const setSel=l=>{ if(!l.length) return; setSel0(l); put(lk+'_cols',l.join(',')); }; const [menu,setMenu]=React.useState(false); const [all,setAll]=React.useState(false);
@@ -3861,12 +3861,12 @@ function SpMap({m,view,vb,setVb,compact,onPick,picked,people}){
   </div>;
 }
 function SpMapCard({hours,minutes,site,tick,onPick,picked,onSecurity,title}){
-  const [m,setM]=React.useState(null); const [view,setView0]=React.useState(()=>{ try{ return localStorage.getItem('opsh_sp_mapview')==='world'?'world':'us'; }catch(_){ return 'us'; } });
+  const [m,setM]=React.useState(null); const [view,setView0]=React.useState(()=>{ try{ return localStorage.getItem('itops_sp_mapview')==='world'?'world':'us'; }catch(_){ return 'us'; } });
   const [vb,setVb0]=React.useState(()=>SP_MAPV[view].vb.slice()); const [custom,setCustom]=React.useState(false);
   const setVb=f=>{ setCustom(true); setVb0(f); };
-  const setView=v=>{ setView0(v); setVb0(SP_MAPV[v].vb.slice()); setCustom(false); try{ localStorage.setItem('opsh_sp_mapview',v); }catch(_){ } };
-  const [ppl,setPpl0]=React.useState(()=>{ try{ return localStorage.getItem('opsh_sp_mappeople')==='1'; }catch(_){ return false; } }); const [people,setPeople]=React.useState(null);
-  const setPpl=v=>{ setPpl0(v); try{ localStorage.setItem('opsh_sp_mappeople',v?'1':'0'); }catch(_){ } };
+  const setView=v=>{ setView0(v); setVb0(SP_MAPV[v].vb.slice()); setCustom(false); try{ localStorage.setItem('itops_sp_mapview',v); }catch(_){ } };
+  const [ppl,setPpl0]=React.useState(()=>{ try{ return localStorage.getItem('itops_sp_mappeople')==='1'; }catch(_){ return false; } }); const [people,setPeople]=React.useState(null);
+  const setPpl=v=>{ setPpl0(v); try{ localStorage.setItem('itops_sp_mappeople',v?'1':'0'); }catch(_){ } };
   const q=(minutes?'minutes='+minutes:'hours='+hours)+(site?'&site='+encodeURIComponent(site):'');
   const load=quiet=>{ if(!quiet) setM(null); api('GET','/server_perf/map?'+q).then(setM).catch(e=>setM({error:e.message})); };
   const loadP=()=>api('GET','/server_perf/vtiger_logins?days=1').then(x=>setPeople(x)).catch(e=>setPeople({error:e.message}));
@@ -4089,19 +4089,19 @@ function spFlag(cc){ if(!cc||!/^[A-Z]{2}$/i.test(cc)) return ''; cc=cc.toUpperCa
 function ServerPerfPage({toast}){
   const [hours,setHours]=React.useState('24'); const [d,setD]=React.useState(null); const [err,setErr]=React.useState(null); const [busy,setBusy]=React.useState(false);
   const [pick,setPick]=React.useState(null); const [s,setS]=React.useState(null); const [f,setF]=React.useState(null); const [now,setNow]=React.useState(null);
-  const [tab,setTab0]=React.useState(()=>{ try{ const v=localStorage.getItem('opsh_sp_tab'); return SP_SUBS.some(t=>t[0]===v)?v:'status'; }catch(_){ return 'status'; } });
-  const [lastSub,setLastSub]=React.useState(()=>{ try{ const v=localStorage.getItem('opsh_sp_sub'); return SP_SUBS.some(t=>t[0]===v)?v:'spikes'; }catch(_){ return 'spikes'; } });
-  const setTab=v=>{ setTab0(v); if(v!=='status'){ setLastSub(v); try{ localStorage.setItem('opsh_sp_sub',v); }catch(_){ } } try{ localStorage.setItem('opsh_sp_tab',v); }catch(_){ } };
+  const [tab,setTab0]=React.useState(()=>{ try{ const v=localStorage.getItem('itops_sp_tab'); return SP_SUBS.some(t=>t[0]===v)?v:'status'; }catch(_){ return 'status'; } });
+  const [lastSub,setLastSub]=React.useState(()=>{ try{ const v=localStorage.getItem('itops_sp_sub'); return SP_SUBS.some(t=>t[0]===v)?v:'spikes'; }catch(_){ return 'spikes'; } });
+  const setTab=v=>{ setTab0(v); if(v!=='status'){ setLastSub(v); try{ localStorage.setItem('itops_sp_sub',v); }catch(_){ } } try{ localStorage.setItem('itops_sp_tab',v); }catch(_){ } };
   const [ips,setIps]=React.useState(null); const [ipq,setIpq]=React.useState(''); const [gtok,setGtok]=React.useState(''); const [ipPlace,setIpPlace]=React.useState(null);
   /* BT166: Visitors — "connected now", the map and the list side by side (resizable, each can be hidden), the list's columns chosen */
   const lsGet=(k,d)=>{ try{ const v=localStorage.getItem(k); return v===null?d:v; }catch(_){ return d; } }; const lsSet=(k,v)=>{ try{ localStorage.setItem(k,v); }catch(_){ } };
   const [ipNow,setIpNow]=React.useState(false); const ipNowRef=React.useRef(false);
   const setIpNowV=(v,h)=>{ ipNowRef.current=v; setIpNow(v); setIpPlace(null); if(v) loadIps(null); };
-  const [ipShowMap,setIpShowMap]=React.useState(()=>lsGet('opsh_sp_ipmap','1')!=='0'); const [ipShowList,setIpShowList]=React.useState(()=>lsGet('opsh_sp_iplist','1')!=='0');
-  const setIpShow=(m,l)=>{ setIpShowMap(m); setIpShowList(l); lsSet('opsh_sp_ipmap',m?'1':'0'); lsSet('opsh_sp_iplist',l?'1':'0'); };
-  const [ipSplit,setIpSplit]=React.useState(()=>{ const v=+lsGet('opsh_sp_split','50'); return v>=25&&v<=75?v:50; }); const setIpSplitV=v=>{ setIpSplit(v); lsSet('opsh_sp_split',String(Math.round(v))); };
-  const [ipCols,setIpCols]=React.useState(()=>{ const v=lsGet('opsh_sp_ipcols',''); const l=v?v.split(',').filter(k=>SP_IPCOLS.some(c=>c[0]===k)):[]; return l.length?(l.includes('addr')?l:['addr'].concat(l)):SP_IPCOLS.map(c=>c[0]); });
-  const setIpColsV=l=>{ if(!l.includes('addr')) l=['addr'].concat(l); setIpCols(l); lsSet('opsh_sp_ipcols',l.join(',')); }; const [ipColsOpen,setIpColsOpen]=React.useState(false);
+  const [ipShowMap,setIpShowMap]=React.useState(()=>lsGet('itops_sp_ipmap','1')!=='0'); const [ipShowList,setIpShowList]=React.useState(()=>lsGet('itops_sp_iplist','1')!=='0');
+  const setIpShow=(m,l)=>{ setIpShowMap(m); setIpShowList(l); lsSet('itops_sp_ipmap',m?'1':'0'); lsSet('itops_sp_iplist',l?'1':'0'); };
+  const [ipSplit,setIpSplit]=React.useState(()=>{ const v=+lsGet('itops_sp_split','50'); return v>=25&&v<=75?v:50; }); const setIpSplitV=v=>{ setIpSplit(v); lsSet('itops_sp_split',String(Math.round(v))); };
+  const [ipCols,setIpCols]=React.useState(()=>{ const v=lsGet('itops_sp_ipcols',''); const l=v?v.split(',').filter(k=>SP_IPCOLS.some(c=>c[0]===k)):[]; return l.length?(l.includes('addr')?l:['addr'].concat(l)):SP_IPCOLS.map(c=>c[0]); });
+  const setIpColsV=l=>{ if(!l.includes('addr')) l=['addr'].concat(l); setIpCols(l); lsSet('itops_sp_ipcols',l.join(',')); }; const [ipColsOpen,setIpColsOpen]=React.useState(false);
   const [sitePick,setSitePick]=React.useState(null); const [ipOut,setIpOut]=React.useState(false);   /* BT167: the sites shown as buttons; only addresses outside the allowed countries */ const [ipSite,setIpSite0]=React.useState('');   /* BT165: one site alone */
   const ipSiteRef=React.useRef(''); const setIpSite=v=>{ ipSiteRef.current=v; setIpSite0(v); setIpPlace(null); loadIps(null,v); };   /* BT164: a place picked on the map filters the list */
   const loadIps=(h,site)=>{ const st=site===undefined?ipSiteRef.current:site; setIps(x=>x&&!x.error?Object.assign({},x,{reloading:true}):null); api('GET','/server_perf/ips?'+(ipNowRef.current?'minutes=5':'hours='+(h||hours))+(st?'&site='+encodeURIComponent(st):'')).then(setIps).catch(e=>setIps({error:e.message})); };
@@ -4109,8 +4109,8 @@ function ServerPerfPage({toast}){
   const loadSample=id=>api('GET','/server_perf/'+id).then(x=>{ setS(x); return x; }).catch(e=>toast(e.message));
   const loadAcc=h=>{ setAcc(null); api('GET','/server_perf/accounts?hours='+(h||hours)).then(setAcc).catch(e=>setAcc({error:e.message})); };
   /* BT162: quiet = the automatic refresh (every minute): no spinner, the forms keep what is being typed, an error keeps the page */
-  const [auto,setAuto0]=React.useState(()=>{ try{ return localStorage.getItem('opsh_sp_auto')!=='0'; }catch(_){ return true; } });
-  const setAuto=v=>{ setAuto0(v); try{ localStorage.setItem('opsh_sp_auto',v?'1':'0'); }catch(_){ } };
+  const [auto,setAuto0]=React.useState(()=>{ try{ return localStorage.getItem('itops_sp_auto')!=='0'; }catch(_){ return true; } });
+  const setAuto=v=>{ setAuto0(v); try{ localStorage.setItem('itops_sp_auto',v?'1':'0'); }catch(_){ } };
   const [updated,setUpdated]=React.useState(null); const [stale,setStale]=React.useState(null); const [tick,setTick]=React.useState(0); const [clock,setClock]=React.useState(0);
   const nowRef=React.useRef(null);
   const load=(h,quiet)=>{ if(!quiet){ setBusy(true); setErr(null); }
@@ -4475,7 +4475,7 @@ function UptimePage({toast}){
     {t==='own'?<UptimeScreen toast={toast}/>:<><MhHead eyebrow="IT Operations · Servers" title="360 Monitoring" desc="The outside monitoring service: its servers (its agent), websites and alerts, beside the checks this server runs."/><Mon360View toast={toast}/></>}
   </div>;
 }
-function opshOpenSystemTool(key){ try{ window.__opshSysTool=key; }catch(_){ } opshOpenSystem(null); }
+function itopsOpenSystemTool(key){ try{ window.__itopsSysTool=key; }catch(_){ } itopsOpenSystem(null); }
 function UptimeScreen({toast}){
   const [d,setD]=React.useState(null); const [err,setErr]=React.useState(null); const [gen,setGen]=React.useState(0); const [flt,setFlt]=React.useState('all'); const [q,setQ]=React.useState('');
   const [edit,setEdit]=React.useState(null); const [busy,setBusy]=React.useState(''); const [rep,setRep]=React.useState(null); const [per,setPer]=React.useState('last_month'); const [sc,setSc]=React.useState({source:'uptime_all_pct',goal:'99.9'});
@@ -4540,8 +4540,8 @@ function UptimeScreen({toast}){
       <div className="bud-form" style={{maxWidth:600}}><MhLbl label="Period"><Sel value={per} onChange={setPer} options={CAL_PERIODS.filter(x=>x[0]!=='custom'&&!/^next/.test(x[0]))}/></MhLbl>
         <div className="mh-mut" style={{fontSize:13}}>{repRange[0]&&(mhDate(repRange[0])+' – '+mhDate(repRange[1]))} · availability, downtime and response time of every monitor, and every outage with its cause.</div></div>
     </EditPage>}
-    {rep==='prev'&&<DocPreview title={'Uptime report · '+mhDate(repRange[0])+' – '+mhDate(repRange[1])} load={()=>opshFetchBlob('/uptime/report?from='+repRange[0]+'&to='+repRange[1]+'&format=pdf&preview=1')} onClose={()=>setRep(true)}
-      downloads={[['pdf','Download PDF',()=>opshFetchFile('/uptime/report?from='+repRange[0]+'&to='+repRange[1]+'&format=pdf',null,'uptime-report.pdf')],['docx','Download Word',()=>opshFetchFile('/uptime/report?from='+repRange[0]+'&to='+repRange[1]+'&format=docx',null,'uptime-report.docx')],['csv','Download CSV',()=>opshFetchFile('/uptime/report?from='+repRange[0]+'&to='+repRange[1]+'&format=csv',null,'uptime-report.csv')]]}/>}
+    {rep==='prev'&&<DocPreview title={'Uptime report · '+mhDate(repRange[0])+' – '+mhDate(repRange[1])} load={()=>itopsFetchBlob('/uptime/report?from='+repRange[0]+'&to='+repRange[1]+'&format=pdf&preview=1')} onClose={()=>setRep(true)}
+      downloads={[['pdf','Download PDF',()=>itopsFetchFile('/uptime/report?from='+repRange[0]+'&to='+repRange[1]+'&format=pdf',null,'uptime-report.pdf')],['docx','Download Word',()=>itopsFetchFile('/uptime/report?from='+repRange[0]+'&to='+repRange[1]+'&format=docx',null,'uptime-report.docx')],['csv','Download CSV',()=>itopsFetchFile('/uptime/report?from='+repRange[0]+'&to='+repRange[1]+'&format=csv',null,'uptime-report.csv')]]}/>}
   </div>;
 }
 function UptimeCfg({d,toast,onSaved}){
@@ -4719,8 +4719,8 @@ function BackupEdit({bk,kind,d,toast,onClose,onSaved}){
   React.useEffect(()=>{ if(bk) api('GET','/backups/'+bk.id).then(setDet).catch(()=>{}); },[]);
   const body=()=>Object.assign({name:f.name,grace_min:Number(f.grace_min),alert:!!f.alert,on_scorecard:!!f.on_scorecard,active:!!f.active,notes:f.notes},whm?{}:{slug:f.slug,expect_hours:Number(f.expect_hours)},isNew?{kind:whm?'whm':'checkin'}:{});
   const save=async()=>{ setBusy('save'); try{ const r=isNew?await api('POST','/backups',body()):await api('PUT','/backups/'+bk.id,body()); toast(isNew?(whm?'WHM backups read':'Backup added'):'Saved','ok'); onSaved(r); }catch(e){ toast(e.message); setBusy(''); } };
-  const del=async()=>{ if(!await opshConfirm('Stop watching "'+bk.name+'" and remove its history?'))return; try{ await api('DELETE','/backups/'+bk.id); toast('Removed','ok'); onSaved(); }catch(e){ toast(e.message); } };
-  const newKey=async()=>{ if(!await opshConfirm('Make a new check-in key? The address with the old key stops working.'))return; try{ const r=await api('POST','/backups/'+bk.id+'/key',{}); onSaved({key:r.key,commands:r.commands}); }catch(e){ toast(e.message); } };
+  const del=async()=>{ if(!await itopsConfirm('Stop watching "'+bk.name+'" and remove its history?'))return; try{ await api('DELETE','/backups/'+bk.id); toast('Removed','ok'); onSaved(); }catch(e){ toast(e.message); } };
+  const newKey=async()=>{ if(!await itopsConfirm('Make a new check-in key? The address with the old key stops working.'))return; try{ const r=await api('POST','/backups/'+bk.id+'/key',{}); onSaved({key:r.key,commands:r.commands}); }catch(e){ toast(e.message); } };
   const readNow=async()=>{ setBusy('read'); try{ const r=await api('POST','/backups/'+bk.id+'/read',{}); toast(r.ok?'WHM read':'Not read: '+r.detail,r.ok?'ok':undefined); const x=await api('GET','/backups/'+bk.id); setDet(x); }catch(e){ toast(e.message); } setBusy(''); };
   const b=det?det.backup:bk;
   return <EditPage title={isNew?(whm?'Watch the WHM backups':'Add a backup script'):bk.name} badge="Backups" onClose={onClose}
@@ -4767,13 +4767,13 @@ const JOB_VIA={cli:'cron',web:'web call',tick:'in-app scheduler',manual:'Run now
 function JobsScreen({toast}){
   /* BT62: three tabs — Scheduled jobs (the list on the left, the chosen job on the right), Set up (the cron lines), Alerts */
   const [d,setD]=React.useState(null); const [err,setErr]=React.useState(null); const [gen,setGen]=React.useState(0); const [busy,setBusy]=React.useState('');
-  const [tab,setTab]=React.useState(()=>{ try{ return localStorage.getItem('opsh_jobs_tab')||'jobs'; }catch(_){ return 'jobs'; } });
+  const [tab,setTab]=React.useState(()=>{ try{ return localStorage.getItem('itops_jobs_tab')||'jobs'; }catch(_){ return 'jobs'; } });
   const [sel,setSel]=React.useState(null); const [hist,setHist]=React.useState(null); const [hs,setHs]=React.useState(''); const [run,setRun]=React.useState(null); const [months,setMonths]=React.useState(null);
   const [cfg,setCfg]=React.useState(null); const [monUrl,setMonUrl]=React.useState('');
   const load=React.useCallback(()=>{ setErr(null); return api('GET','/jobs').then(x=>{ setD(x); setCfg(JSON.parse(JSON.stringify(x.cfg))); }).catch(e=>setErr(e.message)); },[]);
   React.useEffect(()=>{ load(); },[load,gen]);
   React.useEffect(()=>{ const t=setInterval(()=>setGen(g=>g+1),60000); return ()=>clearInterval(t); },[]);
-  React.useEffect(()=>{ try{ localStorage.setItem('opsh_jobs_tab',tab); }catch(_){} },[tab]);
+  React.useEffect(()=>{ try{ localStorage.setItem('itops_jobs_tab',tab); }catch(_){} },[tab]);
   // the chosen job: the first one that needs attention, else the main scheduler
   React.useEffect(()=>{ if(d&&!sel){ const bad=d.jobs.find(j=>d.attention.includes(j.key)); setSel((bad||d.jobs[0]).key); } },[d]);
   const J=d&&sel?d.jobs.find(j=>j.key===sel):null;
@@ -4785,8 +4785,8 @@ function JobsScreen({toast}){
   const runNow=async job=>{ setBusy('run'+job); try{ await api('POST','/jobs/run',{job}); toast('Started. The run shows in a few seconds.','ok'); setTimeout(()=>setGen(g=>g+1),4000); setTimeout(()=>setGen(g=>g+1),15000); }catch(e){ toast(e.message); } setBusy(''); };
   const saveCfg=async()=>{ setBusy('cfg'); try{ const r=await api('PUT','/jobs/settings',{notify:!!cfg.notify,email:!!cfg.email,jobs:Object.fromEntries(Object.entries(cfg.jobs).map(([k,v])=>[k,{every:Number(v.every),alert:!!v.alert}]))}); toast(r.changed?'Saved':'Nothing changed','ok'); setGen(g=>g+1); }catch(e){ toast(e.message); } setBusy(''); };
   const test=async()=>{ setBusy('test'); try{ const r=await api('POST','/jobs/test-alert',{}); toast('Test sent: check the bell'+(r.email===true?' and your email':r.email===false?' (the email could not be sent)':''),'ok'); }catch(e){ toast(e.message); } setBusy(''); };
-  const monNew=async()=>{ if(d.monitor.set&&!await opshConfirm('Make a new monitor URL? The old one stops working.'))return; setBusy('mon'); try{ const r=await api('POST','/jobs/monitor-key',{}); setMonUrl(r.url); setGen(g=>g+1); }catch(e){ toast(e.message); } setBusy(''); };
-  const monStop=async()=>{ if(!await opshConfirm('Stop the outside monitor URL?'))return; setBusy('mon'); try{ await api('DELETE','/jobs/monitor-key'); setMonUrl(''); setGen(g=>g+1); toast('Stopped','ok'); }catch(e){ toast(e.message); } setBusy(''); };
+  const monNew=async()=>{ if(d.monitor.set&&!await itopsConfirm('Make a new monitor URL? The old one stops working.'))return; setBusy('mon'); try{ const r=await api('POST','/jobs/monitor-key',{}); setMonUrl(r.url); setGen(g=>g+1); }catch(e){ toast(e.message); } setBusy(''); };
+  const monStop=async()=>{ if(!await itopsConfirm('Stop the outside monitor URL?'))return; setBusy('mon'); try{ await api('DELETE','/jobs/monitor-key'); setMonUrl(''); setGen(g=>g+1); toast('Stopped','ok'); }catch(e){ toast(e.message); } setBusy(''); };
   const copy=t=>{ try{ navigator.clipboard.writeText(t); toast('Copied','ok'); }catch(_){ toast('Select the text and copy it by hand.'); } };
   const label=k=>(d.jobs.find(j=>j.key===k)||{}).label||k;
   const ym=s=>{ const [y,m]=s.split('-'); return ['January','February','March','April','May','June','July','August','September','October','November','December'][+m-1]+' '+y; };
@@ -4922,7 +4922,7 @@ function VtShell({inline,title,badge,onClose,ribbon,children}){
   </div>;
 }
 function VtUserFromAccount({vid,onClose}){
-  const toast=(m,k)=>{ try{ window.__opshToast&&window.__opshToast(m,k); }catch(_){} };
+  const toast=(m,k)=>{ try{ window.__itopsToast&&window.__itopsToast(m,k); }catch(_){} };
   const [meta,setMeta]=React.useState(null); const [err,setErr]=React.useState(null); const [cfg,setCfg]=React.useState(false); const [rev,setRev]=React.useState(0);
   React.useEffect(()=>{ api('GET','/vtiger_users/meta').then(setMeta).catch(e=>setErr(e.message)); },[]);
   if(err) return <VtShell inline title="" badge="" onClose={onClose}><MhErr msg={err}/></VtShell>;
@@ -5095,8 +5095,8 @@ function SentEmailsScreen({toast}){
       <button className="btn btn-g btn-sm" data-sentmail-prevpage="1" disabled={f.page<=1} onClick={()=>setF(x=>Object.assign({},x,{page:x.page-1}))}>← Newer</button>
       <span className="mh-mut" style={{fontSize:12.5}}>Page {f.page} of {pages}</span>
       <button className="btn btn-g btn-sm" data-sentmail-nextpage="1" disabled={f.page>=pages} onClick={()=>setF(x=>Object.assign({},x,{page:x.page+1}))}>Older →</button></div>}
-    {prev&&<DocPreview title="Sent emails" load={()=>opshFetchBlob('/sent_emails/export?'+qs({preview:1}))} onClose={()=>setPrev(false)} note="The emails that match the filters (up to 10,000), newest first. Times are Eastern."
-      downloads={[['csv','Download CSV',()=>opshFetchFile('/sent_emails/export?'+qs(),null,'sent-emails.csv')]]}/>}
+    {prev&&<DocPreview title="Sent emails" load={()=>itopsFetchBlob('/sent_emails/export?'+qs({preview:1}))} onClose={()=>setPrev(false)} note="The emails that match the filters (up to 10,000), newest first. Times are Eastern."
+      downloads={[['csv','Download CSV',()=>itopsFetchFile('/sent_emails/export?'+qs(),null,'sent-emails.csv')]]}/>}
   </div>;
 }
 function EventLogScreen({ toast }) {
@@ -5155,7 +5155,7 @@ function EventLogScreen({ toast }) {
 
 /* ---- 3. Server Guardian (view tier) -------------------------------------- */
 function GuardianActions({ toast }) {
-  const isSuper=(()=>{ try{ var u=window.__opshUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } })();
+  const isSuper=(()=>{ try{ var u=window.__itopsUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } })();
   const [cat,setCat]=React.useState(null); const [whm,setWhm]=React.useState(false); const [sel,setSel]=React.useState(''); const [params,setParams]=React.useState({}); const [busy,setBusy]=React.useState(false); const [preview,setPreview]=React.useState(null); const [digest,setDigest]=React.useState(false); const [weekly,setWeekly]=React.useState(false); const [minSev,setMinSev]=React.useState('warning');
   const [gc,setGc]=React.useState(null); const [gcSaved,setGcSaved]=React.useState({}); const [gcBusy,setGcBusy]=React.useState(false);
   const GCKEYS=['guardian_host_label','guardian_cpu_count','guardian_whm_host','guardian_whm_port','guardian_whm_user','guardian_whm_token','guardian_imunify_path','guardian_imap_host','guardian_imap_user','guardian_imap_pass','guardian_ssl_hosts'];
@@ -5165,7 +5165,7 @@ function GuardianActions({ toast }) {
   const toggleWeekly=async(v)=>{ setWeekly(v); try{ await api('PUT','/settings',{weekly_digest_enabled:v?'1':'0'}); toast(v?'Weekly ops digest on':'Weekly ops digest off','ok'); }catch(e){ toast(e.message); setWeekly(!v); } };
   const changeMinSev=async(v)=>{ setMinSev(v); try{ await api('PUT','/settings',{alert_min_severity:v}); toast('Alert threshold: '+(v==='error'?'errors only':'warnings and above'),'ok'); }catch(e){ toast(e.message); } };
   React.useEffect(()=>{ if(!isSuper)return; (async()=>{ try{ const r=await api('GET','/guardian_action/catalog'); setCat(r.actions||{}); setWhm(!!r.whm_configured); }catch(e){} })(); (async()=>{ try{ const s=await api('GET','/settings'); setDigest((s&&s.alert_digest_enabled)==='1'); setWeekly((s&&s.weekly_digest_enabled)==='1'); if(s&&s.alert_min_severity)setMinSev(s.alert_min_severity); const g={}; const sv={}; ['guardian_host_label','guardian_cpu_count','guardian_whm_host','guardian_whm_port','guardian_whm_user','guardian_imunify_path','guardian_imap_host','guardian_imap_user','guardian_ssl_hosts'].forEach(k=>{ g[k]=(s&&s[k])||''; }); ['guardian_whm_token','guardian_imap_pass'].forEach(k=>{ g[k]=''; sv[k]=!!(s&&s[k]); }); setGc(g); setGcSaved(sv); }catch(e){ setGc({}); } })(); },[]);
-  if(!isSuper) return <div style={{marginTop:16,padding:'12px 14px',border:'1px dashed var(--b1)',borderRadius:10,fontSize:14,color:'var(--t4)'}}>Server actions and check configuration are super-admin only. You are signed in as <b>{(window.__opshUser&&(window.__opshUser.display_name||''))||'unknown'}</b> with role <b>{(window.__opshUser&&(window.__opshUser.role||'?'))}</b>.</div>;
+  if(!isSuper) return <div style={{marginTop:16,padding:'12px 14px',border:'1px dashed var(--b1)',borderRadius:10,fontSize:14,color:'var(--t4)'}}>Server actions and check configuration are super-admin only. You are signed in as <b>{(window.__itopsUser&&(window.__itopsUser.display_name||''))||'unknown'}</b> with role <b>{(window.__itopsUser&&(window.__itopsUser.role||'?'))}</b>.</div>;
   const acts=cat?Object.keys(cat):[];
   const run=async(confirmed)=>{ if(!sel)return toast('Pick an action'); setBusy(true);
     try{ const r=await api('POST','/guardian_action/run',{action:sel,params:params,confirmed:confirmed}); if(r.status==='preview'){ setPreview(r); } else { toast(r.message||'Done','ok'); setPreview(null); setParams({}); } }catch(e){ toast(e.message); } setBusy(false); };
@@ -5209,9 +5209,9 @@ function GuardianActions({ toast }) {
 function WhmCertBlock({toast}){
   const [c,setC]=React.useState(null); const [busy,setBusy]=React.useState(false); const [open,setOpen]=React.useState(false);
   const load=async()=>{ setBusy(true); try{ setC(await api('GET','/guardian_action/whm_cert')); setOpen(true); }catch(e){ setC({ok:false,error:e.message}); setOpen(true); } setBusy(false); };
-  const trust=async()=>{ if(!c||!c.pin)return; if(!(await opshConfirm('Trust this certificate for WHM? The WHM token will only be sent to a server that shows this same key.')))return;
+  const trust=async()=>{ if(!c||!c.pin)return; if(!(await itopsConfirm('Trust this certificate for WHM? The WHM token will only be sent to a server that shows this same key.')))return;
     setBusy(true); try{ await api('POST','/guardian_action/whm_cert',{pin:c.pin}); toast('WHM certificate trusted','ok'); await load(); }catch(e){ toast(e.message); } setBusy(false); };
-  const untrust=async()=>{ if(!(await opshConfirm('Stop trusting the saved certificate? WHM is then checked like any https site.')))return;
+  const untrust=async()=>{ if(!(await itopsConfirm('Stop trusting the saved certificate? WHM is then checked like any https site.')))return;
     setBusy(true); try{ await api('DELETE','/guardian_action/whm_cert'); toast('Saved certificate removed','ok'); await load(); }catch(e){ toast(e.message); } setBusy(false); };
   const row=(k,v)=><div style={{display:'flex',gap:10,fontSize:13.5,padding:'2px 0'}}><span style={{minWidth:110,color:'var(--t4)'}}>{k}</span><span style={{wordBreak:'break-all'}}>{v}</span></div>;
   return <div data-whm-cert="1" style={{marginTop:12,padding:'10px 12px',border:'1px solid var(--b1)',borderRadius:9,background:'var(--s3)'}}>
@@ -5328,8 +5328,8 @@ function GuardianScreen({ toast }) {
   </div>;
 }
 /* ═══════════════════ BT21 — Microsoft 365 area ═══════════════════
- * Groups, tabs, options, texts and rules of the Microsoft 365 area, drawn in OpsHub's
- * style. Backend: /api/m365hub/<action>. OpsHub-only screens appear as extra tabs.
+ * Groups, tabs, options, texts and rules of the Microsoft 365 area, drawn in ITOps's
+ * style. Backend: /api/m365hub/<action>. ITOps-only screens appear as extra tabs.
  * Colours: forest → var(--green), clay → var(--amber), clay-dark → var(--red), muted → var(--t4).
  */
 let MH_TZ='America/New_York';
@@ -5337,15 +5337,15 @@ let MH_TZ='America/New_York';
    served by /branding; Eastern until it is read). Dates shown with a time and times alone are formatted for that zone in
    US English unless the code asks otherwise; dates alone are left as they are (a date built for a day must not move to
    the day before in another time zone). */
-function opshSetTz(tz){ if(!tz||typeof tz!=='string') return MH_TZ; try{ new Intl.DateTimeFormat('en-US',{timeZone:tz}); MH_TZ=tz; try{ window.OPSH_TZ=tz; }catch(_){} }catch(e){} return MH_TZ; }
+function itopsSetTz(tz){ if(!tz||typeof tz!=='string') return MH_TZ; try{ new Intl.DateTimeFormat('en-US',{timeZone:tz}); MH_TZ=tz; try{ window.ITOPS_TZ=tz; }catch(_){} }catch(e){} return MH_TZ; }
 /* "Eastern Time", "Central Time", … for the installation's zone (the browser's generic name; the IANA name when it has none) */
 function mhTzName(){ try{ const p=new Intl.DateTimeFormat('en-US',{timeZone:MH_TZ,timeZoneName:'longGeneric'}).formatToParts(new Date()); const n=(p.find(x=>x.type==='timeZoneName')||{}).value; if(n&&!/^GMT/.test(n)) return n; }catch(e){} return MH_TZ; }
-(function(){ if(Date.prototype.__opshTz) return; const P=Date.prototype, ls=P.toLocaleString, lt=P.toLocaleTimeString;
+(function(){ if(Date.prototype.__itopsTz) return; const P=Date.prototype, ls=P.toLocaleString, lt=P.toLocaleTimeString;
   const loc=l=>(!l||l==='default'||(Array.isArray(l)&&!l.length))?'en-US':l;
   const hasTime=o=>!o||o.hour!==undefined||o.minute!==undefined||o.timeStyle!==undefined;
   P.toLocaleString=function(l,o){ if(hasTime(o)){ o=Object.assign({timeZone:MH_TZ,hour12:true},o||{}); if(!o.dateStyle&&!o.timeStyle&&!o.year&&!o.month&&!o.day&&!o.hour) Object.assign(o,{year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); } return ls.call(this,loc(l),o); };
   P.toLocaleTimeString=function(l,o){ o=Object.assign({timeZone:MH_TZ,hour12:true},o||{}); if(!o.timeStyle&&!o.hour) Object.assign(o,{hour:'numeric',minute:'2-digit'}); return lt.call(this,loc(l),o); };
-  P.__opshTz=1; })();
+  P.__itopsTz=1; })();
 /* BT22: client-side cache so tabs open instantly. Reads are kept per action+params: a repeat within
  * MH_FRESH ms is served from memory; screens paint the last copy at once (mhPeek) and refresh it in the
  * background. Identical requests in flight are shared. Any change (mhPost) drops the directory/license
@@ -5395,8 +5395,8 @@ const MHC={forest:'var(--green)',clay:'var(--amber)',clayd:'var(--red)',muted:'v
 const mhPctColor=p=>p==null?MHC.muted:p>=90?MHC.clayd:p>=75?MHC.clay:MHC.muted;
 /* CSV cell: commas become spaces and a leading = + - @ is neutralised so a spreadsheet never runs it as a formula */
 // BT86-87 (code audit M-15): a cell never starts a spreadsheet formula
-const opshCsvSafe=v=>{ v=String(v==null?'':v); return /^[=+\-@\t\r]/.test(v)?"'"+v:v; };
-const mhC=v=>{ v=String(v==null?'':v).replace(/[,\r\n]+/g,' '); return opshCsvSafe(v); };
+const itopsCsvSafe=v=>{ v=String(v==null?'':v); return /^[=+\-@\t\r]/.test(v)?"'"+v:v; };
+const mhC=v=>{ v=String(v==null?'':v).replace(/[,\r\n]+/g,' '); return itopsCsvSafe(v); };
 function mhCsv(name,rows){ try{ const b=new Blob([rows.join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }catch(e){} }
 
 /* Page header: eyebrow · title · description (+ "· cached") and the action cluster on the right. */
@@ -5491,7 +5491,7 @@ function M365DomainSetting({toast}){
   React.useEffect(()=>{ api('GET','/m365hub/m365-domains').then(x=>{ setD(x); setV(x.org_default||''); }).catch(e=>setD({error:e.message})); },[]);
   if(!d) return null; if(d.error) return <div className="card" style={{padding:'10px 12px',marginBottom:12,fontSize:12.5}} data-m365-domset="error"><b>Microsoft 365 · People — the domain shown first: </b><span className="mh-mut">{d.error}</span></div>;
   const ds=d.domains||[]; const def=ds.find(x=>x.isDefault);
-  const save=async()=>{ setBusy(true); try{ const r=await api('POST','/m365hub/m365-default-domain',{domain:v}); try{ delete MH_C[mhKey('m365-domains',undefined)]; delete MH_C[mhKey('m365-domains',{})]; }catch(_){ } setD(Object.assign({},d,{org_default:r.org_default})); try{ localStorage.removeItem('opsh_m365_domain'); }catch(_){ } toast('Saved: People opens on '+(v==='*'?'all domains':v?'@'+v:'the Microsoft 365 default domain'),'ok'); }catch(e){ toast(e.message); } setBusy(false); };
+  const save=async()=>{ setBusy(true); try{ const r=await api('POST','/m365hub/m365-default-domain',{domain:v}); try{ delete MH_C[mhKey('m365-domains',undefined)]; delete MH_C[mhKey('m365-domains',{})]; }catch(_){ } setD(Object.assign({},d,{org_default:r.org_default})); try{ localStorage.removeItem('itops_m365_domain'); }catch(_){ } toast('Saved: People opens on '+(v==='*'?'all domains':v?'@'+v:'the Microsoft 365 default domain'),'ok'); }catch(e){ toast(e.message); } setBusy(false); };
   return <div className="card" style={{padding:'10px 12px',marginBottom:12}} data-m365-domset={d.org_default||'default'}>
     <div style={{fontWeight:700,fontSize:14}}>Microsoft 365 · People — the domain shown first</div>
     <div className="mh-mut" style={{fontSize:12.5,margin:'2px 0 8px'}}>{'The accounts list (Microsoft 365 → People → Accounts) opens on this domain for everyone; each person can still pick another domain, or all, on the page. '+(ds.length?ds.length+' domain(s) found'+(d.note?' — '+d.note:' (from Microsoft and the accounts).'):'No domain found yet: open People once so its account list is read.')}</div>
@@ -5502,8 +5502,8 @@ function M365DomainSetting({toast}){
       {d.can_set?<button className="btn btn-p btn-sm" disabled={busy||v===(d.org_default||'')} onClick={save} data-m365-domsave="1">Save</button>:<span className="mh-mut" style={{fontSize:12}}>Changing it needs Settings · Connections.</span>}</div>
   </div>;
 }
-function mhDomainGet(){ try{ const v=localStorage.getItem('opsh_m365_domain'); return v===null?null:(v==='*'?'':v); }catch(e){ return null; } }
-function mhDomainSet(v){ try{ localStorage.setItem('opsh_m365_domain',v||'*'); }catch(e){} }
+function mhDomainGet(){ try{ const v=localStorage.getItem('itops_m365_domain'); return v===null?null:(v==='*'?'':v); }catch(e){ return null; } }
+function mhDomainSet(v){ try{ localStorage.setItem('itops_m365_domain',v||'*'); }catch(e){} }
 /* Typeahead over the M365 directory (manager pickers, offboard picker). */
 function useMhUserSearch(q,enabled,top){
   const [res,setRes]=React.useState([]);
@@ -5559,7 +5559,7 @@ function MhReassign({sourceId,sourceEmail,sourceLabel,compact,onDone}){
    in place, an action picked on the row, several rows ticked for one change. The account itself opens in a panel that
    slides in from the right; the grid stays where it was. Every account is read once (the server keeps the read for a
    few minutes); searching, filtering, sorting and paging happen in the browser. */
-const MH_ACC_COLS_KEY='opsh_acc_cols', MH_ACC_SIZE_KEY='opsh_acc_size', MH_ACC_ORDER_KEY='opsh_acc_order';
+const MH_ACC_COLS_KEY='itops_acc_cols', MH_ACC_SIZE_KEY='itops_acc_size', MH_ACC_ORDER_KEY='itops_acc_order';
 const mhAccStore=(k,fb)=>{ try{ const v=JSON.parse(localStorage.getItem(k)||'null'); return v===null||v===undefined?fb:v; }catch(e){ return fb; } };
 const mhAccKeep=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
 /* The columns a grid can show. p = a value of the account that "Edit contact information" also changes (so it can be
@@ -5637,7 +5637,7 @@ function MhAccounts({go,toast}){
   /* BT53: an account created on Onboard appears here at once — the list is read again when one is created, and while
      Microsoft's own list does not include it yet (pending_new) it is read again from Microsoft every 20 seconds, 3 times. */
   const loadRef=React.useRef(load); loadRef.current=load; const followRef=React.useRef(0);
-  React.useEffect(()=>{ const h=()=>{ followRef.current=0; loadRef.current(false); }; window.addEventListener('opsh-m365-accounts-changed',h); return ()=>window.removeEventListener('opsh-m365-accounts-changed',h); },[]);
+  React.useEffect(()=>{ const h=()=>{ followRef.current=0; loadRef.current(false); }; window.addEventListener('itops-m365-accounts-changed',h); return ()=>window.removeEventListener('itops-m365-accounts-changed',h); },[]);
   React.useEffect(()=>{ if(!meta.pendingNew||followRef.current>=3)return; const t=setTimeout(()=>{ followRef.current++; loadRef.current(true); },20000); return ()=>clearTimeout(t); },[meta.pendingNew,meta.at]);
   const patchRow=(id,o)=>setRows(rs=>rs.map(x=>x.id===id?Object.assign({},x,typeof o==='function'?o(x):o):x));
 
@@ -5680,7 +5680,7 @@ function MhAccounts({go,toast}){
   const selRef=React.useRef(null);
   /* something is being edited in the panel: a save in flight is never interrupted, and typed text is not thrown away unasked */
   const mayLeave=async()=>{ const g=guard.current; if(!g||!g.editing)return true; if(g.busy())return false; if(!g.dirty())return true;
-    return await opshConfirm('Leave without saving?\n\nWhat you typed in the panel is not saved yet.',{okText:'Leave',cancelText:'Keep editing'}); };
+    return await itopsConfirm('Leave without saving?\n\nWhat you typed in the panel is not saved yet.',{okText:'Leave',cancelText:'Keep editing'}); };
   const select=async(id,keep,st)=>{ if(!keep&&selRef.current&&!(await mayLeave()))return;
     selRef.current=id; setSelId(id); setUErr(null); if(!keep){ setUser(null); setULoading(true); setStart(st||null); }
     mhApi('m365-user',{id:id}).then(d=>{ if(selRef.current!==id)return; setUser(d.user); const u=d.user;
@@ -5731,8 +5731,8 @@ function MhAccounts({go,toast}){
       revoke:'Revoke all active sessions of '+name+'?\n\nThey will need to sign in again everywhere.',
       block:'Block sign-in for '+name+'?',restore:'Restore sign-in for '+name+'?'}[a];
     if(!ask)return;
-    if(a==='mfa'){ const t=await opshPrompt(ask+'\n\nType RESET to confirm.',''); if(String(t||'').trim().toUpperCase()!=='RESET')return; }
-    else if(!await opshConfirm(ask))return;
+    if(a==='mfa'){ const t=await itopsPrompt(ask+'\n\nType RESET to confirm.',''); if(String(t||'').trim().toUpperCase()!=='RESET')return; }
+    else if(!await itopsConfirm(ask))return;
     setRowBusy(u.id);
     try{
       if(a==='pw'){ const d=await mhPost('m365-user-reset-password',{id:u.id,force_change:true}); addRes({tone:'ok',act:a,name:name,upn:u.upn,title:'Temporary password — copy it now, it won’t be shown again',secret:d.password,text:'The user must change it at next sign-in.'}); }
@@ -6019,7 +6019,7 @@ function MhUserPanel({user,onChanged,go,start,guard}){
       setObSteps(steps); onChanged(); }
     catch(e){ setBanner({tone:'warn',text:e.message||'Offboard failed.'}); } setBusy(null); };
   const loadMethods=async()=>{ setBusy('methods'); try{ const r=await api('POST','/m365_admin/user_methods',{upn:user.upn}); setMethods(r.value||[]); }catch(e){ setBanner({tone:'warn',text:e.message}); } setBusy(null); };
-  const removeMethod=async(m)=>{ if(!await opshConfirm('Remove "'+m.name+(m.detail?' — '+m.detail:'')+'" from '+name+'? Use this for a lost security key or an old phone. If it was their only method they will need a Temporary access pass (or to set one up again) at next sign-in.'))return;
+  const removeMethod=async(m)=>{ if(!await itopsConfirm('Remove "'+m.name+(m.detail?' — '+m.detail:'')+'" from '+name+'? Use this for a lost security key or an old phone. If it was their only method they will need a Temporary access pass (or to set one up again) at next sign-in.'))return;
     setBusy('methods'); try{ await api('POST','/m365_admin/remove_method',{upn:user.upn,type:m.type,id:m.id,name:m.name+(m.detail?' '+m.detail:'')}); setBanner({tone:'ok',text:'Method removed.'}); const r=await api('POST','/m365_admin/user_methods',{upn:user.upn}); setMethods(r.value||[]); onChanged(); }catch(e){ setBanner({tone:'warn',text:e.message}); } setBusy(null); };
   const issueTap=async()=>{ setBusy('tap'); setOpen(null); setBanner(null);
     try{ const r=await api('POST','/m365_admin/issue_tap',{upn:user.upn,hours:Math.max(1,Math.min(8,parseInt(tapH,10)||1)),one_time:true}); setTap(r); onChanged(); }catch(e){ setBanner({tone:'warn',text:e.message}); } setBusy(null); };
@@ -6027,7 +6027,7 @@ function MhUserPanel({user,onChanged,go,start,guard}){
   const inGrp={}; (user.groups||[]).forEach(g=>inGrp[g.id]=1);
   const heldRole={}; (uRoles||[]).forEach(r=>heldRole[r.role_id]=1);
   const copy=t=>{ try{ navigator.clipboard&&navigator.clipboard.writeText(t); }catch(e){} };
-  const leaveEdit=async()=>{ if(editLock.current)return; if(editDirty.current&&!await opshConfirm('Leave without saving?\n\nWhat you typed for '+name+' is not saved yet.',{okText:'Leave',cancelText:'Keep editing'}))return; setEdit(false); onChanged(); };
+  const leaveEdit=async()=>{ if(editLock.current)return; if(editDirty.current&&!await itopsConfirm('Leave without saving?\n\nWhat you typed for '+name+' is not saved yet.',{okText:'Leave',cancelText:'Keep editing'}))return; setEdit(false); onChanged(); };
   if(vtEdit&&vt&&vt.id) return <div className="mh-panel mh-panel-edit" data-acc-vtiger={vt.id}><VtUserFromAccount vid={vt.id} onClose={()=>{ setVtEdit(false); onChanged(); }}/></div>;
   if(edit) return <div className="mh-panel mh-panel-edit" data-acc-editing={user.upn}>
     <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
@@ -6703,7 +6703,7 @@ function MhOnboard({go}){
     const sysKeys=sysList.filter(sy=>sysOn[sy.key]).map(sy=>sy.key); let rec=null;
     try{ rec=await mhPost('onboard-record',{display_name:dn,upn:upn,m365_id:cr.user&&cr.user.id,vtiger_id:vr&&vr.ok?vr.id:'',first_name:f.first,last_name:f.last,job_title:f.job,department:f.dept,template:tp?tp.name:'',steps:steps,systems:sysKeys}); }catch(e){ rec=null; }
     setResult(Object.assign({},cr,{groupResults:gr,vt:vr,runId:rec&&rec.run_id,sysTasks:(rec&&rec.system_tasks)||[],sysWanted:sysKeys.length,sysNote:rec&&rec.systems_note})); setBusy(false);
-    try{ window.dispatchEvent(new CustomEvent('opsh-m365-accounts-changed')); }catch(_){}   /* BT53: the Accounts list reads again */ };
+    try{ window.dispatchEvent(new CustomEvent('itops-m365-accounts-changed')); }catch(_){}   /* BT53: the Accounts list reads again */ };
   const reset=()=>{ setResult(null); setCErr(null); setMgr(null); setMq(''); setSysOn({}); setF(x=>Object.assign({},x,{first:'',last:'',dn:'',dnEd:false,un:'',unEd:false,job:'',dept:'',lics:[],gen:true,pw:'',pwFrom:'gen',force:true,tpl:'',groups:[],vt:false,vtRole:'',vtStatus:'Active',more:false,mv:blankMore(),cv:{},licShow:false,grpShow:false})); };
   const copy=t=>{ try{ navigator.clipboard&&navigator.clipboard.writeText(t); }catch(e){} };
   const inp=(k,ph,w)=><input className="mh-in" style={{width:w||'100%'}} value={f.mv[k]} placeholder={ph} onChange={e=>{ const v=e.target.value; setF(x=>Object.assign({},x,{mv:Object.assign({},x.mv,{[k]:v})})); }}/>;
@@ -6806,7 +6806,7 @@ function MhAdminOnboarding({toast}){
   const can=usePerm(); const [t,setT]=React.useState('tpl'); const vt=can('onboarding','edit');
   return <div>
     {vt&&<div className="conn-tabs mh-tabs"><div className={'conn-tab'+(t==='tpl'?' on':'')} onClick={()=>setT('tpl')}>Onboarding templates</div><div className={'conn-tab'+(t==='vt'?' on':'')} onClick={()=>setT('vt')}>vTiger provisioning</div></div>}
-    {t==='tpl'?<MhTemplates toast={toast}/>:<div><div className="mh-mut" style={{fontSize:12.5,marginBottom:8}}>The vTiger connection now lives with every other system: Settings → Company systems → vTiger → Set up… (the same settings, shown here too). <button className="btn btn-g btn-sm" onClick={()=>opshOpenSystem('vtiger')}>Open there</button></div><VTigerConfig toast={toast}/></div>}
+    {t==='tpl'?<MhTemplates toast={toast}/>:<div><div className="mh-mut" style={{fontSize:12.5,marginBottom:8}}>The vTiger connection now lives with every other system: Settings → Company systems → vTiger → Set up… (the same settings, shown here too). <button className="btn btn-g btn-sm" onClick={()=>itopsOpenSystem('vtiger')}>Open there</button></div><VTigerConfig toast={toast}/></div>}
   </div>;
 }
 /* ═══ Administration → Onboarding templates ═══ */
@@ -6845,7 +6845,7 @@ function MhTemplates({toast}){
       if(m.department&&!fields.department)fields.department=m.department; if(m.job_title&&!fields.jobTitle)fields.jobTitle=m.job_title;
       nx=Object.assign({},clone(MH_BLANK_TPL),c,{m365:Object.assign({},clone(MH_BLANK_TPL.m365),m,{fields:fields,manager:m.manager||null,password:'',password_clear:false}),vtiger:Object.assign({},MH_BLANK_TPL.vtiger,c.vtiger||{})}); }
     ed0.current=JSON.stringify(nx); setEd(nx); };
-  const mayLeave=async()=>!isDirty()||await opshConfirm('Leave this template without saving? What you changed is lost.',{okText:'Leave without saving',cancelText:'Keep editing'});
+  const mayLeave=async()=>!isDirty()||await itopsConfirm('Leave this template without saving? What you changed is lost.',{okText:'Leave without saving',cancelText:'Keep editing'});
   const pick=async t=>{ if(saving)return; if(ed&&t&&ed.id&&ed.id===t.id)return; if(!await mayLeave())return; openEd(t); };
   const closeEd=async()=>{ if(saving)return; if(!await mayLeave())return; setEd(null); };
   React.useEffect(()=>{ if(loading||auto.current)return; auto.current=true; if(canEdit&&list.length&&wide())openEd(list[0]); },[loading]);   /* a wide screen never opens with an empty half */
@@ -6860,7 +6860,7 @@ function MhTemplates({toast}){
       const saved=ed.id?ls.find(x=>x.id===ed.id):(ls.find(x=>before.indexOf(x.id)<0)||null);
       if(saved&&wide())openEd(saved); else{ ed0.current=''; setEd(null); }
     }catch(e){ setEdErr(e.message||'Could not save the template.'); } setSaving(false); };
-  const del=async t=>{ if(!await opshConfirm('Delete template "'+t.name+'"? A Super Admin can put it back from Deleted items.'))return;
+  const del=async t=>{ if(!await itopsConfirm('Delete template "'+t.name+'"? A Super Admin can put it back from Deleted items.'))return;
     try{ const d=await mhPost('onboard-template-delete',{id:t.id}); setList(d.templates||[]); if(ed&&ed.id===t.id){ ed0.current=''; setEd(null); } }catch(e){ setErr(e.message||'Could not delete the template.'); } };
   const common=catalog.filter(c=>c.common); const lab=k=>{ const c=catalog.find(x=>x.key===k); return c?c.label:k; };
   const customs=catalog.filter(c=>c.custom);   /* BT47: the organization's own fields are always on the page, not behind "Add a field" */
@@ -6988,9 +6988,9 @@ function MhTemplates({toast}){
 }
 
 
-/* ═══ Microsoft 365 → People → Offboard (with OpsHub extras) ═══
- * A guided run, driven through OpsHub's offboarding engine so every departure is kept in History
- * with verification. OpsHub extras: auto-reply, mail forwarding, OneDrive handover, equipment check-in,
+/* ═══ Microsoft 365 → People → Offboard (with ITOps extras) ═══
+ * A guided run, driven through ITOps's offboarding engine so every departure is kept in History
+ * with verification. ITOps extras: auto-reply, mail forwarding, OneDrive handover, equipment check-in,
  * and scheduling the run for the person's last day. */
 function MhOffboard({go,arg}){
   const can=usePerm(); const C=mhCaps(can); const canAssets=can('assets','edit');
@@ -7213,8 +7213,8 @@ function SysStep({runId,taskId,via,onDone}){
         </React.Fragment>
         :<React.Fragment>
           {/* BT133: HubSpot users are removed from the step itself (never a HubSpot Super Admin) */}
-          {s.key==='pbx'&&links.length>0&&<button className="btn btn-p btn-sm mh-dang" data-sys-do="remove_now" disabled={busy} onClick={async()=>{ if(!await opshConfirm('Take '+links.map(l=>'extension '+l.ext_id).join(', ')+' out of service now?\n\nIt can no longer make or take calls, and its call forwarding is cleared. Its voicemail and settings stay; nothing is deleted. It can be put back in service on the phone system tab.',{okText:'Take out of service'}))return; send('remove_now'); }}>{busy?'Changing…':'Take the extension out of service now'}</button>}
-          {s.key==='hubspot'&&links.length>0&&<button className="btn btn-p btn-sm mh-dang" data-sys-do="remove_now" disabled={busy} onClick={async()=>{ if(!await opshConfirm('Remove '+links.map(l=>l.account).join(', ')+' from HubSpot now?\n\nThe user can no longer sign in to HubSpot. Their records stay in HubSpot. A HubSpot Super Admin is never removed from here.',{okText:'Remove from HubSpot'}))return; send('remove_now'); }}>{busy?'Removing…':'Remove from HubSpot now'}</button>}
+          {s.key==='pbx'&&links.length>0&&<button className="btn btn-p btn-sm mh-dang" data-sys-do="remove_now" disabled={busy} onClick={async()=>{ if(!await itopsConfirm('Take '+links.map(l=>'extension '+l.ext_id).join(', ')+' out of service now?\n\nIt can no longer make or take calls, and its call forwarding is cleared. Its voicemail and settings stay; nothing is deleted. It can be put back in service on the phone system tab.',{okText:'Take out of service'}))return; send('remove_now'); }}>{busy?'Changing…':'Take the extension out of service now'}</button>}
+          {s.key==='hubspot'&&links.length>0&&<button className="btn btn-p btn-sm mh-dang" data-sys-do="remove_now" disabled={busy} onClick={async()=>{ if(!await itopsConfirm('Remove '+links.map(l=>l.account).join(', ')+' from HubSpot now?\n\nThe user can no longer sign in to HubSpot. Their records stay in HubSpot. A HubSpot Super Admin is never removed from here.',{okText:'Remove from HubSpot'}))return; send('remove_now'); }}>{busy?'Removing…':'Remove from HubSpot now'}</button>}
           <button className={'btn btn-sm '+((s.key==='hubspot'||s.key==='pbx')&&links.length?'btn-g':'btn-p')} data-sys-do="removed" disabled={busy} onClick={()=>send('removed')}>{busy?'Reading '+s.name+'…':(links.length?'I removed the user: check '+s.name+' again':'Confirm: no user in '+s.name)}</button>
         </React.Fragment>}
       </div>
@@ -7272,8 +7272,8 @@ function AccessPage({toast}){
 /* BT148: CallTrackingMetrics — its users (like every connected system), its tracking numbers, the calls of a period and the
    missed calls that become tickets. Everything here is read from CallTrackingMetrics; nothing is written to it. */
 function CtmArea({name,toast,onChanged,onSetup}){
-  const [t,setT]=React.useState(()=>{ try{ return localStorage.getItem('opsh_ctm_tab')||'users'; }catch(_){ return 'users'; } });
-  const go=k=>{ setT(k); try{ localStorage.setItem('opsh_ctm_tab',k); }catch(_){ } };
+  const [t,setT]=React.useState(()=>{ try{ return localStorage.getItem('itops_ctm_tab')||'users'; }catch(_){ return 'users'; } });
+  const go=k=>{ setT(k); try{ localStorage.setItem('itops_ctm_tab',k); }catch(_){ } };
   const tabs=[['users','Users'],['numbers','Tracking numbers'],['calls','Calls'],['missed','Missed calls → tickets']];
   return <div data-ctm-area="1">
     <div className="conn-tabs mh-tabs" style={{marginBottom:12}}>{tabs.map(x=><div key={x[0]} className={'conn-tab'+(t===x[0]?' on':'')} data-ctm-tab={x[0]} onClick={()=>go(x[0])}>{x[1]}</div>)}</div>
@@ -7457,8 +7457,8 @@ function CtmMissed({toast,onNumbers,sys,name}){ sys=sys||'ctm'; name=name||'Call
 /* BT150: JustCall — its users (since BT45, now with "no sign-in for 90 days"), the activity of each person, and missed
    calls and voicemails as tickets (the same screens as CallTrackingMetrics). Read only. */
 function JustCallArea({name,toast,onChanged,onSetup}){
-  const [t,setT]=React.useState(()=>{ try{ return localStorage.getItem('opsh_jc_tab')||'users'; }catch(_){ return 'users'; } });
-  const go=k=>{ setT(k); try{ localStorage.setItem('opsh_jc_tab',k); }catch(_){ } };
+  const [t,setT]=React.useState(()=>{ try{ return localStorage.getItem('itops_jc_tab')||'users'; }catch(_){ return 'users'; } });
+  const go=k=>{ setT(k); try{ localStorage.setItem('itops_jc_tab',k); }catch(_){ } };
   const tabs=[['users','Users'],['calls','Calls and activity'],['missed','Missed calls → tickets']];
   return <div data-jc-area="1">
     <div className="conn-tabs mh-tabs" style={{marginBottom:12}}>{tabs.map(x=><div key={x[0]} className={'conn-tab'+(t===x[0]?' on':'')} data-jc-tab={x[0]} onClick={()=>go(x[0])}>{x[1]}</div>)}</div>
@@ -7470,8 +7470,8 @@ function JustCallArea({name,toast,onChanged,onSetup}){
 /* BT151: the office phone system (Grandstream UCM63xx): the extensions as accounts (matched to people), every extension
    with its status and the PBX's own status, and taking an extension out of service or back (typed confirmation). */
 function PbxArea({name,toast,onChanged,onSetup}){
-  const [t,setT]=React.useState(()=>{ try{ return localStorage.getItem('opsh_pbx_tab')||'users'; }catch(_){ return 'users'; } });
-  const go=k=>{ setT(k); try{ localStorage.setItem('opsh_pbx_tab',k); }catch(_){ } };
+  const [t,setT]=React.useState(()=>{ try{ return localStorage.getItem('itops_pbx_tab')||'users'; }catch(_){ return 'users'; } });
+  const go=k=>{ setT(k); try{ localStorage.setItem('itops_pbx_tab',k); }catch(_){ } };
   return <div data-pbx-area="1">
     <div className="conn-tabs mh-tabs" style={{marginBottom:12}}>{[['users','People and extensions'],['all','All extensions and status'],['calls','Calls and reports'],['missed','Missed calls → tickets'],['setup','PBX set-up']].map(x=><div key={x[0]} className={'conn-tab'+(t===x[0]?' on':'')} data-pbx-tab={x[0]} onClick={()=>go(x[0])}>{x[1]}</div>)}</div>
     {t==='users'&&<AccessConnected sysKey="pbx" name={name} toast={toast} onChanged={onChanged} onSetup={onSetup}/>}
@@ -7611,8 +7611,8 @@ function PbxOverview({toast}){
 /* BT149: Jotform — its team members (like every connected system), its forms with who owns each, and the forms whose
    new submissions become tickets. Read only: nothing is written to Jotform. */
 function JotformArea({name,toast,onChanged,onSetup}){
-  const [t,setT]=React.useState(()=>{ try{ return localStorage.getItem('opsh_jf_tab')||'users'; }catch(_){ return 'users'; } });
-  const go=k=>{ setT(k); try{ localStorage.setItem('opsh_jf_tab',k); }catch(_){ } };
+  const [t,setT]=React.useState(()=>{ try{ return localStorage.getItem('itops_jf_tab')||'users'; }catch(_){ return 'users'; } });
+  const go=k=>{ setT(k); try{ localStorage.setItem('itops_jf_tab',k); }catch(_){ } };
   const tabs=[['users','Team members'],['forms','Forms'],['tickets','Forms → tickets']];
   return <div data-jf-area="1">
     <div className="conn-tabs mh-tabs" style={{marginBottom:12}}>{tabs.map(x=><div key={x[0]} className={'conn-tab'+(t===x[0]?' on':'')} data-jf-tab={x[0]} onClick={()=>go(x[0])}>{x[1]}</div>)}</div>
@@ -7713,7 +7713,7 @@ function AccessConnected({sysKey,name,toast,onChanged,onSetup}){
       await load(); if(onChanged)onChanged(); }
     catch(e){ setMsg({tone:'err',text:e.message||'Could not read '+name+'.'}); await load(); }
     setBusy(false); };
-  const accept=async()=>{ const h=(d.conn.held||[]); if(!await opshConfirm('Accept the list from '+name+'?\n\n'+h.length+' account(s) are missing from it and will be closed in the records:\n'+h.slice(0,12).join('\n')+(h.length>12?'\n…':'')+'\n\nDo this only after looking in '+name+'.'))return; read(true); };
+  const accept=async()=>{ const h=(d.conn.held||[]); if(!await itopsConfirm('Accept the list from '+name+'?\n\n'+h.length+' account(s) are missing from it and will be closed in the records:\n'+h.slice(0,12).join('\n')+(h.length>12?'\n…':'')+'\n\nDo this only after looking in '+name+'.'))return; read(true); };
   const assign=async(row,email)=>{ setBusy(true); setMsg(null);
     try{ await api('POST','/access/links/'+row.id+'/assign',{email:email}); setAs(null); setMsg({tone:'ok',text:email?('Assigned to '+email+'.'):'Back to the email '+name+' gives.'}); await load(); if(onChanged)onChanged(); }
     catch(e){ setMsg({tone:'err',text:e.message||'Could not assign it.'}); }
@@ -7828,7 +7828,7 @@ function AccessPersonBody({row,embedded,onChanged,skip}){   /* BT133: skip = sys
   const setA=(k,o)=>setAdd(a=>Object.assign({},a,{[k]:Object.assign({account:'',note:''},a[k]||{},o)}));
   const record=s=>act(async()=>{ const v=add[s.key]||{}; const r=await api('POST','/access/links',{system:s.key,email:row.email,account:(v.account||'').trim(),note:(v.note||'').trim(),person_name:row.name||''}); setAdd(a=>Object.assign({},a,{[s.key]:{account:'',note:''}})); setAddOpen(o=>Object.assign({},o,{[s.key]:false})); return r; },'Recorded.');
   const saveEd=()=>act(async()=>{ const r=await api('PUT','/access/links/'+ed.id,{account:ed.account.trim(),note:ed.note.trim()}); setEd(null); return r; },'Saved.');
-  const close=async l=>{ if(!await opshConfirm('Close this account in the records?\n\n'+sysAcc(l.account)+'\n\nDo this after the account was removed in the other system. '+appName()+' does not remove it there.'))return; act(()=>api('POST','/access/links/'+l.id+'/remove',{}),'Closed.'); };
+  const close=async l=>{ if(!await itopsConfirm('Close this account in the records?\n\n'+sysAcc(l.account)+'\n\nDo this after the account was removed in the other system. '+appName()+' does not remove it there.'))return; act(()=>api('POST','/access/links/'+l.id+'/remove',{}),'Closed.'); };
   const reopen=l=>act(()=>api('POST','/access/links/'+l.id+'/restore',{}),'Open again.');
   const links=(d&&d.links)||[]; const systems=(d&&d.systems)||[]; const may=!!(d&&d.can_edit);
   const known={}; const conn={}; systems.forEach(s=>{ known[s.key]=1; if(s.connected)conn[s.key]=1; });
@@ -7934,9 +7934,9 @@ function AccessSystems({toast,onChanged,bump}){
   const [d,setD]=React.useState(null); const [err,setErr]=React.useState(null); const [ed,setEd]=React.useState(null);
   const load=()=>api('GET','/access/systems').then(x=>setD(x)).catch(e=>setErr(e.message||'Could not load the systems.'));
   const [bi,setBi]=React.useState(null); const [imp,setImp]=React.useState(false); const [tick,setTick]=React.useState(0);
-  const [conn,setConn]=React.useState(()=>{ try{ const k=window.__opshSysOpen; window.__opshSysOpen=null; return k||null; }catch(_){ return null; } });   /* BT125 */
-  React.useEffect(()=>{ const on=e=>{ if(e&&e.detail){ setConn(e.detail); try{ window.__opshSysOpen=null; }catch(_){ } } }; window.addEventListener('opsh-sys-open',on); return ()=>window.removeEventListener('opsh-sys-open',on); },[]);
-  React.useEffect(()=>{ let k=null; try{ k=window.__opshSysTool; }catch(_){ } if(k&&d&&d.systems){ const x=d.systems.find(s=>s.key===k); try{ window.__opshSysTool=null; }catch(_){ } if(x) setEd(Object.assign({},x)); } },[d]);
+  const [conn,setConn]=React.useState(()=>{ try{ const k=window.__itopsSysOpen; window.__itopsSysOpen=null; return k||null; }catch(_){ return null; } });   /* BT125 */
+  React.useEffect(()=>{ const on=e=>{ if(e&&e.detail){ setConn(e.detail); try{ window.__itopsSysOpen=null; }catch(_){ } } }; window.addEventListener('itops-sys-open',on); return ()=>window.removeEventListener('itops-sys-open',on); },[]);
+  React.useEffect(()=>{ let k=null; try{ k=window.__itopsSysTool; }catch(_){ } if(k&&d&&d.systems){ const x=d.systems.find(s=>s.key===k); try{ window.__itopsSysTool=null; }catch(_){ } if(x) setEd(Object.assign({},x)); } },[d]);
   React.useEffect(()=>{ load(); let live=true; api('GET','/access/builtin').then(x=>{ if(live)setBi(x); }).catch(()=>{ if(live)setBi({}); }); return ()=>{ live=false; }; },[]);
   const biCell=b=>{ const x=bi&&bi[b.key]; if(!bi) return <span className="mh-mut">counting…</span>; if(!x||!x.ok) return <span className="mh-mut" title={(x&&x.error)||''}>could not be read</span>;
     return b.key==='m365'?<span>{x.total+' accounts'}<span className="mh-mut">{' · '+x.blocked+' blocked'}</span></span>:<span>{x.active+' active users'}<span className="mh-mut">{' · '+x.inactive+' inactive'}</span></span>; };
@@ -7968,7 +7968,7 @@ function AccessSystems({toast,onChanged,bump}){
           {(d.builtin||[]).map(b=><tr key={b.name} data-acs-builtin={b.name}><td><b>{b.name}</b></td><td><span style={{fontWeight:600}}>Built in</span></td>
             <td style={{fontSize:12.5}} data-acs-builtin-state={b.configured===false?'off':'on'}>{b.configured===false?<span style={{color:'var(--amber)',fontWeight:600}}>Not set up yet</span>:<span style={{color:'var(--green)',fontWeight:600}}>Connected</span>}</td>
             <td colSpan={2} className="mh-mut" style={{fontSize:13}}>{b.how}{b.where&&<div style={{fontSize:12,marginTop:2}}>{b.where}</div>}</td>
-            <td data-acs-builtin-count={b.key} style={{whiteSpace:'nowrap'}}>{b.configured===false?<span className="mh-mut">—</span>:biCell(b)}</td><td style={{textAlign:'right'}}>{opshIsSuper()&&<button className="btn btn-g btn-sm" data-acs-conn={b.key} style={{whiteSpace:'nowrap'}} onClick={()=>setConn(b.key)}>Set up…</button>}</td></tr>)}
+            <td data-acs-builtin-count={b.key} style={{whiteSpace:'nowrap'}}>{b.configured===false?<span className="mh-mut">—</span>:biCell(b)}</td><td style={{textAlign:'right'}}>{itopsIsSuper()&&<button className="btn btn-g btn-sm" data-acs-conn={b.key} style={{whiteSpace:'nowrap'}} onClick={()=>setConn(b.key)}>Set up…</button>}</td></tr>)}
           {systems.map(s=><tr key={s.key} data-acs-sysrow={s.key} data-acs-mode={s.mode}>
             <td><b>{s.name}</b>{s.custom&&<span className="mh-mut" style={{fontSize:12}}> · your own</span>}{s.what&&<div className="mh-mut" style={{fontSize:12,maxWidth:300}}>{s.what}</div>}{s.url&&<div className="mh-mono mh-mut" style={{fontSize:11.5,wordBreak:'break-all'}}>{s.url}</div>}</td>
             <td>{s.mode==='connected'?<><span style={{color:'var(--green)',fontWeight:600}}>Connected</span>{s.conn&&<div data-acs-connstate={s.conn.last_sync_ok===false?'err':(s.conn.held?'held':'ok')} style={{fontSize:11.5,color:(s.conn.last_sync_ok===false||s.conn.held)?'var(--amber)':'var(--t4)'}}>{s.conn.last_sync_ok===false?'last reading failed':s.conn.held?(s.conn.held+' held back: look at its tab'):(s.conn.last_sync_at?'read '+mhDateTime(s.conn.last_sync_at):'not read yet')}</div>}</>
@@ -7992,19 +7992,19 @@ function AccessSystems({toast,onChanged,bump}){
         <div style={{fontWeight:700,margin:'4px 0 2px'}}>Other connections</div>
         <div className="mh-mut" style={{fontSize:12.5,marginBottom:6}}>Connections that belong to a part of the app rather than to a system. Each opens where it is set up.</div>
         <div className="mh-tw"><table className="tbl mh-t"><tbody>
-          {[['Email: sending and the help desk mailbox','Mail server or Microsoft 365 mailbox, the sender address.',()=>opshSettingsTab('email')],
-            ['AI provider','The AI features (ticket help, Ask IT, transcription): provider, model and key.',()=>opshSettingsTab('integrations')],
-            ['Sign-in with Microsoft','Who may sign in with Microsoft, the redirect address.',()=>opshSettingsTab('integrations')],
-            ['API keys and webhooks','Keys other systems use to call this app; webhooks it calls.',()=>{ try{ window.__opshSetPg&&window.__opshSetPg('integrations'); }catch(_){ } }],
-            ['Microsoft invoices','The Microsoft billing account the invoices are read from.',()=>{ try{ window.__opshSetPg&&window.__opshSetPg('invoices'); }catch(_){ } }]].map(([n,w,go])=>
+          {[['Email: sending and the help desk mailbox','Mail server or Microsoft 365 mailbox, the sender address.',()=>itopsSettingsTab('email')],
+            ['AI provider','The AI features (ticket help, Ask IT, transcription): provider, model and key.',()=>itopsSettingsTab('integrations')],
+            ['Sign-in with Microsoft','Who may sign in with Microsoft, the redirect address.',()=>itopsSettingsTab('integrations')],
+            ['API keys and webhooks','Keys other systems use to call this app; webhooks it calls.',()=>{ try{ window.__itopsSetPg&&window.__itopsSetPg('integrations'); }catch(_){ } }],
+            ['Microsoft invoices','The Microsoft billing account the invoices are read from.',()=>{ try{ window.__itopsSetPg&&window.__itopsSetPg('invoices'); }catch(_){ } }]].map(([n,w,go])=>
             <tr key={n} data-acs-otherrow={n}><td><b>{n}</b></td><td style={{fontSize:13}}>{w}</td><td style={{textAlign:'right'}}><button className="btn btn-g btn-sm" style={{whiteSpace:'nowrap'}} onClick={go}>Open</button></td></tr>)}
         </tbody></table></div>
       </div>
       {!may&&<div className="mh-mut" style={{fontSize:12.5}}>Only a Super Admin, or a role with Integrations · Edit, can change this list.</div>}
-      {!d.needs_migration&&<div className="mh-mut" style={{fontSize:12.5}} data-acs-moved="1">The people who left and still have access somewhere are on <a href="#" onClick={e=>{ e.preventDefault(); try{ window.__opshSetPg&&window.__opshSetPg('access_attention'); }catch(_){ } }}>Microsoft 365 → People → Needs attention</a>.</div>}
+      {!d.needs_migration&&<div className="mh-mut" style={{fontSize:12.5}} data-acs-moved="1">The people who left and still have access somewhere are on <a href="#" onClick={e=>{ e.preventDefault(); try{ window.__itopsSetPg&&window.__itopsSetPg('access_attention'); }catch(_){ } }}>Microsoft 365 → People → Needs attention</a>.</div>}
     </div>}
     {imp&&<AccessImport systems={systems.filter(s=>s.mode==='manual')} toast={toast} onClose={()=>{ setImp(false); load(); setTick(x=>x+1); }}/>}
-    {conn&&opshIsSuper()&&<SystemConnPage which={conn} toast={toast} onClose={()=>setConn(null)}/>}
+    {conn&&itopsIsSuper()&&<SystemConnPage which={conn} toast={toast} onClose={()=>setConn(null)}/>}
     {ed&&<AccessSystemEdit sys={ed} toast={toast} onClose={()=>setEd(null)} onSaved={x=>{ setD(x); setEd(null); if(onChanged)onChanged(); }} onReload={()=>{ load(); if(onChanged)onChanged(); }}/>}
   </div>;
 }
@@ -8016,7 +8016,7 @@ function AccessSystemEdit({sys,toast,onClose,onSaved,onReload}){
     try{ const r=isNew?await api('POST','/access/systems',body()):await api('PUT','/access/systems/'+sys.key,body()); const fr=r.first_reading;
       if(toast)toast(isNew?'System added':fr?('Connected: '+fr.users+' user(s) read from '+sys.name+(fr.replaced?', '+fr.replaced+' typed by hand replaced':'')+((fr.held||[]).length?', '+fr.held.length+' held back: look at its tab':'')):'Saved','ok'); onSaved(r); }
     catch(e){ setErr(e.message||'Could not save.'); setBusy(false); } };
-  const del=async()=>{ if(!await opshConfirm('Remove “'+sys.name+'” from the list?\n\nThis is only possible while no account was ever recorded for it.'))return; setBusy(true); setErr(null);
+  const del=async()=>{ if(!await itopsConfirm('Remove “'+sys.name+'” from the list?\n\nThis is only possible while no account was ever recorded for it.'))return; setBusy(true); setErr(null);
     try{ const r=await api('DELETE','/access/systems/'+sys.key); if(toast)toast('Removed','ok'); onSaved(r); }catch(e){ setErr(e.message||'Could not remove it.'); setBusy(false); } };
   const on=f.mode!=='off'; const isConn=f.mode==='connected'; const [cn,setCn]=React.useState(null); const [wasMode,setWasMode]=React.useState(sys.mode);
   const tool=!!sys.company;   /* BT57: a company tool — in use or not, no step per person */
@@ -8036,7 +8036,7 @@ function AccessSystemEdit({sys,toast,onClose,onSaved,onReload}){
         onMode={m=>{ if(m!==wasMode){ setWasMode(m); setF(x=>Object.assign({},x,{mode:m==='off'?'manual':m})); if(onReload)onReload(); } }}/>}
       {sys.guide&&<SysGuide sys={sys}/>}
       {sys.key==='mon360'&&!isNew&&<SysFold id="m360conn" title="Connection and alerts" attrs={{'data-acs-m360conn':'1'}}><Mon360Conn toast={toast}/></SysFold>}
-      {sys.key==='whm'&&!isNew&&opshIsSuper()&&<SysFold id="whmconn" title="Connection: WHM host, token and certificate" tag="Super Admin" attrs={{'data-acs-whmconn':'1'}}>
+      {sys.key==='whm'&&!isNew&&itopsIsSuper()&&<SysFold id="whmconn" title="Connection: WHM host, token and certificate" tag="Super Admin" attrs={{'data-acs-whmconn':'1'}}>
         <div className="mh-mut" style={{fontSize:12.5,marginBottom:8}}>The same settings as IT Operations → Server Guardian → settings (Server Guardian, the backups watch and Integration Audit use them).</div>
         <GuardianActions toast={toast}/></SysFold>}
       {sys.planned&&!tool&&<div className="mh-mut" style={{fontSize:12.5,marginTop:-6}}>A direct connection to {sys.name} is planned. Until then it is tracked by hand, and what you record now is kept.</div>}
@@ -8056,7 +8056,7 @@ function AccessSystemEdit({sys,toast,onClose,onSaved,onReload}){
 
 /* A box that folds, and remembers per browser whether it was left open */
 function SysFold({id,title,tag,children,attrs}){
-  const key='opsh_fold_'+id; const [open,setOpen]=React.useState(()=>{ let v=null; try{ v=localStorage.getItem(key); }catch(_){} return v===null?true:v!=='0'; });
+  const key='itops_fold_'+id; const [open,setOpen]=React.useState(()=>{ let v=null; try{ v=localStorage.getItem(key); }catch(_){} return v===null?true:v!=='0'; });
   const flip=()=>{ const n=!open; setOpen(n); try{ localStorage.setItem(key,n?'1':'0'); }catch(_){} };
   return <div className="mh-box" style={{maxWidth:'none'}} {...(attrs||{})}>
     {/* the heading button sits in a div: a last child with a button of its own is styled as a page's action bar (.ep-wrap) */}
@@ -8121,7 +8121,7 @@ function AccessConnBox({sysKey,name,onState,onMode,disabled}){
   const run=async(fn,after)=>{ setBusy(true); setMsg(null); try{ const r=await fn(); take(r); if(after)after(r); }catch(e){ setMsg({tone:'err',text:e.message||'That did not work.'}); } setBusy(false); };
   const save=()=>run(()=>{ const b={}; (d.conn.fields||[]).forEach(f=>{ b[f.key]=(v[f.key]||'').trim(); }); if(clr.length)b.clear=clr; return api('PUT','/access/conn/'+sysKey,b); },r=>{ setV({}); setClr([]); setMsg({tone:r.tested_ok?'ok':'err',text:(r.tested_ok?'Saved. The test passed: ':'Saved, but the test FAILED: ')+r.note}); });
   const test=()=>run(()=>api('POST','/access/conn/'+sysKey+'/test',{}),r=>setMsg({tone:r.tested_ok?'ok':'err',text:(r.tested_ok?'The test passed: ':'The test FAILED: ')+r.note}));
-  const forget=async()=>{ if(!await opshConfirm('Delete the saved key of '+name+'?\n\n'+(d.mode==='connected'?name+' goes back to “Tracked by hand”. The accounts read so far stay in the records.':'Nothing else changes.')+'\n\nThe key itself stays valid in '+name+' until you revoke it there.'))return;
+  const forget=async()=>{ if(!await itopsConfirm('Delete the saved key of '+name+'?\n\n'+(d.mode==='connected'?name+' goes back to “Tracked by hand”. The accounts read so far stay in the records.':'Nothing else changes.')+'\n\nThe key itself stays valid in '+name+' until you revoke it there.'))return;
     run(()=>api('POST','/access/conn/'+sysKey+'/forget',{confirm:'FORGET'}),()=>setMsg({tone:'ok',text:'The key was deleted from '+appName()+'.'})); };
   if(err) return <div className="mh-err" style={{fontFamily:'inherit'}}>{err}</div>;
   if(!d) return <div className="mh-mut" style={{fontSize:13}}>Loading the connection…</div>;
@@ -8189,7 +8189,7 @@ function MhSkuHolders({sku,onClose,onChanged}){
   React.useEffect(load,[sku.sku_id]);
   const f=(users||[]).filter(u=>!q||((u.display_name||'')+' '+(u.upn||'')).toLowerCase().indexOf(q.toLowerCase())>=0);
   const vis=f.filter(u=>sel[u.id]); const allOn=f.length>0&&f.every(u=>sel[u.id]);
-  const bulk=async()=>{ if((await opshPrompt('Remove "'+sku.name+'" from '+vis.length+' user(s)? Type REMOVE '+vis.length+' to confirm.'))!=='REMOVE '+vis.length)return; setBusy(true); setMsg(null);
+  const bulk=async()=>{ if((await itopsPrompt('Remove "'+sku.name+'" from '+vis.length+' user(s)? Type REMOVE '+vis.length+' to confirm.'))!=='REMOVE '+vis.length)return; setBusy(true); setMsg(null);
     try{ const d=await mhPost('m365-bulk-remove-licenses',{ids:vis.map(u=>u.id),sku_id:sku.sku_id,confirm:'REMOVE '+vis.length}); setMsg('Removed '+d.removed_seats+' seat(s) from '+d.users+' user(s).'); setSel({}); load(); onChanged&&onChanged(); }
     catch(e){ setMsg(e.message||'Reclaim failed.'); } setBusy(false); };
   return <EditPage title={sku.name} badge={<span className="mh-mono mh-mut" style={{fontSize:12}}>{sku.part} · {sku.consumed}/{sku.total} seats</span>} onClose={onClose}>
@@ -8226,7 +8226,7 @@ function MhReclaim(){
       setRemoved(r=>Object.assign({},r,{[c.id]:n})); }
     catch(e){ setRowErr(x=>Object.assign({},x,{[c.id]:(e.message||'Could not remove licenses.')+(n?' ('+n+' removed before this)':'')})); if(n)setRemoved(r=>Object.assign({},r,{[c.id]:n})); }
     setRowBusy(null); };
-  const bulk=async()=>{ if((await opshPrompt('Remove '+(mode==='all'?'all licenses':'the selected license')+' from '+E.length+' user(s)? This frees '+I+' seat(s). Type REMOVE '+E.length+' to confirm.'))!=='REMOVE '+E.length)return; setBBusy(true); setBMsg(null);
+  const bulk=async()=>{ if((await itopsPrompt('Remove '+(mode==='all'?'all licenses':'the selected license')+' from '+E.length+' user(s)? This frees '+I+' seat(s). Type REMOVE '+E.length+' to confirm.'))!=='REMOVE '+E.length)return; setBBusy(true); setBMsg(null);
     try{ const d=await mhPost('m365-bulk-remove-licenses',{ids:E.map(c=>c.id),sku_id:mode==='all'?'':mode,confirm:'REMOVE '+E.length}); setBMsg({ok:true,t:'Reclaimed '+d.removed_seats+' seat(s) from '+d.users+' user(s).'}); setSel({}); load(days,true); }
     catch(e){ setBMsg({ok:false,t:e.message||'Bulk reclaim failed.'}); } setBBusy(false); };
   const csv=()=>{ const rows=['name,upn,enabled,last_sign_in,reasons,licenses'].concat(cands.map(c=>[c.display_name,c.upn,c.enabled?'enabled':'disabled',c.last_sign_in||'never',(c.reasons||[]).join('; '),(c.licenses||[]).map(l=>l.name).join('; ')].map(mhC).join(',')));
@@ -8295,7 +8295,7 @@ function MhReconcile(){
     mhApi('recon-directory',{section:k}).then(d=>setItems(s=>Object.assign({},s,{[k]:d.items||[]}))).catch(()=>setItems(s=>Object.assign({},s,{[k]:[]}))).finally(()=>setSLoad(s=>Object.assign({},s,{[k]:false}))); };
   const toggle=(k,force)=>{ const o=force||!open[k]; setOpen(s=>Object.assign({},s,{[k]:o})); if(o)loadSec(k); };
   const c=(sum&&sum.counts)||{};
-  const reclaim=async()=>{ const ids=Object.keys(sel).filter(Boolean); if((await opshPrompt('Remove all licenses from '+ids.length+' disabled account(s)? Type REMOVE '+ids.length+' to confirm.'))!=='REMOVE '+ids.length)return; setRBusy(true);
+  const reclaim=async()=>{ const ids=Object.keys(sel).filter(Boolean); if((await itopsPrompt('Remove all licenses from '+ids.length+' disabled account(s)? Type REMOVE '+ids.length+' to confirm.'))!=='REMOVE '+ids.length)return; setRBusy(true);
     try{ const d=await mhPost('m365-bulk-remove-licenses',{ids:ids,sku_id:'',confirm:'REMOVE '+ids.length}); setMsg('Reclaimed '+d.removed_seats+' seat(s) from '+d.users+' account(s).'); load(true,true); }
     catch(e){ setMsg(e.message||'Bulk reclaim failed.'); } setRBusy(false); };
   const csv=async()=>{ try{ const d=await mhApi('recon-directory'); const cat=d.categories||{}; const rows=['section,name,email,detail1,detail2'];
@@ -8449,7 +8449,7 @@ function MhDevices({arg,toast}){
   const {data,err,busy,load}=useMhLoad('m365-intune-devices','Could not load devices.');
   const [st,setSt]=React.useState((arg&&arg.st)||''); const [q,setQ]=React.useState(''); const {sort,th}=useMhSort('name',1,{alwaysAsc:true});
   React.useEffect(()=>{ if(arg&&arg.st!=null)setSt(arg.st); },[arg]);
-  const canAct=(()=>{ try{ const u=window.__opshUser||{}; return u.role==='super_admin'||opshCanFrom(u.role,u.role_permissions||{},'m365_admin','edit'); }catch(e){ return false; } })();
+  const canAct=(()=>{ try{ const u=window.__itopsUser||{}; return u.role==='super_admin'||itopsCanFrom(u.role,u.role_permissions||{},'m365_admin','edit'); }catch(e){ return false; } })();
   const [busyId,setBusyId]=React.useState(''); const [more,setMore]=React.useState('');
   const canWipe=mhCanU('m365_device_wipe','edit'); const anyAct=canAct||canWipe;   /* BT114 */
   const stale=d=>d.last_sync&&(Date.now()-new Date(d.last_sync).getTime())>MH_DEV_STALE_DAYS*86400000;
@@ -8457,7 +8457,7 @@ function MhDevices({arg,toast}){
   const all=(data&&data.devices)||[]; const nStale=all.filter(stale).length;
   const devs=all.filter(d=>(!st||(st==='stale'?stale(d):(d.compliance||'unknown')===st))&&(!q||[d.name,d.user,d.os,d.model].join(' ').toLowerCase().indexOf(q.toLowerCase())>=0));
   const rows=sort(devs,(a,b,k)=>String(a[k]||'').localeCompare(String(b[k]||'')));
-  const act=async(d,a)=>{ if(a==='lock'){ const typed=await opshPrompt('Remote-lock "'+(d.name||d.id)+'"? The user unlocks it with their own PIN. Type LOCK to confirm.'); if(typed!=='LOCK')return; }
+  const act=async(d,a)=>{ if(a==='lock'){ const typed=await itopsPrompt('Remote-lock "'+(d.name||d.id)+'"? The user unlocks it with their own PIN. Type LOCK to confirm.'); if(typed!=='LOCK')return; }
     setBusyId(d.id+a); try{ const r=await api('POST','/m365_admin/intune_action',{device_id:d.id,device_name:d.name,action:a,confirm:a==='lock'?'LOCK':undefined}); toast&&toast(r.note||'Done','ok'); }catch(e){ toast&&toast(e.message); } setBusyId(''); };
   return <div>
     <MhHead eyebrow="Microsoft 365 · Intune" title="Compliance" desc="Every device Intune manages: compliance and last check-in. Sync or Lock on the row; “More” for restart, Defender scan, and retire, wipe or fresh start (with a second person’s approval). Click a count to filter." cached={data&&data.cached} right={<MhRefresh onClick={()=>load(true)} busy={busy&&!!data}/>}/>
@@ -8493,7 +8493,7 @@ const mhIsWin=d=>/windows/i.test(String(d.os||''));
 const mhDevWhyNot=(d,k)=>{ const a=MH_DEV_ACT[k]; if(!a)return 'Unknown'; if(d.owner==='personal'&&!a[2])return 'Personal device: only Retire'; if(a[3]&&!mhIsWin(d))return 'Windows only'; return ''; };
 function mhOptText(action,o){ o=o||{}; if(action==='wipe') return [o.keep_enrollment?'keeps enrollment':'removes enrollment',o.keep_user_data?'keeps the person’s files':'deletes the person’s files'].join(' · ');
   if(action==='fresh_start') return o.keep_user_data===false?'removes the person’s files':'keeps the person’s files'; return ''; }
-function mhCanU(mod,act){ try{ const u=window.__opshUser||{}; return u.role==='super_admin'||opshCanFrom(u.role,u.role_permissions||{},mod,act); }catch(e){ return false; } }
+function mhCanU(mod,act){ try{ const u=window.__itopsUser||{}; return u.role==='super_admin'||itopsCanFrom(u.role,u.role_permissions||{},mod,act); }catch(e){ return false; } }
 
 /* ═══ BT134: Devices → Personal computers. People protect their own computer with Microsoft Defender, by choice and
  *     without Intune enrollment: they agree on their own page (pc.html), run a read-only check, and Windows Pro / Mac
@@ -8707,8 +8707,8 @@ function MhDevActions({d,toast,canAct,canWipe}){
   const [appr,setAppr]=React.useState(null); React.useEffect(()=>{ if(canWipe) api('GET','/m365hub/approval-settings').then(x=>setAppr(x.settings||{})).catch(()=>setAppr({})); },[]);   /* BT115 */
   const needs=k=>!appr||appr[k]!==false;
   const choose=k=>{ setPick(p=>p===k?'':k); setOpt(k==='wipe'?{keep_enrollment:false,keep_user_data:false}:k==='fresh_start'?{keep_user_data:true}:{}); setConf(''); };
-  const now=async k=>{ if(k==='restart'){ const t=await opshPrompt('Restart "'+(d.name||d.id)+'"? Unsaved work on it is lost. Type RESTART to confirm.'); if(t!=='RESTART')return; }
-    else if(!await opshConfirm(MH_DEV_ACT[k][0]+' on "'+d.name+'"? '+MH_DEV_ACT[k][1]))return;
+  const now=async k=>{ if(k==='restart'){ const t=await itopsPrompt('Restart "'+(d.name||d.id)+'"? Unsaved work on it is lost. Type RESTART to confirm.'); if(t!=='RESTART')return; }
+    else if(!await itopsConfirm(MH_DEV_ACT[k][0]+' on "'+d.name+'"? '+MH_DEV_ACT[k][1]))return;
     setBusy(k); try{ const r=await mhPost('dev-action',{device_id:d.id,device_name:d.name,action:k,confirm:k==='restart'?'RESTART':undefined}); if(r&&r.error)throw new Error(r.error); toast&&toast(r.note||'Sent','ok'); }catch(e){ toast&&toast(e.message); } setBusy(''); };
   const ask=async()=>{ setBusy('ask'); try{ const r=await mhPost('dev-request',{device_id:d.id,device_name:d.name,action:pick,options:opt,reason:reason.trim(),confirm:conf.trim()}); if(r&&r.error)throw new Error(r.error);
       setSent({action:pick,n:r.approvers,now:!!r.sent}); setPick(''); setReason(''); setConf(''); toast&&toast(r.sent?'Sent to Intune':'Sent for approval','ok'); }catch(e){ toast&&toast(e.message); } setBusy(''); };
@@ -8746,9 +8746,9 @@ function MhDevRequests({toast}){
   const groups={pending:x=>x.status==='pending',sent:x=>x.status==='sent',not:x=>['denied','cancelled','expired','failed'].indexOf(x.status)>=0};
   const rows=all.filter(r=>!ff||groups[ff](r));
   const run=async(r,what)=>{ let body={id:r.id};
-    if(what==='approve'){ const t=await opshPrompt(r.label+' "'+r.device+'"'+(r.user?' ('+r.user+')':'')+(mhOptText(r.action,r.options)?' · '+mhOptText(r.action,r.options):'')+'.\nAsked by '+r.requested_by+': '+r.reason+'\n\nIt is sent to the device at once. Type the device name to approve.','',{title:'Approve: '+r.label,okText:'Approve and send',danger:r.action!=='retire'}); if(t==null)return; if(t.trim().toLowerCase()!==String(r.device).toLowerCase()){ toast&&toast('The name did not match: nothing was sent.'); return; } body.decision='approve'; }
-    if(what==='deny'){ const t=await opshPrompt('Deny '+r.label.toLowerCase()+' of "'+r.device+'"? Say why (the person who asked sees it).','',{title:'Deny the request',okText:'Deny'}); if(!t||!t.trim())return; body.decision='deny'; body.note=t.trim(); }
-    if(what==='cancel'){ if(!await opshConfirm('Withdraw your request to '+r.label.toLowerCase()+' "'+r.device+'"?'))return; }
+    if(what==='approve'){ const t=await itopsPrompt(r.label+' "'+r.device+'"'+(r.user?' ('+r.user+')':'')+(mhOptText(r.action,r.options)?' · '+mhOptText(r.action,r.options):'')+'.\nAsked by '+r.requested_by+': '+r.reason+'\n\nIt is sent to the device at once. Type the device name to approve.','',{title:'Approve: '+r.label,okText:'Approve and send',danger:r.action!=='retire'}); if(t==null)return; if(t.trim().toLowerCase()!==String(r.device).toLowerCase()){ toast&&toast('The name did not match: nothing was sent.'); return; } body.decision='approve'; }
+    if(what==='deny'){ const t=await itopsPrompt('Deny '+r.label.toLowerCase()+' of "'+r.device+'"? Say why (the person who asked sees it).','',{title:'Deny the request',okText:'Deny'}); if(!t||!t.trim())return; body.decision='deny'; body.note=t.trim(); }
+    if(what==='cancel'){ if(!await itopsConfirm('Withdraw your request to '+r.label.toLowerCase()+' "'+r.device+'"?'))return; }
     setB(r.id+what); try{ await mhPost(what==='cancel'?'dev-request-cancel':'dev-request-decide',body); toast&&toast(what==='approve'?'Approved and sent to Intune':what==='deny'?'Denied':'Withdrawn','ok'); }catch(e){ toast&&toast(e.message); } setB(''); load(true); };
   const check=r=>{ setStt(s=>({...s,[r.id]:{busy:true}})); api('GET','/m365hub/dev-request-status?id='+r.id).then(x=>setStt(s=>({...s,[r.id]:x}))).catch(e=>setStt(s=>({...s,[r.id]:{error:e.message}}))); };
   const stC={pending:'var(--amber)',sent:'var(--green)',failed:'var(--red)',denied:'var(--t3)',cancelled:'var(--t3)',expired:'var(--t3)',approving:'var(--amber)'};
@@ -8821,27 +8821,27 @@ function MhCa({toast,arg}){
   const d=data||{}; const ed=!!d.may_edit; const appr=!!d.approval;
   const emOk=(d.emergency||[]).length>0&&(d.emergency||[]).every(x=>x.found);
   const send=async(kind,params,what,extra)=>{ let reason='';
-    if(appr){ const t=await opshPrompt(what+'\n\nA second person approves this before it is done (Settings → Approvals). Say why:','',{title:'Ask for approval',okText:'Ask'}); if(t==null)return; reason=t.trim(); }
+    if(appr){ const t=await itopsPrompt(what+'\n\nA second person approves this before it is done (Settings → Approvals). Say why:','',{title:'Ask for approval',okText:'Ask'}); if(t==null)return; reason=t.trim(); }
     setB(kind+(params.id||params.template||params.change_id||''));
     try{ const r=await mhPost('ca-change',Object.assign({kind,params,reason},extra||{})); toast&&toast(r.done?r.summary:'Sent for approval to '+r.approvers+' '+(r.approvers===1?'person':'people'),'ok'); }
     catch(e){ toast&&toast(e.message); }
     setB(''); load(true); };
   const create=async t=>{ const p={template:t.key};
     if(t.key==='block_countries'){ const c=String(ctry!=null?ctry:(d.countries||[]).join(', ')).split(/[\s,;]+/).filter(Boolean); if(!c.length){ toast&&toast('Name the countries people sign in from (two-letter codes).'); return; } p.countries=c; }
-    if(!appr&&!await opshConfirm('Create "'+t.name+'" in report-only?\n\nIt changes nothing for anyone yet: Microsoft only records what it would have done. The emergency access accounts are left out.',{title:'Create policy',okText:'Create in report-only'}))return;
+    if(!appr&&!await itopsConfirm('Create "'+t.name+'" in report-only?\n\nIt changes nothing for anyone yet: Microsoft only records what it would have done. The emergency access accounts are left out.',{title:'Create policy',okText:'Create in report-only'}))return;
     send('create',p,'Create "'+t.name+'" in report-only.'); };
   const state=async(p,to)=>{ const L=CA_ST[to][0];
     const msg=to==='enabled'?'Turn on "'+p.name+'"?\n\nFrom now on it is enforced for '+p.who.toLowerCase()+'. Check “What it would do” first. If something goes wrong, “Put back” undoes it.':'Set "'+p.name+'" to '+L.toLowerCase()+'?';
-    if(!appr&&!await opshConfirm(msg,{title:L,okText:L,danger:to==='enabled'}))return;
+    if(!appr&&!await itopsConfirm(msg,{title:L,okText:L,danger:to==='enabled'}))return;
     send('state',{id:p.id,state:to},msg.split('\n')[0]); };
-  const del=async p=>{ if(!appr&&!await opshConfirm('Delete "'+p.name+'"? It can be created again with “Put back”.',{title:'Delete policy',okText:'Delete',danger:true}))return; send('delete',{id:p.id},'Delete "'+p.name+'".'); };
-  const restore=async c=>{ if(!appr&&!await opshConfirm('Put back this change to "'+c.policy+'"? ('+(CA_ACT[c.action]||c.action)+', '+mhDateTime(c.at)+')',{title:'Put back',okText:'Put back'}))return; send('restore',{change_id:c.id},'Put back the change to "'+c.policy+'".'); };
-  const swap=async()=>{ const t=await opshPrompt('Security defaults go off, and four Conditional Access policies go on at once (multifactor for everyone, multifactor for admins, legacy sign-in blocked, device code sign-in blocked), with the emergency access accounts left out. If Microsoft refuses one, security defaults are turned back on.\n\nType SWITCH to confirm.','',{title:'Switch to Conditional Access',okText:'Switch',danger:true}); if(t==null)return;
+  const del=async p=>{ if(!appr&&!await itopsConfirm('Delete "'+p.name+'"? It can be created again with “Put back”.',{title:'Delete policy',okText:'Delete',danger:true}))return; send('delete',{id:p.id},'Delete "'+p.name+'".'); };
+  const restore=async c=>{ if(!appr&&!await itopsConfirm('Put back this change to "'+c.policy+'"? ('+(CA_ACT[c.action]||c.action)+', '+mhDateTime(c.at)+')',{title:'Put back',okText:'Put back'}))return; send('restore',{change_id:c.id},'Put back the change to "'+c.policy+'".'); };
+  const swap=async()=>{ const t=await itopsPrompt('Security defaults go off, and four Conditional Access policies go on at once (multifactor for everyone, multifactor for admins, legacy sign-in blocked, device code sign-in blocked), with the emergency access accounts left out. If Microsoft refuses one, security defaults are turned back on.\n\nType SWITCH to confirm.','',{title:'Switch to Conditional Access',okText:'Switch',danger:true}); if(t==null)return;
     if(t.trim()!=='SWITCH'){ toast&&toast('Not confirmed: nothing changed.'); return; } send('secdef_swap',{},'Turn security defaults off and switch on the four policies that replace them.',{confirm:'SWITCH'}); };
   const decide=async(r,dec)=>{ let note='';
-    if(dec==='approve'){ if(!await opshConfirm(r.label+'\nAsked by '+r.by+': '+r.reason+'\n\nIt is done at once.',{title:'Approve',okText:'Approve and do it',danger:true}))return; }
-    if(dec==='deny'){ const t=await opshPrompt('Say why it is denied (the person who asked sees it).','',{title:'Deny',okText:'Deny'}); if(!t||!t.trim())return; note=t.trim(); }
-    if(dec==='cancel'){ if(!await opshConfirm('Withdraw your request?'))return; }
+    if(dec==='approve'){ if(!await itopsConfirm(r.label+'\nAsked by '+r.by+': '+r.reason+'\n\nIt is done at once.',{title:'Approve',okText:'Approve and do it',danger:true}))return; }
+    if(dec==='deny'){ const t=await itopsPrompt('Say why it is denied (the person who asked sees it).','',{title:'Deny',okText:'Deny'}); if(!t||!t.trim())return; note=t.trim(); }
+    if(dec==='cancel'){ if(!await itopsConfirm('Withdraw your request?'))return; }
     setB('r'+r.id+dec); try{ const x=await mhPost(dec==='cancel'?'ca-request-cancel':'ca-request-decide',dec==='cancel'?{id:r.id}:{id:r.id,decision:dec,note}); toast&&toast(dec==='approve'?(x.summary||'Done'):dec==='deny'?'Denied':'Withdrawn','ok'); }catch(e){ toast&&toast(e.message); } setB(''); load(true); };
   const pend=(d.requests||[]).filter(r=>r.status==='pending');
   const rqL={pending:'waiting for approval',done:'approved and done',failed:'approved, not done',denied:'denied',cancelled:'withdrawn',expired:'lapsed',approving:'being done'};
@@ -8879,13 +8879,13 @@ function MhCa({toast,arg}){
         {!(d.policies||[]).length?<div className="mh-mut" style={{fontSize:14}} data-ca-nopol="1">No Conditional Access policies yet.</div>:
         <div className="mh-tw"><table className="tbl mh-t" data-ca-list="1"><thead><tr><th>Policy</th><th>Who</th><th>Does</th><th>State</th><th>Emergency accounts</th><th></th></tr></thead>
           <tbody>{d.policies.map(p=><React.Fragment key={p.id}><tr data-ca-pol={p.name} data-ca-state={p.state}>
-            <td><b>{p.name}</b>{p.opshub&&<span className="mh-tag" style={{marginLeft:6}}>made here</span>}<div className="mh-mono mh-mut" style={{fontSize:11.5}}>{mhDateTime(p.modified)}</div></td>
+            <td><b>{p.name}</b>{p.itops&&<span className="mh-tag" style={{marginLeft:6}}>made here</span>}<div className="mh-mono mh-mut" style={{fontSize:11.5}}>{mhDateTime(p.modified)}</div></td>
             <td style={{fontSize:13}}>{p.who}</td><td style={{fontSize:13}}>{p.what}</td>
             <td><span className="mh-mono" style={{color:(CA_ST[p.state]||[])[1]}}>{(CA_ST[p.state]||[p.state])[0]}</span></td>
             <td style={{fontSize:12.5}}>{p.emergency_out===true?<span style={{color:'var(--green)'}}>left out</span>:p.emergency_out===false?<span style={{color:'var(--red)'}} data-ca-em-in={p.name}>not left out</span>:'—'}</td>
             <td style={{whiteSpace:'nowrap'}}><button type="button" className="mh-link" data-ca-impbtn={p.name} onClick={()=>setImp(imp===p.id?'':p.id)}>What it would do</button>
               {ed&&Object.keys(CA_ST).filter(s=>s!==p.state).map(s=><button key={s} className="btn btn-g btn-sm" style={{marginLeft:5}} data-ca-set={p.name+':'+s} disabled={!!b||(s==='enabled'&&(p.emergency_out!==true||!!d.secdef))} title={s==='enabled'&&p.emergency_out!==true?'It must leave out every emergency access account':s==='enabled'&&d.secdef?'Security defaults are on':undefined} onClick={()=>state(p,s)}>{CA_ST[s][0]}</button>)}
-              {ed&&p.opshub&&<button className="btn btn-g btn-sm" style={{marginLeft:5,color:'var(--red)'}} data-ca-del={p.name} disabled={!!b} onClick={()=>del(p)}>Delete</button>}</td></tr>
+              {ed&&p.itops&&<button className="btn btn-g btn-sm" style={{marginLeft:5,color:'var(--red)'}} data-ca-del={p.name} disabled={!!b} onClick={()=>del(p)}>Delete</button>}</td></tr>
             {imp===p.id&&<tr><td colSpan={6}><MhCaImpact id={p.id} onClose={()=>setImp('')}/></td></tr>}</React.Fragment>)}</tbody></table></div>}</div>
       <div><MhEyebrow>Changes made here</MhEyebrow>
         {!(d.changes||[]).length?<div className="mh-mut" style={{fontSize:14}}>None yet.</div>:
@@ -8960,19 +8960,19 @@ function MhRoles({toast,arg}){
   Object.keys(SO_FLAG).forEach(k=>{ tests[k]=p=>(p.flags||[]).indexOf(k)>=0; });
   const rows=all.filter(p=>!f||(tests[f]&&tests[f](p)));
   const send=async(kind,params,what,extra)=>{ let reason='';
-    if(appr){ const t=await opshPrompt(what+'\n\nA second person approves this before it is done (Settings → Approvals). Say why:','',{title:'Ask for approval',okText:'Ask'}); if(t==null)return; reason=t.trim(); }
+    if(appr){ const t=await itopsPrompt(what+'\n\nA second person approves this before it is done (Settings → Approvals). Say why:','',{title:'Ask for approval',okText:'Ask'}); if(t==null)return; reason=t.trim(); }
     setB(kind+(params.assignment_id||params.change_id));
     try{ const r=await mhPost('role-change',Object.assign({kind,params,reason},extra||{})); toast&&toast(r.done?r.summary:'Sent for approval to '+r.approvers+' '+(r.approvers===1?'person':'people'),'ok'); }catch(e){ toast&&toast(e.message); }
     setB(''); load(true); };
-  const remove=async(p,r)=>{ const t=await opshPrompt('Remove "'+r.name+'" from '+p.upn+'?\n\nThey lose what the role allows at once. “Put back” gives it back.\n\nType the account’s address to confirm.','',{title:'Remove admin role',okText:'Remove',danger:true}); if(t==null)return;
+  const remove=async(p,r)=>{ const t=await itopsPrompt('Remove "'+r.name+'" from '+p.upn+'?\n\nThey lose what the role allows at once. “Put back” gives it back.\n\nType the account’s address to confirm.','',{title:'Remove admin role',okText:'Remove',danger:true}); if(t==null)return;
     if(t.trim().toLowerCase()!==p.upn){ toast&&toast('The address did not match: nothing changed.'); return; } send('role_remove',{assignment_id:r.assignment_id},'Remove "'+r.name+'" from '+p.upn+'.',{confirm:t.trim()}); };
-  const elig=async(p,r)=>{ if(!appr&&!await opshConfirm('Make "'+r.name+'" eligible for '+p.upn+'?\n\nThey keep the role but must activate it in Entra (My roles) when they need it, with a reason and multifactor sign-in. Needs Entra ID P2. “Put back” makes it permanent again.',{title:'Make eligible',okText:'Make eligible'}))return;
+  const elig=async(p,r)=>{ if(!appr&&!await itopsConfirm('Make "'+r.name+'" eligible for '+p.upn+'?\n\nThey keep the role but must activate it in Entra (My roles) when they need it, with a reason and multifactor sign-in. Needs Entra ID P2. “Put back” makes it permanent again.',{title:'Make eligible',okText:'Make eligible'}))return;
     send('role_eligible',{assignment_id:r.assignment_id},'Make "'+r.name+'" eligible for '+p.upn+'.'); };
-  const restore=async c=>{ if(!appr&&!await opshConfirm('Put back: give "'+c.role+'" back to '+c.who+' as a permanent role?',{title:'Put back',okText:'Put back'}))return; send('role_restore',{change_id:c.id},'Put back "'+c.role+'" for '+c.who+'.'); };
+  const restore=async c=>{ if(!appr&&!await itopsConfirm('Put back: give "'+c.role+'" back to '+c.who+' as a permanent role?',{title:'Put back',okText:'Put back'}))return; send('role_restore',{change_id:c.id},'Put back "'+c.role+'" for '+c.who+'.'); };
   const decide=async(r,dec)=>{ let note='';
-    if(dec==='approve'){ if(!await opshConfirm(r.label+'\nAsked by '+r.by+': '+r.reason+'\n\nIt is done at once.',{title:'Approve',okText:'Approve and do it',danger:true}))return; }
-    if(dec==='deny'){ const t=await opshPrompt('Say why it is denied (the person who asked sees it).','',{title:'Deny',okText:'Deny'}); if(!t||!t.trim())return; note=t.trim(); }
-    if(dec==='cancel'){ if(!await opshConfirm('Withdraw your request?'))return; }
+    if(dec==='approve'){ if(!await itopsConfirm(r.label+'\nAsked by '+r.by+': '+r.reason+'\n\nIt is done at once.',{title:'Approve',okText:'Approve and do it',danger:true}))return; }
+    if(dec==='deny'){ const t=await itopsPrompt('Say why it is denied (the person who asked sees it).','',{title:'Deny',okText:'Deny'}); if(!t||!t.trim())return; note=t.trim(); }
+    if(dec==='cancel'){ if(!await itopsConfirm('Withdraw your request?'))return; }
     setB('r'+r.id); try{ const x=await mhPost(dec==='cancel'?'ca-request-cancel':'ca-request-decide',dec==='cancel'?{id:r.id}:{id:r.id,decision:dec,note}); toast&&toast(dec==='approve'?(x.summary||'Done'):dec==='deny'?'Denied':'Withdrawn','ok'); }catch(e){ toast&&toast(e.message); } setB(''); load(true); };
   const pend=(d.requests||[]).filter(r=>r.status==='pending'); const RA={role_remove:'Removed',role_eligible:'Made eligible',role_restore:'Put back'};
   const t=(k,label,acc)=><span key={k} data-role-tile={k}><MhTile label={label} value={all.filter(tests[k]).length} accent={acc} active={f===k} onClick={()=>setF(v=>v===k?'':k)}/></span>;
@@ -9022,7 +9022,7 @@ function MhRoles({toast,arg}){
    subscriptions turned into a vendor and contracts ═══ */
 const INV_ST={received:['Received','var(--t3)'],approved:['Approved','var(--accent)'],paid:['Paid','var(--green)'],disputed:['Disputed','var(--red)']};
 const invMoney=(v,c)=>(v==null?'—':(Number(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+(c&&c!=='USD'?' '+c:'')));
-async function invPdfText(file){ const lib=await opshPdfjs(); const buf=await file.arrayBuffer(); const doc=await lib.getDocument({data:buf,isEvalSupported:false}).promise; let out='';
+async function invPdfText(file){ const lib=await itopsPdfjs(); const buf=await file.arrayBuffer(); const doc=await lib.getDocument({data:buf,isEvalSupported:false}).promise; let out='';
   for(let i=1;i<=Math.min(doc.numPages,15);i++){ const pg=await doc.getPage(i); const tc=await pg.getTextContent(); let last=null; tc.items.forEach(it=>{ const y=it.transform?Math.round(it.transform[5]):0; out+=(last!==null&&Math.abs(y-last)>2?'\n':' ')+it.str; last=y; }); out+='\n\n'; }
   return out; }
 function InvoiceEditor({id,init,toast,onSaved,onClose}){
@@ -9044,18 +9044,18 @@ function InvoiceEditor({id,init,toast,onSaved,onClose}){
       setF(x=>Object.assign({},x,{invoice_number:g.invoice_number||x.invoice_number,invoice_date:g.invoice_date||x.invoice_date,period_start:g.period_start||x.period_start,period_end:g.period_end||x.period_end,due_date:g.due_date||x.due_date,
         currency:g.currency||x.currency,tax:g.tax||0,source:'pdf_ai',lines:g.lines.length?g.lines.map(l=>({contract_id:l.contract_id?String(l.contract_id):'',description:l.description,quantity:l.quantity,unit_price:l.unit_price,billing:l.billing})):x.lines}));
       toast&&toast('Read. Check every field before saving.','ok'); }catch(e){ toast&&toast(e.message); } setB(''); if(pref.current)pref.current.value=''; };
-  const attach=async(iid,file)=>{ const fd=new FormData(); fd.append('type','invoices'); fd.append('id',iid); fd.append('file',file); const res=await fetch(API_BASE+'/attachments',{method:'POST',headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin',body:fd}); if(!res.ok) throw new Error('The PDF could not be attached'); };
+  const attach=async(iid,file)=>{ const fd=new FormData(); fd.append('type','invoices'); fd.append('id',iid); fd.append('file',file); const res=await fetch(API_BASE+'/attachments',{method:'POST',headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin',body:fd}); if(!res.ok) throw new Error('The PDF could not be attached'); };
   const save=async()=>{ setB('save'); try{ const body=Object.assign({},f,{vendor_id:+f.vendor_id,tax:+f.tax||0,lines:f.lines.map(l=>({contract_id:l.contract_id?+l.contract_id:null,description:l.description,quantity:+l.quantity,unit_price:+l.unit_price,billing:l.billing,sku_part:l.sku_part||null}))});
       const r=id?await api('PUT','/invoices/'+id,body):await api('POST','/invoices',body);
       if(pdf){ try{ await attach(r.id||id,pdf); }catch(e){ toast&&toast(e.message); } setPdf(null); }
       toast&&toast(id?'Invoice saved':'Invoice added','ok'); onSaved&&onSaved(r.id||id); if(id) load(); }catch(e){ toast&&toast(e.message); } setB(''); };
   const status=async to=>{ let note='';
-    if(to==='disputed'){ const t=await opshPrompt('What is disputed? (kept with the invoice)','',{title:'Dispute',okText:'Dispute'}); if(!t||!t.trim())return; note=t.trim(); }
-    if(to==='paid'&&!await opshConfirm('Mark paid on '+mhDate(paidOn)+'? The total is recorded as spend in IT Budget.',{title:'Paid',okText:'Mark paid'}))return;
+    if(to==='disputed'){ const t=await itopsPrompt('What is disputed? (kept with the invoice)','',{title:'Dispute',okText:'Dispute'}); if(!t||!t.trim())return; note=t.trim(); }
+    if(to==='paid'&&!await itopsConfirm('Mark paid on '+mhDate(paidOn)+'? The total is recorded as spend in IT Budget.',{title:'Paid',okText:'Mark paid'}))return;
     setB('st'); try{ const r=await api('POST','/invoices/'+id+'/status',{status:to,paid_date:paidOn,note}); toast&&toast((INV_ST[to]||[to])[0]+(r.said?' · '+r.said:''),'ok'); await load(); onSaved&&onSaved(id); }catch(e){ toast&&toast(e.message); } setB(''); };
-  const usePrice=async a=>{ if(!await opshConfirm('Use '+invMoney(a.price)+' per license per month for '+a.name+' in IT Budget?',{title:'Use this price',okText:'Use it'}))return;
+  const usePrice=async a=>{ if(!await itopsConfirm('Use '+invMoney(a.price)+' per license per month for '+a.name+' in IT Budget?',{title:'Use this price',okText:'Use it'}))return;
     try{ await api('POST','/invoices/use-price',{sku_id:a.sku_id,name:a.name,price:a.price,billing:a.billing}); toast&&toast('IT Budget now uses the invoice price','ok'); load(); }catch(e){ toast&&toast(e.message); } };
-  const del=async()=>{ if(!await opshConfirm('Delete invoice '+inv.invoice_number+' and its PDF?',{title:'Delete',okText:'Delete',danger:true}))return; try{ await api('DELETE','/invoices/'+id); toast&&toast('Deleted','ok'); onSaved&&onSaved(null); onClose&&onClose(); }catch(e){ toast&&toast(e.message); } };
+  const del=async()=>{ if(!await itopsConfirm('Delete invoice '+inv.invoice_number+' and its PDF?',{title:'Delete',okText:'Delete',danger:true}))return; try{ await api('DELETE','/invoices/'+id); toast&&toast('Deleted','ok'); onSaved&&onSaved(null); onClose&&onClose(); }catch(e){ toast&&toast(e.message); } };
   const cOpts=[['','No contract']].concat(cons.map(c=>[String(c.id),(c.ref?c.ref+' · ':'')+c.title]));
   return <div className="card" data-inv-editor={id||'new'} data-inv-status={inv?inv.status:'new'} style={{display:'grid',gap:12}}>
     <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}><b style={{fontSize:15}}>{id?'Invoice '+(inv?inv.invoice_number:''):'New invoice'}</b>
@@ -9196,7 +9196,7 @@ function MhSubs({toast,setPg}){
   const subs=d.subscriptions||[]; const unl=subs.filter(s=>!s.contract); const chg=subs.filter(s=>s.contract&&s.changes.length);
   const chosen=Object.keys(pick).filter(k=>pick[k]);
   const mkVendor=async()=>{ setB('v'); try{ const r=await api('POST','/invoices/microsoft/vendor',{}); toast&&toast(r.created?'Vendor "Microsoft" created':'The Microsoft vendor already exists','ok'); load(); }catch(e){ toast&&toast(e.message); } setB(''); };
-  const apply=async()=>{ const n=chosen.length; if(!await opshConfirm((n?'Create '+n+' contract'+(n===1?'':'s')+' under '+d.vendor.name:'')+(n&&chg.length?' and ':'')+(chg.length?'bring '+chg.length+' contract'+(chg.length===1?'':'s')+' up to date (a new term when Microsoft renewed, the amount when seats changed)':'')+'?',{title:'Contracts',okText:'Go'}))return;
+  const apply=async()=>{ const n=chosen.length; if(!await itopsConfirm((n?'Create '+n+' contract'+(n===1?'':'s')+' under '+d.vendor.name:'')+(n&&chg.length?' and ':'')+(chg.length?'bring '+chg.length+' contract'+(chg.length===1?'':'s')+' up to date (a new term when Microsoft renewed, the amount when seats changed)':'')+'?',{title:'Contracts',okText:'Go'}))return;
     setB('a'); try{ const r=await api('POST','/invoices/microsoft/apply',{create:chosen}); toast&&toast(r.created+' created · '+r.updated+' updated · '+r.renewed+' renewed','ok'); (r.notes||[]).forEach(x=>toast&&toast(x)); setPick({}); load(); }catch(e){ toast&&toast(e.message); } setB(''); };
   return <div data-subs="1">
     <MhHead eyebrow="Microsoft 365 · Licenses" title="Subscriptions & contracts" desc="Each subscription Microsoft bills, with seats bought and assigned and the date it renews or ends. Turn them into contracts under the Microsoft vendor, so renewals and invoices are tracked with every other vendor's." right={<MhRefresh onClick={load} busy={false}/>}/>
@@ -9311,7 +9311,7 @@ function MhRings({toast}){
   const [b,setB]=React.useState('');
   const rings=(data&&data.rings)||[]; const may=data&&data.may_act;
   const flip=async(r,which,paused)=>{ const w=which==='quality'?'monthly quality (security) updates':'feature updates (new Windows versions)';
-    if(!await opshConfirm((paused?'Pause ':'Resume ')+w+' for "'+r.name+'"?'+(paused?' Devices in this ring stop installing them for up to 35 days. Use it when an update is causing trouble; resume when it is fixed.':' Devices start installing them again.')))return;
+    if(!await itopsConfirm((paused?'Pause ':'Resume ')+w+' for "'+r.name+'"?'+(paused?' Devices in this ring stop installing them for up to 35 days. Use it when an update is causing trouble; resume when it is fixed.':' Devices start installing them again.')))return;
     setB(r.id+which); try{ const x=await mhPost('ring-pause',{id:r.id,name:r.name,which,paused}); if(x&&x.error)throw new Error(x.error); toast&&toast((paused?'Paused':'Resumed')+': '+r.name,'ok'); load(true); }catch(e){ toast&&toast(e.message); } setB(''); };
   const line=(r,which)=>{ const p=r[which+'_paused'], until=r[which+'_pause_until'], def=r[which+'_deferral'], dl=r[which+'_deadline'];
     return <div className="mh-ring-l" data-ring-line={which}><span style={{minWidth:120,fontWeight:600}}>{which==='quality'?'Quality updates':'Feature updates'}</span>
@@ -9336,7 +9336,7 @@ function MhRings({toast}){
 }
 
 
-/* ═══ BT27: Device inventory (OpsHub only; on the Entra ID page since BT30). Entra devices + the sign-in log, kept in OpsHub's own table. Read-only. ═══ */
+/* ═══ BT27: Device inventory (ITOps only; on the Entra ID page since BT30). Entra devices + the sign-in log, kept in ITOps's own table. Read-only. ═══ */
 /* ═══ BT34: "About this screen" — what a screen does, what it needs and what to expect, in the same three columns everywhere.
  *     Open the first time; it remembers per screen when someone folds it away. An item is a string, or [text, state] where
  *     state is true (in place), false (missing), 'opt' (optional and not in place) or null/undefined (not known: no mark). ═══ */
@@ -9346,7 +9346,7 @@ function MhAbout({id,title,does,needs,expect}){
      one on screen is the one shown (a page opened over another brings its own). */
   const [host,setHost]=React.useState(null); const [open,setOpen]=React.useState(false); const [pos,setPos]=React.useState(null);
   const btn=React.useRef(null), pop=React.useRef(null);
-  React.useEffect(()=>{ setHost(document.getElementById('opsh-about-slot')); },[]);
+  React.useEffect(()=>{ setHost(document.getElementById('itops-about-slot')); },[]);
   const place=()=>{ const r=btn.current?btn.current.getBoundingClientRect():null; if(!r)return; const w=Math.min(980,window.innerWidth-24); setPos({top:Math.round(r.bottom+8),left:Math.round(Math.max(12,Math.min(r.left,window.innerWidth-w-12))),width:w}); };
   React.useEffect(()=>{ if(!open)return; place();
     const down=e=>{ if(pop.current&&pop.current.contains(e.target))return; if(btn.current&&btn.current.contains(e.target))return; setOpen(false); };
@@ -9529,8 +9529,8 @@ function MhInventory({arg}){
 }
 
 
-/* ═══ BT34: Device inventory → Clean up stale devices (OpsHub only). Two steps, as Microsoft advises: disable, then remove.
- *     The list comes from OpsHub's own table; the server reads every device live again before it changes it and says why
+/* ═══ BT34: Device inventory → Clean up stale devices (ITOps only). Two steps, as Microsoft advises: disable, then remove.
+ *     The list comes from ITOps's own table; the server reads every device live again before it changes it and says why
  *     it skipped one. Nothing is pre-ticked for removal unless its waiting time is known to be over. ═══ */
 function MhDeviceCleanup({onBack,onDone}){
   const [d,setD]=React.useState(null); const [err,setErr]=React.useState(null);
@@ -9548,7 +9548,7 @@ function MhDeviceCleanup({onBack,onDone}){
   const sd=d.stale_days||90; const gd=d.grace_days||30; const may=!!d.may_change; const dis=d.disable||[]; const rem=d.remove||[]; const ex=d.excluded||{};
   const nD=dis.filter(x=>selD[x.id]).length; const nR=rem.filter(x=>selR[x.id]).length; const phrase='REMOVE '+nR;
   const run=async op=>{ const list=op==='disable'?dis:rem; const sel=op==='disable'?selD:selR; const ids=list.filter(x=>sel[x.id]).map(x=>x.id); if(!ids.length)return;
-    if(op==='disable'&&!await opshConfirm('Disable '+ids.length+' '+(ids.length===1?'device':'devices')+'?\n\nA disabled device can no longer sign in to Microsoft 365 with its device identity. Nothing is deleted, and each one can be enabled again from its row in the inventory.'))return;
+    if(op==='disable'&&!await itopsConfirm('Disable '+ids.length+' '+(ids.length===1?'device':'devices')+'?\n\nA disabled device can no longer sign in to Microsoft 365 with its device identity. Nothing is deleted, and each one can be enabled again from its row in the inventory.'))return;
     const names={}; list.forEach(x=>{ names[x.id]=x.name||'(no name)'; });
     setBusy(op); setProg({n:0,of:ids.length}); setRes(r=>Object.assign({},r,{[op]:null}));
     const sum=await mhBulkRun('m365-devices-bulk',op,ids,d.max||10,op==='remove'?{confirm:'REMOVE '+ids.length}:null,(n,of)=>setProg({n:n,of:of}));
@@ -9611,8 +9611,8 @@ function MhDeviceCleanup({onBack,onDone}){
   </div>;
 }
 
-/* ═══ BT31: actions on one Entra device, inside the Device inventory detail row (OpsHub only).
- *     The server decides what is allowed and says why not (opsh_dinv_actions); this component only shows it.
+/* ═══ BT31: actions on one Entra device, inside the Device inventory detail row (ITOps only).
+ *     The server decides what is allowed and says why not (itops_dinv_actions); this component only shows it.
  *     Secrets (BitLocker key, LAPS password) are held in component state, never cached, and hide themselves. ═══ */
 function MhDeviceActions({d,onChanged}){
   const [st,setSt]=React.useState(null); const [err,setErr]=React.useState(null); const [busy,setBusy]=React.useState(''); const [panel,setPanel]=React.useState('');
@@ -9630,7 +9630,7 @@ function MhDeviceActions({d,onChanged}){
   const post=(action,body,tag)=>{ setBusy(tag); setMsg(null); return api('POST','/m365hub/'+action,Object.assign({id:d.id},body||{})).finally(()=>setBusy('')); };
   const after=ch=>{ Object.keys(MH_C).forEach(k=>{ if(k.indexOf('m365-device-inventory')===0)delete MH_C[k]; }); if(onChanged)onChanged(ch); return load(); };
   const toggle=async on=>{
-    if(!await opshConfirm(on?'Enable '+name+' again in Entra?':'Disable '+name+' in Entra?\n\nIt can no longer use its device identity with Microsoft 365: single sign-on stops and sign-in rules that require a known device block it. Nothing on the computer is erased, and you can enable it again.')) return;
+    if(!await itopsConfirm(on?'Enable '+name+' again in Entra?':'Disable '+name+' in Entra?\n\nIt can no longer use its device identity with Microsoft 365: single sign-on stops and sign-in rules that require a known device block it. Nothing on the computer is erased, and you can enable it again.')) return;
     post('m365-device-set-enabled',{enabled:on},'toggle').then(()=>{ setMsg({tone:'ok',text:on?'Enabled in Entra.':'Disabled in Entra.'}); after({enabled:on}); }).catch(e=>setMsg({tone:'err',text:e.message})); };
   const remove=()=>post('m365-device-delete',{confirm:typed},'delete').then(()=>{ setPanel(''); setMsg({tone:'ok',text:'Removed from Entra. The row leaves the list after the next sync.'}); after({removed:true}); }).catch(e=>setMsg({tone:'err',text:e.message}));
   const openKeys=()=>{ setMsg(null); if(panel==='keys'){ setPanel(''); setSecret(null); return; } setPanel('keys'); setKeys(null); setSecret(null);
@@ -9781,13 +9781,13 @@ function MhGroupDetail({g,onChanged}){
   const change=(action,id,label,tag)=>{ setBusy(tag); setMsg(null); return mhPost(action,{group_id:g.id,member_id:id,member_name:label})
       .then(()=>{ setMsg({tone:'ok',text:(action==='m365-group-add-member'?'Added ':'Removed ')+label+'.'}); setUq(''); setFound([]); setDq(''); return load().then(()=>{ if(onChanged)onChanged(); }); })
       .catch(e=>setMsg({tone:'err',text:e.message})).finally(()=>setBusy('')); };
-  const remove=async m=>{ if(!await opshConfirm('Remove '+(m.name||m.upn||'this member')+' from '+grp.name+'?\n\nThey lose whatever this group gives: access, licenses or policies assigned to the group.'))return; change('m365-group-remove-member',m.id,m.name||m.upn||m.id,'rm:'+m.id); };
+  const remove=async m=>{ if(!await itopsConfirm('Remove '+(m.name||m.upn||'this member')+' from '+grp.name+'?\n\nThey lose whatever this group gives: access, licenses or policies assigned to the group.'))return; change('m365-group-remove-member',m.id,m.name||m.upn||m.id,'rm:'+m.id); };
   /* BT34: owners. The server says whether they can be changed (group kind) and whether the Microsoft permission is there. */
   const mayOwn=!!d.may_owners&&grp.owners_manageable!==false; const owns=grp.owners||[]; const isOwner=id=>owns.some(o=>String(o.id).toLowerCase()===String(id).toLowerCase());
   const ownChange=(action,id,label,tag)=>{ setBusy(tag); setOmsg(null); return mhPost(action,{group_id:g.id,owner_id:id,also_member:alsoMem})
       .then(r=>{ setOmsg({tone:'ok',text:action==='m365-group-add-owner'?label+' is now an owner'+(r.also_member?' and a member':'')+'.':label+' is no longer an owner.'}); setOq(''); setOfound([]); return load().then(()=>{ if(onChanged)onChanged(); }); })
       .catch(e=>setOmsg({tone:'err',text:e.message})).finally(()=>setBusy('')); };
-  const ownRemove=async o=>{ if(!await opshConfirm('Remove '+(o.name||o.upn||'this person')+' as an owner of '+grp.name+'?\n\nThey stay a member if they are one, but can no longer manage the group, approve members or change its settings.'))return; ownChange('m365-group-remove-owner',o.id,o.name||o.upn||o.id,'orm:'+o.id); };
+  const ownRemove=async o=>{ if(!await itopsConfirm('Remove '+(o.name||o.upn||'this person')+' as an owner of '+grp.name+'?\n\nThey stay a member if they are one, but can no longer manage the group, approve members or change its settings.'))return; ownChange('m365-group-remove-owner',o.id,o.name||o.upn||o.id,'orm:'+o.id); };
   const KIND={user:'People',device:'Devices',group:'Groups inside this group',app:'Applications',other:'Other'};
   const kinds=['user','device','group','app','other'].filter(k=>mem.some(m=>m.kind===k));
   const dl=(devs||[]).filter(x=>!has(x.object_id)&&(!dq||[x.name,x.user,x.user_name,x.os].join(' ').toLowerCase().indexOf(dq.toLowerCase())>=0)).slice(0,8);
@@ -9929,11 +9929,11 @@ function MhGuests(){
     (a,b,k)=>k==='name'?String(a.name||a.email).localeCompare(String(b.name||b.email)):k==='domain'||k==='state'?String(a[k]||'￿').localeCompare(String(b[k]||'￿')):mhCmp(a[k]||'',b[k]||''));
   const tile=(k,label,n,accent)=><MhTile label={label} value={n} accent={accent} active={mode===k} onClick={()=>{ setMode(m=>m===k?'':k); setOpen(null); }}/>;
   const toggle=async g=>{ const on=!g.enabled;
-    if(!await opshConfirm(on?'Let '+(g.name||g.email)+' sign in again?':'Block sign-in for '+(g.name||g.email)+'?\n\nThe guest can no longer sign in. The account, its group and team memberships and its files stay; you can restore sign-in later.'))return;
+    if(!await itopsConfirm(on?'Let '+(g.name||g.email)+' sign in again?':'Block sign-in for '+(g.name||g.email)+'?\n\nThe guest can no longer sign in. The account, its group and team memberships and its files stay; you can restore sign-in later.'))return;
     setAct('tog:'+g.id); setMsg(null);
     mhPost('m365-user-set-enabled',{id:g.id,enabled:on}).then(()=>{ setMsg({id:g.id,tone:'ok',text:on?'Sign-in restored.':'Sign-in blocked.'}); load(true); }).catch(e=>setMsg({id:g.id,tone:'err',text:e.message})).finally(()=>setAct('')); };
   const resend=async g=>{
-    if(!await opshConfirm('Send the invitation again to '+(g.name||g.email)+'?\n\nMicrosoft emails a new invitation to '+g.email+'. The guest account, and the teams and sites it was added to, stay as they are.'))return;
+    if(!await itopsConfirm('Send the invitation again to '+(g.name||g.email)+'?\n\nMicrosoft emails a new invitation to '+g.email+'. The guest account, and the teams and sites it was added to, stay as they are.'))return;
     setAct('inv:'+g.id); setMsg(null);
     mhPost('m365-guest-resend',{id:g.id}).then(r=>{ setMsg({id:g.id,tone:r.same_account===false?'err':'ok',text:r.message||'Invitation sent again.'}); if(r.same_account===false)load(true); }).catch(e=>setMsg({id:g.id,tone:'err',text:e.message})).finally(()=>setAct('')); };
   const remove=g=>{ setAct('del:'+g.id); setMsg(null);
@@ -10032,7 +10032,7 @@ function MhGuestPending({guests,may,data,onBack,onDone}){
   const picked=rows.filter(g=>sel[g.id]); const n=picked.length; const nSend=picked.filter(g=>g.enabled).length; const phrase='REMOVE '+n;
   const days=g=>g.created?Math.max(0,Math.floor((Date.now()-new Date(g.created).getTime())/86400000)):null;
   const run=async op=>{ const ids=(op==='resend'?picked.filter(g=>g.enabled):picked).map(g=>g.id); if(!ids.length)return;
-    if(op==='resend'&&!await opshConfirm('Send the invitation again to '+ids.length+' '+(ids.length===1?'guest':'guests')+'?\n\nMicrosoft emails each of them a new invitation. Their accounts, and the teams and sites they were added to, stay as they are.'))return;
+    if(op==='resend'&&!await itopsConfirm('Send the invitation again to '+ids.length+' '+(ids.length===1?'guest':'guests')+'?\n\nMicrosoft emails each of them a new invitation. Their accounts, and the teams and sites they were added to, stay as they are.'))return;
     const names={}; rows.forEach(g=>{ names[g.id]=g.name||g.email; });
     setBusy(op); setProg({n:0,of:ids.length}); setRes(null);
     const sum=await mhBulkRun('m365-guests-bulk',op,ids,10,op==='remove'?{confirm:'REMOVE '+ids.length}:null,(a,b)=>setProg({n:a,of:b}));
@@ -10075,7 +10075,7 @@ function MhGuestPending({guests,may,data,onBack,onDone}){
   </div>;
 }
 
-/* ═══ BT32: Security → Enterprise apps (OpsHub only). Which applications hold access in the tenant, what they may do
+/* ═══ BT32: Security → Enterprise apps (ITOps only). Which applications hold access in the tenant, what they may do
  *     without a person and on behalf of people, and who agreed to it. Read-only. ═══ */
 const MH_APP_KIND={own:'Your organization',microsoft:'Microsoft',third_party:'Third party',unknown:'Unknown'};
 const MH_APP_FLAG={high:['High privilege','It may read or change mail, files, accounts or the directory without any person signing in.','warn'],
@@ -10152,7 +10152,7 @@ function MhEntApps(){
   </div>;
 }
 
-/* ═══ BT32: Collaboration & activity → Audit log (OpsHub only). Who changed what in the directory, as Microsoft recorded it. ═══ */
+/* ═══ BT32: Collaboration & activity → Audit log (ITOps only). Who changed what in the directory, as Microsoft recorded it. ═══ */
 function MhDirAudit(){
   const [days,setDays]=React.useState(1); const [cat,setCat]=React.useState(''); const [data,setData]=React.useState(null); const [err,setErr]=React.useState(null); const [busy,setBusy]=React.useState(false);
   const [q,setQ]=React.useState(''); const [fail,setFail]=React.useState(false); const [open,setOpen]=React.useState(null);
@@ -10335,7 +10335,7 @@ function MhMailboxPanel({m,mayView,mayChange,toast,onChanged}){
     <div><div className="mh-eyebrow mh-mut">Send on behalf</div>
       <div className="mh-mut" style={{fontSize:12,margin:'2px 0 6px'}}>These people can send email on behalf of {d.name} (“on behalf of” shows to the receiver).</div>
       {!d.delegates.length?<div className="mh-mut" style={{fontSize:13}}>Nobody.</div>:d.delegates.map(x=><div key={x.id} className="mh-exo-li" data-exo-delegate={x.id}><span>{x.name}{x.id&&x.id!==x.name?<span className="mh-mono mh-mut" style={{fontSize:11,marginLeft:6}}>{x.id}</span>:null}</span>
-        {mayChange&&<button type="button" className="mh-link" disabled={!!busy} onClick={async()=>{ if(!await opshConfirm('Stop '+x.name+' sending on behalf of '+d.name+'?'))return; post('exo-delegates',{remove:[x.id]},'Delegate removed'); }}>remove</button>}</div>)}
+        {mayChange&&<button type="button" className="mh-link" disabled={!!busy} onClick={async()=>{ if(!await itopsConfirm('Stop '+x.name+' sending on behalf of '+d.name+'?'))return; post('exo-delegates',{remove:[x.id]},'Delegate removed'); }}>remove</button>}</div>)}
       {mayChange&&<div style={{display:'flex',gap:6,marginTop:6}}><input className="mh-in" data-exo-adddel="1" style={{width:240}} placeholder="person@company.com" value={addDel} onChange={e=>setAddDel(e.target.value)}/>
         <button className="btn btn-g btn-sm" disabled={!!busy||!addDel.trim()} onClick={()=>post('exo-delegates',{add:[addDel.trim()]},'Delegate added').then(()=>setAddDel(''))}>{busy==='exo-delegates'?'Saving…':'Add'}</button></div>}</div>
     <div><div className="mh-eyebrow mh-mut">Calendar access</div>
@@ -10343,7 +10343,7 @@ function MhMailboxPanel({m,mayView,mayChange,toast,onChanged}){
       {d.calendar_error?<div className="mh-mut" style={{fontSize:12.5}}>{d.calendar_error}</div>:<table className="tbl mh-t" data-exo-cal="1"><tbody>{d.calendar.map(p=><tr key={p.user}><td>{p.user}</td>
         <td>{mayChange&&p.user!=='Anonymous'?<span style={{display:'inline-flex',gap:6,alignItems:'center',flexWrap:'wrap'}}><Sel small value={calPend&&calPend.user===p.user?calPend.role:(p.rights[0]||'None')} disabled={!!busy} onChange={v=>setCalPend(v===(p.rights[0]||'None')?null:{user:p.user,role:v})} options={Object.keys(roles).map(k=>[k,roles[k]])}/>
           {calPend&&calPend.user===p.user&&<><button type="button" className="btn btn-p btn-sm" data-cal-save={p.user} disabled={!!busy} onClick={()=>{ const c=calPend; setCalPend(null); post('exo-calendar',{user:c.user==='Default'?'Default':c.user,role:c.role,op:'set'},'Calendar access changed'); }}>Save</button><button type="button" className="btn btn-g btn-sm" onClick={()=>setCalPend(null)}>Cancel</button></>}</span>:<span className="mh-mut">{(p.rights||[]).map(r=>roles[r]||r).join(', ')}</span>}</td>
-        <td>{mayChange&&p.user!=='Default'&&p.user!=='Anonymous'&&<button type="button" className="mh-link" disabled={!!busy} onClick={async()=>{ if(!await opshConfirm('Take away '+p.user+'’s access to this calendar?'))return; post('exo-calendar',{user:p.user,op:'remove'},'Access removed'); }}>remove</button>}</td></tr>)}</tbody></table>}
+        <td>{mayChange&&p.user!=='Default'&&p.user!=='Anonymous'&&<button type="button" className="mh-link" disabled={!!busy} onClick={async()=>{ if(!await itopsConfirm('Take away '+p.user+'’s access to this calendar?'))return; post('exo-calendar',{user:p.user,op:'remove'},'Access removed'); }}>remove</button>}</td></tr>)}</tbody></table>}
       {mayChange&&!d.calendar_error&&<div style={{display:'flex',gap:6,marginTop:6,flexWrap:'wrap'}}><input className="mh-in" data-exo-addcal="1" style={{width:220}} placeholder="person@company.com" value={cal.user} onChange={e=>setCal(c=>({...c,user:e.target.value}))}/>
         <Sel small value={cal.role} onChange={v=>setCal(c=>({...c,role:v}))} options={Object.keys(roles).filter(k=>k!=='None').map(k=>[k,roles[k]])}/>
         <button className="btn btn-g btn-sm" disabled={!!busy||!cal.user.trim()} onClick={()=>post('exo-calendar',{user:cal.user.trim(),role:cal.role,op:'add'},'Calendar access given').then(()=>setCal({user:'',role:'Reviewer'}))}>Give access</button></div>}</div>
@@ -10491,11 +10491,11 @@ const BUD_TABS=[['overview','Overview'],['lines','Budget lines'],['sites','Offic
 const budMoney=(v,cur,dec)=>{ if(v==null||v==='')return '—'; const n=Number(v); if(!isFinite(n))return '—'; try{ return new Intl.NumberFormat('en-US',{style:'currency',currency:cur||'USD',minimumFractionDigits:dec?2:0,maximumFractionDigits:dec?2:0}).format(n); }catch(_){ return (dec?n.toFixed(2):Math.round(n).toLocaleString('en-US')); } };
 const budNum=v=>{ const n=Number(v); return isFinite(n)?(Math.round(n*100)/100).toString():''; };
 const budPct=v=>v==null?'—':(Math.round(v*10)/10)+'%';
-/* ═══ BT105: License Manager — only in the owner's installation (config.php: define('OPSH_LICENSE_MANAGER', true);),
+/* ═══ BT105: License Manager — only in the owner's installation (config.php: define('ITOPS_LICENSE_MANAGER', true);),
    Super Admin. Keeps the signing key, issues signed license files, keeps the register. Server: api/routes/license_manager.php ═══ */
 const LM_KINDS=[['Paid','Paid'],['Free','Free'],['Trial','Trial'],['Partner','Partner']];
 async function lmDownload(path,opts,name){
-  const r=await fetch(API_BASE+path,Object.assign({credentials:'same-origin'},opts||{},{headers:opshAuth(Object.assign({'X-OpsHub-CSRF':'1'},(opts&&opts.body)?{'Content-Type':'application/json'}:{}))}));
+  const r=await fetch(API_BASE+path,Object.assign({credentials:'same-origin'},opts||{},{headers:itopsAuth(Object.assign({'X-ITOps-CSRF':'1'},(opts&&opts.body)?{'Content-Type':'application/json'}:{}))}));
   if(!r.ok){ let m='Could not download.'; try{ const j=await r.json(); m=(j.error&&j.error.message)||m; }catch(_){ } throw new Error(m); }
   const b=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
 }
@@ -10510,26 +10510,26 @@ function LicenseManagerScreen({toast}){
   if(!d) return <div className="mh-mut" style={{padding:20}}>Loading…</div>;
   const k=d.key; const set=(x)=>setF(o=>Object.assign({},o,x));
   const planMods=(d.plans.find(p=>p.key===f.plan)||{modules:[]}).modules; const modLabel=key=>(d.modules.find(m=>m.key===key)||{label:key}).label;
-  const createKey=async replace=>{ if(replace){ const c=await opshPrompt('Replacing the signing key: licenses signed with the new key are accepted only by builds that carry its public key. Type REPLACE to go on.'); if(c!=='REPLACE')return; }
-    else if(!await opshConfirm('Create the signing key now? Then download its backup straight away and keep it somewhere safe.'))return;
+  const createKey=async replace=>{ if(replace){ const c=await itopsPrompt('Replacing the signing key: licenses signed with the new key are accepted only by builds that carry its public key. Type REPLACE to go on.'); if(c!=='REPLACE')return; }
+    else if(!await itopsConfirm('Create the signing key now? Then download its backup straight away and keep it somewhere safe.'))return;
     setBusy(true); try{ await api('POST','/license_manager/key',replace?{replace:true,confirm:'REPLACE'}:{}); toast('Signing key created','ok'); await load(); }catch(e){ toast(e.message); } setBusy(false); };
   const backup=async()=>{ if(pp.a.length<12){ toast('Use a passphrase of at least 12 characters'); return; } if(pp.a!==pp.b){ toast('The two passphrases are not the same'); return; }
     setBusy(true); try{ await lmDownload('/license_manager/key/backup',{method:'POST',body:JSON.stringify({passphrase:pp.a})},'license-key-'+k.key_id+'.json'); setPp({a:'',b:''}); toast('Backup downloaded — keep it and its passphrase apart','ok'); }catch(e){ toast(e.message); } setBusy(false); };
   const pickFile=e=>{ const fl=e.target.files&&e.target.files[0]; if(!fl)return; const r=new FileReader(); r.onload=()=>setRs(x=>Object.assign({},x,{file:String(r.result||''),name:fl.name})); r.readAsText(fl); };
   const restore=async()=>{ setBusy(true); try{ let body={backup:rs.file,passphrase:rs.pass};
-      try{ await api('POST','/license_manager/key/restore',body); }catch(e){ if(!/different signing key/.test(e.message)) throw e; const c=await opshPrompt(e.message+'\n\nType REPLACE to use the key from the backup.'); if(c!=='REPLACE'){ setBusy(false); return; } await api('POST','/license_manager/key/restore',Object.assign(body,{replace:true,confirm:'REPLACE'})); }
+      try{ await api('POST','/license_manager/key/restore',body); }catch(e){ if(!/different signing key/.test(e.message)) throw e; const c=await itopsPrompt(e.message+'\n\nType REPLACE to use the key from the backup.'); if(c!=='REPLACE'){ setBusy(false); return; } await api('POST','/license_manager/key/restore',Object.assign(body,{replace:true,confirm:'REPLACE'})); }
       setRs({file:'',name:'',pass:''}); toast('Signing key restored','ok'); await load(); }catch(e){ toast(e.message); } setBusy(false); };
   const issue=async()=>{ setBusy(true); try{ const body=Object.assign({},f,{users:String(f.users||'0').trim()||'0',client_id:f.client_id?+f.client_id:null}); const r=await api('POST','/license_manager/licenses',body); if(r.warning) toast(r.warning);
-      await lmDownload('/license_manager/licenses/'+r.license.id+'/file',{method:'GET'},'opsh-license.php'); toast(r.license.serial+' issued — opsh-license.php downloaded','ok'); setF(blank()); setShowForm(false); await load(); }catch(e){ toast(e.message); } setBusy(false); };
+      await lmDownload('/license_manager/licenses/'+r.license.id+'/file',{method:'GET'},'itops-license.php'); toast(r.license.serial+' issued — itops-license.php downloaded','ok'); setF(blank()); setShowForm(false); await load(); }catch(e){ toast(e.message); } setBusy(false); };
   const renew=l=>{ setLmTab('licenses'); setF({billing:{cycle:'',discount_pct:'0',amount:'',starts:''},client_id:l.client_id?String(l.client_id):'',licensee:l.licensee,contact:l.contact||'',install_id:l.install_id,agreement:l.agreement||'',kind:l.kind||'Paid',plan:l.plan||'',modules:l.modules||[],users:String(l.users||0),term_start:mhToday(),term_end:'',notes:l.notes||'',replaces_id:l.id}); setShowForm(true); window.scrollTo(0,0); };
-  const revoke=async l=>{ const why=await opshPrompt('Revoke '+l.serial+' ('+l.licensee+')? A linked installation takes it out of use at its next check-in; one that is not linked keeps its file until you send a new one. Why?'); if(!why)return;
+  const revoke=async l=>{ const why=await itopsPrompt('Revoke '+l.serial+' ('+l.licensee+')? A linked installation takes it out of use at its next check-in; one that is not linked keeps its file until you send a new one. Why?'); if(!why)return;
     try{ await api('PUT','/license_manager/licenses/'+l.id,{status:'revoked',reason:why}); toast('Marked revoked','ok'); load(); }catch(e){ toast(e.message); } };
   const copy=t=>{ try{ navigator.clipboard.writeText(t); toast('Copied','ok'); }catch(_){ } };
   const today=mhToday(); const soon=(()=>{ const x=new Date(today+'T12:00:00'); x.setDate(x.getDate()+60); return x.toISOString().slice(0,10); })();
   const ql=q.trim().toLowerCase(); const rows=d.licenses.filter(l=>!ql||(l.serial+' '+l.licensee+' '+l.install_id+' '+(l.contact||'')).toLowerCase().includes(ql));
   const ST={issued:['In use','bg'],replaced:['Replaced','bp'],revoked:['Revoked','br']};
   return <div data-lm="1">
-    <MhHead eyebrow="Administration · Owner only" title="License Manager" desc={'Issues the signed license files of '+OPSH_PRODUCT+' and keeps the register. Next number: '+d.next_serial}
+    <MhHead eyebrow="Administration · Owner only" title="License Manager" desc={'Issues the signed license files of '+ITOPS_PRODUCT+' and keeps the register. Next number: '+d.next_serial}
       right={k.exists&&<button className="btn btn-p btn-sm" data-lm-new="1" onClick={()=>{ setF(blank()); setShowForm(s=>!s); }}>{showForm?'Close the form':'Issue a license'}</button>}/>
     <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}} data-lm-tabs="1">{[['licenses','Licenses'],['clients','Clients'+((d.clients||[]).length?' ('+d.clients.length+')':'')],['billing','Billing'],['installations','Installations'],['releases','Releases']].map(([k,l])=>
       <button key={k} className={'btn btn-sm '+(lmTab===k?'btn-p':'btn-g')} onClick={()=>setLmTab(k)} data-lm-tab={k}>{l}{k==='clients'&&(d.clients||[]).some(c=>+c.overdue>0)?<span style={{color:lmTab===k?'#fff':'var(--red)'}}> ●</span>:null}</button>)}</div>
@@ -10537,7 +10537,7 @@ function LicenseManagerScreen({toast}){
     <div className="card" style={{marginBottom:14}} data-lm-key="1">
       <div style={{fontSize:15,fontWeight:700,marginBottom:6}}>Signing key</div>
       {!k.exists?<>
-        <div style={{fontSize:13.5,marginBottom:10,lineHeight:1.5}}>The signing key proves a license file comes from {OPSH_OWNER} and was not changed. Its private half stays in this installation (wrapped, never shown); its public half goes into every {OPSH_PRODUCT} build. Create it once.</div>
+        <div style={{fontSize:13.5,marginBottom:10,lineHeight:1.5}}>The signing key proves a license file comes from {ITOPS_OWNER} and was not changed. Its private half stays in this installation (wrapped, never shown); its public half goes into every {ITOPS_PRODUCT} build. Create it once.</div>
         <button className="btn btn-p btn-sm" data-lm-create="1" disabled={busy} onClick={()=>createKey(false)}>Create the signing key</button></>
       :<>
         <div style={{display:'grid',gridTemplateColumns:'150px 1fr',gap:'4px 12px',fontSize:13.5,marginBottom:10}}>
@@ -10545,7 +10545,7 @@ function LicenseManagerScreen({toast}){
           <span className="mh-mut">Created</span><span>{mhDateTime(k.created_at)}</span>
           <span className="mh-mut">In this build</span><span data-lm-inbuild={k.in_build?'1':'0'} style={{color:k.in_build?'var(--green)':'var(--amber)',fontWeight:600}}>{k.in_build?'Yes: builds check licenses against this key.':'Not yet: builds do not check licenses until this public key is put into them.'}</span>
         </div>
-        {!k.in_build&&<div style={{fontSize:13,marginBottom:10,lineHeight:1.5}}>Send this line to be put into the {OPSH_PRODUCT} builds (it is the public half; safe to share):
+        {!k.in_build&&<div style={{fontSize:13,marginBottom:10,lineHeight:1.5}}>Send this line to be put into the {ITOPS_PRODUCT} builds (it is the public half; safe to share):
           <div style={{display:'flex',gap:8,alignItems:'center',marginTop:6}}><code style={{flex:1,minWidth:0,overflowWrap:'anywhere',background:'var(--s3)',padding:'6px 8px',borderRadius:6,fontSize:12}} data-lm-buildline="1">{k.build_line}</code><button className="btn btn-g btn-sm" onClick={()=>copy(k.build_line)}>Copy</button></div></div>}
         <div style={{borderTop:'1px solid var(--b1)',paddingTop:10,marginTop:4}}>
           <div style={{fontSize:13.5,fontWeight:600,marginBottom:4}}>Backup</div>
@@ -10586,7 +10586,7 @@ function LicenseManagerScreen({toast}){
       </div>
       {(()=>{ const c=(d.clients||[]).find(x=>String(x.id)===String(f.client_id)); return c&&+c.overdue>0?<div style={{fontSize:13,color:'var(--red)',marginBottom:8}} data-lm-overdue-warn="1">This client has {usd(c.overdue)} overdue (oldest {c.days_late} days late). You can still issue the license.</div>:null; })()}
       {!k.in_build&&<div style={{fontSize:12.5,color:'var(--amber)',marginBottom:8}}>Builds do not check signatures until they carry this key's public half; a file issued now is accepted as it is until then, and checked once they do.</div>}
-      <div style={{display:'flex',gap:8}}><button className="btn btn-p btn-sm" data-lm-issue="1" disabled={busy||!f.licensee||!f.install_id||!f.term_start} onClick={issue}>{busy?'Signing…':'Issue and download opsh-license.php'}</button><button className="btn btn-g btn-sm" onClick={()=>{ setShowForm(false); setF(blank()); }}>Cancel</button></div>
+      <div style={{display:'flex',gap:8}}><button className="btn btn-p btn-sm" data-lm-issue="1" disabled={busy||!f.licensee||!f.install_id||!f.term_start} onClick={issue}>{busy?'Signing…':'Issue and download itops-license.php'}</button><button className="btn btn-g btn-sm" onClick={()=>{ setShowForm(false); setF(blank()); }}>Cancel</button></div>
     </div>}
     <div className="card" style={{padding:0,overflowX:'auto'}} data-lm-register="1">
       <div style={{display:'flex',gap:10,alignItems:'center',padding:'12px 14px',flexWrap:'wrap'}}><b style={{flex:1}}>Register ({d.licenses.length})</b><input className="mh-in" style={{maxWidth:260}} placeholder="Search number, organization, installation…" value={q} onChange={e=>setQ(e.target.value)}/></div>
@@ -10598,7 +10598,7 @@ function LicenseManagerScreen({toast}){
             <td>{l.plan?(d.plans.find(p=>p.key===l.plan)||{label:l.plan}).label:'—'}{l.modules.length>0&&<div className="mh-mut" style={{fontSize:12}}>+ {l.modules.map(modLabel).join(', ')}</div>}</td>
             <td>{l.users||'No limit'}</td><td style={{color:endC}}>{mhDate(l.term_start)} – {l.term_end?mhDate(l.term_end):'no end'}</td>
             <td><span className={'badge '+s[1]}>{s[0]}</span>{l.status==='revoked'&&l.revoked_reason&&<div className="mh-mut" style={{fontSize:12}}>{l.revoked_reason}</div>}</td>
-            <td style={{whiteSpace:'nowrap'}}><button className="btn btn-g btn-sm" data-lm-dl={l.serial} onClick={()=>lmDownload('/license_manager/licenses/'+l.id+'/file',{method:'GET'},'opsh-license.php').then(()=>toast('opsh-license.php downloaded','ok')).catch(e=>toast(e.message))}>File</button>{' '}
+            <td style={{whiteSpace:'nowrap'}}><button className="btn btn-g btn-sm" data-lm-dl={l.serial} onClick={()=>lmDownload('/license_manager/licenses/'+l.id+'/file',{method:'GET'},'itops-license.php').then(()=>toast('itops-license.php downloaded','ok')).catch(e=>toast(e.message))}>File</button>{' '}
               {l.status!=='revoked'&&<button className="btn btn-g btn-sm" data-lm-renew={l.serial} onClick={()=>renew(l)}>Renew / change</button>}{' '}
               {l.status==='issued'&&<button className="btn btn-d btn-sm" data-lm-revoke={l.serial} onClick={()=>revoke(l)}>Revoke</button>}</td></tr>; })}</tbody></table>}
     </div>
@@ -10610,11 +10610,11 @@ function LicenseManagerScreen({toast}){
   </div>;
 }
 
-/* ═══ BT125: Settings → Updates (Super Admin). A signed update bundle (.opshub-update) from the License Hub is checked,
+/* ═══ BT125: Settings → Updates (Super Admin). A signed update bundle (.itops-update) from the License Hub is checked,
    then installed in two steps: step 1 (this code) backs up and puts the new files in place, step 2 (the new code) runs
    the database update. Server: api/routes/updates.php, api/lib/Updates.php ═══ */
 async function updPost(path,fd){
-  const r=await fetch(API_BASE+path,{method:'POST',credentials:'same-origin',headers:opshAuth({'X-OpsHub-CSRF':'1'}),body:fd});
+  const r=await fetch(API_BASE+path,{method:'POST',credentials:'same-origin',headers:itopsAuth({'X-ITOps-CSRF':'1'}),body:fd});
   let j=null; try{ j=await r.json(); }catch(_){ }
   if(!r.ok) throw new Error((j&&j.error&&j.error.message)||('The server answered '+r.status));
   return j;
@@ -10663,9 +10663,9 @@ function UpdatesScreen({toast}){
     </div>}
     <div className="card" style={{marginBottom:14}} data-upd-check="1">
       <div style={{fontSize:15,fontWeight:700,marginBottom:6}}>1. Check a bundle</div>
-      <div className="mh-mut" style={{fontSize:12.5,marginBottom:8}}>The file ends in .opshub-update. Its signature, its package, the build, the free space and write access to every file are checked; nothing changes yet.</div>
+      <div className="mh-mut" style={{fontSize:12.5,marginBottom:8}}>The file ends in .itops-update. Its signature, its package, the build, the free space and write access to every file are checked; nothing changes yet.</div>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
-        <label className="btn btn-g btn-sm" style={{cursor:'pointer'}}>{file?file.name:'Choose the bundle…'}<input type="file" accept=".opshub-update" style={{display:'none'}} onChange={e=>setFile(e.target.files&&e.target.files[0]||null)} data-upd-file="1"/></label>
+        <label className="btn btn-g btn-sm" style={{cursor:'pointer'}}>{file?file.name:'Choose the bundle…'}<input type="file" accept=".itops-update" style={{display:'none'}} onChange={e=>setFile(e.target.files&&e.target.files[0]||null)} data-upd-file="1"/></label>
         <button className="btn btn-p btn-sm" disabled={!file||!!busy||!d.keys_in_build} onClick={check} data-upd-checkbtn="1">{busy==='check'?'Checking…':'Check'}</button>
       </div>
     </div>
@@ -10704,11 +10704,11 @@ function TimeZoneCard({toast,isSA}){
   React.useEffect(()=>{ load(); },[load]);
   if(!d) return null;
   const want=sel==='__other'?other.trim():sel; const valid=!!want&&d.all.indexOf(want)>=0; const changed=valid&&want!==d.timezone;
-  const save=async()=>{ setBusy(true); try{ const r=await api('POST','/settings/timezone',{timezone:want,confirm:word.trim()}); opshSetTz(r.timezone); setWord(''); toast('Time zone: '+r.label+'. Reload to see every page in it.','ok'); await load(); }catch(e){ toast(e.message); } setBusy(false); };
+  const save=async()=>{ setBusy(true); try{ const r=await api('POST','/settings/timezone',{timezone:want,confirm:word.trim()}); itopsSetTz(r.timezone); setWord(''); toast('Time zone: '+r.label+'. Reload to see every page in it.','ok'); await load(); }catch(e){ toast(e.message); } setBusy(false); };
   return <div className="card ct-general" style={{marginBottom:14}} data-tz-card={d.timezone}>
     <div style={{fontSize:15,fontWeight:700,marginBottom:4}}>Time zone</div>
     <div className="mh-mut" style={{fontSize:12.5,marginBottom:10}}>Every time in the app is recorded and shown in this zone, 12-hour: tickets and their due times, business hours, the scheduler, emails, reports, calendar sync. Now: <b data-tz-now="1">{d.label}</b> · {mhDateTime(d.now)} (UTC{d.offset}).</div>
-    {d.fixed_in_config?<div style={{fontSize:13,color:'var(--amber)'}} data-tz-fixed="1">Set in config.php (OPSH_TIMEZONE) on this server; change it there.</div>
+    {d.fixed_in_config?<div style={{fontSize:13,color:'var(--amber)'}} data-tz-fixed="1">Set in config.php (ITOPS_TIMEZONE) on this server; change it there.</div>
     :!isSA?<div className="mh-mut" style={{fontSize:13}}>A Super Admin changes it.</div>
     :<>
       <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-end'}}>
@@ -10787,8 +10787,8 @@ function LmBilling({toast,lm,reloadLm}){
   const s=d.summary; const methods=Object.entries(d.methods);
   const run=async()=>{ setBusy(true); try{ const r=await api('POST','/license_manager/billing/run',{}); toast(r.made?r.made+' new charge'+(r.made===1?'':'s'):'Nothing new to charge','ok'); await load(); }catch(e){ toast(e.message); } setBusy(false); };
   const doPay=async(c,over)=>{ setBusy(true); try{ await api('POST','/license_manager/billing/charges/'+c.id+'/pay',{amount:pay.amount,paid_on:pay.paid_on,method:pay.method,reference:pay.reference,note:pay.note,confirm:over?'OVERPAY':''}); toast('Payment recorded','ok'); setPay(null); await load(); reloadLm&&reloadLm(); }
-    catch(e){ if(/OVERPAY/.test(e.message)&&await opshConfirm(e.message.replace(/ Send confirm.*$/,'')+' Record it anyway?')){ setBusy(false); return doPay(c,true); } toast(e.message); } setBusy(false); };
-  const voidIt=async(kind,id,label)=>{ const why=await opshPrompt('Void '+label+'? It stays in the records, marked void. Why?'); if(!why)return; try{ await api('POST','/license_manager/billing/'+kind+'/'+id+'/void',{reason:why}); toast('Voided','ok'); await load(); }catch(e){ toast(e.message); } };
+    catch(e){ if(/OVERPAY/.test(e.message)&&await itopsConfirm(e.message.replace(/ Send confirm.*$/,'')+' Record it anyway?')){ setBusy(false); return doPay(c,true); } toast(e.message); } setBusy(false); };
+  const voidIt=async(kind,id,label)=>{ const why=await itopsPrompt('Void '+label+'? It stays in the records, marked void. Why?'); if(!why)return; try{ await api('POST','/license_manager/billing/'+kind+'/'+id+'/void',{reason:why}); toast('Voided','ok'); await load(); }catch(e){ toast(e.message); } };
   const savePrice=async()=>{ setBusy(true); try{ await api('POST','/license_manager/billing/prices',pe); toast('Price saved','ok'); setPe(null); await load(); }catch(e){ toast(e.message); } setBusy(false); };
   const addCharge=async()=>{ setBusy(true); try{ await api('POST','/license_manager/billing/charges',{...nc,client_id:+nc.client_id}); toast('Charge added','ok'); setNc(null); await load(); }catch(e){ toast(e.message); } setBusy(false); };
   const saveCfg=async()=>{ setBusy(true); try{ await api('POST','/license_manager/billing/settings',{due_days:+cfg.due_days,lead_days:+cfg.lead_days}); toast('Saved','ok'); await load(); }catch(e){ toast(e.message); } setBusy(false); };
@@ -10906,7 +10906,7 @@ function LmReleases({d,toast,reload}){
   const [f,setF]=React.useState({file:null,notes:'',install_id:''}); const [rep,setRep]=React.useState(''); const [pd,setPd]=React.useState(null);
   const saveDays=async()=>{ setBusy(true); try{ await api('POST','/license_manager/releases/settings',{pilot_days:+pd}); toast('Waiting period saved','ok'); setPd(null); await reload(); }catch(e){ toast(e.message); } setBusy(false); };
   const act=async(r,a)=>{ let body={action:a};
-    if(a==='withdraw'){ const c=await opshPrompt('Withdraw build '+r.build+'? Installations that have not installed it stop being offered it, for good. Type WITHDRAW.'); if(c!=='WITHDRAW')return; body.confirm='WITHDRAW'; }
+    if(a==='withdraw'){ const c=await itopsPrompt('Withdraw build '+r.build+'? Installations that have not installed it stop being offered it, for good. Type WITHDRAW.'); if(c!=='WITHDRAW')return; body.confirm='WITHDRAW'; }
     try{ await api('POST','/license_manager/releases/'+r.id,body); toast('Build '+r.build+': '+({promote:'promoted to Stable',pause:'paused',resume:'resumed',withdraw:'withdrawn'})[a],'ok'); await reload(); }catch(e){ toast(e.message); } };
   const create=async replace=>{ setBusy(true); try{ await api('POST','/license_manager/release-key',replace?{replace:true,confirm:'REPLACE'}:{}); setRep(''); toast('Release key created','ok'); await reload(); }catch(e){ toast(e.message); } setBusy(false); };
   const backup=async()=>{ if(pp.a.length<12){ toast('Use a passphrase of at least 12 characters'); return; } if(pp.a!==pp.b){ toast('The two passphrases are not the same'); return; }
@@ -10994,7 +10994,7 @@ function LmInstalls({toast,plans}){
   const iid=f.install_id.trim(); const exists=iid&&d.installs.some(i=>i.install_id===iid&&i.linked);
   const make=async()=>{ setBusy(true); setMade(null); try{ const r=await api('POST','/license_manager/installs',{install_id:iid,label:f.label.trim(),confirm:f.confirm.trim()}); setMade(r); setF({install_id:'',label:'',confirm:''}); await load(); }catch(e){ toast(e.message); } setBusy(false); };
   const saveAddr=async()=>{ setBusy(true); try{ await api('POST','/license_manager/installs/address',{url:(addr||'').trim()}); toast('Address saved','ok'); await load(); }catch(e){ toast(e.message); } setBusy(false); };
-  const stop=async i=>{ if(!await opshConfirm('Stop the check-in of '+(i.label||i.licensee||i.install_id)+'? It stops receiving licenses until it gets a new link code.'))return; try{ await api('POST','/license_manager/installs/'+i.install_id+'/stop',{}); toast('Stopped','ok'); await load(); }catch(e){ toast(e.message); } };
+  const stop=async i=>{ if(!await itopsConfirm('Stop the check-in of '+(i.label||i.licensee||i.install_id)+'? It stops receiving licenses until it gets a new link code.'))return; try{ await api('POST','/license_manager/installs/'+i.install_id+'/stop',{}); toast('Stopped','ok'); await load(); }catch(e){ toast(e.message); } };
   const setCh=async(i,c)=>{ try{ await api('POST','/license_manager/installs/'+i.install_id+'/channel',{channel:c}); toast((i.label||i.install_id)+': '+(c==='pilot'?'Pilot':'Stable'),'ok'); await load(); }catch(e){ toast(e.message); } };
   const stopLink=async l=>{ try{ await api('POST','/license_manager/installs/links/'+l.ref+'/stop',{}); toast('Link code stopped','ok'); await load(); }catch(e){ toast(e.message); } };
   const copy=t=>{ try{ navigator.clipboard.writeText(t); toast('Copied','ok'); }catch(_){ } };
@@ -11048,7 +11048,7 @@ const RK_FU={open:['Asked to fix','bb'],escalated:['Escalated','br'],fixed:['Fix
    users", disabled ones included, with Microsoft's level, state, why and when; the history behind each; and the two
    answers sent back to Microsoft (dismiss the risk, confirm compromised), with a reason and in the Audit Log. */
 const RK_MS_ST={atRisk:['At risk','ba'],confirmedCompromised:['Confirmed compromised','br'],remediated:['Remediated','bg'],dismissed:['Dismissed','bp'],confirmedSafe:['Confirmed safe','bg'],none:['None','bp']};
-function RkMicrosoft({toast,onOpshub,onPeople}){
+function RkMicrosoft({toast,onItops,onPeople}){
   const [m,setM]=React.useState(null); const [err,setErr]=React.useState(null); const [busy,setBusy]=React.useState(false);
   const [lv,setLv]=React.useState(['high','medium']); const [st,setSt]=React.useState(['atRisk','confirmedCompromised']); const [q,setQ]=React.useState('');
   const [sel,setSel]=React.useState({}); const [open,setOpen]=React.useState({}); const [hist,setHist]=React.useState({});
@@ -11090,7 +11090,7 @@ function RkMicrosoft({toast,onOpshub,onPeople}){
   const expand=r=>{ const o=!open[r.id]; setOpen(x=>Object.assign({},x,{[r.id]:o})); if(o&&!hist[r.id]) api('GET','/risk_users/microsoft/'+r.id+'/history').then(x=>setHist(h=>Object.assign({},h,{[r.id]:x.data}))).catch(e=>setHist(h=>Object.assign({},h,{[r.id]:{error:e.message}}))); };
   const answer=async kind=>{ if(!picked.length)return;
     const names=picked.map(r=>r.name||r.upn).join(', ');
-    const why=await opshPrompt(kind==='dismiss'?('Dismiss Microsoft’s risk for '+names+'? Do this only after you have checked the sign-ins and the person fixed what was asked. Why?'):('Confirm to Microsoft that '+names+(picked.length>1?' are':' is')+' compromised? Microsoft raises the risk to high and your risk policies act on it (password change, blocked sign-in). Why?'));
+    const why=await itopsPrompt(kind==='dismiss'?('Dismiss Microsoft’s risk for '+names+'? Do this only after you have checked the sign-ins and the person fixed what was asked. Why?'):('Confirm to Microsoft that '+names+(picked.length>1?' are':' is')+' compromised? Microsoft raises the risk to high and your risk policies act on it (password change, blocked sign-in). Why?'));
     if(!why)return; setBusy(true);
     try{ const r=await api('POST','/risk_users/microsoft/'+(kind==='dismiss'?'dismiss':'compromised'),{ids:picked.map(r=>r.id),reason:why}); toast((kind==='dismiss'?'Risk dismissed for ':'Confirmed compromised: ')+r.done+(r.done===1?' person':' people')+'. '+r.note,'ok'); await load(); }
     catch(e){ toast(e.message); } setBusy(false); };
@@ -11116,14 +11116,14 @@ function RkMicrosoft({toast,onOpshub,onPeople}){
       <table className="tbl mh-t" style={{width:'100%'}}><thead><tr>
         {m.can_answer&&<th style={{width:34}}><input type="checkbox" aria-label="Choose all" checked={allOn} onChange={()=>{ const n={}; if(!allOn) rows.forEach(r=>n[r.id]=true); setSel(n); }} data-rkm-all="1"/></th>}
         <th>Person</th><th>Risk level</th><th>Risk state</th><th>Why (Microsoft)</th><th>Risk last updated</th><th>In {appName()}</th></tr></thead><tbody>
-      {rows.map(r=>{ const L=RK_LVL[r.level]||[r.level==='none'?'None':r.level==='hidden'?'Hidden':r.level,'bp']; const S=RK_MS_ST[r.state]||[r.state_label,'bp']; const o=!!open[r.id]; const h=hist[r.id]; const op=r.opshub;
+      {rows.map(r=>{ const L=RK_LVL[r.level]||[r.level==='none'?'None':r.level==='hidden'?'Hidden':r.level,'bp']; const S=RK_MS_ST[r.state]||[r.state_label,'bp']; const o=!!open[r.id]; const h=hist[r.id]; const op=r.itops;
         return <React.Fragment key={r.id}><tr data-rkm-row={r.upn} style={{cursor:'pointer'}} onClick={()=>expand(r)}>
           {m.can_answer&&<td onClick={e=>e.stopPropagation()}><input type="checkbox" aria-label={'Choose '+r.name} checked={!!sel[r.id]} onChange={()=>setSel(x=>Object.assign({},x,{[r.id]:!x[r.id]}))} data-rkm-pick={r.upn}/></td>}
           <td><b>{r.name||'—'}</b>{r.disabled&&<span className="badge bp" style={{marginLeft:6}}>sign-in blocked</span>}{r.deleted&&<span className="badge bp" style={{marginLeft:6}}>deleted</span>}{r.processing&&<span className="badge bb" style={{marginLeft:6}}>updating</span>}<div className="mh-mut" style={{fontSize:12}}>{r.upn}</div></td>
           <td><span className={'badge '+L[1]}>{L[0]}</span></td><td><span className={'badge '+S[1]}>{S[0]}</span></td>
           <td style={{fontSize:13,maxWidth:260}}>{r.detail||<span className="mh-mut">—</span>}</td>
           <td style={{whiteSpace:'nowrap'}}>{r.updated?mhDateTime(r.updated):'—'}</td>
-          <td style={{whiteSpace:'nowrap'}}>{op&&op.score!=null?<a href="#" onClick={e=>{ e.preventDefault(); e.stopPropagation(); onOpshub&&onOpshub(r.upn); }}><b>{op.score}</b> <span className={'badge '+((RK_LVL[op.level]||['','bp'])[1])}>{(RK_LVL[op.level]||[op.level])[0]}</span></a>:<span className="mh-mut">—</span>}
+          <td style={{whiteSpace:'nowrap'}}>{op&&op.score!=null?<a href="#" onClick={e=>{ e.preventDefault(); e.stopPropagation(); onItops&&onItops(r.upn); }}><b>{op.score}</b> <span className={'badge '+((RK_LVL[op.level]||['','bp'])[1])}>{(RK_LVL[op.level]||[op.level])[0]}</span></a>:<span className="mh-mut">—</span>}
             {op&&op.followup&&<div><span className={'badge '+((RK_FU[op.followup]||['','bp'])[1])}>{(RK_FU[op.followup]||[op.followup])[0]}</span></div>}</td></tr>
           {o&&<tr><td colSpan={m.can_answer?7:6} style={{background:'var(--s3)'}} data-rkm-hist={r.upn}>
             {!h?<div className="mh-mut">Reading the history…</div>:h.error?<div style={{color:'var(--red)'}}>{h.error}</div>:h.length===0?<div className="mh-mut">No history from Microsoft.</div>:
@@ -11145,9 +11145,9 @@ function RiskUsersScreen({toast,setPg,setFocus}){
   const goTicket=id=>{ setFocus&&setFocus({res:'tickets',id}); setPg&&setPg('tickets'); };
   const saveCfg=async()=>{ setBusy(true); try{ const b={enabled:!!cfg.enabled,levels:cfg.levels,days:+cfg.days,remind_after:+cfg.remind_after,manager:!!cfg.manager,ticket:!!cfg.ticket,ticket_category_id:cfg.ticket_category_id?+cfg.ticket_category_id:null,mfa_group_id:(cfg.mfa_group_id||'').trim(),mfa_group_name:cfg.mfa_group_name||''};
       await api('PUT','/risk_users/settings',b); toast('Follow-up settings saved','ok'); await load(); }catch(e){ toast(e.message); } setBusy(false); };
-  const approve=async a=>{ if(!await opshConfirm(a.label+' for '+a.name+' ('+a.upn+')?\n\n'+a.explains))return; try{ const r=await api('POST','/risk_users/actions/'+a.id+'/approve',{}); toast(r.result||'Done','ok'); load(); }catch(e){ toast(e.message); load(); } };
-  const dropA=async a=>{ const why=await opshPrompt('Why not '+a.label.toLowerCase()+' for '+a.name+'?'); if(!why)return; try{ await api('POST','/risk_users/actions/'+a.id+'/dismiss',{reason:why}); toast('Dismissed','ok'); load(); }catch(e){ toast(e.message); } };
-  const dismissF=async f=>{ const why=await opshPrompt('Stop following up '+(f.name||f.upn)+' for 30 days? Their ticket is resolved and open proposals are withdrawn. Why?'); if(!why)return; try{ await api('POST','/risk_users/followups/'+f.id+'/dismiss',{reason:why}); toast('Dismissed','ok'); load(); }catch(e){ toast(e.message); } };
+  const approve=async a=>{ if(!await itopsConfirm(a.label+' for '+a.name+' ('+a.upn+')?\n\n'+a.explains))return; try{ const r=await api('POST','/risk_users/actions/'+a.id+'/approve',{}); toast(r.result||'Done','ok'); load(); }catch(e){ toast(e.message); load(); } };
+  const dropA=async a=>{ const why=await itopsPrompt('Why not '+a.label.toLowerCase()+' for '+a.name+'?'); if(!why)return; try{ await api('POST','/risk_users/actions/'+a.id+'/dismiss',{reason:why}); toast('Dismissed','ok'); load(); }catch(e){ toast(e.message); } };
+  const dismissF=async f=>{ const why=await itopsPrompt('Stop following up '+(f.name||f.upn)+' for 30 days? Their ticket is resolved and open proposals are withdrawn. Why?'); if(!why)return; try{ await api('POST','/risk_users/followups/'+f.id+'/dismiss',{reason:why}); toast('Dismissed','ok'); load(); }catch(e){ toast(e.message); } };
   const run=d.run; const src=(run&&run.sources)||{};
   const missing=[!src.mfa&&'multifactor registration (AuditLog.Read.All, Entra ID P1)',!src.signin&&'last sign-in (AuditLog.Read.All, Entra ID P1)',!src.devices&&'devices (Intune)',!src.identity&&'Microsoft’s own sign-in risk (Entra ID P2, IdentityRiskyUser.Read.All)',!src.roles&&'admin roles (RoleManagement.Read.Directory)'].filter(Boolean);
   const ql=q.trim().toLowerCase(); const ppl=d.people.filter(p=>(!lvl||p.level===lvl)&&(!ql||(p.name+' '+p.upn+' '+p.factors.map(f=>f.label).join(' ')).toLowerCase().includes(ql)));
@@ -11185,7 +11185,7 @@ function RiskUsersScreen({toast,setPg,setFocus}){
               {p.followup&&<div className="mh-mut">Follow-up: asked to fix {mhDateTime(p.followup.started_at)}{p.followup.reminded_at?', reminded '+mhDateTime(p.followup.reminded_at):''}{p.followup.escalated_at?', escalated '+mhDateTime(p.followup.escalated_at):''}.</div>}
             </div></td></tr>}</React.Fragment>; })}</tbody></table>}</div></>}
     </>}
-    {tab==='microsoft'&&<RkMicrosoft toast={toast} onOpshub={upn=>{ setQ(upn); setLvl(''); setTab('people'); }} onPeople={()=>{ setQ(''); setLvl(''); setTab('people'); }}/>}
+    {tab==='microsoft'&&<RkMicrosoft toast={toast} onItops={upn=>{ setQ(upn); setLvl(''); setTab('people'); }} onPeople={()=>{ setQ(''); setLvl(''); setTab('people'); }}/>}
     {tab==='followup'&&cfg&&<>
       <div className="card" style={{marginBottom:12}} data-rk-cfg="1">
         <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}><div style={{fontSize:15,fontWeight:700,flex:1}}>Automatic follow-up</div>
@@ -11237,7 +11237,7 @@ function SaProfile({d,onSaved,toast,canEdit}){
   const p0=d.profile||{}; const [p,setP]=React.useState(Object.assign({staff:'',work:'hybrid',byod:false,executives:false,countries:'',pressure:'none',notes:''},p0));
   const [em,setEm]=React.useState((d.emergency||[]).join('\n')); const [busy,setBusy]=React.useState(false);
   const set=(k,v)=>setP(x=>({...x,[k]:v}));
-  const save=async()=>{ setBusy(true); try{ const r=await api('PUT','/security_assessment/profile',Object.assign({profile:p},opshIsSuper()?{emergency:em.split(/[\s,;]+/).filter(Boolean)}:{})); toast&&toast('Tenant profile saved','ok'); onSaved&&onSaved(r); }catch(e){ toast&&toast(e.message); } setBusy(false); };
+  const save=async()=>{ setBusy(true); try{ const r=await api('PUT','/security_assessment/profile',Object.assign({profile:p},itopsIsSuper()?{emergency:em.split(/[\s,;]+/).filter(Boolean)}:{})); toast&&toast('Tenant profile saved','ok'); onSaved&&onSaved(r); }catch(e){ toast&&toast(e.message); } setBusy(false); };
   return <div className="card" data-sa-profile="1" style={{marginBottom:12,display:'grid',gap:12}}>
     <div><div style={{fontSize:15,fontWeight:700}}>Tenant profile</div><div className="mh-mut" style={{fontSize:13}}>Answered once. Rules use it to decide what applies here; the plan and the AI assistant (later builds) use it to tailor.</div></div>
     <div style={{display:'flex',gap:14,flexWrap:'wrap',alignItems:'flex-end'}}>
@@ -11247,12 +11247,12 @@ function SaProfile({d,onSaved,toast,canEdit}){
       <MhLbl label="Countries people sign in from"><input className="mh-in" style={{width:220}} placeholder="e.g. United States, Canada" value={p.countries} disabled={!canEdit} onChange={e=>set('countries',e.target.value)}/></MhLbl>
     </div>
     <div style={{display:'flex',gap:18,flexWrap:'wrap'}}><MhCheck small checked={p.byod} disabled={!canEdit} onChange={v=>set('byod',v)}><span data-sa-pf="byod">People read company email on personal phones</span></MhCheck><MhCheck small checked={p.executives} disabled={!canEdit} onChange={v=>set('executives',v)}>Executives or finance staff are likely targets</MhCheck></div>
-    <MhLbl label="Emergency access accounts (one sign-in address per line, two recommended)"><textarea className="mh-in" data-sa-pf="emergency" rows={2} style={{width:'100%',maxWidth:520}} placeholder="emergency1@yourtenant.onmicrosoft.com" value={em} disabled={!canEdit||!opshIsSuper()} title={opshIsSuper()?undefined:'Only a Super Admin changes the emergency access accounts'} onChange={e=>setEm(e.target.value)}/></MhLbl>
+    <MhLbl label="Emergency access accounts (one sign-in address per line, two recommended)"><textarea className="mh-in" data-sa-pf="emergency" rows={2} style={{width:'100%',maxWidth:520}} placeholder="emergency1@yourtenant.onmicrosoft.com" value={em} disabled={!canEdit||!itopsIsSuper()} title={itopsIsSuper()?undefined:'Only a Super Admin changes the emergency access accounts'} onChange={e=>setEm(e.target.value)}/></MhLbl>
     <MhLbl label="Notes" hint="sent to the AI planning assistant, with the countries"><input className="mh-in" style={{width:'100%',maxWidth:520}} value={p.notes} disabled={!canEdit} onChange={e=>set('notes',e.target.value)} placeholder="No names, addresses or secrets"/></MhLbl>
     {canEdit&&<div><button className="btn btn-p btn-sm" data-sa-pf-save="1" disabled={busy} onClick={save}>{busy?'Saving…':'Save'}</button> <span className="mh-mut" style={{fontSize:12.5}}>Run the assessment again to see the effect.</span></div>}
   </div>;
 }
-/* BT116 (4a): Microsoft's own recommended actions for the tenant (Secure Score controls), next to OpsHub's rules */
+/* BT116 (4a): Microsoft's own recommended actions for the tenant (Secure Score controls), next to ITOps's rules */
 function SaMsActions({extra,checks,onRule}){
   const [f,setF]=React.useState('todo'); const [cat,setCat]=React.useState('');
   if(!extra||(!extra.ms&&!extra.ms_error)) return <div className="card mh-mut">Run the assessment to read Microsoft's recommended actions.</div>;
@@ -11346,7 +11346,7 @@ function SaPlanTab({toast,openRule,onBuilt,fixCa}){
   React.useEffect(()=>{ load(ver); },[ver]);
   const build=async()=>{ setBusy(true); try{ const r=await api('POST','/security_assessment/plan/build',{}); toast&&toast('Plan v'+r.version+': '+r.items+' items'+(r.carried?', '+r.carried+' decisions carried over':'')+(r.expired?', '+r.expired+' accepted risks expired':''),'ok'); setVer(''); await load(''); onBuilt&&onBuilt(); }catch(e){ toast&&toast(e.message); } setBusy(false); };
   const sign=async()=>{ setBusy(true); try{ const r=await api('POST','/security_assessment/plan/sign',sig); toast&&toast('Plan v'+r.version+' signed off','ok'); await load(''); }catch(e){ toast&&toast(e.message); } setBusy(false); };
-  const csv=async()=>{ try{ const r=await fetch(API_BASE+'/security_assessment/plan/export?id='+d.view.plan.id,{headers:opshAuth({}),credentials:'same-origin'}); if(!r.ok)throw new Error('Could not export.'); const b=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='security-plan-v'+d.view.plan.version+'.csv'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }catch(e){ toast&&toast(e.message); } };
+  const csv=async()=>{ try{ const r=await fetch(API_BASE+'/security_assessment/plan/export?id='+d.view.plan.id,{headers:itopsAuth({}),credentials:'same-origin'}); if(!r.ok)throw new Error('Could not export.'); const b=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='security-plan-v'+d.view.plan.version+'.csv'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }catch(e){ toast&&toast(e.message); } };
   if(err) return <div className="card" style={{color:'var(--red)'}}>{err}</div>;
   if(!d) return <div className="mh-mut">Loading…</div>;
   const v=d.view;
@@ -11429,7 +11429,7 @@ function SaDriftTab({toast,openRule,onCount}){
 function SaReportTab({toast}){
   const [url,setUrl]=React.useState(null); const [html,setHtml]=React.useState(null); const [busy,setBusy]=React.useState(false); const [err,setErr]=React.useState(null); const fr=React.useRef(null);
   React.useEffect(()=>()=>{ if(url)URL.revokeObjectURL(url); },[url]);
-  const open=async()=>{ setBusy(true); setErr(null); try{ const r=await fetch(API_BASE+'/security_assessment/report',{headers:opshAuth({}),credentials:'same-origin'}); if(!r.ok){ let m='Could not build the report.'; try{ m=(e0=>(e0&&e0.message)||(typeof e0==='string'?e0:'')||m)((await r.json()).error); }catch(_){ } throw new Error(m); } const t=await r.text(); setHtml(t); setUrl(u=>{ if(u)URL.revokeObjectURL(u); return URL.createObjectURL(new Blob([t],{type:'text/html'})); }); }catch(e){ setErr(e.message); } setBusy(false); };
+  const open=async()=>{ setBusy(true); setErr(null); try{ const r=await fetch(API_BASE+'/security_assessment/report',{headers:itopsAuth({}),credentials:'same-origin'}); if(!r.ok){ let m='Could not build the report.'; try{ m=(e0=>(e0&&e0.message)||(typeof e0==='string'?e0:'')||m)((await r.json()).error); }catch(_){ } throw new Error(m); } const t=await r.text(); setHtml(t); setUrl(u=>{ if(u)URL.revokeObjectURL(u); return URL.createObjectURL(new Blob([t],{type:'text/html'})); }); }catch(e){ setErr(e.message); } setBusy(false); };
   const print=()=>{ try{ fr.current.contentWindow.focus(); fr.current.contentWindow.print(); }catch(e){ toast&&toast('Use the browser’s print on the report.','err'); } };
   const save=()=>{ const a=document.createElement('a'); a.href=url; a.download='security-report-'+new Date().toISOString().slice(0,10)+'.html'; document.body.appendChild(a); a.click(); a.remove(); };
   return <div data-sa-report="1">
@@ -11451,7 +11451,7 @@ function SaHouseTab({d,checks,toast,onChanged}){
   React.useEffect(()=>{ load(); },[load]);
   const done=(x,msg)=>{ setH({house:x.house,in_use:x.in_use}); setNotes(((x.house||{}).notes)||{}); toast&&toast(msg,'ok'); onChanged&&onChanged(); };
   const call=async(m,p,b,msg)=>{ setErr(null); try{ const x=await api(m,p,b); done(x,msg); return x; }catch(e){ setErr(e.message); return null; } };
-  const exp=async()=>{ try{ const r=await fetch(API_BASE+'/security_assessment/house/export',{headers:opshAuth({}),credentials:'same-origin'}); if(!r.ok)throw new Error('Could not export.'); const b=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=((r.headers.get('Content-Disposition')||'').match(/filename="([^"]+)"/)||[])[1]||'house-baseline.json'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }catch(e){ setErr(e.message); } };
+  const exp=async()=>{ try{ const r=await fetch(API_BASE+'/security_assessment/house/export',{headers:itopsAuth({}),credentials:'same-origin'}); if(!r.ok)throw new Error('Could not export.'); const b=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=((r.headers.get('Content-Disposition')||'').match(/filename="([^"]+)"/)||[])[1]||'house-baseline.json'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }catch(e){ setErr(e.message); } };
   const pick=e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f)return; if(f.size>512000){ setErr('That file is too big for a house baseline.'); return; }
     const rd=new FileReader(); rd.onload=()=>{ try{ const j=JSON.parse(String(rd.result)); setImp({file:j,name:j.name,base:j.base,add:(j.add||[]).length,remove:(j.remove||[]).length,notes:Object.keys(j.notes||{}).length}); setErr(null); }catch(_){ setErr('That file is not a house baseline (it is not JSON).'); } }; rd.readAsText(f); };
   const doImp=async()=>{ const x=await call('POST','/security_assessment/house/import',{file:imp.file,use},'House baseline imported'); if(x){ setImp(null); if(x.dropped&&x.dropped.length)setErr('Rules this version does not know were left out: '+x.dropped.join(', ')+'.'); } };
@@ -11508,7 +11508,7 @@ function SecAssessScreen({toast,setPg}){
   const load=React.useCallback(()=>{ setErr(null); return api('GET','/security_assessment').then(setD).catch(e=>setErr(e.message||'Could not load the assessment.')); },[]);
   React.useEffect(()=>{ load(); },[load]);
   const [driftN,setDriftN]=React.useState(0);   /* BT123 */
-  React.useEffect(()=>{ api('GET','/security_assessment/drift').then(x=>setDriftN(x.open||0)).catch(()=>{}); const h=e=>{ const x=e.detail||{}; if(x.page==='security_assessment'&&x.tab){ window.__mhNext=null; setTab(x.tab); } }; window.addEventListener('opsh-mh-go',h); return ()=>window.removeEventListener('opsh-mh-go',h); },[]);
+  React.useEffect(()=>{ api('GET','/security_assessment/drift').then(x=>setDriftN(x.open||0)).catch(()=>{}); const h=e=>{ const x=e.detail||{}; if(x.page==='security_assessment'&&x.tab){ window.__mhNext=null; setTab(x.tab); } }; window.addEventListener('itops-mh-go',h); return ()=>window.removeEventListener('itops-mh-go',h); },[]);
   React.useEffect(()=>{ if(tab==='history') api('GET','/security_assessment/runs').then(x=>setHist(x.data)).catch(e=>setErr(e.message)); },[tab,d]);
   const run=async()=>{ setBusy(true); setErr(null); try{ const r=await api('POST','/security_assessment/run',{}); setOld(null); setD(x=>Object.assign({},x,{run:r.run,checks:r.checks,summary:r.summary,extra:r.extra})); setTab('findings'); toast&&toast('Assessment finished'+(r.summary&&r.summary.score!=null?': '+r.summary.score+'%':''),'ok'); }catch(e){ setErr(e.message||'The assessment could not run.'); } setBusy(false); };
   const sched=async v=>{ try{ await api('PUT','/security_assessment/settings',{schedule:v}); setD(x=>Object.assign({},x,{schedule:v})); toast&&toast('Schedule saved','ok'); }catch(e){ setErr(e.message); } };
@@ -11516,7 +11516,7 @@ function SecAssessScreen({toast,setPg}){
   const fixCa=(tab,a)=>{ mhGo('m365_security',tab,a); setPg&&setPg('m365_security'); };   /* BT118: a rule or plan item opens Security → Conditional Access on its template */
   const openRule=id=>{ setTab('findings'); setScope('all'); setArea(''); setSt(''); setSev(''); setQ(''); setOpen(x=>Object.assign({},x,{[id]:true})); setTimeout(()=>{ const el=document.querySelector('[data-sa-row="'+id+'"]'); if(el)el.scrollIntoView({block:'center'}); },60); };
   const openRun=id=>{ api('GET','/security_assessment/runs/'+id).then(x=>{ setOld(x); setTab('findings'); }).catch(e=>setErr(e.message)); };
-  const csv=async()=>{ try{ const id=(old||d||{}).run&&(old||d).run.id; const r=await fetch(API_BASE+'/security_assessment/export?run='+id,{headers:opshAuth({}),credentials:'same-origin'}); if(!r.ok)throw new Error('Could not export.'); const b=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='security-assessment.csv'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }catch(e){ setErr(e.message); } };
+  const csv=async()=>{ try{ const id=(old||d||{}).run&&(old||d).run.id; const r=await fetch(API_BASE+'/security_assessment/export?run='+id,{headers:itopsAuth({}),credentials:'same-origin'}); if(!r.ok)throw new Error('Could not export.'); const b=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='security-assessment.csv'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }catch(e){ setErr(e.message); } };
   if(err&&!d) return <div className="card" style={{color:'var(--red)'}}>{err}</div>;
   if(!d) return <div className="mh-mut" style={{padding:20}}>Loading…</div>;
   const view=old||d; const runI=view.run; const checks=view.checks||[];
@@ -11620,17 +11620,17 @@ function BudBar({label,value,actual,max,cur,attr}){
     <span className="bud-bar-v">{budMoney(value,cur)}{actual!=null&&actual>0&&<span className="mh-mut">{' · spent '+budMoney(actual,cur)}</span>}</span></div>;
 }
 function BudgetScreen({toast}){
-  const [tab,setTab]=React.useState(()=>{ try{ return localStorage.getItem('opsh_bud_tab')||'overview'; }catch(_){ return 'overview'; } });
+  const [tab,setTab]=React.useState(()=>{ try{ return localStorage.getItem('itops_bud_tab')||'overview'; }catch(_){ return 'overview'; } });
   const [fy,setFy]=React.useState(null); const [sum,setSum]=React.useState(null); const [err,setErr]=React.useState(null); const [gen,setGen]=React.useState(0);
   const [docOpen,setDocOpen]=React.useState(false); const [csvPrev,setCsvPrev]=React.useState(false);
-  const go=t=>{ setTab(t); try{ localStorage.setItem('opsh_bud_tab',t); }catch(_){ } };
+  const go=t=>{ setTab(t); try{ localStorage.setItem('itops_bud_tab',t); }catch(_){ } };
   const load=React.useCallback(()=>{ setErr(null); return api('GET','/budget/summary'+(fy?'?fy='+fy:'')).then(d=>{ setSum(d); if(!fy)setFy(d.fy.fy); }).catch(e=>setErr(e.message||'Could not load the budget.')); },[fy]);
   React.useEffect(()=>{ load(); },[load,gen]);
   const changed=()=>setGen(g=>g+1);
   const cur=(sum&&sum.cfg&&sum.cfg.currency)||'USD';
   const years=React.useMemo(()=>{ if(!sum)return []; const s=new Set((sum.years||[]).concat([sum.fy_now-1,sum.fy_now,sum.fy_now+1,sum.fy_now+2])); return Array.from(s).sort(); },[sum]);
   const fyLabel=y=>{ if(!sum)return String(y); const m=sum.cfg.fy_start; return m===1?('FY '+y):('FY '+y+'–'+String(y+1).slice(2)); };
-  const csv=async()=>{ try{ const r=await fetch(API_BASE+'/budget/export?fy='+fy,{headers:opshAuth({}),credentials:'same-origin'}); if(!r.ok)throw new Error('Could not export.'); const b=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='it-budget-'+fy+'.csv'; document.body.appendChild(a); a.click(); a.remove(); }catch(e){ toast&&toast(e.message,'err'); } };
+  const csv=async()=>{ try{ const r=await fetch(API_BASE+'/budget/export?fy='+fy,{headers:itopsAuth({}),credentials:'same-origin'}); if(!r.ok)throw new Error('Could not export.'); const b=await r.blob(); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='it-budget-'+fy+'.csv'; document.body.appendChild(a); a.click(); a.remove(); }catch(e){ toast&&toast(e.message,'err'); } };
   return <div className="bud" data-bud="1">
     <MhHead eyebrow="Assets & Vendors" title="IT Budget" desc={sum?(sum.fy.label+' · '+mhDate(sum.fy.start)+' – '+mhDate(sum.fy.end)):'Plan next year’s IT costs, office by office, and follow the spend.'}
       right={sum&&<><Sel value={String(fy)} onChange={v=>setFy(Number(v))} options={years.map(y=>[String(y),fyLabel(y)+(y===sum.fy_now?' (this year)':y===sum.fy_now+1?' (next year)':'')])} title="Fiscal year"/>
@@ -11660,7 +11660,7 @@ function BudgetScreen({toast}){
       {tab==='settings'&&<BudSettings toast={toast} onChanged={()=>{ setSum(null); changed(); }}/>}
     </div>}
     {docOpen&&sum&&fy&&<BudDocument fy={fy} sum={sum} toast={toast} onClose={()=>setDocOpen(false)}/>}
-    {csvPrev&&sum&&fy&&<DocPreview title={'IT budget lines · '+sum.fy.label+' (CSV)'} load={()=>opshFetchBlob('/budget/export?fy='+fy+'&preview=1')} onClose={()=>setCsvPrev(false)}
+    {csvPrev&&sum&&fy&&<DocPreview title={'IT budget lines · '+sum.fy.label+' (CSV)'} load={()=>itopsFetchBlob('/budget/export?fy='+fy+'&preview=1')} onClose={()=>setCsvPrev(false)}
       downloads={[['csv','Download CSV',async()=>{ await csv(); }]]}/>}
   </div>;
 }
@@ -11676,7 +11676,7 @@ function BudLinksPanel({res,id,setPg}){
     {d.lines.length>0&&<div className="card" style={{padding:0,overflow:'auto'}}><table className="tbl"><thead><tr><th>Year</th><th>Line</th><th>Office</th>{res==='vendors'&&<th>Contract</th>}<th style={{textAlign:'right'}}>Planned</th><th>Status</th></tr></thead>
       <tbody>{d.lines.map(l=><tr key={l.id} style={{opacity:l.status==='cut'?.55:1}}><td style={{whiteSpace:'nowrap'}}>{l.fy_label}</td><td>{l.name}</td><td>{l.site_name||'Whole organization'}</td>{res==='vendors'&&<td className="mh-mono" style={{fontSize:12}}>{l.contract_ref||'—'}</td>}
         <td className="mh-mono" style={{textAlign:'right'}}>{budMoney(l.amount,cur,true)}</td><td>{l.status}</td></tr>)}</tbody></table></div>}
-    {setPg&&<div><button className="btn btn-g btn-sm" onClick={()=>{ try{ localStorage.setItem('opsh_bud_tab','lines'); }catch(_){ } setPg('budget'); }}>Open the IT Budget →</button></div>}
+    {setPg&&<div><button className="btn btn-g btn-sm" onClick={()=>{ try{ localStorage.setItem('itops_bud_tab','lines'); }catch(_){ } setPg('budget'); }}>Open the IT Budget →</button></div>}
   </div>;
 }
 function BudOverview({s,cur,go}){
@@ -11844,7 +11844,7 @@ function BudLineEdit({line,d,cur,toast,onClose,onSaved}){
     const b={name:f.name,pool:f.pool,tower:f.tower||'',nature:f.nature,cost_type:f.cost_type,billing:f.billing,unit_cost:f.unit_cost===''?0:Number(f.unit_cost),qty:f.qty===''?0:Number(f.qty),months:Number(f.months)||12,
       site_id:f.site_id||null,vendor_id:f.vendor_id||null,contract_id:f.contract_id||null,renewal_date:f.renewal_date||null,status:f.status,notes:f.notes||''};
     try{ if(isNew){ b.fy=line.fy; await api('POST','/budget/lines',b); } else await api('PUT','/budget/lines/'+line.id,b); toast&&toast('Saved','ok'); onSaved(); }catch(e){ setErr(e.message||'Could not save.'); setBusy(false); } };
-  const del=async()=>{ if(!await opshConfirm('Remove “'+line.name+'” from the budget?\n\nA line with spend recorded against it cannot be removed: set it to “Cut” instead.'))return; setBusy(true);
+  const del=async()=>{ if(!await itopsConfirm('Remove “'+line.name+'” from the budget?\n\nA line with spend recorded against it cannot be removed: set it to “Cut” instead.'))return; setBusy(true);
     try{ await api('DELETE','/budget/lines/'+line.id); toast&&toast('Removed','ok'); onSaved(); }catch(e){ setErr(e.message||'Could not remove it.'); setBusy(false); } };
   const P=d.pools;
   return <EditPage title={isNew?'Add a budget line':line.name} badge={'IT Budget · '+d.fy.label} onClose={busy?()=>{}:onClose}
@@ -11950,7 +11950,7 @@ function BudSiteEdit({site,kinds,toast,onClose,onSaved}){
   const set=o=>{ setF(x=>Object.assign({},x,o)); setErr(null); };
   const save=async()=>{ setBusy(true); const b={name:f.name||'',kind:f.kind,address:f.address||'',region:f.region||'',match_names:f.match_names||'',notes:f.notes||'',active:!!f.active};
     try{ if(isNew)await api('POST','/budget/sites',b); else await api('PUT','/budget/sites/'+site.id,b); toast&&toast('Saved','ok'); onSaved(); }catch(e){ setErr(e.message); setBusy(false); } };
-  const del=async()=>{ if(!await opshConfirm('Remove the office “'+site.name+'”?\n\nAn office with budget lines or spend cannot be removed: switch “In use” off instead.'))return; setBusy(true);
+  const del=async()=>{ if(!await itopsConfirm('Remove the office “'+site.name+'”?\n\nAn office with budget lines or spend cannot be removed: switch “In use” off instead.'))return; setBusy(true);
     try{ await api('DELETE','/budget/sites/'+site.id); toast&&toast('Removed','ok'); onSaved(); }catch(e){ setErr(e.message); setBusy(false); } };
   return <EditPage title={isNew?'Add an office':site.name} badge="IT Budget · Offices" onClose={busy?()=>{}:onClose}
     ribbon={<><button className="btn btn-p btn-sm" data-bud-sitesave="1" disabled={busy||!(f.name||'').trim()} onClick={save}>{busy?'Saving…':'Save'}</button><button className="btn btn-g btn-sm" disabled={busy} onClick={onClose}>Cancel</button></>}>
@@ -12048,7 +12048,7 @@ function BudSpend({fy,toast,onChanged,cur,sum}){
   if(!d||!lines) return <MhLoading/>;
   const may=lines.can.edit; const P=lines.pools;
   const add=async()=>{ setBusy(true); try{ await api('POST','/budget/actuals',{period:f.period,line_id:f.line_id?Number(f.line_id):null,pool:f.pool,amount:Number(f.amount),reference:f.reference,note:f.note}); toast&&toast('Recorded','ok'); setF(x=>Object.assign({},x,{amount:'',reference:'',note:''})); await load(); onChanged&&onChanged(); }catch(e){ toast&&toast(e.message,'err'); } setBusy(false); };
-  const del=async a=>{ if(!await opshConfirm('Remove this spend entry ('+budMoney(a.amount,cur,true)+', '+a.period+')?'))return; try{ await api('DELETE','/budget/actuals/'+a.id); load(); onChanged&&onChanged(); }catch(e){ toast&&toast(e.message,'err'); } };
+  const del=async a=>{ if(!await itopsConfirm('Remove this spend entry ('+budMoney(a.amount,cur,true)+', '+a.period+')?'))return; try{ await api('DELETE','/budget/actuals/'+a.id); load(); onChanged&&onChanged(); }catch(e){ toast&&toast(e.message,'err'); } };
   const total=d.actuals.reduce((s,a)=>s+a.amount,0);
   return <div style={{display:'flex',flexDirection:'column',gap:12}}>
     <div className="mh-mut" style={{fontSize:13.5}}>Record what was paid, month by month, from the invoices or the card statement. Against a budget line when there is one; otherwise in a category. The Overview compares it with the plan.</div>
@@ -12109,14 +12109,14 @@ function BudDocument({fy,sum,toast,onClose}){
   React.useEffect(()=>{ api('GET','/budget/document?fy='+fy).then(x=>{ setD(x); setO(JSON.parse(JSON.stringify(x.options))); }).catch(e=>setErr(e.message)); },[fy]);
   const set=x=>setO(v=>Object.assign({},v,x));
   const [prev,setPrev]=React.useState(false);
-  const make=async(fmt)=>{ const n=await opshFetchFile('/budget/document',{fy,format:fmt,options:o,remember:!!(d&&d.can_save)},'it-budget.'+fmt); toast&&toast('Downloaded '+n,'ok'); };
+  const make=async(fmt)=>{ const n=await itopsFetchFile('/budget/document',{fy,format:fmt,options:o,remember:!!(d&&d.can_save)},'it-budget.'+fmt); toast&&toast('Downloaded '+n,'ok'); };
   const sec=d?Object.entries(d.sections):[]; const on=k=>o&&o.sections.includes(k);
   const tog=k=>set({sections:on(k)?o.sections.filter(x=>x!==k):sec.map(x=>x[0]).filter(x=>x===k||o.sections.includes(x))});
   const ap=(i,j,v)=>set({approvers:o.approvers.map((r,ii)=>ii===i?r.map((c,jj)=>jj===j?v:c):r)});
   return <EditPage title={'Budget document · '+sum.fy.label} badge="IT Budget" onClose={busy?()=>{}:onClose}
     ribbon={<><button className="btn btn-p btn-sm" data-bud-docprev="1" disabled={!o} onClick={()=>setPrev(true)}>Preview</button>
       <button className="btn btn-g btn-sm" onClick={onClose}>Close</button></>}>
-    {prev&&<DocPreview title={'Budget document · '+sum.fy.label} load={()=>opshFetchBlob('/budget/document',{fy,format:'pdf',options:o,remember:!!(d&&d.can_save),preview:true})} onClose={()=>setPrev(false)}
+    {prev&&<DocPreview title={'Budget document · '+sum.fy.label} load={()=>itopsFetchBlob('/budget/document',{fy,format:'pdf',options:o,remember:!!(d&&d.can_save),preview:true})} onClose={()=>setPrev(false)}
       note="This is the document exactly as it will be printed. The Word file has the same content. Go back to change the options or the introduction, or change the budget lines and preview again."
       downloads={[['pdf','Download PDF',()=>make('pdf')],['docx','Download Word',()=>make('docx')]]}/>}
     {err&&<MhErr msg={err}/>}{!o&&!err&&<MhLoading/>}
@@ -12246,7 +12246,7 @@ function MhAttention({go}){
   PE('copilot','Copilot usage',v=>add((v.summary||{}).inactive,'info','Copilot-licensed users idle for '+(v.days||30)+' days','copilot'));
   PE('recs','Entra recommendations',v=>{ const s=v.summary||{}; add(s.high,'warning','high-priority Entra recommendations','recommendations'); add(s.medium,'info','medium-priority Entra recommendations','recommendations'); });
   PE('secrets','app secrets',v=>{ const s=v.summary||{}; add(s.expired,'critical','app registrations with expired secrets/certs','appsecrets'); add(s.expiring_soon,'warning','app registrations with secrets/certs expiring in 30 days','appsecrets'); });
-  /* BT27: device inventory (read from OpsHub's table; nothing is flagged until the first sync has run) */
+  /* BT27: device inventory (read from ITOps's table; nothing is flagged until the first sync has run) */
   if(d.inventory===null)miss.push('device inventory'); else if(d.inventory&&d.inventory.state&&d.inventory.state.last_sync){ const s=d.inventory.summary||{}; const sd=d.inventory.stale_days||90;
     add(s.owner_disabled,'warning','devices whose owner’s account is disabled','inventory',{flag:'owner_disabled'});
     add(s.eol,'warning','computers on an operating system that is out of support','inventory',{flag:'eol'});
@@ -12426,7 +12426,7 @@ function SecDashScreen({toast,onGo}){
           <td>{i.url&&<a href={i.url} target="_blank" rel="noopener noreferrer" className="mh-link" style={{fontSize:12.5}}>Defender ↗</a>}</td></tr>)}</tbody></table></div>}
   </div>;
 }
-function mhGo(page,tab,arg){ const p=page||MH_VIEW[tab]; window.__mhNext={page:p,tab:tab,arg:arg||null}; try{ window.dispatchEvent(new CustomEvent('opsh-mh-go',{detail:window.__mhNext})); }catch(e){} }
+function mhGo(page,tab,arg){ const p=page||MH_VIEW[tab]; window.__mhNext={page:p,tab:tab,arg:arg||null}; try{ window.dispatchEvent(new CustomEvent('itops-mh-go',{detail:window.__mhNext})); }catch(e){} }
 /* BT54: one line at the top of every Microsoft 365 page: when the data was last read in the background, when the next read is
    due, "Refresh now", and (for Integrations · Edit) what is kept fresh and how often. */
 function mhClock(v){ if(!v)return ''; const d=new Date(v); if(isNaN(d))return ''; return d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}); }
@@ -12480,7 +12480,7 @@ function MhSyncLine({toast,onRefreshed}){
 }
 function M365Hub({page,toast,setPg,setFocus}){
   const can=usePerm(); const def=MH_PAGES[page];
-  const isSuper=(()=>{ try{ const u=window.__opshUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } })();
+  const isSuper=(()=>{ try{ const u=window.__itopsUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } })();
   const tabOk=t=>{ const need=t[2]; if(need==='super')return isSuper; if(need==='onboarding')return can('onboarding'); if(need&&need.indexOf('view:')===0)return can(need.slice(5)); if(need)return can(need,'edit'); return can('m365'); };
   const tabs=def.tabs.filter(tabOk);
   const pick0=()=>{ const n=window.__mhNext; if(n&&n.page===page&&tabs.some(t=>t[0]===n.tab)){ window.__mhNext=null; return {tab:n.tab,arg:n.arg}; } return {tab:(tabs[0]||[])[0],arg:null}; };
@@ -12491,12 +12491,12 @@ function M365Hub({page,toast,setPg,setFocus}){
   /* BT54: after a background read, every open tab of the area reads again (from the fresh copies on the server) */
   const [gen,setGen]=React.useState(0);
   const refreshed=()=>{ Object.keys(MH_C).forEach(k=>{ delete MH_C[k]; }); setGen(g=>g+1);
-    try{ window.dispatchEvent(new CustomEvent('opsh-m365-accounts-changed')); }catch(_){} };   /* the Accounts list reads again in place (an edit in progress is kept) */
+    try{ window.dispatchEvent(new CustomEvent('itops-m365-accounts-changed')); }catch(_){} };   /* the Accounts list reads again in place (an edit in progress is kept) */
   const MH_KEEP=['console','onboard','offboarding','history','rollout','diagnose','coverage','access','alerts','devpolicies','emailsec','atrisk','trace'];   /* screens with work in progress, or their own reads: never rebuilt */
   /* …and the reads behind this page's other tabs are fetched quietly in the background */
   React.useEffect(()=>{ const t=setTimeout(()=>{ const l=[]; tabs.forEach(x=>(MH_PREFETCH[x[0]]||[]).forEach(a=>l.push(a))); mhPrefetch(l); },700); return ()=>clearTimeout(t); },[page]);
   React.useEffect(()=>{ const h=e=>{ const d=e.detail||{}; if(d.page===page&&tabs.some(t=>t[0]===d.tab)){ window.__mhNext=null; setSt({tab:d.tab,arg:d.arg}); } };
-    window.addEventListener('opsh-mh-go',h); return ()=>window.removeEventListener('opsh-mh-go',h); },[page,tabs.map(t=>t[0]).join()]);
+    window.addEventListener('itops-mh-go',h); return ()=>window.removeEventListener('itops-mh-go',h); },[page,tabs.map(t=>t[0]).join()]);
   React.useEffect(()=>{ if(!tabs.some(t=>t[0]===st.tab)&&tabs[0])setSt({tab:tabs[0][0],arg:null}); },[page]);
   if(!tabs.length) return <div className="card" style={{maxWidth:560}}>Your role doesn’t include any Microsoft 365 screens here.</div>;
   const renderTab=(t,arg)=>{ switch(t){
@@ -12667,7 +12667,7 @@ function ObSchedule({run,toast,onChanged}){
           :(st==='done'||st==='partial')&&sched?<span>Scheduled run on {sched.toLocaleString([], {dateStyle:'medium',timeStyle:'short'})}: <b style={{color:st==='done'?'var(--green)':'var(--amber)'}}>{st==='done'?'all done':'some steps need you'}</b></span>
           :'Run the automated steps at a set time — e.g. 5:00 PM on the last day. Needs the scheduled job (cron) or someone having '+appName()+' open.'}</div></div>
       {st==='scheduled'?<button className="btn btn-g btn-sm" disabled={busy} onClick={()=>save('')}>Cancel schedule</button>
-       :run.status==='in_progress'&&<div style={{display:'flex',gap:6}}><input type="datetime-local" value={at} onChange={e=>setAt(e.target.value)} style={{padding:'6px 8px',border:'1px solid var(--b1)',borderRadius:7,fontSize:13.5,background:'var(--bg2)',color:'var(--t1)'}}/><button className="btn btn-p btn-sm" disabled={busy||!at} onClick={async()=>{ if(!await opshConfirm('Schedule the automated steps for '+new Date(at).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})+'? They will run as you, even if nobody is watching.'))return; save(at); }}>Schedule</button></div>}
+       :run.status==='in_progress'&&<div style={{display:'flex',gap:6}}><input type="datetime-local" value={at} onChange={e=>setAt(e.target.value)} style={{padding:'6px 8px',border:'1px solid var(--b1)',borderRadius:7,fontSize:13.5,background:'var(--bg2)',color:'var(--t1)'}}/><button className="btn btn-p btn-sm" disabled={busy||!at} onClick={async()=>{ if(!await itopsConfirm('Schedule the automated steps for '+new Date(at).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})+'? They will run as you, even if nobody is watching.'))return; save(at); }}>Schedule</button></div>}
     </div>
     {log.length>0&&<div style={{marginTop:8}}>{log.map((l,i)=><div key={i} className="obv-row" style={{borderTop:i?'1px solid var(--b1)':'none'}}><span style={{fontWeight:800,width:14,textAlign:'center',color:l.ok===true?'var(--green)':(l.ok===false?'var(--red)':'var(--t4)')}}>{l.ok===true?'✓':(l.ok===false?'✕':'–')}</span><span style={{minWidth:170,fontWeight:600}}>{l.task}</span><span style={{flex:1,minWidth:180,color:l.ok===false?'var(--red)':'var(--t3)',wordBreak:'break-word'}}>{l.msg}</span></div>)}</div>}
   </div>;
@@ -12700,7 +12700,7 @@ function ObVtReassign({run,task,toast,onDone,onCancel}){
   const chosen=Object.keys(mods).filter(k=>mods[k]); const all=chosen.length===Object.keys(mods).length;
   const n=chosen.reduce((a,k)=>a+((pv&&pv.modules&&pv.modules[k])||0),0);
   const go=async()=>{ if(!to)return toast('Choose the new owner'); const tgt=(pv.targets||[]).find(u=>u.id===to);
-    if(!await opshConfirm('Move '+n+' record(s) from '+(pv.user.first_name+' '+pv.user.last_name).trim()+' to '+(tgt?(tgt.first_name+' '+tgt.last_name).trim():'the selected user')+' in vTiger?'))return;
+    if(!await itopsConfirm('Move '+n+' record(s) from '+(pv.user.first_name+' '+pv.user.last_name).trim()+' to '+(tgt?(tgt.first_name+' '+tgt.last_name).trim():'the selected user')+' in vTiger?'))return;
     setBusy(true); try{ const r=await api('POST','/onboarding/runs/'+run.id+'/tasks/'+task.id,Object.assign({action:'run',to_id:to,modules:all?[]:chosen},needSame&&same?{vtiger_id:String(pv.user.id)}:{})); toast(r.result||'Done','ok'); onDone(); }catch(e){ toast(e.message); } setBusy(false); };
   const needSame=!!(pv&&pv.user&&pv.user.confirmed===false);
   const box={marginTop:10,padding:'11px 12px',border:'1px solid var(--b1)',borderRadius:9,background:'var(--s1)'};
@@ -12778,7 +12778,7 @@ function OnboardingRuns({toast,history}){   /* BT21: shown as Microsoft 365 → 
     if(r.errors>0){ toast('Pre-flight found '+r.errors+' problem(s) — fix them first (see the list), then run again'); return; }
     const auto=view.tasks.filter(t=>(t.status==='pending'||t.status==='failed')&&t.task_type&&OB_MANUAL.indexOf(t.task_type)<0);
     if(!auto.length){ toast('No automated steps left — the rest are manual check-offs'); return; }
-    if(!await opshConfirm('Run '+auto.length+' automated step(s) in order?'+(r.warnings?' The pre-flight shows '+r.warnings+' warning(s).':'')+' This makes real changes in Microsoft 365 / vTiger and stops at the first problem. Manual steps are left for you.'))return;
+    if(!await itopsConfirm('Run '+auto.length+' automated step(s) in order?'+(r.warnings?' The pre-flight shows '+r.warnings+' warning(s).':'')+' This makes real changes in Microsoft 365 / vTiger and stops at the first problem. Manual steps are left for you.'))return;
     const got=[];
     for(let i=0;i<auto.length;i++){ const t=auto[i]; let cfg={}; try{ cfg=JSON.parse(t.config||'{}')||{}; }catch(_){ }
       if(t.task_type==='vtiger_reassign'&&!cfg.to_email&&!cfg.to_id){ toast('Paused at "'+t.title+'" — choose the new owner, then click Run all again'); setReassign(t.id); break; }
@@ -12796,12 +12796,12 @@ function OnboardingRuns({toast,history}){   /* BT21: shown as Microsoft 365 → 
   const openRun=async(r)=>{ try{ setView(await api('GET','/onboarding/runs/'+r.id)); }catch(e){ toast(e.message); } };
   const doTask=async(t,action,extra)=>{
     if(action==='run'&&t.task_type==='vtiger_reassign'){ setReassign(t.id); return; }
-    if(action==='run'&&!extra&&t.task_type&&(t.task_type.indexOf('m365_')===0||t.task_type.indexOf('vtiger_')===0)){ if(!await opshConfirm('Run "'+t.title+'"? This performs a real action on '+(t.task_type.indexOf('vtiger_')===0?'vTiger':'your Microsoft 365 tenant')+'.'))return; }
+    if(action==='run'&&!extra&&t.task_type&&(t.task_type.indexOf('m365_')===0||t.task_type.indexOf('vtiger_')===0)){ if(!await itopsConfirm('Run "'+t.title+'"? This performs a real action on '+(t.task_type.indexOf('vtiger_')===0?'vTiger':'your Microsoft 365 tenant')+'.'))return; }
     try{ const r=await api('POST','/onboarding/runs/'+view.id+'/tasks/'+t.id,Object.assign({action:action},extra||{})); toast(r.result||'Done','ok'); if(r.secret)setSecret([r.secret]); if(r.verify&&!r.verify.clean)toast('Offboarding finished, but the access check found '+r.verify.issues.length+' issue(s) — see Access verification'); setView(await api('GET','/onboarding/runs/'+view.id)); load(); }
     catch(e){
-      if(e.data&&e.data.needs_override){ const why=await opshPrompt(e.message+'\n\nTo deactivate anyway, type the reason (it is saved in the audit log):'); if(why&&why.trim()) return doTask(t,action,Object.assign({},extra||{},{override_reason:why.trim()})); }
+      if(e.data&&e.data.needs_override){ const why=await itopsPrompt(e.message+'\n\nTo deactivate anyway, type the reason (it is saved in the audit log):'); if(why&&why.trim()) return doTask(t,action,Object.assign({},extra||{},{override_reason:why.trim()})); }
       else if(e.data&&e.data.needs_vtiger_confirm&&e.data.vtiger_user&&!(extra&&extra.vtiger_id)){ const v=e.data.vtiger_user;   /* BT40 */
-        if(await opshConfirm('No vTiger user has this person’s email.\n\nThe vTiger user “'+(v.user_name||'?')+'”'+(v.name?' ('+v.name+')':'')+' was found by '+(v.matched_by==='username'?'user name only':'an id kept on this record')+'. The email on that vTiger record is '+(v.email||'empty')+' and its status is '+(v.status||'unknown')+'.\n\nIs this the same person as '+(view.subject_name||'the person on this record')+'? Confirm only if you are sure: “'+t.title+'” then runs on that vTiger user, and your answer is written to the Audit Log.',{title:'Same person?',okText:'Yes, the same person'}))
+        if(await itopsConfirm('No vTiger user has this person’s email.\n\nThe vTiger user “'+(v.user_name||'?')+'”'+(v.name?' ('+v.name+')':'')+' was found by '+(v.matched_by==='username'?'user name only':'an id kept on this record')+'. The email on that vTiger record is '+(v.email||'empty')+' and its status is '+(v.status||'unknown')+'.\n\nIs this the same person as '+(view.subject_name||'the person on this record')+'? Confirm only if you are sure: “'+t.title+'” then runs on that vTiger user, and your answer is written to the Audit Log.',{title:'Same person?',okText:'Yes, the same person'}))
           return doTask(t,action,Object.assign({},extra||{},{vtiger_id:String(v.id)})); }
       else toast(e.message);
       setView(await api('GET','/onboarding/runs/'+view.id)); } };
@@ -12856,7 +12856,7 @@ function OnboardingRuns({toast,history}){   /* BT21: shown as Microsoft 365 → 
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,gap:10,flexWrap:'wrap'}}>
       <div style={{fontSize:14,color:'var(--t4)'}}>{history?'Every onboarding and offboarding, with what ran, what failed and the access check. Start new ones from the Onboard and Offboard tabs.':'Active and past onboarding / offboarding processes.'}{!allDept&&<div data-ob-scope="1" style={{fontSize:12.5,marginTop:3}}>Showing the processes you started and the ones of your department.</div>}</div>
       <span style={{flex:1}}/>
-      <button className="btn btn-g btn-sm" title="Re-verify every completed offboarding (Microsoft 365 + vTiger). Runs automatically once a month." disabled={recert==='busy'} onClick={async()=>{ if(!await opshConfirm('Re-check access for every completed offboarding now? This reads Microsoft 365 and vTiger (no changes) and saves the result to the audit log.'))return; setRecert('busy'); try{ const r=await api('POST','/onboarding/recertify',{}); setRecert(r); load(); }catch(e){ toast(e.message); setRecert(null); } }}>{recert==='busy'?'Checking…':'Re-check all offboardings'}</button>
+      <button className="btn btn-g btn-sm" title="Re-verify every completed offboarding (Microsoft 365 + vTiger). Runs automatically once a month." disabled={recert==='busy'} onClick={async()=>{ if(!await itopsConfirm('Re-check access for every completed offboarding now? This reads Microsoft 365 and vTiger (no changes) and saves the result to the audit log.'))return; setRecert('busy'); try{ const r=await api('POST','/onboarding/recertify',{}); setRecert(r); load(); }catch(e){ toast(e.message); setRecert(null); } }}>{recert==='busy'?'Checking…':'Re-check all offboardings'}</button>
       {!history&&<button className="btn btn-p btn-sm" onClick={()=>setStart({template_id:templates[0]&&templates[0].id,subject_name:'',subject_email:'',subject_upn:'',start_date:''})}>+ Start process</button>}
     </div>
     {recert&&recert!=='busy'&&<div className="card" style={{marginBottom:14,borderColor:recert.failed.length?'var(--red)':'var(--green)'}}>
@@ -12921,13 +12921,13 @@ function KBAssistant({toast}){
   </div>;
 }
 function KBGaps({toast}){
-  const canK=usePerm(); const kEd=canK('kb_gaps','edit'), kbEd=canK('kb','edit'), isSA=opshIsSuper();   // review UI2-16
+  const canK=usePerm(); const kEd=canK('kb_gaps','edit'), kbEd=canK('kb','edit'), isSA=itopsIsSuper();   // review UI2-16
   const [insights,setInsights]=React.useState(null);
   React.useEffect(()=>{ (async()=>{ try{ setInsights(await api('GET','/kb/insights')); }catch(e){} })(); },[]);
   const [seedBusy,setSeedBusy]=React.useState(false);
-  const seed=async()=>{ if(!await opshConfirm('Add the starter KB articles as drafts? Existing articles are skipped.'))return; setSeedBusy(true); try{ const r=await api('POST','/kb/seed_starter',{}); toast('Added '+r.created+' draft article(s)'+(r.skipped?' ('+r.skipped+' already existed)':''),'ok'); }catch(e){ toast(e.message); } setSeedBusy(false); };
+  const seed=async()=>{ if(!await itopsConfirm('Add the starter KB articles as drafts? Existing articles are skipped.'))return; setSeedBusy(true); try{ const r=await api('POST','/kb/seed_starter',{}); toast('Added '+r.created+' draft article(s)'+(r.skipped?' ('+r.skipped+' already existed)':''),'ok'); }catch(e){ toast(e.message); } setSeedBusy(false); };
   const [rows,setRows]=React.useState(null); const [cfg,setCfg]=React.useState(null); const [ext,setExt]=React.useState(false); const [srcs,setSrcs]=React.useState([]); const [saving,setSaving]=React.useState(false);
-  const isSuper=(()=>{ try{ var u=window.__opshUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } })();
+  const isSuper=(()=>{ try{ var u=window.__itopsUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } })();
   const load=async()=>{ try{ const r=await api('GET','/ai/kb_gaps'); setRows(r.data||[]); }catch(e){ setRows([]); toast&&toast(e.message); }
     try{ const c=await api('GET','/ai'); setCfg(c); setExt(!!c.assist_external); setSrcs(c.trusted_sources&&c.trusted_sources.length?c.trusted_sources:[{label:'Microsoft 365 documentation',url:'https://learn.microsoft.com/microsoft-365/'},{label:'Microsoft Support',url:'https://support.microsoft.com/'},{label:'JustCall Help Center',url:'https://help.justcall.io/en/'},{label:'Vtiger CRM Help',url:'https://help.vtiger.com/'}]); }catch(e){} };
   React.useEffect(()=>{ load(); },[]);
@@ -12970,9 +12970,9 @@ function KBGaps({toast}){
   </div>;
 }
 function VTigerConfig({toast}){
-  const isSuper=(()=>{ try{ var u=window.__opshUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } })();
-  // vTiger provisioning is fully independent of Microsoft 365. The bridge (opsh-bridge.php) is signed
-  // with OpsHub's own HMAC secret (X-Opsh headers).
+  const isSuper=(()=>{ try{ var u=window.__itopsUser||{}; return u.role==='super_admin'||u.role_slug==='super_admin'; }catch(e){ return false; } })();
+  // vTiger provisioning is fully independent of Microsoft 365. The bridge (itops-bridge.php) is signed
+  // with ITOps's own HMAC secret (X-Itops headers).
   const [cfg,setCfg]=React.useState(null); const [err,setErr]=React.useState('');
   const [ep,setEp]=React.useState(''); const [un,setUn]=React.useState(''); const [ak,setAk]=React.useState(''); const [roleId,setRoleId]=React.useState('');
   const [burl,setBurl]=React.useState(''); const [bsec,setBsec]=React.useState(''); const [genSec,setGenSec]=React.useState(''); const [genBusy,setGenBusy]=React.useState(false);
@@ -12985,7 +12985,7 @@ function VTigerConfig({toast}){
   const brSave=async()=>{ setBrBusy(true); try{ await api('POST','/vtiger_provision/bridge_save',{bridge_url:burl,bridge_secret:bsec}); toast('Bridge settings saved','ok'); setBsec(''); load(); }catch(e){ toast(e.message); } setBrBusy(false); };
   const genSecret=async()=>{ setGenBusy(true); try{ const r=await api('POST','/vtiger_provision/gen_secret',{}); if(r&&r.secret){ setBsec(r.secret); setGenSec(r.secret); toast('Secret generated — copy it to the vTiger server, then Save bridge','ok'); } }catch(e){ toast(e.message); } setGenBusy(false); };
   const [rotSec,setRotSec]=React.useState(''); const [rotBusy,setRotBusy]=React.useState(false);
-  const rotStage=async()=>{ if(!await opshConfirm('Start rotating the bridge secret? A new secret is created and kept waiting — the current one keeps working until the new one is confirmed on the vTiger server.'))return; setRotBusy(true); try{ const r=await api('POST','/vtiger_provision/rotate_stage',{}); setRotSec(r.secret); load(); }catch(e){ toast(e.message); } setRotBusy(false); };
+  const rotStage=async()=>{ if(!await itopsConfirm('Start rotating the bridge secret? A new secret is created and kept waiting — the current one keeps working until the new one is confirmed on the vTiger server.'))return; setRotBusy(true); try{ const r=await api('POST','/vtiger_provision/rotate_stage',{}); setRotSec(r.secret); load(); }catch(e){ toast(e.message); } setRotBusy(false); };
   const rotActivate=async()=>{ setRotBusy(true); try{ const r=await api('POST','/vtiger_provision/rotate_activate',{}); setRotSec(''); toast('New secret is active — the bridge accepted it'+(r.build?' (build '+r.build+')':''),'ok'); load(); }catch(e){ toast(e.message); } setRotBusy(false); };
   const rotCancel=async()=>{ setRotBusy(true); try{ await api('POST','/vtiger_provision/rotate_cancel',{}); setRotSec(''); toast('Rotation cancelled — nothing changed','ok'); load(); }catch(e){ toast(e.message); } setRotBusy(false); };
   const brTest=async()=>{ setBrBusy(true); setBrStat(null); try{ const r=await api('POST','/vtiger_provision/bridge_test',{}); setBrStat({ok:!r.warning&&!r.https_warning,msg:'Bridge reachable. vTiger '+(r.version||r.vtiger||'?')+' · admin '+(r.admins!=null?r.admins:(r.admin_id||'?'))+' · PHP '+(r.php||'?')+(r.build?' · bridge build '+r.build:'')+(r.warning?' — '+r.warning:'')+(r.https_warning?' — '+r.https_warning:'')}); }catch(e){ setBrStat({ok:false,msg:e.message}); } setBrBusy(false); };
@@ -12995,7 +12995,7 @@ function VTigerConfig({toast}){
   React.useEffect(()=>{ if(isSuper&&cfg&&cfg.has_secret&&vtRl===null) loadRoles(); },[cfg&&cfg.has_secret]);
   const saveDefRole=async()=>{ setRlBusy(true); try{ await api('POST','/vtiger_provision/default_role',{roleid:roleId}); toast(roleId?'Default vTiger role saved':'Default vTiger role cleared','ok'); load(); }catch(e){ toast(e.message); } setRlBusy(false); };
   const dbSave=async()=>{ try{ await api('POST','/vtiger_provision/db_save',dbf); toast('Read-only DB saved','ok'); setDbf(d=>Object.assign({},d,{pass:''})); load(); }catch(e){ toast(e.message); } };
-  if(!isSuper) return <div className="card" style={{marginBottom:16,fontSize:14,color:'var(--t4)'}}>vTiger bridge configuration is super-admin only. Signed in role: <b>{(window.__opshUser&&window.__opshUser.role)||'?'}</b>.</div>;
+  if(!isSuper) return <div className="card" style={{marginBottom:16,fontSize:14,color:'var(--t4)'}}>vTiger bridge configuration is super-admin only. Signed in role: <b>{(window.__itopsUser&&window.__itopsUser.role)||'?'}</b>.</div>;
   if(cfg===null) return <div className="card" style={{marginBottom:16,fontSize:14,color:'var(--t4)'}}>Loading vTiger configuration…</div>;
   return <div className="card" style={{marginBottom:16}}>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',flexWrap:'wrap',gap:8,marginBottom:4}}>
@@ -13007,9 +13007,9 @@ function VTigerConfig({toast}){
       <div className="vt-col" data-vt-col="bridge">
     <div style={{border:'1px solid var(--b1)',borderRadius:10,padding:'12px 14px',marginBottom:12}}>
       <div style={{fontSize:13,fontWeight:700,letterSpacing:.4,color:'var(--t3)',marginBottom:8}}>PROVISIONER BRIDGE{cfg.has_secret&&<span style={{color:'#2E9E5B',fontWeight:600}}> · configured</span>}</div>
-      <div style={{fontSize:13,color:'var(--t4)',marginBottom:10,lineHeight:1.5}}>vTiger can’t create users over Web Services, so creation goes through a small bridge file in the vTiger web root. Upload <b>opsh-bridge.php</b> (included in the install).</div>
+      <div style={{fontSize:13,color:'var(--t4)',marginBottom:10,lineHeight:1.5}}>vTiger can’t create users over Web Services, so creation goes through a small bridge file in the vTiger web root. Upload <b>itops-bridge.php</b> (included in the install).</div>
       <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-        <div className="fld" style={{flex:'2 1 260px'}}><label>Bridge URL</label><input value={burl} onChange={e=>setBurl(e.target.value)} placeholder="https://crm.example.com/opsh-bridge.php" style={inp()}/></div>
+        <div className="fld" style={{flex:'2 1 260px'}}><label>Bridge URL</label><input value={burl} onChange={e=>setBurl(e.target.value)} placeholder="https://crm.example.com/itops-bridge.php" style={inp()}/></div>
         <div className="fld" style={{flex:'1 1 220px'}}><label>Shared secret{cfg.has_secret&&<span style={{color:'var(--t4)',fontWeight:400}}> · saved</span>}</label><div style={{display:'flex',gap:6}}><input type="text" value={bsec} onChange={e=>setBsec(e.target.value)} placeholder={cfg.has_secret?'(leave blank to keep)':'paste or Generate'} style={Object.assign({},inp(),{fontFamily:'ui-monospace,Menlo,Consolas,monospace',fontSize:13})}/><button type="button" className="btn btn-g btn-sm" style={{whiteSpace:'nowrap'}} disabled={genBusy} onClick={genSecret} title={"Generate a strong random secret in "+appName()+""}>{genBusy?'…':'Generate'}</button></div></div>
       </div>
       <div style={{display:'flex',gap:8,marginTop:10}}>
@@ -13019,7 +13019,7 @@ function VTigerConfig({toast}){
       </div>
       {cfg.rotation_pending&&<div style={{marginTop:10,padding:'11px 13px',borderRadius:9,border:'1px solid var(--amber)',background:'var(--amberL)'}}>
         <div style={{fontSize:14,fontWeight:700,marginBottom:4}}>Secret rotation in progress{cfg.rotation_started?' · started '+mhDateTime(cfg.rotation_started):''}</div>
-        <div style={{fontSize:13.5,color:'var(--t2)',lineHeight:1.55}}>The current secret still works. 1) On the vTiger server, replace the contents of <code>opsh-bridge.secret</code> (or the <code>SetEnv OPSH_BRIDGE_SECRET</code> line) with the new value. 2) Click <b>Activate</b> — {appName()} tests the bridge with the new secret and only switches if it's accepted.</div>
+        <div style={{fontSize:13.5,color:'var(--t2)',lineHeight:1.55}}>The current secret still works. 1) On the vTiger server, replace the contents of <code>itops-bridge.secret</code> (or the <code>SetEnv ITOPS_BRIDGE_SECRET</code> line) with the new value. 2) Click <b>Activate</b> — {appName()} tests the bridge with the new secret and only switches if it's accepted.</div>
         {rotSec?<div style={{display:'flex',gap:6,alignItems:'center',margin:'8px 0'}}><code style={{flex:1,padding:'7px 10px',background:'var(--bg2)',border:'1px solid var(--b1)',borderRadius:7,fontSize:14,wordBreak:'break-all',userSelect:'all'}}>{rotSec}</code><button className="btn btn-g btn-sm" onClick={()=>{ try{ navigator.clipboard.writeText(rotSec); toast('Copied','ok'); }catch(_){ } }}>Copy</button></div>
           :<div style={{fontSize:13,color:'var(--t3)',margin:'8px 0'}}>The new value was shown once when the rotation started. If you didn't copy it, cancel and start again.</div>}
         <div style={{display:'flex',gap:6}}><button className="btn btn-p btn-sm" disabled={rotBusy} onClick={rotActivate}>{rotBusy?'Testing…':'Activate new secret'}</button><button className="btn btn-g btn-sm" disabled={rotBusy} onClick={rotCancel}>Cancel rotation</button></div>
@@ -13037,7 +13037,7 @@ function VTigerConfig({toast}){
         </div>
         <div style={{fontSize:12.5,color:vtRlErr?'var(--red)':'var(--t4)',marginTop:6}}>{vtRlErr?('Could not read roles through the bridge: '+vtRlErr):('Read from vTiger through this bridge'+(vtRlVia==='db'?' (bridge unavailable — read from the read-only DB)':'')+'. Used when a template or the Onboard screen doesn’t pick a role, and preselected on the Onboard screen.')}</div>
       </div>}
-      {brStat&&<div style={{marginTop:10,padding:'9px 12px',borderRadius:8,fontSize:14,fontWeight:600,background:brStat.ok?'rgba(46,158,91,.12)':'rgba(214,69,69,.12)',color:brStat.ok?'#2E9E5B':'var(--red)'}}>{brStat.ok?'✓ ':'✗ '}{brStat.msg}</div>}{genSec&&<div style={{marginTop:10,padding:'11px 13px',borderRadius:8,border:'1px solid var(--b1)',background:'var(--bg2)'}}><div style={{fontSize:13,fontWeight:700,marginBottom:6}}>New secret generated — copy it now (shown once)</div><div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}><code style={{flex:'1 1 240px',fontFamily:'ui-monospace,Menlo,Consolas,monospace',fontSize:14,background:'var(--bg1)',border:'1px solid var(--b1)',borderRadius:6,padding:'7px 9px',wordBreak:'break-all',userSelect:'all'}}>{genSec}</code><button type="button" className="btn btn-p btn-sm" onClick={()=>{ try{ navigator.clipboard.writeText(genSec); toast('Copied','ok'); }catch(e){ toast('Select the value and copy manually'); } }}>Copy</button></div><div style={{fontSize:12.5,color:'var(--t4)',marginTop:8,lineHeight:1.55}}>This same value goes in two places:<br/>(1) <b>Here in {appName()}</b> — already in the field above; click <b>Save bridge</b>.<br/>(2) <b>On the vTiger server</b>, no command line needed — in cPanel File Manager (in the vTiger web root, next to opsh-bridge.php): create a file named <code>opsh-bridge.secret</code> containing only this value, set its permissions to <b>600</b>, and deny web access to it by adding a <code>&lt;Files "opsh-bridge.secret"&gt; Require all denied &lt;/Files&gt;</code> block to the <code>.htaccess</code>. (Alternatively, if your host passes it through, add <code>SetEnv OPSH_BRIDGE_SECRET</code> + the value to <code>.htaccess</code>.) Then <b>Test bridge</b>.</div></div>}
+      {brStat&&<div style={{marginTop:10,padding:'9px 12px',borderRadius:8,fontSize:14,fontWeight:600,background:brStat.ok?'rgba(46,158,91,.12)':'rgba(214,69,69,.12)',color:brStat.ok?'#2E9E5B':'var(--red)'}}>{brStat.ok?'✓ ':'✗ '}{brStat.msg}</div>}{genSec&&<div style={{marginTop:10,padding:'11px 13px',borderRadius:8,border:'1px solid var(--b1)',background:'var(--bg2)'}}><div style={{fontSize:13,fontWeight:700,marginBottom:6}}>New secret generated — copy it now (shown once)</div><div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}><code style={{flex:'1 1 240px',fontFamily:'ui-monospace,Menlo,Consolas,monospace',fontSize:14,background:'var(--bg1)',border:'1px solid var(--b1)',borderRadius:6,padding:'7px 9px',wordBreak:'break-all',userSelect:'all'}}>{genSec}</code><button type="button" className="btn btn-p btn-sm" onClick={()=>{ try{ navigator.clipboard.writeText(genSec); toast('Copied','ok'); }catch(e){ toast('Select the value and copy manually'); } }}>Copy</button></div><div style={{fontSize:12.5,color:'var(--t4)',marginTop:8,lineHeight:1.55}}>This same value goes in two places:<br/>(1) <b>Here in {appName()}</b> — already in the field above; click <b>Save bridge</b>.<br/>(2) <b>On the vTiger server</b>, no command line needed — in cPanel File Manager (in the vTiger web root, next to itops-bridge.php): create a file named <code>itops-bridge.secret</code> containing only this value, set its permissions to <b>600</b>, and deny web access to it by adding a <code>&lt;Files "itops-bridge.secret"&gt; Require all denied &lt;/Files&gt;</code> block to the <code>.htaccess</code>. (Alternatively, if your host passes it through, add <code>SetEnv ITOPS_BRIDGE_SECRET</code> + the value to <code>.htaccess</code>.) Then <b>Test bridge</b>.</div></div>}
     </div>
       </div>
       <div className="vt-col" data-vt-col="other">
@@ -13081,7 +13081,7 @@ function code128svg(text,h){
 const IS_TOUCH=(typeof window!=='undefined')&&window.matchMedia&&window.matchMedia('(pointer:coarse)').matches;
 async function uploadAttachment(entity,id,file){
   const fd=new FormData(); fd.append('type',entity); fd.append('id',id); fd.append('file',file);
-  const res=await fetch(API_BASE+'/attachments',{method:'POST',headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin',body:fd});
+  const res=await fetch(API_BASE+'/attachments',{method:'POST',headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin',body:fd});
   if(!res.ok){ let m='Upload failed'; try{ m=(JSON.parse(await res.text()).error||{}).message||m; }catch(_){} throw new Error(m); }
   return res.json();
 }
@@ -13093,12 +13093,12 @@ function AttachmentsPanel({entity,id,toast,heading}){
   React.useEffect(()=>{ load(); },[entity,id]);
   const up=async(file)=>{ if(!file)return; setBusy(true);
     try{ const fd=new FormData(); fd.append('type',entity); fd.append('id',id); fd.append('file',file);
-      const res=await fetch(API_BASE+'/attachments',{method:'POST',headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin',body:fd});
+      const res=await fetch(API_BASE+'/attachments',{method:'POST',headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin',body:fd});
       const j=await res.json().catch(()=>({}));
       if(!res.ok) throw new Error((j.error&&j.error.message)||'Upload failed');
       if(j.needs_migration){ toast('Run db-update.php once to enable attachments'); } else { toast('Attached','ok'); load(); }
     }catch(e){ toast(e.message); } setBusy(false); if(fref.current)fref.current.value=''; };
-  const del=async(a)=>{ if(!await opshConfirm('Remove "'+a.file_name+'"?'))return; try{ await api('DELETE','/attachments/'+a.id); load(); }catch(e){ toast(e.message); } };
+  const del=async(a)=>{ if(!await itopsConfirm('Remove "'+a.file_name+'"?'))return; try{ await api('DELETE','/attachments/'+a.id); load(); }catch(e){ toast(e.message); } };
   const fmt=(b)=>b>1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
   return <div style={{marginTop:14}}>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
@@ -13162,7 +13162,7 @@ function VendorContactsPanel({vendorId,toast}){
   React.useEffect(()=>{ load(); },[vendorId]);
   const blank={name:'',title:'',email:'',phone:'',role:'general',is_primary:0,notes:''};
   const save=async()=>{ if(!edit.name||!edit.name.trim())return toast('Name is required'); try{ if(edit.id){ await api('PUT','/vendor_contacts/'+edit.id,edit); }else{ await api('POST','/vendor_contacts',Object.assign({},edit,{vendor_id:vendorId})); } toast('Contact saved','ok'); setEdit(null); load(); }catch(e){ toast(e.message); } };
-  const del=async(c)=>{ if(!await opshConfirm('Remove contact "'+c.name+'"?'))return; try{ await api('DELETE','/vendor_contacts/'+c.id); load(); }catch(e){ toast(e.message); } };
+  const del=async(c)=>{ if(!await itopsConfirm('Remove contact "'+c.name+'"?'))return; try{ await api('DELETE','/vendor_contacts/'+c.id); load(); }catch(e){ toast(e.message); } };
   const inp={width:'100%',padding:'7px 9px',border:'1px solid var(--b1)',borderRadius:7,fontSize:14,background:'var(--bg2)',color:'var(--t1)'};
   return <div style={{marginTop:16}}>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
@@ -13202,7 +13202,7 @@ function MyEquipment({toast}){
   React.useEffect(()=>{ load(); },[]);
   const accept=async()=>{ if(!ack)return toast('Tick the acknowledgment.'); if(!sigName.trim())return toast('Type your full name to sign.'); setBusy(true);
     try{ await api('POST','/assets/ack',{loan_id:sign.id,ack:true,signed_name:sigName.trim(),signature_img:sigImg}); toast('Accepted and signed','ok'); setSign(null); setSigName(''); setSigImg(''); setAck(false); load(); }catch(e){ toast(e.message); } setBusy(false); };
-  const reqReturn=async(l)=>{ if(!await opshConfirm('Request to return '+l.asset_tag+'? IT will be notified to check it in.'))return;
+  const reqReturn=async(l)=>{ if(!await itopsConfirm('Request to return '+l.asset_tag+'? IT will be notified to check it in.'))return;
     try{ await api('POST','/assets/request_return',{loan_id:l.id}); toast('Return requested — IT has been notified','ok'); load(); }catch(e){ toast(e.message); } };
   const item=(l)=>{ const nm=((l.make||'')+' '+(l.model||'')).trim()||l.category;
     return <div key={l.id} className="card" style={{marginBottom:10}}>
@@ -13366,13 +13366,13 @@ function ScPriorityRows({toast,onChanged,onClose}){
 function Scorecard({toast}){
   const [data,setData]=React.useState(null); const [meta,setMeta]=React.useState(null); const [need,setNeed]=React.useState(false);
   const SCV={day:['Daily',[7,14,31],14],week:['Weekly',[8,13,26,52],13],month:['Monthly',[6,12,24],12],year:['Yearly',[3,5],3]};   /* BT63 */
-  const [view,setView]=React.useState(()=>{ try{ const v=localStorage.getItem('opsh_sc_view'); return SCV[v]?v:'week'; }catch(_){ return 'week'; } });
-  const [nby,setNby]=React.useState(()=>{ try{ return JSON.parse(localStorage.getItem('opsh_sc_n')||'{}')||{}; }catch(_){ return {}; } });
-  const weeks=nby[view]||SCV[view][2]; const setWeeks=v=>setNby(x=>{ const o=Object.assign({},x,{[view]:v}); try{ localStorage.setItem('opsh_sc_n',JSON.stringify(o)); }catch(_){} return o; });
-  React.useEffect(()=>{ try{ localStorage.setItem('opsh_sc_view',view); }catch(_){} },[view]);
+  const [view,setView]=React.useState(()=>{ try{ const v=localStorage.getItem('itops_sc_view'); return SCV[v]?v:'week'; }catch(_){ return 'week'; } });
+  const [nby,setNby]=React.useState(()=>{ try{ return JSON.parse(localStorage.getItem('itops_sc_n')||'{}')||{}; }catch(_){ return {}; } });
+  const weeks=nby[view]||SCV[view][2]; const setWeeks=v=>setNby(x=>{ const o=Object.assign({},x,{[view]:v}); try{ localStorage.setItem('itops_sc_n',JSON.stringify(o)); }catch(_){} return o; });
+  React.useEffect(()=>{ try{ localStorage.setItem('itops_sc_view',view); }catch(_){} },[view]);
   const [edit,setEdit]=React.useState(null); const [adding,setAdding]=React.useState(false);
   const can=usePerm(); const CA={create:can('scorecard','create'),edit:can('scorecard','edit'),delete:can('scorecard','delete')};   /* BT70: View only = no change controls (the server refuses them too) */
-  const wrapRef=React.useRef(null); const [colW,setColW]=React.useState(()=>{ try{ return JSON.parse(localStorage.getItem('opsh_sc_cols')||'null'); }catch(_){ return null; } });
+  const wrapRef=React.useRef(null); const [colW,setColW]=React.useState(()=>{ try{ return JSON.parse(localStorage.getItem('itops_sc_cols')||'null'); }catch(_){ return null; } });
   const [cell,setCell]=React.useState(null); const [cellVal,setCellVal]=React.useState(''); const [busy,setBusy]=React.useState(false);
   const [det,setDet]=React.useState(null); const [prioOpen,setPrioOpen]=React.useState(false);   /* BT94: the data behind a number; priority rows */
   const [help,setHelp]=React.useState(false); const [startEdit,setStartEdit]=React.useState('');
@@ -13382,7 +13382,7 @@ function Scorecard({toast}){
   React.useEffect(()=>{ load(); },[weeks,view]);
   const refresh=async()=>{ setBusy(true); try{ const r=await api('POST','/scorecard/refresh',{}); toast('Updated '+r.updated+' auto-measurables for w/e '+r.period_end,'ok'); load(); }catch(e){ toast(e.message); } setBusy(false); };
   const seed=async()=>{ try{ const r=await api('POST','/scorecard/seed',{}); toast(r.added?('Added '+r.added+' measurables'):(r.note||'Nothing added'),'ok'); load(); }catch(e){ toast(e.message); } };
-  const del=async(m)=>{ if(!await opshConfirm('Remove "'+m.name+'" and its history?'))return; try{ await api('DELETE','/scorecard/measurables/'+m.id); load(); }catch(e){ toast(e.message); } };
+  const del=async(m)=>{ if(!await itopsConfirm('Remove "'+m.name+'" and its history?'))return; try{ await api('DELETE','/scorecard/measurables/'+m.id); load(); }catch(e){ toast(e.message); } };
   const saveCell=async()=>{ if(!cell)return; try{ await api('POST','/scorecard/entry',{measurable_id:cell.m.id,period_end:cell.pe,value:cellVal===''?null:cellVal}); setCell(null); setDet(null); load(); }catch(e){ toast(e.message); } };
   const goalText=(m)=>{ const o={gte:'≥',lte:'≤',gt:'>',lt:'<',eq:'=',between:''}[m.goal_op]; return m.goal_op==='between'?(m.goal_value+'–'+m.goal_value2+(m.unit||'')):(o+' '+m.goal_value+(m.unit||'')); };
   const CLR={green:'#2E9E5B',red:'#D64545',none:'transparent'};
@@ -13394,7 +13394,7 @@ function Scorecard({toast}){
   const cw=Object.assign({name:240,owner:150,goal:120,period:88},colW||{});
   const grip=k=><span data-sc-grip={k} title="Drag to resize" onMouseDown={e=>{ e.preventDefault(); e.stopPropagation(); const x0=e.clientX, w0=cw[k];
       const mv=ev=>{ const w=Math.max(k==='period'?52:70,Math.min(600,w0+ev.clientX-x0)); setColW(c=>Object.assign({},cw,c||{},{[k]:w})); };
-      const up=()=>{ window.removeEventListener('mousemove',mv); window.removeEventListener('mouseup',up); setColW(c=>{ try{ localStorage.setItem('opsh_sc_cols',JSON.stringify(c)); }catch(_){} return c; }); };
+      const up=()=>{ window.removeEventListener('mousemove',mv); window.removeEventListener('mouseup',up); setColW(c=>{ try{ localStorage.setItem('itops_sc_cols',JSON.stringify(c)); }catch(_){} return c; }); };
       window.addEventListener('mousemove',mv); window.addEventListener('mouseup',up); }}
     style={{position:'absolute',right:0,top:0,bottom:0,width:7,cursor:'col-resize',borderRight:'2px solid transparent'}} onMouseEnter={e=>e.currentTarget.style.borderRightColor='var(--accent)'} onMouseLeave={e=>e.currentTarget.style.borderRightColor='transparent'}/>;
   const periods=data.periods||[]; const meas=data.measurables||[]; const pinfo=data.period_info||periods.map(k=>({key:k,label:k.slice(5),partial:false})); const wk=(data.view||'week')==='week';
@@ -13405,7 +13405,7 @@ function Scorecard({toast}){
       <div style={{fontSize:13.5,color:'var(--t4)',flex:1,minWidth:220}}>{wk?'Green meets the goal, red misses. Click a value to see the data behind it (and to type or override a weekly value).':'Click a value to see the data behind it. '+'Automatic rows are worked out for each '+({day:'day',month:'month',year:'year'}[view])+'; typed rows combine their weekly values. Type values in the weekly view.'}</div>
       <span style={{fontSize:13,color:'var(--t4)'}}>Starts</span><input type="date" data-sc-start="1" disabled={!CA.edit} value={startEdit||((data&&data.start)||'')} onChange={e=>{setStartEdit(e.target.value); saveStart(e.target.value);}} style={{padding:'6px 9px',border:'1px solid var(--b1)',borderRadius:8,fontSize:13,background:'var(--bg2)',color:'var(--t1)'}}/>
       <button className="btn btn-g btn-sm" onClick={()=>setHelp(x=>!x)}>{help?'Hide guide':'How it works'}</button>
-      <button className="btn btn-g btn-sm" data-sc-fit="1" title="Size the columns to the width of the page" onClick={()=>{ const f=fitW(); setColW(f); try{ localStorage.setItem('opsh_sc_cols',JSON.stringify(f)); }catch(_){} }}>Fit to screen</button>
+      <button className="btn btn-g btn-sm" data-sc-fit="1" title="Size the columns to the width of the page" onClick={()=>{ const f=fitW(); setColW(f); try{ localStorage.setItem('itops_sc_cols',JSON.stringify(f)); }catch(_){} }}>Fit to screen</button>
       <span data-sc-n="1"><Sel value={String(weeks)} onChange={v=>setWeeks(parseInt(v,10))} options={SCV[view][1].map(w=>[String(w),'Last '+w+' '+({day:'days',week:'weeks',month:'months',year:'years'}[view])])}/></span>
       {CA.edit&&<button className="btn btn-g btn-sm" data-sc-refresh="1" disabled={busy} onClick={refresh}>{busy?'Refreshing…':'Refresh from '+appName()+''}</button>}
       {CA.create&&CA.edit&&<button className="btn btn-g btn-sm" data-sc-prio-open="1" onClick={()=>setPrioOpen(x=>!x)}>Priority targets…</button>}
@@ -13623,11 +13623,11 @@ function LoanAcceptance({loan,asset}){
   const acc=(()=>{ try{ const a=typeof loan.accessories==='string'?JSON.parse(loan.accessories||'[]'):(loan.accessories||[]); return Array.isArray(a)?a:[]; }catch(_){ return loan.accessories?[String(loan.accessories)]:[]; } })();
   const rows=[['Signed by',loan.signed_name],['Signed at',mhDateTime(loan.signed_at||'')],['From IP address',loan.ack_ip],['Borrower',loan.borrower_display||loan.borrower_name],['Issued',mhDateTime(loan.issued_at||'')],['Due back',loan.due_date],['Condition when issued',loan.condition_out],['Accessories',acc.join(', ')],['Returned',loan.returned_at?mhDateTime(loan.returned_at)+(loan.condition_in?' · condition '+loan.condition_in:''):null]].filter(r=>r[1]);
   const print=()=>{
-    const h='<h2>Equipment acceptance — '+opshEsc(asset.asset_tag)+'</h2><p>'+opshEsc(((asset.make||'')+' '+(asset.model||'')).trim())+(asset.serial_number?' · serial '+opshEsc(asset.serial_number):'')+'</p>'
-      +'<table>'+rows.map(r=>'<tr><th style="width:200px">'+opshEsc(r[0])+'</th><td>'+opshEsc(r[1])+'</td></tr>').join('')+'</table>'
+    const h='<h2>Equipment acceptance — '+itopsEsc(asset.asset_tag)+'</h2><p>'+itopsEsc(((asset.make||'')+' '+(asset.model||'')).trim())+(asset.serial_number?' · serial '+itopsEsc(asset.serial_number):'')+'</p>'
+      +'<table>'+rows.map(r=>'<tr><th style="width:200px">'+itopsEsc(r[0])+'</th><td>'+itopsEsc(r[1])+'</td></tr>').join('')+'</table>'
       +(loan.signature_img?'<h3>Signature</h3><img src="'+String(loan.signature_img).replace(/"/g,'')+'" style="max-width:420px;border:1px solid #ccc;border-radius:6px"/>':'')
       +(loan.content?'<h3>Agreement accepted</h3>'+shtml(loan.content).__html:'');   /* review UI2-26: cleaned like every other HTML shown */
-    opshPopout('Acceptance — '+asset.asset_tag+' — '+(loan.signed_name||''),h);
+    itopsPopout('Acceptance — '+asset.asset_tag+' — '+(loan.signed_name||''),h);
   };
   return <div style={{marginTop:8,border:'1px solid var(--b1)',borderRadius:10,padding:'12px 14px',background:'var(--s1)'}}>
     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}><div style={{fontSize:15,fontWeight:700}}>Acceptance record</div><span style={{flex:1}}/><button className="btn btn-g btn-sm" onClick={print}>🖨 Print / save PDF</button></div>
@@ -13688,7 +13688,7 @@ function AssetsScreen({toast}){
     {detail&&<EditPage title={detail.asset.asset_tag+' — '+((detail.asset.make||'')+' '+(detail.asset.model||''))} onClose={()=>setDetail(null)}>
       <div style={{maxWidth:640}}>
         <div style={{fontSize:14,color:'var(--t3)',marginBottom:12}}>{detail.asset.category} · serial {detail.asset.serial_number||'—'} · condition {detail.asset.cond} · <span style={{color:SC[detail.asset.status]}}>{detail.asset.status}</span>{detail.asset.holder_name?' · with '+detail.asset.holder_name:''}</div>
-        <div style={{display:'flex',gap:8,marginBottom:14}}>{aEd&&detail.asset.status==='available'&&<button className="btn btn-p btn-sm" onClick={()=>{setLoanFor(detail.asset);}}>Loan this item</button>}{aEd&&detail.asset.status==='loaned'&&<button className="btn btn-g btn-sm" onClick={()=>{setReturnFor(detail.asset);}}>Check in</button>}{aEd&&<button className="btn btn-g btn-sm" onClick={()=>setEditItem(detail.asset)}>Edit item</button>}{aDel&&detail.asset.status!=='loaned'&&detail.asset.status!=='retired'&&<button className="btn btn-g btn-sm" onClick={async()=>{ if(!await opshConfirm('Retire '+detail.asset.asset_tag+'? It stays in the log but leaves active inventory.'))return; try{ await api('DELETE','/assets/'+detail.asset.id); toast('Item retired','ok'); setDetail(null); refresh(); }catch(e){ toast(e.message); } }}>Retire</button>}</div>
+        <div style={{display:'flex',gap:8,marginBottom:14}}>{aEd&&detail.asset.status==='available'&&<button className="btn btn-p btn-sm" onClick={()=>{setLoanFor(detail.asset);}}>Loan this item</button>}{aEd&&detail.asset.status==='loaned'&&<button className="btn btn-g btn-sm" onClick={()=>{setReturnFor(detail.asset);}}>Check in</button>}{aEd&&<button className="btn btn-g btn-sm" onClick={()=>setEditItem(detail.asset)}>Edit item</button>}{aDel&&detail.asset.status!=='loaned'&&detail.asset.status!=='retired'&&<button className="btn btn-g btn-sm" onClick={async()=>{ if(!await itopsConfirm('Retire '+detail.asset.asset_tag+'? It stays in the log but leaves active inventory.'))return; try{ await api('DELETE','/assets/'+detail.asset.id); toast('Item retired','ok'); setDetail(null); refresh(); }catch(e){ toast(e.message); } }}>Retire</button>}</div>
         <AttachmentsPanel entity="assets" id={detail.asset.id} toast={toast} heading="Photos & documents"/>
         <div style={{fontSize:14,fontWeight:700,marginBottom:6,marginTop:14}}>Loan history</div>
         {(detail.history||[]).length===0?<div style={{fontSize:14,color:'var(--t4)'}}>No loans yet.</div>:
@@ -13763,7 +13763,7 @@ function CaptureModal({toast,onClose}){
     try{ const ext=kind==='video'?'webm':'jpg'; const name='capture-'+Date.now()+'.'+ext;
       const file=new File([blob],name,{type:blob.type||(kind==='video'?'video/webm':'image/jpeg')});
       const fd=new FormData(); fd.append('file',file);
-      const res=await fetch(API_BASE+'/tickets/'+t.id+'/attachments',{method:'POST',headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin',body:fd});
+      const res=await fetch(API_BASE+'/tickets/'+t.id+'/attachments',{method:'POST',headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin',body:fd});
       if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error((j.error&&j.error.message)||'Upload failed'); }
       toast('Attached to '+(t.ticket_number||('#'+t.id)),'ok'); onClose();
     }catch(e){ toast(e.message); } setBusy(false); };
@@ -13815,20 +13815,20 @@ function CaptureModal({toast,onClose}){
   </div></div>;
 }
 
-const OPSH_DLG={fn:null};
+const ITOPS_DLG={fn:null};
 /* Review UI2-11: dialogs wait their turn (a second one no longer drops the first one's answer); before the host is on the
    page they wait for it instead of using the browser's own boxes. */
-const OPSH_DLG_Q=[];
-function opshDialogNext(){ if(OPSH_DLG.busy||!OPSH_DLG.fn||!OPSH_DLG_Q.length)return; const it=OPSH_DLG_Q.shift(); OPSH_DLG.busy=true; OPSH_DLG.fn(it.o,v=>{ OPSH_DLG.busy=false; it.res(v); setTimeout(opshDialogNext,0); }); }
-function opshDialog(o){ return new Promise(res=>{ const it={o,res}; OPSH_DLG_Q.push(it); opshDialogNext();
+const ITOPS_DLG_Q=[];
+function itopsDialogNext(){ if(ITOPS_DLG.busy||!ITOPS_DLG.fn||!ITOPS_DLG_Q.length)return; const it=ITOPS_DLG_Q.shift(); ITOPS_DLG.busy=true; ITOPS_DLG.fn(it.o,v=>{ ITOPS_DLG.busy=false; it.res(v); setTimeout(itopsDialogNext,0); }); }
+function itopsDialog(o){ return new Promise(res=>{ const it={o,res}; ITOPS_DLG_Q.push(it); itopsDialogNext();
   // a screen without the host (the sign-in page): after 2 seconds the browser's own box answers, so nothing waits forever
-  setTimeout(()=>{ const i=OPSH_DLG_Q.indexOf(it); if(i>=0&&!OPSH_DLG.fn){ OPSH_DLG_Q.splice(i,1); res(o.type==='confirm'?window.confirm(o.message):(o.type==='prompt'?window.prompt(o.message,o.default||''):(window.alert(o.message),undefined))); } },2000); }); }
-const opshConfirm=(message,o)=>opshDialog(Object.assign({type:'confirm',message},o||{}));
-const opshAlert=(message,o)=>opshDialog(Object.assign({type:'alert',message},o||{}));
-const opshPrompt=(message,def,o)=>opshDialog(Object.assign({type:'prompt',message,default:def||''},o||{}));
+  setTimeout(()=>{ const i=ITOPS_DLG_Q.indexOf(it); if(i>=0&&!ITOPS_DLG.fn){ ITOPS_DLG_Q.splice(i,1); res(o.type==='confirm'?window.confirm(o.message):(o.type==='prompt'?window.prompt(o.message,o.default||''):(window.alert(o.message),undefined))); } },2000); }); }
+const itopsConfirm=(message,o)=>itopsDialog(Object.assign({type:'confirm',message},o||{}));
+const itopsAlert=(message,o)=>itopsDialog(Object.assign({type:'alert',message},o||{}));
+const itopsPrompt=(message,def,o)=>itopsDialog(Object.assign({type:'prompt',message,default:def||''},o||{}));
 function DialogHost(){
   const [d,setD]=React.useState(null); const res=React.useRef(null); const [val,setVal]=React.useState('');
-  React.useEffect(()=>{ OPSH_DLG.fn=(o,r)=>{ res.current=r; setVal(o.default||''); setD(o); }; opshDialogNext(); return ()=>{ OPSH_DLG.fn=null; }; },[]);
+  React.useEffect(()=>{ ITOPS_DLG.fn=(o,r)=>{ res.current=r; setVal(o.default||''); setD(o); }; itopsDialogNext(); return ()=>{ ITOPS_DLG.fn=null; }; },[]);
   if(!d) return null;
   const isC=d.type==='confirm', isP=d.type==='prompt';
   const danger = d.danger!=null ? d.danger : /^(delete|remove|reset|disable)\b/i.test(d.message||'');
@@ -13845,11 +13845,11 @@ function DialogHost(){
     </div>
   </div>;
 }
-const OPSH_UP={fn:null};
-function opshUpload(o){ return new Promise(res=>{ if(OPSH_UP.fn){OPSH_UP.fn(o||{},res);} else res(null); }); }
+const ITOPS_UP={fn:null};
+function itopsUpload(o){ return new Promise(res=>{ if(ITOPS_UP.fn){ITOPS_UP.fn(o||{},res);} else res(null); }); }
 function UploadHost(){
   const [o,setO]=React.useState(null); const resRef=React.useRef(null); const [drag,setDrag]=React.useState(false); const inp=React.useRef(null);
-  React.useEffect(()=>{ OPSH_UP.fn=(opt,r)=>{ resRef.current=r; setDrag(false); setO(opt); }; return ()=>{ OPSH_UP.fn=null; }; },[]);
+  React.useEffect(()=>{ ITOPS_UP.fn=(opt,r)=>{ resRef.current=r; setDrag(false); setO(opt); }; return ()=>{ ITOPS_UP.fn=null; }; },[]);
   if(!o) return null;
   const done=files=>{ const r=resRef.current; resRef.current=null; setO(null); if(r)r(files); };
   const pick=fl=>{ const arr=Array.prototype.slice.call(fl||[]); if(!arr.length)return; done(o.multiple?arr:[arr[0]]); };
@@ -13873,18 +13873,18 @@ function UploadHost(){
   </div>;
 }
 const SOP_TEMPLATES=[
-{area:"IT & Operations",title:"Employee IT Onboarding & Provisioning",desc:"Provision accounts, access and equipment for a new hire so they are productive on day one.",review:180,html:`<h2>Purpose</h2><p>Ensure every new hire receives the correct accounts, access and equipment in a consistent, secure and timely way.</p><h2>Scope</h2><p>Applies to all new employees, contractors and interns across all offices.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Hiring manager:</b> submits the onboarding request and approves required access.</li><li><b>IT &amp; Operations:</b> provisions accounts, equipment and access.</li><li><b>HR:</b> confirms start date and employment details.</li></ul><h2>Prerequisites</h2><ul><li>Approved hire with confirmed start date and role.</li><li>Manager-defined application and access list (least privilege).</li></ul><h2>Procedure</h2><ol><li>Create the identity / email account and add to the correct security groups for the role.</li><li>Grant role-based access to required systems; apply least-privilege and record approvals.</li><li>Prepare and image hardware; install standard software and endpoint protection.</li><li>Enable multi-factor authentication and deliver first-login credentials securely.</li><li>Schedule a brief orientation covering security expectations and how to request help.</li><li>Record all provisioned assets and access in the asset/credential records.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a start date is cancelled, disable all newly created accounts within the same business day and reclaim equipment. Document the reversal.</p><h2>References &amp; Related Records</h2><ul><li>Offboarding SOP, Access Management policy, relevant credential records.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"IT & Operations",title:"Employee IT Offboarding & Deprovisioning",desc:"Revoke access and recover assets when an employee leaves, protecting data and accounts.",review:180,html:`<h2>Purpose</h2><p>Remove access and recover assets promptly and completely when a worker departs, reducing security and data-loss risk.</p><h2>Scope</h2><p>Applies to all departures: resignation, termination, end of contract or role change.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>HR:</b> notifies IT of the departure date and type.</li><li><b>IT &amp; Operations:</b> disables access and recovers assets.</li><li><b>Manager:</b> identifies data/handover needs.</li></ul><h2>Prerequisites</h2><ul><li>Confirmed last working day and departure type.</li><li>Data handover / mailbox delegation requirements.</li></ul><h2>Procedure</h2><ol><li>At the agreed time, disable sign-in and revoke MFA and active sessions.</li><li>Reset or rotate any shared or service credentials the person could access.</li><li>Preserve or delegate mailbox and files per retention requirements.</li><li>Recover hardware, badges and tokens; wipe or re-image returned devices.</li><li>Remove from distribution lists, applications and third-party tools.</li><li>Record the deprovisioning actions and close out related credential records.</li></ol><h2>Exceptions &amp; Rollback</h2><p>For involuntary departures, coordinate timing with HR so access is removed at the moment of notification. If a departure is reversed, re-enable accounts and document the change.</p><h2>References &amp; Related Records</h2><ul><li>Onboarding SOP, data retention policy, credential records.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"IT & Operations",title:"IT Incident Response",desc:"Detect, triage, resolve and review service-disrupting incidents with clear communication.",review:90,html:`<h2>Purpose</h2><p>Restore service quickly and safely during an outage or security incident, while keeping stakeholders informed.</p><h2>Scope</h2><p>Applies to incidents affecting availability, integrity or confidentiality of company systems.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Incident lead:</b> coordinates response and decisions.</li><li><b>IT &amp; Operations:</b> diagnoses and remediates.</li><li><b>Communications owner:</b> updates stakeholders.</li></ul><h2>Procedure</h2><ol><li>Log the incident with time, impact and severity.</li><li>Triage and assign a severity; engage the incident lead for high severity.</li><li>Contain the impact (isolate, fail over or roll back as appropriate).</li><li>Diagnose root cause and apply a fix or workaround.</li><li>Verify recovery and confirm with affected users.</li><li>Communicate resolution; schedule a post-incident review within five business days.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a fix worsens impact, roll back to the last known good state and re-triage. Preserve logs for security incidents.</p><h2>References &amp; Related Records</h2><ul><li>Backup &amp; restore SOP, vendor support contracts, on-call roster.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"HR / People",title:"New Hire Onboarding (HR)",desc:"A consistent first-week experience covering paperwork, orientation and role setup.",review:365,html:`<h2>Purpose</h2><p>Give every new employee a welcoming, compliant and consistent start that sets them up to succeed.</p><h2>Scope</h2><p>All new employees across all locations.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>HR:</b> coordinates paperwork, benefits and orientation.</li><li><b>Manager:</b> owns role-specific training and check-ins.</li><li><b>IT:</b> provisions access (see IT Onboarding SOP).</li></ul><h2>Procedure</h2><ol><li>Send the welcome packet and collect signed employment and tax forms.</li><li>Verify eligibility-to-work documentation and file securely.</li><li>Enroll in payroll and benefits; confirm direct deposit.</li><li>Schedule orientation: mission, policies, code of conduct and safety.</li><li>Assign required training and a 30/60/90-day check-in plan.</li><li>Confirm IT provisioning is complete before day one.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a candidate declines after paperwork begins, securely retain or dispose of records per policy.</p><h2>References &amp; Related Records</h2><ul><li>IT Onboarding SOP, benefits guide, code of conduct.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"HR / People",title:"Employee Offboarding (HR)",desc:"Handle resignations and exits with dignity while protecting the organization.",review:365,html:`<h2>Purpose</h2><p>Manage departures professionally, capture knowledge and complete all administrative and compliance steps.</p><h2>Scope</h2><p>All voluntary and involuntary departures.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>HR:</b> manages the exit process and final pay.</li><li><b>Manager:</b> arranges knowledge transfer.</li><li><b>IT:</b> deprovisions access (see IT Offboarding SOP).</li></ul><h2>Procedure</h2><ol><li>Acknowledge notice and confirm the last working day.</li><li>Plan knowledge transfer and reassign responsibilities.</li><li>Notify IT to schedule access removal at the right time.</li><li>Process final pay, accrued leave and benefits continuation.</li><li>Conduct an exit interview and record feedback.</li><li>Collect company property and close the personnel file per retention rules.</li></ol><h2>Exceptions &amp; Rollback</h2><p>For involuntary exits, coordinate timing and communications with leadership and IT in advance.</p><h2>References &amp; Related Records</h2><ul><li>IT Offboarding SOP, final pay checklist, retention policy.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"HR / People",title:"PTO / Leave Request & Approval",desc:"A clear path for requesting, approving and recording time off.",review:365,html:`<h2>Purpose</h2><p>Provide a fair, transparent process for requesting and approving leave while maintaining coverage.</p><h2>Scope</h2><p>All paid and unpaid leave types for employees.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Employee:</b> submits the request with dates and type.</li><li><b>Manager:</b> reviews coverage and approves or declines.</li><li><b>HR:</b> records and tracks balances.</li></ul><h2>Procedure</h2><ol><li>Employee submits the request with dates, type and any notes.</li><li>Manager checks team coverage and approves or declines within two business days.</li><li>HR records the approved leave and updates the balance.</li><li>Coverage and out-of-office handover are arranged before the leave begins.</li></ol><h2>Exceptions &amp; Rollback</h2><p>Emergency leave may be requested retroactively and reconciled on return. Cancelled leave is credited back.</p><h2>References &amp; Related Records</h2><ul><li>Leave policy, accrual schedule.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"Finance",title:"Expense Reimbursement Approval",desc:"Submit, review and reimburse employee expenses with proper documentation.",review:365,html:`<h2>Purpose</h2><p>Reimburse legitimate business expenses promptly while maintaining controls and documentation.</p><h2>Scope</h2><p>All employee out-of-pocket business expenses.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Employee:</b> submits the claim with receipts.</li><li><b>Manager:</b> approves business purpose.</li><li><b>Finance:</b> verifies policy compliance and pays.</li></ul><h2>Procedure</h2><ol><li>Employee submits an itemized claim with receipts and business purpose.</li><li>Manager reviews and approves within three business days.</li><li>Finance verifies against policy, coding and budget.</li><li>Approved amounts are scheduled for the next reimbursement run.</li><li>Exceptions or missing receipts are returned with a reason.</li></ol><h2>Exceptions &amp; Rollback</h2><p>Claims that breach policy are declined with explanation; duplicate or erroneous payments are recovered in the next cycle.</p><h2>References &amp; Related Records</h2><ul><li>Expense policy, chart of accounts, approval matrix.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"Finance",title:"Vendor Invoice Processing (AP)",desc:"Receive, match, approve and pay supplier invoices accurately and on time.",review:365,html:`<h2>Purpose</h2><p>Process supplier invoices accurately, prevent duplicate or fraudulent payments, and pay on agreed terms.</p><h2>Scope</h2><p>All vendor invoices and credit notes.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Accounts payable:</b> records and matches invoices.</li><li><b>Budget owner:</b> approves spend.</li><li><b>Finance lead:</b> releases payment.</li></ul><h2>Procedure</h2><ol><li>Receive and log the invoice; capture vendor, amount and due date.</li><li>Match to the purchase order and goods/services received.</li><li>Route to the budget owner for approval.</li><li>Verify bank details against the trusted vendor record before payment.</li><li>Schedule payment per terms and record the transaction.</li><li>File the invoice and approval for audit.</li></ol><h2>Exceptions &amp; Rollback</h2><p>Mismatches are placed on hold and queried with the vendor. Any changed bank details require independent verification before payment.</p><h2>References &amp; Related Records</h2><ul><li>Vendor records, contracts, approval matrix.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"Finance",title:"Month-End Close Checklist",desc:"A repeatable close that produces timely, accurate financial statements.",review:90,html:`<h2>Purpose</h2><p>Close the books accurately and on schedule each month with clear ownership of each task.</p><h2>Scope</h2><p>All general-ledger close activities for the entity.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Accountant:</b> performs reconciliations and entries.</li><li><b>Finance lead:</b> reviews and signs off.</li></ul><h2>Procedure</h2><ol><li>Confirm all invoices, expenses and revenue for the period are recorded.</li><li>Reconcile bank, credit card and key balance-sheet accounts.</li><li>Post accruals, prepayments and depreciation.</li><li>Review variances against budget and prior period.</li><li>Prepare draft statements and obtain finance-lead sign-off.</li><li>Lock the period and archive the close package.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a material error is found after lock, reopen the period under finance-lead approval, correct, and document the adjustment.</p><h2>References &amp; Related Records</h2><ul><li>Chart of accounts, reconciliation templates.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"Quality & Standards",title:"Client Intake & Eligibility",desc:"Welcome and assess a new person served, confirming eligibility and consent.",review:180,html:`<h2>Purpose</h2><p>Provide a consistent, respectful intake that confirms eligibility, obtains informed consent and begins person-centered planning.</p><h2>Scope</h2><p>All new people served entering the program.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Intake coordinator:</b> guides the intake and gathers information.</li><li><b>Program staff:</b> complete initial assessments.</li><li><b>Supervisor:</b> reviews eligibility decisions.</li></ul><h2>Procedure</h2><ol><li>Welcome the person and explain services, rights and responsibilities.</li><li>Collect referral and demographic information and verify eligibility criteria.</li><li>Obtain informed consent and required authorizations, including release of information.</li><li>Complete initial needs and risk screening.</li><li>Assign a primary worker and schedule the first planning meeting.</li><li>Document the intake and store records securely with appropriate confidentiality.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a person is not eligible, provide a clear explanation and referral to alternative resources, and document the outcome.</p><h2>References &amp; Related Records</h2><ul><li>Service Plan Review SOP, confidentiality policy, consent forms.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"Quality & Standards",title:"Individual Service Plan Review",desc:"Keep each person-centered plan current, measurable and driven by the person served.",review:90,html:`<h2>Purpose</h2><p>Ensure each service plan reflects the goals of the person served, is reviewed on schedule, and shows measurable progress.</p><h2>Scope</h2><p>All active people served with an individualized plan.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Primary worker:</b> coordinates the review with the person served.</li><li><b>Person served:</b> directs their goals and preferences.</li><li><b>Supervisor:</b> approves the updated plan.</li></ul><h2>Procedure</h2><ol><li>Schedule the review before the plan due date and invite the person served and their chosen supports.</li><li>Review progress toward each goal using objective measures.</li><li>Update goals, services and timelines based on the person preferences and needs.</li><li>Confirm understanding and obtain signatures or documented agreement.</li><li>Record the next review date and distribute the updated plan to the team.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a review cannot occur on time, document the reason, mitigate any risk, and reschedule at the earliest opportunity.</p><h2>References &amp; Related Records</h2><ul><li>Intake SOP, outcomes measures, supervision notes.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`},
-{area:"Quality & Standards",title:"Incident Reporting & Review",desc:"Report, respond to and learn from incidents involving people served or staff.",review:90,html:`<h2>Purpose</h2><p>Ensure incidents are reported promptly, handled safely, and reviewed to prevent recurrence and protect health and safety.</p><h2>Scope</h2><p>All incidents involving people served, staff, visitors or property.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Staff:</b> ensure safety and report the incident.</li><li><b>Supervisor:</b> reviews and initiates follow-up.</li><li><b>Leadership:</b> analyzes trends and approves corrective actions.</li></ul><h2>Procedure</h2><ol><li>Ensure immediate safety and obtain medical or emergency help if needed.</li><li>Report the incident within the required timeframe using the incident form.</li><li>Notify required parties, including guardians or authorities where applicable.</li><li>Supervisor reviews, determines severity and starts any investigation.</li><li>Identify corrective actions and assign owners and due dates.</li><li>Aggregate incidents periodically to identify trends and improvements.</li></ol><h2>Exceptions &amp; Rollback</h2><p>Critical incidents trigger immediate escalation to leadership and external reporting as required by law.</p><h2>References &amp; Related Records</h2><ul><li>Health &amp; safety policy, incident form, trend analysis log.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from OpsHub template</td></tr></table>`}
+{area:"IT & Operations",title:"Employee IT Onboarding & Provisioning",desc:"Provision accounts, access and equipment for a new hire so they are productive on day one.",review:180,html:`<h2>Purpose</h2><p>Ensure every new hire receives the correct accounts, access and equipment in a consistent, secure and timely way.</p><h2>Scope</h2><p>Applies to all new employees, contractors and interns across all offices.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Hiring manager:</b> submits the onboarding request and approves required access.</li><li><b>IT &amp; Operations:</b> provisions accounts, equipment and access.</li><li><b>HR:</b> confirms start date and employment details.</li></ul><h2>Prerequisites</h2><ul><li>Approved hire with confirmed start date and role.</li><li>Manager-defined application and access list (least privilege).</li></ul><h2>Procedure</h2><ol><li>Create the identity / email account and add to the correct security groups for the role.</li><li>Grant role-based access to required systems; apply least-privilege and record approvals.</li><li>Prepare and image hardware; install standard software and endpoint protection.</li><li>Enable multi-factor authentication and deliver first-login credentials securely.</li><li>Schedule a brief orientation covering security expectations and how to request help.</li><li>Record all provisioned assets and access in the asset/credential records.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a start date is cancelled, disable all newly created accounts within the same business day and reclaim equipment. Document the reversal.</p><h2>References &amp; Related Records</h2><ul><li>Offboarding SOP, Access Management policy, relevant credential records.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"IT & Operations",title:"Employee IT Offboarding & Deprovisioning",desc:"Revoke access and recover assets when an employee leaves, protecting data and accounts.",review:180,html:`<h2>Purpose</h2><p>Remove access and recover assets promptly and completely when a worker departs, reducing security and data-loss risk.</p><h2>Scope</h2><p>Applies to all departures: resignation, termination, end of contract or role change.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>HR:</b> notifies IT of the departure date and type.</li><li><b>IT &amp; Operations:</b> disables access and recovers assets.</li><li><b>Manager:</b> identifies data/handover needs.</li></ul><h2>Prerequisites</h2><ul><li>Confirmed last working day and departure type.</li><li>Data handover / mailbox delegation requirements.</li></ul><h2>Procedure</h2><ol><li>At the agreed time, disable sign-in and revoke MFA and active sessions.</li><li>Reset or rotate any shared or service credentials the person could access.</li><li>Preserve or delegate mailbox and files per retention requirements.</li><li>Recover hardware, badges and tokens; wipe or re-image returned devices.</li><li>Remove from distribution lists, applications and third-party tools.</li><li>Record the deprovisioning actions and close out related credential records.</li></ol><h2>Exceptions &amp; Rollback</h2><p>For involuntary departures, coordinate timing with HR so access is removed at the moment of notification. If a departure is reversed, re-enable accounts and document the change.</p><h2>References &amp; Related Records</h2><ul><li>Onboarding SOP, data retention policy, credential records.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"IT & Operations",title:"IT Incident Response",desc:"Detect, triage, resolve and review service-disrupting incidents with clear communication.",review:90,html:`<h2>Purpose</h2><p>Restore service quickly and safely during an outage or security incident, while keeping stakeholders informed.</p><h2>Scope</h2><p>Applies to incidents affecting availability, integrity or confidentiality of company systems.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Incident lead:</b> coordinates response and decisions.</li><li><b>IT &amp; Operations:</b> diagnoses and remediates.</li><li><b>Communications owner:</b> updates stakeholders.</li></ul><h2>Procedure</h2><ol><li>Log the incident with time, impact and severity.</li><li>Triage and assign a severity; engage the incident lead for high severity.</li><li>Contain the impact (isolate, fail over or roll back as appropriate).</li><li>Diagnose root cause and apply a fix or workaround.</li><li>Verify recovery and confirm with affected users.</li><li>Communicate resolution; schedule a post-incident review within five business days.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a fix worsens impact, roll back to the last known good state and re-triage. Preserve logs for security incidents.</p><h2>References &amp; Related Records</h2><ul><li>Backup &amp; restore SOP, vendor support contracts, on-call roster.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"HR / People",title:"New Hire Onboarding (HR)",desc:"A consistent first-week experience covering paperwork, orientation and role setup.",review:365,html:`<h2>Purpose</h2><p>Give every new employee a welcoming, compliant and consistent start that sets them up to succeed.</p><h2>Scope</h2><p>All new employees across all locations.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>HR:</b> coordinates paperwork, benefits and orientation.</li><li><b>Manager:</b> owns role-specific training and check-ins.</li><li><b>IT:</b> provisions access (see IT Onboarding SOP).</li></ul><h2>Procedure</h2><ol><li>Send the welcome packet and collect signed employment and tax forms.</li><li>Verify eligibility-to-work documentation and file securely.</li><li>Enroll in payroll and benefits; confirm direct deposit.</li><li>Schedule orientation: mission, policies, code of conduct and safety.</li><li>Assign required training and a 30/60/90-day check-in plan.</li><li>Confirm IT provisioning is complete before day one.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a candidate declines after paperwork begins, securely retain or dispose of records per policy.</p><h2>References &amp; Related Records</h2><ul><li>IT Onboarding SOP, benefits guide, code of conduct.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"HR / People",title:"Employee Offboarding (HR)",desc:"Handle resignations and exits with dignity while protecting the organization.",review:365,html:`<h2>Purpose</h2><p>Manage departures professionally, capture knowledge and complete all administrative and compliance steps.</p><h2>Scope</h2><p>All voluntary and involuntary departures.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>HR:</b> manages the exit process and final pay.</li><li><b>Manager:</b> arranges knowledge transfer.</li><li><b>IT:</b> deprovisions access (see IT Offboarding SOP).</li></ul><h2>Procedure</h2><ol><li>Acknowledge notice and confirm the last working day.</li><li>Plan knowledge transfer and reassign responsibilities.</li><li>Notify IT to schedule access removal at the right time.</li><li>Process final pay, accrued leave and benefits continuation.</li><li>Conduct an exit interview and record feedback.</li><li>Collect company property and close the personnel file per retention rules.</li></ol><h2>Exceptions &amp; Rollback</h2><p>For involuntary exits, coordinate timing and communications with leadership and IT in advance.</p><h2>References &amp; Related Records</h2><ul><li>IT Offboarding SOP, final pay checklist, retention policy.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"HR / People",title:"PTO / Leave Request & Approval",desc:"A clear path for requesting, approving and recording time off.",review:365,html:`<h2>Purpose</h2><p>Provide a fair, transparent process for requesting and approving leave while maintaining coverage.</p><h2>Scope</h2><p>All paid and unpaid leave types for employees.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Employee:</b> submits the request with dates and type.</li><li><b>Manager:</b> reviews coverage and approves or declines.</li><li><b>HR:</b> records and tracks balances.</li></ul><h2>Procedure</h2><ol><li>Employee submits the request with dates, type and any notes.</li><li>Manager checks team coverage and approves or declines within two business days.</li><li>HR records the approved leave and updates the balance.</li><li>Coverage and out-of-office handover are arranged before the leave begins.</li></ol><h2>Exceptions &amp; Rollback</h2><p>Emergency leave may be requested retroactively and reconciled on return. Cancelled leave is credited back.</p><h2>References &amp; Related Records</h2><ul><li>Leave policy, accrual schedule.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"Finance",title:"Expense Reimbursement Approval",desc:"Submit, review and reimburse employee expenses with proper documentation.",review:365,html:`<h2>Purpose</h2><p>Reimburse legitimate business expenses promptly while maintaining controls and documentation.</p><h2>Scope</h2><p>All employee out-of-pocket business expenses.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Employee:</b> submits the claim with receipts.</li><li><b>Manager:</b> approves business purpose.</li><li><b>Finance:</b> verifies policy compliance and pays.</li></ul><h2>Procedure</h2><ol><li>Employee submits an itemized claim with receipts and business purpose.</li><li>Manager reviews and approves within three business days.</li><li>Finance verifies against policy, coding and budget.</li><li>Approved amounts are scheduled for the next reimbursement run.</li><li>Exceptions or missing receipts are returned with a reason.</li></ol><h2>Exceptions &amp; Rollback</h2><p>Claims that breach policy are declined with explanation; duplicate or erroneous payments are recovered in the next cycle.</p><h2>References &amp; Related Records</h2><ul><li>Expense policy, chart of accounts, approval matrix.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"Finance",title:"Vendor Invoice Processing (AP)",desc:"Receive, match, approve and pay supplier invoices accurately and on time.",review:365,html:`<h2>Purpose</h2><p>Process supplier invoices accurately, prevent duplicate or fraudulent payments, and pay on agreed terms.</p><h2>Scope</h2><p>All vendor invoices and credit notes.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Accounts payable:</b> records and matches invoices.</li><li><b>Budget owner:</b> approves spend.</li><li><b>Finance lead:</b> releases payment.</li></ul><h2>Procedure</h2><ol><li>Receive and log the invoice; capture vendor, amount and due date.</li><li>Match to the purchase order and goods/services received.</li><li>Route to the budget owner for approval.</li><li>Verify bank details against the trusted vendor record before payment.</li><li>Schedule payment per terms and record the transaction.</li><li>File the invoice and approval for audit.</li></ol><h2>Exceptions &amp; Rollback</h2><p>Mismatches are placed on hold and queried with the vendor. Any changed bank details require independent verification before payment.</p><h2>References &amp; Related Records</h2><ul><li>Vendor records, contracts, approval matrix.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"Finance",title:"Month-End Close Checklist",desc:"A repeatable close that produces timely, accurate financial statements.",review:90,html:`<h2>Purpose</h2><p>Close the books accurately and on schedule each month with clear ownership of each task.</p><h2>Scope</h2><p>All general-ledger close activities for the entity.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Accountant:</b> performs reconciliations and entries.</li><li><b>Finance lead:</b> reviews and signs off.</li></ul><h2>Procedure</h2><ol><li>Confirm all invoices, expenses and revenue for the period are recorded.</li><li>Reconcile bank, credit card and key balance-sheet accounts.</li><li>Post accruals, prepayments and depreciation.</li><li>Review variances against budget and prior period.</li><li>Prepare draft statements and obtain finance-lead sign-off.</li><li>Lock the period and archive the close package.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a material error is found after lock, reopen the period under finance-lead approval, correct, and document the adjustment.</p><h2>References &amp; Related Records</h2><ul><li>Chart of accounts, reconciliation templates.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"Quality & Standards",title:"Client Intake & Eligibility",desc:"Welcome and assess a new person served, confirming eligibility and consent.",review:180,html:`<h2>Purpose</h2><p>Provide a consistent, respectful intake that confirms eligibility, obtains informed consent and begins person-centered planning.</p><h2>Scope</h2><p>All new people served entering the program.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Intake coordinator:</b> guides the intake and gathers information.</li><li><b>Program staff:</b> complete initial assessments.</li><li><b>Supervisor:</b> reviews eligibility decisions.</li></ul><h2>Procedure</h2><ol><li>Welcome the person and explain services, rights and responsibilities.</li><li>Collect referral and demographic information and verify eligibility criteria.</li><li>Obtain informed consent and required authorizations, including release of information.</li><li>Complete initial needs and risk screening.</li><li>Assign a primary worker and schedule the first planning meeting.</li><li>Document the intake and store records securely with appropriate confidentiality.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a person is not eligible, provide a clear explanation and referral to alternative resources, and document the outcome.</p><h2>References &amp; Related Records</h2><ul><li>Service Plan Review SOP, confidentiality policy, consent forms.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"Quality & Standards",title:"Individual Service Plan Review",desc:"Keep each person-centered plan current, measurable and driven by the person served.",review:90,html:`<h2>Purpose</h2><p>Ensure each service plan reflects the goals of the person served, is reviewed on schedule, and shows measurable progress.</p><h2>Scope</h2><p>All active people served with an individualized plan.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Primary worker:</b> coordinates the review with the person served.</li><li><b>Person served:</b> directs their goals and preferences.</li><li><b>Supervisor:</b> approves the updated plan.</li></ul><h2>Procedure</h2><ol><li>Schedule the review before the plan due date and invite the person served and their chosen supports.</li><li>Review progress toward each goal using objective measures.</li><li>Update goals, services and timelines based on the person preferences and needs.</li><li>Confirm understanding and obtain signatures or documented agreement.</li><li>Record the next review date and distribute the updated plan to the team.</li></ol><h2>Exceptions &amp; Rollback</h2><p>If a review cannot occur on time, document the reason, mitigate any risk, and reschedule at the earliest opportunity.</p><h2>References &amp; Related Records</h2><ul><li>Intake SOP, outcomes measures, supervision notes.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`},
+{area:"Quality & Standards",title:"Incident Reporting & Review",desc:"Report, respond to and learn from incidents involving people served or staff.",review:90,html:`<h2>Purpose</h2><p>Ensure incidents are reported promptly, handled safely, and reviewed to prevent recurrence and protect health and safety.</p><h2>Scope</h2><p>All incidents involving people served, staff, visitors or property.</p><h2>Roles &amp; Responsibilities</h2><ul><li><b>Staff:</b> ensure safety and report the incident.</li><li><b>Supervisor:</b> reviews and initiates follow-up.</li><li><b>Leadership:</b> analyzes trends and approves corrective actions.</li></ul><h2>Procedure</h2><ol><li>Ensure immediate safety and obtain medical or emergency help if needed.</li><li>Report the incident within the required timeframe using the incident form.</li><li>Notify required parties, including guardians or authorities where applicable.</li><li>Supervisor reviews, determines severity and starts any investigation.</li><li>Identify corrective actions and assign owners and due dates.</li><li>Aggregate incidents periodically to identify trends and improvements.</li></ol><h2>Exceptions &amp; Rollback</h2><p>Critical incidents trigger immediate escalation to leadership and external reporting as required by law.</p><h2>References &amp; Related Records</h2><ul><li>Health &amp; safety policy, incident form, trend analysis log.</li></ul><h2>Revision History</h2><table><tr><th>Version</th><th>Date</th><th>Author</th><th>Summary of change</th></tr><tr><td>1.0</td><td>&nbsp;</td><td>&nbsp;</td><td>Initial draft created from ITOps template</td></tr></table>`}
 ];
 const JD_TEMPLATES=[
 {area:'Direct Services',title:'Employment Specialist',desc:'Help job seekers find and keep meaningful employment.',review:365,html:`<h2>Position Summary</h2><p>The Employment Specialist supports individuals served in identifying career goals, securing employment, and maintaining job success through coaching, employer engagement, and person-centered planning.</p><h2>Key Responsibilities</h2><ul><li>Conduct intake, vocational assessment, and person-centered employment planning with each participant</li><li>Develop and maintain relationships with local employers to identify job opportunities</li><li>Provide job-search coaching: resume help, interview preparation, and application support</li><li>Deliver on-the-job and follow-along support to promote retention</li><li>Document services, progress, and outcomes accurately and on time in the case record</li><li>Coordinate with case managers, funders, and community partners</li></ul><h2>Required Qualifications</h2><ul><li>Bachelor's degree in human services, vocational rehabilitation, or related field, or equivalent experience</li><li>Experience supporting individuals with barriers to employment</li><li>Valid driver's license and reliable transportation</li><li>Strong written and verbal communication skills</li></ul><h2>Preferred Qualifications</h2><ul><li>A relevant professional certification</li><li>Familiarity with accreditation or quality standards</li><li>Bilingual ability</li></ul><h2>Core Competencies</h2><ul><li>Person-centered, strengths-based approach</li><li>Relationship building with employers and participants</li><li>Organization and timely documentation</li><li>Adaptability and problem-solving</li></ul><h2>Reporting and Schedule</h2><p>Reports to the [Program Manager]. Full-time, with occasional evening or community-based hours. Location: [office/community].</p><h2>Equal Opportunity</h2><p>[Organization] is an equal opportunity employer. We celebrate diversity and are committed to an inclusive environment; we do not discriminate on the basis of any protected characteristic. Reasonable accommodations are available throughout the hiring process.</p>`},
@@ -13920,8 +13920,8 @@ function SopTemplateGallery({onClose,onUse,templates}){
 }
 function sopExtractSteps(html){
   try{
-    const doc=new DOMParser().parseFromString('<div id="opshr">'+(html||'')+'</div>','text/html');
-    const root=doc.getElementById('opshr'); if(!root)return [];
+    const doc=new DOMParser().parseFromString('<div id="itopsr">'+(html||'')+'</div>','text/html');
+    const root=doc.getElementById('itopsr'); if(!root)return [];
     let ol=null;
     const heads=Array.from(root.querySelectorAll('h1,h2,h3'));
     const ph=heads.find(hd=>/procedure|steps|process|instructions/i.test(hd.textContent||''));
@@ -13934,8 +13934,8 @@ function sopExtractSteps(html){
 }
 function sopGuessSteps(html){
   try{
-    const doc=new DOMParser().parseFromString('<div id="opshg">'+(html||'')+'</div>','text/html');
-    const root=doc.getElementById('opshg'); if(!root)return [];
+    const doc=new DOMParser().parseFromString('<div id="itopsg">'+(html||'')+'</div>','text/html');
+    const root=doc.getElementById('itopsg'); if(!root)return [];
     let blocks=Array.from(root.querySelectorAll('li,p')).map(n=>(n.textContent||'').replace(/\s+/g,' ').trim()).filter(Boolean);
     if(!blocks.length){ const t=(root.textContent||'').replace(/\s+/g,' ').trim(); blocks=t.split(/[.;]\s+/).map(x=>x.trim()).filter(Boolean); }
     blocks=blocks.map(x=>x.replace(/^(step\s*)?\d+[.\x29:\-]\s*/i,'').trim()).filter(x=>x.length>2);
@@ -13982,26 +13982,26 @@ const DOC_AGENT_CFG={
     greeting:"Hi! I'll help you write a clear, inclusive job description. Tell me the role title and department to start — type or tap the mic, and I'll draft it on the right. You can also paste an existing job description to modernize.",
     formats:[['default','Standard',''],['concise','Concise','Keep it concise: a short Position Summary, 6 to 8 key responsibilities, and only the essential qualifications.'],['detailed','Comprehensive','Be comprehensive: responsibilities grouped by area, full required and preferred qualifications, core competencies, and work environment.'],['competency','Competency-based','Organize the role around core competencies: for each competency list the behaviours and responsibilities that demonstrate it.'],['custom','Custom…','']]}
 };
-function opshDownload(filename, blob){ try{ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},1500); }catch(e){} }
-function opshDocSlug(t){ return ((t||'document').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60))||'document'; }
-function opshEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function opshExportWord(title, html){
-  html=opshSafeHtml(html);
+function itopsDownload(filename, blob){ try{ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},1500); }catch(e){} }
+function itopsDocSlug(t){ return ((t||'document').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60))||'document'; }
+function itopsEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function itopsExportWord(title, html){
+  html=itopsSafeHtml(html);
   const css="body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#222;line-height:1.5;} h1{font-size:19pt;color:#1D4D7A;margin:0 0 10pt;} h2{font-size:13pt;color:#1D4D7A;margin:14pt 0 5pt;} p{margin:0 0 7pt;} ul,ol{margin:4pt 0 8pt 22pt;} li{margin:2pt 0;} table{border-collapse:collapse;width:100%;margin:8pt 0;} td,th{border:1px solid #999;padding:5px 7px;font-size:10.5pt;} th{background:#EAEEF3;}";
-  const doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>'+opshEsc(title)+'</title><style>'+css+'</style></head><body><h1>'+opshEsc(title)+'</h1>'+(html||'')+'</body></html>';
-  opshDownload(opshDocSlug(title)+'.doc', new Blob(['﻿'+doc],{type:'application/msword'}));
+  const doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>'+itopsEsc(title)+'</title><style>'+css+'</style></head><body><h1>'+itopsEsc(title)+'</h1>'+(html||'')+'</body></html>';
+  itopsDownload(itopsDocSlug(title)+'.doc', new Blob(['﻿'+doc],{type:'application/msword'}));
 }
-function opshExportPdf(title, html){
-  html=opshSafeHtml(html);
+function itopsExportPdf(title, html){
+  html=itopsSafeHtml(html);
   const css="@page{margin:0.9in;} body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#222;line-height:1.6;max-width:760px;margin:0 auto;padding:24px;} h1{font-size:22px;color:#1D4D7A;margin:0 0 12px;} h2{font-size:16px;color:#1D4D7A;border-bottom:1px solid #d4dbe3;padding-bottom:3px;margin:18px 0 7px;} p{margin:0 0 9px;} ul,ol{margin:6px 0 10px 22px;} li{margin:3px 0;} table{border-collapse:collapse;width:100%;margin:10px 0;} td,th{border:1px solid #999;padding:6px 8px;font-size:11px;} th{background:#EAEEF3;}";
   const w=window.open('','_blank','width=840,height=920');
-  if(!w){ try{ opshAlert('Please allow pop-ups for this site to export as PDF, then try again.'); }catch(e){} return; }
+  if(!w){ try{ itopsAlert('Please allow pop-ups for this site to export as PDF, then try again.'); }catch(e){} return; }
   w.document.open();
-  w.document.write('<html><head><meta charset="utf-8"><title>'+opshEsc(title)+'</title><style>'+css+'</style></head><body><h1>'+opshEsc(title)+'</h1>'+(html||'')+'</body></html>');
+  w.document.write('<html><head><meta charset="utf-8"><title>'+itopsEsc(title)+'</title><style>'+css+'</style></head><body><h1>'+itopsEsc(title)+'</h1>'+(html||'')+'</body></html>');
   w.document.close();
   setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} }, 400);
 }
-function opshHtmlToText(html){ try{ const d=new DOMParser().parseFromString('<div>'+(html||'')+'</div>','text/html'); Array.prototype.forEach.call(d.querySelectorAll('li'),function(li){ li.insertAdjacentText('afterbegin','• '); }); Array.prototype.forEach.call(d.querySelectorAll('p,div,h1,h2,h3,h4,br,tr,li'),function(n){ n.insertAdjacentText('beforeend','\n'); }); return (d.body.textContent||'').replace(/\n{3,}/g,'\n\n').replace(/[ \t]+\n/g,'\n').trim(); }catch(e){ return (html||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); } }
+function itopsHtmlToText(html){ try{ const d=new DOMParser().parseFromString('<div>'+(html||'')+'</div>','text/html'); Array.prototype.forEach.call(d.querySelectorAll('li'),function(li){ li.insertAdjacentText('afterbegin','• '); }); Array.prototype.forEach.call(d.querySelectorAll('p,div,h1,h2,h3,h4,br,tr,li'),function(n){ n.insertAdjacentText('beforeend','\n'); }); return (d.body.textContent||'').replace(/\n{3,}/g,'\n\n').replace(/[ \t]+\n/g,'\n').trim(); }catch(e){ return (html||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); } }
 function SopAgent({onClose,onUse,toast,initialSource,kind}){
   const C=DOC_AGENT_CFG[kind||'sop']||DOC_AGENT_CFG.sop;
   const GREETING=C.greeting;
@@ -14090,23 +14090,23 @@ function SopAgent({onClose,onUse,toast,initialSource,kind}){
 /* BT30: page titles live outside App so the address check at start-up (…#page bookmarks) can read them before the first full render. */
 const TITLES={data:'Data',recycle:'Deleted items',updates:'Updates',integration_audit:'Integration Audit',invoices:'Invoices',risk_users:'Risky people',m365_email:'Microsoft 365 · Email',m365_devices:'Microsoft 365 · Devices',license_manager:'License Manager',profile:'My profile',security_assessment:'Microsoft 365 · Posture',about:'About & ownership',terms:'Terms of Use',my_tasks:'My tasks',improvements:'Improvements',vtiger_users:'vTiger users',dashboard:'Dashboard',cases:'Cases & Projects',announcements:'Announcements',tickets:'Service Desk',kb:'Knowledge Base',sops:'SOPs',job_descriptions:'Job Descriptions',credentials:'Credential Vault',contracts:'Contracts',vendors:'Vendors',users:'Users',roles:'Roles & Permissions',import:'Bulk Import',categories:'Ticket Categories',forms:'Forms',calendar:'Calendar',reports:'Reports',settings:'Settings',standards:'Standards & Audits',audit:'Audit Log',changelog:"What's New",integrations:'Integrations',job_descriptions:'Job Descriptions',my_signatures:'My Signatures',assets:'Equipment & Assets',my_equipment:'My Equipment',scorecard:'Scorecard',m365_overview:'Microsoft 365 · Home',m365_accounts:'Microsoft 365 · People',m365_licensing:'Microsoft 365 · Licenses',m365_entra:'Microsoft 365 · Entra ID',m365_security:'Microsoft 365 · Security',m365_usage:'Microsoft 365 · Collaboration & activity',guardian:'Server Guardian',server_perf:'Server performance',uptime:'Uptime',backups:'Backups',sent_emails:'Sent emails',budget:'IT Budget',access:'Company systems',event_log:'Event Log',jobs:'Scheduled jobs',standards_dashboard:'Standards Dashboard',onboarding_templates:'Onboarding Templates',kb_assist:'Ask IT — Knowledge Assistant',kb_gaps:'KB Content Gaps'};
 function App(){
-  const [theme,setTheme]=useState(()=>localStorage.getItem('opsh_theme')||'light');
-  const [token,setToken]=useState(()=>localStorage.getItem('opsh_user')?true:null);
-  const [user,setUser]=useState(()=>{try{return JSON.parse(localStorage.getItem('opsh_user')||'null')}catch(_){return null}});
+  const [theme,setTheme]=useState(()=>localStorage.getItem('itops_theme')||'light');
+  const [token,setToken]=useState(()=>localStorage.getItem('itops_user')?true:null);
+  const [user,setUser]=useState(()=>{try{return JSON.parse(localStorage.getItem('itops_user')||'null')}catch(_){return null}});
   const [booting,setBooting]=useState(!!token);
   const [o365On,setO365On]=useState(false);
   const [lookups,setLookups]=useState(null);
-  const [pg,setPgRaw]=useState(()=>{ try{ const u=JSON.parse(localStorage.getItem('opsh_user')||'null'); const sa=u&&u.role==='super_admin'; const pp=(u&&u.role_permissions)||{}; const has=m=>sa||pp['*']===true||pp['*']==='all'||(Array.isArray(pp[m])?pp[m].length>0:(pp[m]&&pp[m]!=='none')); const dashOk=sa||has('tickets')||has('reports')||has('kb')||has('sops')||has('creds')||has('contracts')||has('vendors'); return dashOk?'dashboard':(has('standards')?'standards':'dashboard'); }catch(_){ return 'dashboard'; } });
+  const [pg,setPgRaw]=useState(()=>{ try{ const u=JSON.parse(localStorage.getItem('itops_user')||'null'); const sa=u&&u.role==='super_admin'; const pp=(u&&u.role_permissions)||{}; const has=m=>sa||pp['*']===true||pp['*']==='all'||(Array.isArray(pp[m])?pp[m].length>0:(pp[m]&&pp[m]!=='none')); const dashOk=sa||has('tickets')||has('reports')||has('kb')||has('sops')||has('creds')||has('contracts')||has('vendors'); return dashOk?'dashboard':(has('standards')?'standards':'dashboard'); }catch(_){ return 'dashboard'; } });
   /* BT111: a page that moved opens its new home (and the right tab) */
   const setPg=React.useCallback(p=>{ p=pgResolve(p); if(typeof p==='string'&&PG_TAB_ALIAS[p]){ const [np,tab]=PG_TAB_ALIAS[p]; if(tab)mhGo(np,tab); try{ window.history.replaceState({pg:np},'','#'+np); }catch(e){} setPgRaw(np); return; } setPgRaw(p); },[]);
-  React.useEffect(()=>{ window.__opshSetPg=setPg; return ()=>{ if(window.__opshSetPg===setPg) window.__opshSetPg=null; }; },[setPg]);   /* BT125: links from a page to another page */
+  React.useEffect(()=>{ window.__itopsSetPg=setPg; return ()=>{ if(window.__itopsSetPg===setPg) window.__itopsSetPg=null; }; },[setPg]);   /* BT125: links from a page to another page */
   const [col,setCol]=useState(false);
   const [isMobile,setIsMobile]=useState(()=>{try{return window.matchMedia('(max-width:820px)').matches;}catch(e){return false;}});
   useEffect(()=>{ let mq; try{mq=window.matchMedia('(max-width:820px)');}catch(e){return;} const on=()=>setIsMobile(mq.matches); on(); if(mq.addEventListener)mq.addEventListener('change',on); else mq.addListener(on); return ()=>{ if(mq.removeEventListener)mq.removeEventListener('change',on); else mq.removeListener(on); }; },[]);
   const [navOpen,setNavOpen]=useState(false);
   const fromPop=React.useRef(false);
-  React.useEffect(()=>{ try{ let hp=(window.location.hash||'').replace('#',''); if(PG_ALIAS[hp]){ if(hp==='onboarding_runs')window.__mhNext={page:'m365_accounts',tab:'history'}; if(hp==='access')window.__opshSettingsTab='systems'; if(hp==='help_visuals')window.__opshSettingsTab='visuals'; hp=PG_ALIAS[hp]; } if(hp&&(TITLES[hp]||PG_TAB_ALIAS[hp])&&hp!==pg){ fromPop.current=true; setPg(hp); } }catch(e){} const onPop=()=>{ try{ let p=pgResolve((window.location.hash||'').replace('#','')||'dashboard');   /* BT48: Company systems is a tab of Settings */ if(TITLES[p]||PG_TAB_ALIAS[p]){ fromPop.current=true; setPg(p); setNavOpen(false); }   /* BT114: and a page-and-tab alias (#device_approvals) */ }catch(e){} }; window.addEventListener('popstate',onPop); return ()=>window.removeEventListener('popstate',onPop); },[]);
-  React.useEffect(()=>{ const h=e=>{ const d=e.detail||{}; if(d.page)setPg(d.page); }; window.addEventListener('opsh-mh-go',h); return ()=>window.removeEventListener('opsh-mh-go',h); },[]);   // BT21: links between Microsoft 365 pages
+  React.useEffect(()=>{ try{ let hp=(window.location.hash||'').replace('#',''); if(PG_ALIAS[hp]){ if(hp==='onboarding_runs')window.__mhNext={page:'m365_accounts',tab:'history'}; if(hp==='access')window.__itopsSettingsTab='systems'; if(hp==='help_visuals')window.__itopsSettingsTab='visuals'; hp=PG_ALIAS[hp]; } if(hp&&(TITLES[hp]||PG_TAB_ALIAS[hp])&&hp!==pg){ fromPop.current=true; setPg(hp); } }catch(e){} const onPop=()=>{ try{ let p=pgResolve((window.location.hash||'').replace('#','')||'dashboard');   /* BT48: Company systems is a tab of Settings */ if(TITLES[p]||PG_TAB_ALIAS[p]){ fromPop.current=true; setPg(p); setNavOpen(false); }   /* BT114: and a page-and-tab alias (#device_approvals) */ }catch(e){} }; window.addEventListener('popstate',onPop); return ()=>window.removeEventListener('popstate',onPop); },[]);
+  React.useEffect(()=>{ const h=e=>{ const d=e.detail||{}; if(d.page)setPg(d.page); }; window.addEventListener('itops-mh-go',h); return ()=>window.removeEventListener('itops-mh-go',h); },[]);   // BT21: links between Microsoft 365 pages
   React.useEffect(()=>{ try{ if(fromPop.current){ fromPop.current=false; return; } if(('#'+pg)!==window.location.hash) window.history.pushState({pg:pg},'','#'+pg); }catch(e){} },[pg]);
   const [openGroup,setOpenGroup]=useState('g_desk');
   const [fly,setFly]=useState(null);   // collapsed-sidebar flyout anchor {id, top}
@@ -14115,30 +14115,30 @@ function App(){
   const [apiCfg,setApiCfg]=useState(false);
   const [baseInput,setBaseInput]=useState(API_BASE);
 
-  useEffect(()=>{document.documentElement.setAttribute('data-theme',theme);localStorage.setItem('opsh_theme',theme)},[theme]);
+  useEffect(()=>{document.documentElement.setAttribute('data-theme',theme);localStorage.setItem('itops_theme',theme)},[theme]);
   useEffect(()=>{ const g=NAVGROUPS.find(x=>x.type==='group'&&x.items.some(i=>i.id===pg)); if(g&&!(col&&!isMobile))setOpenGroup(g.id); },[pg,col,isMobile]);
   useEffect(()=>{ if(col&&!isMobile){ setOpenGroup(null); setFly(null); } },[col,isMobile]);   // collapse = close everything
-  // In-app scheduler ("no-cron mode"): while OpsHub is open, nudge the server every 3 min to run
+  // In-app scheduler ("no-cron mode"): while ITOps is open, nudge the server every 3 min to run
   // email intake + SLA checks. The server throttles globally and replies instantly; errors are ignored.
   useEffect(()=>{ if(!token||!user)return; const tick=()=>{ if(document.visibilityState==='hidden')return; api('POST','/tick',null,false,true).catch(()=>{}); }; const t0=setTimeout(tick,15000); const iv=setInterval(tick,180000); return ()=>{ clearTimeout(t0); clearInterval(iv); }; },[token,user&&user.id]);
 
   const toast=useCallback((msg,kind='err')=>{const id=Math.random();setToasts(t=>[...t,{id,msg,kind}]);setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),4200)},[]);
-  try{window.__opshToast=toast;}catch(_){} try{window.__opshUser=user;}catch(_){}
+  try{window.__itopsToast=toast;}catch(_){} try{window.__itopsUser=user;}catch(_){}
   const [notifs,setNotifs]=useState([]);
   const [unread,setUnread]=useState(0);
   const [bellOpen,setBellOpen]=useState(false);
   const [helpOpen,setHelpOpen]=useState(false);
   /* BT72: someone whose role sees Microsoft 365 → the server starts reading it for them at once, then every 15 minutes */
-  React.useEffect(()=>{ if(!user) return; let ok=false; try{ ok=user.role==='super_admin'||opshCanFrom(user.role,user.role_permissions||{},'m365','view'); }catch(_){}
-    if(!ok) return; const t0=setTimeout(()=>opshM365Warm(true),2500);
-    const t1=setInterval(()=>{ if(document.visibilityState==='visible') opshM365Warm(false); },15*60000);
+  React.useEffect(()=>{ if(!user) return; let ok=false; try{ ok=user.role==='super_admin'||itopsCanFrom(user.role,user.role_permissions||{},'m365','view'); }catch(_){}
+    if(!ok) return; const t0=setTimeout(()=>itopsM365Warm(true),2500);
+    const t1=setInterval(()=>{ if(document.visibilityState==='visible') itopsM365Warm(false); },15*60000);
     return ()=>{ clearTimeout(t0); clearInterval(t1); }; },[user&&user.id]);
   /* BT71: a link in the Help panel that leads into the app ("Who sees them…") asks the app to go there and closes the
      panel — before, it loaded a second copy of the app inside the panel (a second menu that stayed after closing). Only
      the Help frame of this page, on this site, is listened to. */
-  React.useEffect(()=>{ const on=e=>{ try{ if(e.origin!==window.location.origin||!e.data||e.data.type!=='opsh-help-goto')return;
+  React.useEffect(()=>{ const on=e=>{ try{ if(e.origin!==window.location.origin||!e.data||e.data.type!=='itops-help-goto')return;
       const f=document.querySelector('iframe[data-help-frame]'); if(!f||e.source!==f.contentWindow)return;
-      if(e.data.page==='help_visuals'){ setHelpOpen(false); window.__opshSettingsTab='visuals'; window.dispatchEvent(new CustomEvent('opsh-settings-tab',{detail:'visuals'})); setPg('settings'); }
+      if(e.data.page==='help_visuals'){ setHelpOpen(false); window.__itopsSettingsTab='visuals'; window.dispatchEvent(new CustomEvent('itops-settings-tab',{detail:'visuals'})); setPg('settings'); }
     }catch(_){} }; window.addEventListener('message',on); return ()=>window.removeEventListener('message',on); },[]);
   const [capOpen,setCapOpen]=useState(false);
   const [focus,setFocus]=useState(null);  // deep-link: {res,id} -> open a specific record
@@ -14154,8 +14154,8 @@ function App(){
   const [sopen,setSopen]=useState(false);
   useEffect(()=>{ if(!token||sq.trim().length<2){setSres([]);return;} const t=setTimeout(async()=>{ try{const r=await api('GET','/search?q='+encodeURIComponent(sq.trim())); setSres(r.data||[]); setSopen(true);}catch(_){}} ,250); return ()=>clearTimeout(t); },[sq,token]);
 
-  const loadLookups=useCallback(async()=>{ const lk=await api('GET','/lookups'); opshSetAppName(lk&&lk.branding&&lk.branding.name); opshSetModules(lk&&lk.modules); setLookups(lk);
-    try{ if(lk&&lk.branding) localStorage.setItem('opsh_brand_v1',JSON.stringify({app_name:lk.branding.name||'OpsHub',logo:lk.branding.logo||''})); }catch(_){}   /* BT98: the sign-in page shows it at once next time */
+  const loadLookups=useCallback(async()=>{ const lk=await api('GET','/lookups'); itopsSetAppName(lk&&lk.branding&&lk.branding.name); itopsSetModules(lk&&lk.modules); setLookups(lk);
+    try{ if(lk&&lk.branding) localStorage.setItem('itops_brand_v1',JSON.stringify({app_name:lk.branding.name||'ITOps',logo:lk.branding.logo||''})); }catch(_){}   /* BT98: the sign-in page shows it at once next time */
     return lk; },[]);
   /* BT167: an installed app window (or a tab left open) reads the shared settings again when it comes back to the front
      (at most once a minute) and every 10 minutes: a change saved elsewhere — menu icons, name, logo, modules — shows
@@ -14172,13 +14172,13 @@ function App(){
     if(!idleMin||idleMin<=0) return;
     let warnT,outT,lastW=0;
     /* Review UI2-7: activity is shared between tabs (localStorage), so an idle tab does not sign out a tab in use. */
-    const lastAct=()=>{ try{ return Number(localStorage.getItem('opsh_last_act')||0); }catch(_){ return 0; } };
+    const lastAct=()=>{ try{ return Number(localStorage.getItem('itops_last_act')||0); }catch(_){ return 0; } };
     const arm=(ms)=>{ clearTimeout(warnT); clearTimeout(outT);
       warnT=setTimeout(()=>{ if(Date.now()-lastAct()<(idleMin-1)*60000)return; try{toast('You will be signed out soon due to inactivity.');}catch(_){} }, Math.max(1,ms-60000));
       outT=setTimeout(()=>{ const left=idleMin*60000-(Date.now()-lastAct()); if(lastAct()&&left>1000){ arm(left); return; } doLogout(); try{toast('Signed out due to inactivity.');}catch(_){} }, ms);
     };
-    const reset=()=>{ const t=Date.now(); if(t-lastW>5000){ lastW=t; try{ localStorage.setItem('opsh_last_act',String(t)); }catch(_){} } arm(idleMin*60000); };
-    const onStore=e=>{ if(e&&e.key==='opsh_last_act')arm(idleMin*60000); };
+    const reset=()=>{ const t=Date.now(); if(t-lastW>5000){ lastW=t; try{ localStorage.setItem('itops_last_act',String(t)); }catch(_){} } arm(idleMin*60000); };
+    const onStore=e=>{ if(e&&e.key==='itops_last_act')arm(idleMin*60000); };
     const evs=['mousemove','keydown','click','scroll','touchstart'];
     evs.forEach(e=>window.addEventListener(e,reset,{passive:true})); window.addEventListener('storage',onStore);
     reset();
@@ -14201,17 +14201,17 @@ function App(){
   const [forceEnroll,setForceEnroll]=React.useState(false);
   const [forceTerms,setForceTerms]=React.useState(false);   /* BT97: the Terms of Use come before the app */
   // Review UI2-21: after a profile change the signed-in user is read again (screen and saved copy), not edited in place
-  const reloadMe=async()=>{ try{ const r=await api('GET','/auth/me'); if(r&&r.user){ setUser(u=>{ const nu=Object.assign({},u||{},r.user); try{ localStorage.setItem('opsh_user',JSON.stringify(nu)); }catch(_){} return nu; }); } }catch(_){} };
-  function doLogout(){ try{ api('POST','/auth/logout').catch(function(){}); }catch(_){} setShowAccount(false); setForceEnroll(false); setForceTerms(false); window.__opshMemTok=null; localStorage.removeItem('opsh_user');setToken(null);setUser(null);setLookups(null);setPg('dashboard'); }
+  const reloadMe=async()=>{ try{ const r=await api('GET','/auth/me'); if(r&&r.user){ setUser(u=>{ const nu=Object.assign({},u||{},r.user); try{ localStorage.setItem('itops_user',JSON.stringify(nu)); }catch(_){} return nu; }); } }catch(_){} };
+  function doLogout(){ try{ api('POST','/auth/logout').catch(function(){}); }catch(_){} setShowAccount(false); setForceEnroll(false); setForceTerms(false); window.__itopsMemTok=null; localStorage.removeItem('itops_user');setToken(null);setUser(null);setLookups(null);setPg('dashboard'); }
 
-  useEffect(()=>{ const hh=()=>setForceEnroll(true); window.addEventListener('opsh-mfa-enroll',hh); return ()=>window.removeEventListener('opsh-mfa-enroll',hh); },[]);
-  useEffect(()=>{ const seen={}; const h=e=>{ const k=String(e.detail||'').split('?')[0]; if(seen[k])return; seen[k]=1; toast&&toast('Microsoft returned more than the app reads at once: what this page says is missing may only be missing from the read.'); }; window.addEventListener('opsh-truncated',h); return ()=>window.removeEventListener('opsh-truncated',h); },[]);   /* BT124 (review M365A-6) */
-  useEffect(()=>{ const ht=()=>{ if(localStorage.getItem('opsh_user')) setForceTerms(true); }; window.addEventListener('opsh-terms',ht); return ()=>window.removeEventListener('opsh-terms',ht); },[]);
-  useEffect(()=>{ const he=()=>{ if(!localStorage.getItem('opsh_user'))return; window.__opshMemTok=null; localStorage.removeItem('opsh_user');setToken(null);setUser(null);setLookups(null);setPg('dashboard'); try{toast('Your session ended — please sign in again.');}catch(_){} };
-    window.addEventListener('opsh-session-ended',he); return ()=>window.removeEventListener('opsh-session-ended',he); },[]);
+  useEffect(()=>{ const hh=()=>setForceEnroll(true); window.addEventListener('itops-mfa-enroll',hh); return ()=>window.removeEventListener('itops-mfa-enroll',hh); },[]);
+  useEffect(()=>{ const seen={}; const h=e=>{ const k=String(e.detail||'').split('?')[0]; if(seen[k])return; seen[k]=1; toast&&toast('Microsoft returned more than the app reads at once: what this page says is missing may only be missing from the read.'); }; window.addEventListener('itops-truncated',h); return ()=>window.removeEventListener('itops-truncated',h); },[]);   /* BT124 (review M365A-6) */
+  useEffect(()=>{ const ht=()=>{ if(localStorage.getItem('itops_user')) setForceTerms(true); }; window.addEventListener('itops-terms',ht); return ()=>window.removeEventListener('itops-terms',ht); },[]);
+  useEffect(()=>{ const he=()=>{ if(!localStorage.getItem('itops_user'))return; window.__itopsMemTok=null; localStorage.removeItem('itops_user');setToken(null);setUser(null);setLookups(null);setPg('dashboard'); try{toast('Your session ended — please sign in again.');}catch(_){} };
+    window.addEventListener('itops-session-ended',he); return ()=>window.removeEventListener('itops-session-ended',he); },[]);
   async function finishAuth(r){
-    if(r&&r.token&&OPSH_HOST==='teams') window.__opshMemTok=r.token;   /* BT90: Teams only, in memory; elsewhere the cookie carries the session */
-    localStorage.setItem('opsh_user',JSON.stringify(r.user));
+    if(r&&r.token&&ITOPS_HOST==='teams') window.__itopsMemTok=r.token;   /* BT90: Teams only, in memory; elsewhere the cookie carries the session */
+    localStorage.setItem('itops_user',JSON.stringify(r.user));
     setToken(true); setUser(r.user);
     if(r.user && r.user.mfa_enrollment_required){ setForceEnroll(true); return; }
     if(r.user && r.user.terms_required){ setForceTerms(true); return; }   /* BT97 */
@@ -14230,23 +14230,23 @@ function App(){
   }
   async function signInO365(){ try{ const r=await api('GET','/auth/o365/url'); window.location.href=r.url; }catch(e){ toast(e.message||'Microsoft 365 sign-in is not configured'); } }
   /* BT29: inside Teams — sign in with the token Teams provides; a sub-page in the link (notification, channel card) opens that page. */
-  const inTeams=OPSH_HOST==='teams';
+  const inTeams=ITOPS_HOST==='teams';
   const [teamsSt,setTeamsSt]=useState(inTeams?'signing':'');
   const [openTick,setOpenTick]=useState(0);
   const teamsRef=React.useRef({});
   teamsRef.current.signIn=async()=>{ setTeamsSt('signing');
-    try{ const mt=await opshTeams(); if(!mt){ setTeamsSt('failed:Teams did not answer.'); return; }
+    try{ const mt=await itopsTeams(); if(!mt){ setTeamsSt('failed:Teams did not answer.'); return; }
       const tok=await mt.authentication.getAuthToken(); const r=await api('POST','/auth/teams',{token:tok}); await finishAuth(r); setTeamsSt(''); }
     catch(e){ setTeamsSt('failed:'+((e&&e.message)||'Automatic sign-in did not work.')); } };
-  useEffect(()=>{ if(!inTeams)return; (async()=>{ const mt=await opshTeams();
-      if(mt){ try{ const c=await mt.app.getContext(); const sub=c&&c.page&&c.page.subPageId; if(sub&&/^[a-z0-9_]{1,40}$/.test(sub)){ sessionStorage.setItem('opsh_open',JSON.stringify({res:sub,page:1})); setOpenTick(t=>t+1); } }catch(_){} }
-      if(!opshMemTok()) teamsRef.current.signIn(); })(); },[]);
-  useEffect(()=>{ if(!inTeams)return; const h=()=>{ setTimeout(()=>teamsRef.current.signIn(),80); }; window.addEventListener('opsh-session-ended',h); return ()=>window.removeEventListener('opsh-session-ended',h); },[]);
+  useEffect(()=>{ if(!inTeams)return; (async()=>{ const mt=await itopsTeams();
+      if(mt){ try{ const c=await mt.app.getContext(); const sub=c&&c.page&&c.page.subPageId; if(sub&&/^[a-z0-9_]{1,40}$/.test(sub)){ sessionStorage.setItem('itops_open',JSON.stringify({res:sub,page:1})); setOpenTick(t=>t+1); } }catch(_){} }
+      if(!itopsMemTok()) teamsRef.current.signIn(); })(); },[]);
+  useEffect(()=>{ if(!inTeams)return; const h=()=>{ setTimeout(()=>teamsRef.current.signIn(),80); }; window.addEventListener('itops-session-ended',h); return ()=>window.removeEventListener('itops-session-ended',h); },[]);
   /* BT29: tell the Device inventory which kind of device this session is on (at most twice a day per browser). */
-  useEffect(()=>{ if(!user||booting||forceEnroll)return; (async()=>{ try{ const k='opsh_cf_'+user.id; if(Date.now()-(+localStorage.getItem(k)||0)<12*3600*1000)return;
-      const r=await api('POST','/auth/client',await opshClientFacts()); if(r&&(r.ok||r.reason==='off'||r.reason==='unknown_os'||r.reason==='no_table'))localStorage.setItem(k,String(Date.now())); }catch(_){} })(); },[user&&user.id,booting,forceEnroll]);
+  useEffect(()=>{ if(!user||booting||forceEnroll)return; (async()=>{ try{ const k='itops_cf_'+user.id; if(Date.now()-(+localStorage.getItem(k)||0)<12*3600*1000)return;
+      const r=await api('POST','/auth/client',await itopsClientFacts()); if(r&&(r.ok||r.reason==='off'||r.reason==='unknown_os'||r.reason==='no_table'))localStorage.setItem(k,String(Date.now())); }catch(_){} })(); },[user&&user.id,booting,forceEnroll]);
 
-  React.useEffect(()=>{ if(!user||booting||forceEnroll) return; let d=null; try{ d=JSON.parse(sessionStorage.getItem('opsh_open')||'null'); }catch(_){} if(d&&d.page&&d.res){ try{ sessionStorage.removeItem('opsh_open'); }catch(_){} setPg(d.res); return; }   /* BT28: open a page by link (survives the sign-in screen) */ if(!d||!d.id) return; try{ sessionStorage.removeItem('opsh_open'); }catch(_){} setPg(d.res||'tickets'); setFocus({res:d.res||'tickets',id:d.id}); },[user,booting,forceEnroll,openTick]);
+  React.useEffect(()=>{ if(!user||booting||forceEnroll) return; let d=null; try{ d=JSON.parse(sessionStorage.getItem('itops_open')||'null'); }catch(_){} if(d&&d.page&&d.res){ try{ sessionStorage.removeItem('itops_open'); }catch(_){} setPg(d.res); return; }   /* BT28: open a page by link (survives the sign-in screen) */ if(!d||!d.id) return; try{ sessionStorage.removeItem('itops_open'); }catch(_){} setPg(d.res||'tickets'); setFocus({res:d.res||'tickets',id:d.id}); },[user,booting,forceEnroll,openTick]);
   React.useEffect(()=>{ const onHash=()=>{ const m=(location.hash||'').match(/^#(tickets|calendar|cases|improvements)\/(\d+)$/); if(m&&user){ try{ history.replaceState(null,'',location.pathname+location.search+'#'+m[1]); }catch(_){} setPg(m[1]); setFocus({res:m[1],id:+m[2]}); } };   /* BT66: #calendar/ID from Outlook */ window.addEventListener('hashchange',onHash); return ()=>window.removeEventListener('hashchange',onHash); },[user]);
   const isAdm = user && user.role==='super_admin';
 
@@ -14265,16 +14265,16 @@ function App(){
   if(forceTerms){ return <TermsGate toast={toast} onLogout={doLogout} onAccepted={async()=>{ setForceTerms(false); setBooting(true); try{ await loadLookups(); }catch(e){ toast(e.message); } setBooting(false); }}/>; }
   if(booting){ return <div className="login"><div className="spin"/><div style={{color:'var(--t4)',fontSize:14}}>Connecting to your data…</div></div>; }
 
-  const can=(mod,act='view')=>user?opshCanFrom(user.role,user.role_permissions||{},mod,act):false;
+  const can=(mod,act='view')=>user?itopsCanFrom(user.role,user.role_permissions||{},mod,act):false;
   const navEmoji=navEmojiMap(lookups&&lookups.branding&&lookups.branding.nav_emoji);
-  const itemVisible=(it)=> OPSH_MODS.pageOff[it.id] ? false : it.id==='license_manager' ? !!(lookups&&lookups.license_manager) : it.id==='updates'||it.id==='data' ? opshIsSuper() : it.id==='dashboard' ? (isAdm||can('tickets')||can('reports')||can('kb')||can('sops')||can('creds')||can('contracts')||can('vendors')) : (it.adminOnly?isAdm:navCan(can,it.perm));
-  const pgAllowed=(()=>{ if(OPSH_MODS.pageOff[pg]) return false; const it=NAVGROUPS.flatMap(g=>g.type==='item'?[g]:g.items).find(i=>i.id===pg); return !(it&&it.perm&&!navCan(can,it.perm)); })();
+  const itemVisible=(it)=> ITOPS_MODS.pageOff[it.id] ? false : it.id==='license_manager' ? !!(lookups&&lookups.license_manager) : it.id==='updates'||it.id==='data' ? itopsIsSuper() : it.id==='dashboard' ? (isAdm||can('tickets')||can('reports')||can('kb')||can('sops')||can('creds')||can('contracts')||can('vendors')) : (it.adminOnly?isAdm:navCan(can,it.perm));
+  const pgAllowed=(()=>{ if(ITOPS_MODS.pageOff[pg]) return false; const it=NAVGROUPS.flatMap(g=>g.type==='item'?[g]:g.items).find(i=>i.id===pg); return !(it&&it.perm&&!navCan(can,it.perm)); })();
   const visGroups=NAVGROUPS.map(g=>{ if(g.type==='item')return itemVisible(g)?g:null; const items=g.items.filter(itemVisible); return items.length?Object.assign({},g,{items}):null; }).filter(Boolean);
   const flatItems=[]; visGroups.forEach(g=>{ if(g.type==='item')flatItems.push(g); else g.items.forEach(i=>flatItems.push(i)); });
 
   return <PermCtx.Provider value={can}><div className={"shell"+(navOpen?' nav-open':'')} style={{paddingLeft:isMobile?0:((col)?58:256),transition:'padding-left .2s'}}>
     <aside className={'sb'+((col&&!isMobile)?' col':'')}>
-      <div className="sb-h" onClick={()=>setCol(c=>!c)}>{lookups&&lookups.branding&&lookups.branding.logo?<img src={lookups.branding.logo} alt="Logo" style={{maxHeight:(col&&!isMobile)?44:34,maxWidth:(col&&!isMobile)?52:170,objectFit:'contain',display:'block',margin:'0 auto'}}/>:<><div className="sb-mark">{appInitials()}</div><span className="sb-brand">{(lookups&&lookups.branding&&lookups.branding.name)||'OpsHub'}</span></>}</div>
+      <div className="sb-h" onClick={()=>setCol(c=>!c)}>{lookups&&lookups.branding&&lookups.branding.logo?<img src={lookups.branding.logo} alt="Logo" style={{maxHeight:(col&&!isMobile)?44:34,maxWidth:(col&&!isMobile)?52:170,objectFit:'contain',display:'block',margin:'0 auto'}}/>:<><div className="sb-mark">{appInitials()}</div><span className="sb-brand">{(lookups&&lookups.branding&&lookups.branding.name)||'ITOps'}</span></>}</div>
       <nav className="sb-nav">
         {visGroups.map(g=> g.type==='item'
           ? <div key={g.id} className={'sb-it'+(pg===g.id?' act':'')} data-tip={g.label} title={g.label} onClick={()=>{setPg(g.id);setNavOpen(false);}}><NavIco id={g.id} map={navEmoji}/><span>{g.label}</span>{g.id==='announcements'&&(annCnt.to_ack||annCnt.unread)>0&&<i className="sb-bdg" title={annCnt.to_ack?annCnt.to_ack+' to confirm':annCnt.unread+' new'}>{annCnt.to_ack||annCnt.unread}</i>}</div>
@@ -14286,7 +14286,7 @@ function App(){
     </aside>
     <div className="nav-backdrop" onClick={()=>setNavOpen(false)}></div>
     <div className="main">
-      <header className="top"><div className="top-l"><div className="iconbtn" onClick={()=>{setCol(c=>!c);setNavOpen(o=>!o);}}><I n="menu" s={19}/></div><div style={{fontSize:16,fontWeight:700}}>{TITLES[pg]}</div><span id="opsh-about-slot" className="about-slot"/><div style={{position:'relative',marginLeft:6}}><input className="topsearch" value={sq} onChange={e=>setSq(e.target.value)} onFocus={()=>sres.length&&setSopen(true)} onBlur={()=>setTimeout(()=>setSopen(false),160)} placeholder="Search tickets, KB, SOPs…" style={{width:"min(230px,19vw)",padding:'7px 11px',background:'var(--s3)',border:'1px solid var(--b1)',borderRadius:8,color:'var(--t1)',fontFamily:'var(--font)',fontSize:14,outline:'none'}}/>{sopen&&sq.trim().length>=2&&<div className="searchdd" style={{position:'absolute',left:0,top:36,width:330,maxHeight:380,overflowY:'auto',background:'var(--bg2)',border:'1px solid var(--b1)',borderRadius:12,boxShadow:'var(--shadowLg)',zIndex:1000}}>{sres.length?sres.map((r,i)=><div key={r.type+r.id+i} onMouseDown={()=>{setPg(r.page);setSopen(false);setSq('');}} style={{padding:'9px 13px',borderBottom:'1px solid var(--b1)',cursor:'pointer',display:'flex',alignItems:'center',gap:9}}><span style={{fontSize:11,fontWeight:700,textTransform:'uppercase',color:'var(--accent)',background:'var(--accentL)',padding:'2px 6px',borderRadius:5,minWidth:54,textAlign:'center'}}>{r.type}</span><div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.title}</div><div style={{fontSize:12,color:'var(--t4)'}}>{r.sub}</div></div></div>):<div style={{padding:'18px',textAlign:'center',color:'var(--t4)',fontSize:13}}>No matches</div>}</div>}</div></div>
+      <header className="top"><div className="top-l"><div className="iconbtn" onClick={()=>{setCol(c=>!c);setNavOpen(o=>!o);}}><I n="menu" s={19}/></div><div style={{fontSize:16,fontWeight:700}}>{TITLES[pg]}</div><span id="itops-about-slot" className="about-slot"/><div style={{position:'relative',marginLeft:6}}><input className="topsearch" value={sq} onChange={e=>setSq(e.target.value)} onFocus={()=>sres.length&&setSopen(true)} onBlur={()=>setTimeout(()=>setSopen(false),160)} placeholder="Search tickets, KB, SOPs…" style={{width:"min(230px,19vw)",padding:'7px 11px',background:'var(--s3)',border:'1px solid var(--b1)',borderRadius:8,color:'var(--t1)',fontFamily:'var(--font)',fontSize:14,outline:'none'}}/>{sopen&&sq.trim().length>=2&&<div className="searchdd" style={{position:'absolute',left:0,top:36,width:330,maxHeight:380,overflowY:'auto',background:'var(--bg2)',border:'1px solid var(--b1)',borderRadius:12,boxShadow:'var(--shadowLg)',zIndex:1000}}>{sres.length?sres.map((r,i)=><div key={r.type+r.id+i} onMouseDown={()=>{setPg(r.page);setSopen(false);setSq('');}} style={{padding:'9px 13px',borderBottom:'1px solid var(--b1)',cursor:'pointer',display:'flex',alignItems:'center',gap:9}}><span style={{fontSize:11,fontWeight:700,textTransform:'uppercase',color:'var(--accent)',background:'var(--accentL)',padding:'2px 6px',borderRadius:5,minWidth:54,textAlign:'center'}}>{r.type}</span><div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r.title}</div><div style={{fontSize:12,color:'var(--t4)'}}>{r.sub}</div></div></div>):<div style={{padding:'18px',textAlign:'center',color:'var(--t4)',fontSize:13}}>No matches</div>}</div>}</div></div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           <div style={{position:'relative'}}><div className="iconbtn" onClick={()=>{const o=!bellOpen;setBellOpen(o);if(o)loadNotifs();}}><span style={{fontSize:21,lineHeight:1}}>{navEmoji.tb_bell||EMO.tb_bell}</span>{unread>0&&<span style={{position:'absolute',top:-3,right:-3,background:'var(--red)',color:'#fff',fontSize:11,fontWeight:700,borderRadius:8,minWidth:15,height:15,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 3px'}}>{unread>9?'9+':unread}</span>}</div>{bellOpen&&<div style={{position:'absolute',right:0,top:38,width:320,maxHeight:400,overflowY:'auto',background:'var(--bg2)',border:'1px solid var(--b1)',borderRadius:12,boxShadow:'var(--shadowLg)',zIndex:1000}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'11px 14px',borderBottom:'1px solid var(--b1)',position:'sticky',top:0,background:'var(--bg2)'}}><span style={{fontSize:14,fontWeight:700}}>Notifications</span>{unread>0&&<span style={{fontSize:12,color:'var(--accent)',cursor:'pointer',fontWeight:600}} onClick={markAllNotifs}>Mark all read</span>}</div>{notifs.length?notifs.map(n=><div key={n.id} onClick={()=>openNotif(n)} style={{padding:'10px 14px',borderBottom:'1px solid var(--b1)',cursor:'pointer',background:n.is_read?'transparent':'var(--accentL)'}}><div style={{fontSize:14,fontWeight:600,marginBottom:2}}>{n.title}</div><div style={{fontSize:12.5,color:'var(--t3)',marginBottom:3}}>{n.body}</div><div style={{fontSize:11.5,color:'var(--t4)'}}>{mhDateTime(n.created_at||'')}</div></div>):<div style={{padding:'24px',textAlign:'center',color:'var(--t4)',fontSize:14}}>No notifications</div>}</div>}</div>
           <div onClick={()=>setPg('profile')} data-open-profile="1" title="My profile" style={{display:'flex',alignItems:'center',gap:7,cursor:'pointer',padding:'4px 8px',borderRadius:18,border:'1px solid var(--b1)'}}><div className="uav" style={{width:26,height:26,fontSize:12}}>{(user.display_name||'?').split(' ').map(w=>w[0]).slice(0,2).join('')}</div><span className="tb-uname" style={{fontSize:14,fontWeight:600,maxWidth:120,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{user.display_name}</span></div>
@@ -14297,7 +14297,7 @@ function App(){
         </div>
       </header>
       {helpOpen&&<div onClick={()=>setHelpOpen(false)} style={{position:'fixed',inset:0,background:'rgba(18,28,42,.45)',zIndex:9000}}>
-        <div onClick={e=>e.stopPropagation()} style={{position:'absolute',top:0,right:0,height:'100%',width:helpW,maxWidth:'100%',background:'var(--s1)',boxShadow:'-10px 0 36px rgba(0,0,0,.28)',display:'flex',flexDirection:'column',animation:'opshSlide .18s ease-out'}}><div onMouseDown={e=>{e.preventDefault();const sx=e.clientX,w0=helpW;const mv=ev=>{const nw=Math.min(Math.max(w0+(sx-ev.clientX),320),Math.min(window.innerWidth-40,1000));setHelpW(nw);};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);}} title="Drag to resize" style={{position:'absolute',left:0,top:0,bottom:0,width:6,cursor:'ew-resize',zIndex:3}}/>
+        <div onClick={e=>e.stopPropagation()} style={{position:'absolute',top:0,right:0,height:'100%',width:helpW,maxWidth:'100%',background:'var(--s1)',boxShadow:'-10px 0 36px rgba(0,0,0,.28)',display:'flex',flexDirection:'column',animation:'itopsSlide .18s ease-out'}}><div onMouseDown={e=>{e.preventDefault();const sx=e.clientX,w0=helpW;const mv=ev=>{const nw=Math.min(Math.max(w0+(sx-ev.clientX),320),Math.min(window.innerWidth-40,1000));setHelpW(nw);};const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);}} title="Drag to resize" style={{position:'absolute',left:0,top:0,bottom:0,width:6,cursor:'ew-resize',zIndex:3}}/>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 12px',borderBottom:'1px solid var(--b1)',flex:'0 0 auto'}}>
             <div style={{fontWeight:700,fontSize:15,display:'flex',alignItems:'center',gap:7}}><span style={{fontWeight:700}}>?</span> Help Center</div>
             <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}>
@@ -14358,8 +14358,8 @@ function App(){
         {pgAllowed&&pg==='security_assessment'&&<SecAssessScreen toast={toast} setPg={setPg}/>}
         {pgAllowed&&pg==='risk_users'&&<RiskUsersScreen toast={toast} setPg={setPg} setFocus={setFocus}/>}
         {pg==='license_manager'&&lookups&&lookups.license_manager&&<LicenseManagerScreen toast={toast}/>}
-        {pg==='updates'&&opshIsSuper()&&<UpdatesScreen toast={toast}/>}
-        {pg==='data'&&opshIsSuper()&&<DataScreen toast={toast}/>}
+        {pg==='updates'&&itopsIsSuper()&&<UpdatesScreen toast={toast}/>}
+        {pg==='data'&&itopsIsSuper()&&<DataScreen toast={toast}/>}
         {pgAllowed&&pg==='recycle'&&<RecycleScreen toast={toast}/>}
         {pg==='profile'&&user&&<ProfileScreen user={user} isAdm={isAdm} toast={toast} onLogout={doLogout} theme={theme} setTheme={setTheme} reloadMe={reloadMe}/>}
         {pgAllowed&&pg==='calendar'&&<Calendar toast={toast} setPg={setPg} setFocus={setFocus} focus={focus} lookups={lookups} user={user}/>}
@@ -14369,7 +14369,7 @@ function App(){
         {pgAllowed&&pg==='improvements'&&<Improvements user={user} toast={toast} focus={focus} setFocus={setFocus}/>}
         {pgAllowed&&pg==='reports'&&<Reports lookups={lookups} toast={toast} setPg={setPg} setFocus={setFocus}/>}
         {pgAllowed&&pg==='settings'&&<Connection user={user} lookups={lookups} toast={toast} reloadLookups={loadLookups}/>}
-        <div id="opsh-pg-edit" className="pg-edit"/>
+        <div id="itops-pg-edit" className="pg-edit"/>
       </div>
     </div>
     {capOpen&&<CaptureModal toast={toast} onClose={()=>setCapOpen(false)}/>}
@@ -14386,17 +14386,17 @@ function Login({onLogin,onMfaVerify,theme,setTheme,toast,apiCfg,setApiCfg,baseIn
   const [mfaToken,setMfaToken]=useState(null),[mfaCode,setMfaCode]=useState(''),[useBackup,setUseBackup]=useState(false);
   /* BT98: no flicker — the last branding seen on this browser is shown at once, and nothing (not the default mark) is
      shown until the branding is known; a new logo appears only once it has loaded */
-  const _bc=(()=>{ try{ const c=JSON.parse(localStorage.getItem('opsh_brand_v1')||'null'); return c&&typeof c==='object'?c:null; }catch(_){ return null; } })();
-  const [brand,setBrand]=useState(_bc?{app_name:_bc.app_name||'OpsHub',logo:_bc.logo||'',tagline:_bc.tagline||'',signin_default:_bc.signin_default||'local'}:{app_name:'OpsHub',logo:'',tagline:'',signin_default:'local'});
+  const _bc=(()=>{ try{ const c=JSON.parse(localStorage.getItem('itops_brand_v1')||'null'); return c&&typeof c==='object'?c:null; }catch(_){ return null; } })();
+  const [brand,setBrand]=useState(_bc?{app_name:_bc.app_name||'ITOps',logo:_bc.logo||'',tagline:_bc.tagline||'',signin_default:_bc.signin_default||'local'}:{app_name:'ITOps',logo:'',tagline:'',signin_default:'local'});
   /* BT103: Microsoft 365 first (Branding → Sign-in page): the email and password fields stay hidden until "Sign in with a local account" */
   const [showLocal,setShowLocal]=useState(false);
   const [o365Seen,setO365Seen]=useState(()=>!!(_bc&&_bc.o365));
-  useEffect(()=>{ fetch(API_BASE+'/health').then(r=>r.json()).then(j=>{ const v=!!(j&&j.o365); setO365Seen(v); try{ const c=JSON.parse(localStorage.getItem('opsh_brand_v1')||'{}')||{}; c.o365=v; localStorage.setItem('opsh_brand_v1',JSON.stringify(c)); }catch(_){} }).catch(()=>{}); },[]);
+  useEffect(()=>{ fetch(API_BASE+'/health').then(r=>r.json()).then(j=>{ const v=!!(j&&j.o365); setO365Seen(v); try{ const c=JSON.parse(localStorage.getItem('itops_brand_v1')||'{}')||{}; c.o365=v; localStorage.setItem('itops_brand_v1',JSON.stringify(c)); }catch(_){} }).catch(()=>{}); },[]);
   const [brandReady,setBrandReady]=useState(!!_bc); const [logoOk,setLogoOk]=useState(false);
   useEffect(()=>{ const t=setTimeout(()=>setBrandReady(true),2500); return ()=>clearTimeout(t); },[]);
   const [tou,setTou]=useState(null);   /* BT97: the Terms of Use, read from the sign-in page (a page of its own, not a pop-up) */
   const [instOn,setInstOn]=useState(false); const [instOpen,setInstOpen]=useState(false);
-  useEffect(()=>{ api('GET','/branding').then(b=>{ if(b){ setInstOn(!!(b.install&&b.install.enabled)); opshSetTz(b.timezone); const nb={app_name:opshSetAppName(b.app_name),logo:b.logo||'',tagline:b.tagline||'',signin_default:b.signin_default||'local'}; setBrand(nb); try{ const c=JSON.parse(localStorage.getItem('opsh_brand_v1')||'{}')||{}; localStorage.setItem('opsh_brand_v1',JSON.stringify(Object.assign(c,nb))); }catch(_){} } }).catch(()=>{}).finally(()=>setBrandReady(true)); },[]);
+  useEffect(()=>{ api('GET','/branding').then(b=>{ if(b){ setInstOn(!!(b.install&&b.install.enabled)); itopsSetTz(b.timezone); const nb={app_name:itopsSetAppName(b.app_name),logo:b.logo||'',tagline:b.tagline||'',signin_default:b.signin_default||'local'}; setBrand(nb); try{ const c=JSON.parse(localStorage.getItem('itops_brand_v1')||'{}')||{}; localStorage.setItem('itops_brand_v1',JSON.stringify(Object.assign(c,nb))); }catch(_){} } }).catch(()=>{}).finally(()=>setBrandReady(true)); },[]);
   const msFirst=brand.signin_default==='microsoft'&&!inTeams&&(o365On||o365Seen)&&!!onO365; const localVisible=!msFirst||showLocal;
   const submit=async()=>{ setErr(''); if(!email||!pw){setErr('Enter email and password.');return;} setBusy(true);
     try{ const r=await onLogin(email,pw); if(r&&r.mfa_required){ setMfaToken(r.mfa_token); } }catch(e){ setErr(e.message); } setBusy(false); };
@@ -14433,13 +14433,13 @@ function Login({onLogin,onMfaVerify,theme,setTheme,toast,apiCfg,setApiCfg,baseIn
       {!mfaToken&&localVisible&&<button className="btn btn-p" data-login-submit="1" style={{width:'100%',justifyContent:'center',padding:'11px'}} onClick={submit} disabled={busy}>{busy?'Signing in…':'Sign In'}</button>}
       {!mfaToken&&o365On&&!msFirst&&<button className="btn" style={{width:'100%',justifyContent:'center',padding:'10px',marginTop:8,background:'#fff',border:'1px solid #DDD9D3',color:'#2B2926',fontWeight:600}} onClick={onO365}><span style={{display:'inline-grid',gridTemplateColumns:'9px 9px',gap:'1.5px',marginRight:8}}><span style={{width:9,height:9,background:'#F25022'}}></span><span style={{width:9,height:9,background:'#7FBA00'}}></span><span style={{width:9,height:9,background:'#00A4EF'}}></span><span style={{width:9,height:9,background:'#FFB900'}}></span></span>Sign in with Microsoft 365</button>}
 
-      {instOn&&!instOpen&&!opshPlatform().standalone&&<div style={{textAlign:'center',marginTop:8,fontSize:13}}><a data-login-install="1" onClick={()=>setInstOpen(!instOpen)} style={{color:'var(--accent)',cursor:'pointer'}}>⤓ Install {brand.app_name||appName()} on this device</a></div>}
+      {instOn&&!instOpen&&!itopsPlatform().standalone&&<div style={{textAlign:'center',marginTop:8,fontSize:13}}><a data-login-install="1" onClick={()=>setInstOpen(!instOpen)} style={{color:'var(--accent)',cursor:'pointer'}}>⤓ Install {brand.app_name||appName()} on this device</a></div>}
       {instOn&&instOpen&&<div style={{marginTop:10,padding:'14px 16px',border:'1px solid var(--b1)',borderRadius:10,background:'var(--s3)',textAlign:'center'}} data-login-install-card="1"><AppInstallCard name={brand.app_name} enabled={true} centered/>
         <div style={{marginTop:8,fontSize:12.5}}><a data-login-install-close="1" onClick={()=>setInstOpen(false)} style={{color:'var(--accent)',cursor:'pointer'}}>Not now</a></div></div>}
           </div>
     {/* BT156: the Terms line sits at the foot, above the owner line; no build line, Help Center link or theme button here */}
-    {!mfaToken&&<div data-login-tou="1" style={{marginTop:16,fontSize:12,color:'var(--t3)',textAlign:'center'}}>By signing in, you agree to the {OPSH_PRODUCT} <a data-login-tou-link="1" onClick={openTou} style={{color:'var(--accent)',cursor:'pointer'}}>Terms of Use</a></div>}
-    <div style={{marginTop:4,fontSize:11.5,color:'var(--t4)',textAlign:'center'}} data-login-owner="1">Powered by {OPSH_PRODUCT} · © {OPSH_YEARS} {OPSH_OWNER}. All rights reserved.</div>
+    {!mfaToken&&<div data-login-tou="1" style={{marginTop:16,fontSize:12,color:'var(--t3)',textAlign:'center'}}>By signing in, you agree to the {ITOPS_PRODUCT} <a data-login-tou-link="1" onClick={openTou} style={{color:'var(--accent)',cursor:'pointer'}}>Terms of Use</a></div>}
+    <div style={{marginTop:4,fontSize:11.5,color:'var(--t4)',textAlign:'center'}} data-login-owner="1">Powered by {ITOPS_PRODUCT} · © {ITOPS_YEARS} {ITOPS_OWNER}. All rights reserved.</div>
   </div>;
 }
 
@@ -14482,7 +14482,7 @@ function SimpleList({res,cols,toast}){
 }
 
 /* File types a ticket accepts — keep in sync with api/lib/Uploads.php */
-const OPSH_TICKET_ACCEPT='.png,.jpg,.jpeg,.gif,.webp,.bmp,.heic,.mp4,.mov,.webm,.mp3,.m4a,.wav,.ogg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.log,.xml,.json';
+const ITOPS_TICKET_ACCEPT='.png,.jpg,.jpeg,.gif,.webp,.bmp,.heic,.mp4,.mov,.webm,.mp3,.m4a,.wav,.ogg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.log,.xml,.json';
 /* ====== TICKETS (full CRUD, live) ====== */
 /* ── BT76 · Phase 2 of "Tickets, Cases & Projects": cases ─────────────────────────────────────────────────────────────
  * A case starts from a ticket (its main ticket) and can hold more tickets (one case per ticket). Its work is split into
@@ -14676,7 +14676,7 @@ function CaseTemplates({user,toast,lookups}){
           show_requester:k.show_requester,public_title:k.public_title,at_time:k.at_time,minutes:+k.minutes||60,invite_requester:k.invite_requester,attendees:k.attendees}))};
       if(ed.id) await api('PUT','/cases/templates/'+ed.id,b); else await api('POST','/cases/templates',b);
       toast('Template saved','ok'); setEd(null); load(); }catch(e){ toast(e.message); } setBusy(false); };
-  const del=async t=>{ if(!await opshConfirm('Delete the template "'+t.name+'"? Cases made from it keep their tasks.'))return; try{ await api('DELETE','/cases/templates/'+t.id); toast('Template deleted','ok'); load(); }catch(e){ toast(e.message); } };
+  const del=async t=>{ if(!await itopsConfirm('Delete the template "'+t.name+'"? Cases made from it keep their tasks.'))return; try{ await api('DELETE','/cases/templates/'+t.id); toast('Template deleted','ok'); load(); }catch(e){ toast(e.message); } };
   if(ed) return <div className="card" data-cs-tpl-editor="1">
     <div style={{fontSize:16,fontWeight:700,marginBottom:10}}>{ed.id?'Edit template':'New template'}</div>
     <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:10}}>
@@ -14841,7 +14841,7 @@ function PriorityDefsCard({toast}){
         <div className="fld" style={{marginBottom:0}}><label>Examples (one per line, up to 8)</label><textarea data-prio-examples={p.priority} value={p.examples} onChange={e=>upd(p.priority,'examples',e.target.value)} style={{minHeight:70}}/></div>
       </div>
     </div>)}
-    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}><button className="btn btn-p" data-prio-save="1" disabled={busy} onClick={()=>save(false)}>Save definitions</button><button className="btn btn-g" disabled={busy} onClick={async()=>{ if(await opshConfirm('Go back to the standard definitions and examples?')) save(true); }}>Back to the standard words</button></div>
+    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}><button className="btn btn-p" data-prio-save="1" disabled={busy} onClick={()=>save(false)}>Save definitions</button><button className="btn btn-g" disabled={busy} onClick={async()=>{ if(await itopsConfirm('Go back to the standard definitions and examples?')) save(true); }}>Back to the standard words</button></div>
   </div>;
 }
 /* BT81: incidents' own priority targets, and the satisfaction question — Settings → SLA & Hours */
@@ -14917,14 +14917,14 @@ function TicketRelated({view,toast,canEdit,onChanged,openTicket}){
       {canEdit&&d.can_edit&&!view.merged_into_id&&<button className="btn btn-g btn-sm" data-rel-link-open="1" onClick={()=>setMode(m=>m==='link'?'':'link')}>{g?'Link more…':'Link related tickets…'}</button>}
       {g&&canEdit&&d.can_edit&&<button className="btn btn-g btn-sm" data-rel-reply-open="1" onClick={()=>setMode(m=>m==='reply'?'':'reply')}>Reply to all linked…</button>}
       {g&&canEdit&&d.can_edit&&<button className="btn btn-g btn-sm" data-rel-resolve-open="1" onClick={()=>setMode(m=>m==='resolve'?'':'resolve')}>Resolve all linked…</button>}
-      {g&&canEdit&&d.can_edit&&<button className="btn btn-g btn-sm" data-rel-rename="1" title="Name of the group" onClick={async()=>{ const t=await opshPrompt('Name of the related tickets (what they are about):',g.title); if(t&&t.trim()) post({action:'title',title:t.trim()},()=>'Renamed'); }}><I n="edit" s={13}/></button>}
+      {g&&canEdit&&d.can_edit&&<button className="btn btn-g btn-sm" data-rel-rename="1" title="Name of the group" onClick={async()=>{ const t=await itopsPrompt('Name of the related tickets (what they are about):',g.title); if(t&&t.trim()) post({action:'title',title:t.trim()},()=>'Renamed'); }}><I n="edit" s={13}/></button>}
     </div>
     {!g&&mode!=='link'&&<div style={{fontSize:12.5,color:'var(--t4)',marginTop:4}}>Several people reporting the same thing? Link their tickets to answer and resolve them together.</div>}
     {g&&<div data-rel-list="1">{(d.tickets||[]).map(t=><div key={t.id} data-rel-row={t.ticket_number} style={{display:'flex',gap:8,alignItems:'baseline',padding:'5px 0',borderTop:'1px solid var(--b1)',fontSize:13.5}}>
       {+t.id===+view.id?<b style={{fontFamily:'monospace'}}>{t.ticket_number}</b>:<a href="#" onClick={e=>{e.preventDefault(); openTicket&&openTicket(t.id);}} style={{fontFamily:'monospace',fontWeight:600,color:'var(--accent)',textDecoration:'none'}}>{t.ticket_number}</a>}
       <span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.subject}</span>
       <span style={{fontSize:12,color:'var(--t4)',whiteSpace:'nowrap'}}>{t.requester_name||'—'} · {String(t.status).replace('_',' ')}{t.major?' · major incident':''}</span>
-      {canEdit&&d.can_edit&&<span className="iconbtn" data-rel-unlink={t.ticket_number} title="Take it out of the group" style={{display:'inline-flex',width:22,height:22}} onClick={async()=>{ if(await opshConfirm('Take '+t.ticket_number+' out of the related tickets?')) post({action:'unlink',ticket_id:t.id},r=>r.unlinked+' taken out'); }}><I n="x" s={13}/></span>}
+      {canEdit&&d.can_edit&&<span className="iconbtn" data-rel-unlink={t.ticket_number} title="Take it out of the group" style={{display:'inline-flex',width:22,height:22}} onClick={async()=>{ if(await itopsConfirm('Take '+t.ticket_number+' out of the related tickets?')) post({action:'unlink',ticket_id:t.id},r=>r.unlinked+' taken out'); }}><I n="x" s={13}/></span>}
     </div>)}</div>}
     {mode==='link'&&<div data-rel-link="1" style={{marginTop:10}}>
       {!g&&<div className="fld" style={{marginBottom:8}}><label>What are they about? (optional)</label><input value={title} onChange={e=>setTitle(e.target.value)} placeholder={view.subject||'e.g. Printer on the 2nd floor offline'} maxLength={200}/></div>}
@@ -14939,7 +14939,7 @@ function TicketRelated({view,toast,canEdit,onChanged,openTicket}){
       <div style={{fontSize:12.5,color:'var(--t4)',marginBottom:6}}>{mode==='reply'?'One public reply on every open linked ticket you work on: each requester gets the usual reply email.':'Every open linked ticket you work on is resolved with this note: each requester gets the usual Resolved email. Major incidents and tickets that close with their case are left alone.'} Open: {(d.tickets||[]).filter(t=>open.includes(t.status)).length} of {(d.tickets||[]).length}.</div>
       <textarea data-rel-text="1" value={txt} onChange={e=>setTxt(e.target.value)} placeholder={mode==='reply'?'What everyone should know':'What was done, in plain words'} style={{width:'100%',minHeight:80}}/>
       <div style={{display:'flex',gap:8,marginTop:8}}>
-        <button className="btn btn-p btn-sm" data-rel-go={mode} disabled={!txt.trim()||busy} onClick={async()=>{ if(mode==='resolve'&&!await opshConfirm('Resolve every open linked ticket you work on with this note?'))return; post(mode==='reply'?{action:'reply',message:txt.trim()}:{action:'resolve',note:txt.trim()}, r=>mode==='reply'?('Replied on '+r.tickets.length+' ticket'+(r.tickets.length===1?'':'s')+' · '+r.emails+' email'+(r.emails===1?'':'s')+'.'+skippedTxt(r)):('Resolved '+r.tickets.length+' ticket'+(r.tickets.length===1?'':'s')+'.'+skippedTxt(r))); }}>{busy?'Sending…':(mode==='reply'?'Send to all':'Resolve all')}</button>
+        <button className="btn btn-p btn-sm" data-rel-go={mode} disabled={!txt.trim()||busy} onClick={async()=>{ if(mode==='resolve'&&!await itopsConfirm('Resolve every open linked ticket you work on with this note?'))return; post(mode==='reply'?{action:'reply',message:txt.trim()}:{action:'resolve',note:txt.trim()}, r=>mode==='reply'?('Replied on '+r.tickets.length+' ticket'+(r.tickets.length===1?'':'s')+' · '+r.emails+' email'+(r.emails===1?'':'s')+'.'+skippedTxt(r)):('Resolved '+r.tickets.length+' ticket'+(r.tickets.length===1?'':'s')+'.'+skippedTxt(r))); }}>{busy?'Sending…':(mode==='reply'?'Send to all':'Resolve all')}</button>
         <button className="btn btn-g btn-sm" onClick={()=>setMode('')}>Cancel</button></div>
     </div>}
   </div>;
@@ -15186,12 +15186,12 @@ function AboutOwnership({toast,setPg}){
     {d.full&&<div className="card" style={{padding:'16px 22px'}} data-about-record="1">
       <div style={{fontSize:15,fontWeight:700,marginBottom:6}}>License record</div>
       {d.license_notice&&<div style={{fontSize:13.5,background:'var(--amberL)',border:'1px solid var(--amber)',borderRadius:8,padding:'8px 10px',marginBottom:10}} data-about-licnotice="1">{d.license_notice}</div>}
-      {!L&&<div style={{fontSize:14,color:'var(--t3)'}} data-about-norecord="1">No license record installed. The owner delivers it with each installation (opsh-license.php in the installation folder); it cannot be entered in the app.</div>}
+      {!L&&<div style={{fontSize:14,color:'var(--t3)'}} data-about-norecord="1">No license record installed. The owner delivers it with each installation (itops-license.php in the installation folder); it cannot be entered in the app.</div>}
       {L&&L.error&&<div style={{fontSize:14,color:'var(--red)'}}>{L.error}</div>}
       {L&&!L.error&&<React.Fragment>
         {L.other_installation&&<div style={{fontSize:13.5,color:'var(--red)',marginBottom:6}} data-about-otherinst="1">This license record names another installation ({L.install_id}).</div>}
         {L.expired&&<div style={{fontSize:13.5,color:'var(--red)',marginBottom:6}} data-about-expired="1">The term of this license ended on {fmtD(L.term_end)}.</div>}
-        {row('Signature',{valid:'Genuine: signed by '+OPSH_OWNER+' and unchanged',invalid:'Not valid: the file was changed or damaged',unsigned:'Not signed',unknown_key:'Signed with a key that is not '+OPSH_OWNER+'’s',unavailable:'Cannot be checked on this server (PHP sodium extension missing)',unchecked:'Signed (this build does not check signatures yet)'}[L.signed]||'—',{'data-about-signed':L.signed||''})}
+        {row('Signature',{valid:'Genuine: signed by '+ITOPS_OWNER+' and unchanged',invalid:'Not valid: the file was changed or damaged',unsigned:'Not signed',unknown_key:'Signed with a key that is not '+ITOPS_OWNER+'’s',unavailable:'Cannot be checked on this server (PHP sodium extension missing)',unchecked:'Signed (this build does not check signatures yet)'}[L.signed]||'—',{'data-about-signed':L.signed||''})}
         {L.serial?row('License number',L.serial):null}
         {row('Agreement',L.agreement||'—',{'data-about-agreement':'1'})}
         {L.kind?row('License',L.kind):null}
@@ -15397,8 +15397,8 @@ function CaseDetail({id,user,toast,lookups,onBack}){
   const [upd,setUpd]=React.useState({body:'',public:false}); const [fin,setFin]=React.useState(null); const [why,setWhy]=React.useState(null); const [prev,setPrev]=React.useState(false);
   const [tpls,setTpls]=React.useState(null); const [ap,setAp]=React.useState(null); const [sv,setSv]=React.useState(null);
   const [pm,setPm]=React.useState(null); const [np,setNp]=React.useState(null); const [ep,setEp]=React.useState(null); const [bq,setBq]=React.useState(null);   /* BT80: promote, phases, budget */
-  const [tv,setTv]=React.useState(()=>{ try{ return localStorage.getItem('opsh_case_view')||'list'; }catch(_){ return 'list'; } });   /* BT79: list or timeline */
-  React.useEffect(()=>{ try{ localStorage.setItem('opsh_case_view',tv); }catch(_){} },[tv]);   /* BT78: apply a template / save as a template */
+  const [tv,setTv]=React.useState(()=>{ try{ return localStorage.getItem('itops_case_view')||'list'; }catch(_){ return 'list'; } });   /* BT79: list or timeline */
+  React.useEffect(()=>{ try{ localStorage.setItem('itops_case_view',tv); }catch(_){} },[tv]);   /* BT78: apply a template / save as a template */
   React.useEffect(()=>{ api('GET','/cases/templates').then(setTpls).catch(()=>setTpls(null)); },[]);
   const load=React.useCallback(()=>api('GET','/cases/'+id).then(setD).catch(e=>setD({err:e.message})),[id]);
   React.useEffect(()=>{ load(); },[load]);
@@ -15425,7 +15425,7 @@ function CaseDetail({id,user,toast,lookups,onBack}){
     if(M&&st!=='cancelled'&&st!=='done') out.push(<button key="c" className="btn btn-g btn-sm" disabled={busy} onClick={()=>setWhy({t,kind:'cancelled'})}>Cancel</button>);
     if(M) out.push(<span key="e" className="iconbtn" title="Edit task" style={{display:'inline-flex',width:28,height:28}} onClick={()=>setNt({id:t.id,title:t.title,kind:t.kind,assignee_id:t.assignee_id?String(t.assignee_id):'',due_date:t.due_date||'',start_date:t.start_date||'',depends_on:t.depends_on?String(t.depends_on):'',show_requester:!!+t.show_requester,public_title:t.public_title||'',
       start_at:t.start_at?String(t.start_at).slice(0,16).replace(' ','T'):'',minutes:String(t.minutes||60),attendees:(()=>{ try{ return JSON.parse(t.attendees||'[]'); }catch(_){ return []; } })(),invite_requester:!!+t.invite_requester,phase_id:t.phase_id?String(t.phase_id):''})}><I n="edit" s={15}/></span>);
-    if(M) out.push(<span key="x" className="iconbtn" title="Delete task" style={{display:'inline-flex',width:28,height:28}} onClick={async()=>{ if(await opshConfirm('Delete the task "'+t.title+'"?')) run(()=>api('DELETE','/cases/'+id+'/tasks/'+t.id),'Task deleted'); }}><I n="trash" s={15} c="var(--red)"/></span>);
+    if(M) out.push(<span key="x" className="iconbtn" title="Delete task" style={{display:'inline-flex',width:28,height:28}} onClick={async()=>{ if(await itopsConfirm('Delete the task "'+t.title+'"?')) run(()=>api('DELETE','/cases/'+id+'/tasks/'+t.id),'Task deleted'); }}><I n="trash" s={15} c="var(--red)"/></span>);
     return out; };
   const saveTask=async()=>{ const b={title:nt.title,due_date:nt.due_date,depends_on:nt.depends_on?+nt.depends_on:0,public_title:nt.public_title};
     if(PJ&&PH.length) b.phase_id=nt.phase_id?+nt.phase_id:0;
@@ -15531,7 +15531,7 @@ function CaseDetail({id,user,toast,lookups,onBack}){
             <span className="iconbtn" title="Move up" data-cs-phase-up={p.name} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:26,height:26,opacity:i?1:.3}} onClick={()=>i&&run(()=>api('PUT','/cases/'+id+'/phases/'+p.id,{move:'up'}))}>↑</span>
             <span className="iconbtn" title="Move down" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:26,height:26,opacity:i<PH.length-1?1:.3}} onClick={()=>i<PH.length-1&&run(()=>api('PUT','/cases/'+id+'/phases/'+p.id,{move:'down'}))}>↓</span>
             <span className="iconbtn" title="Edit phase" data-cs-phase-edit={p.name} style={{display:'inline-flex',width:26,height:26}} onClick={()=>setNp({id:p.id,name:p.name,milestone_date:p.milestone_date||''})}><I n="edit" s={14}/></span>
-            <span className="iconbtn" title="Delete phase" style={{display:'inline-flex',width:26,height:26}} onClick={async()=>{ if(await opshConfirm('Delete the phase "'+p.name+'"? Its '+p.tasks+' task(s) stay in the project, without a phase.')) run(()=>api('DELETE','/cases/'+id+'/phases/'+p.id),'Phase deleted'); }}><I n="trash" s={14} c="var(--red)"/></span></span>}</td></tr>; })}
+            <span className="iconbtn" title="Delete phase" style={{display:'inline-flex',width:26,height:26}} onClick={async()=>{ if(await itopsConfirm('Delete the phase "'+p.name+'"? Its '+p.tasks+' task(s) stay in the project, without a phase.')) run(()=>api('DELETE','/cases/'+id+'/phases/'+p.id),'Phase deleted'); }}><I n="trash" s={14} c="var(--red)"/></span></span>}</td></tr>; })}
       </tbody></table>:<div style={{fontSize:13.5,color:'var(--t3)'}}>No phases yet. Split the project into phases (for example Plan, Build, Roll out, Close), each with a milestone date; then give each task its phase.</div>}
     </div>}
 
@@ -15593,7 +15593,7 @@ function CaseDetail({id,user,toast,lookups,onBack}){
           <button className="btn btn-p btn-sm" data-cs-budget-link={l.name} disabled={busy} onClick={async()=>{ const ok=await run(()=>api('POST','/cases/'+id+'/budget',{line_id:l.id}),'Budget line linked'); if(ok) setBq(null); }}>Link</button></div>)}</div></div>}
       {d.budget.lines.length?<table className="tbl"><thead><tr><th>Budget line</th><th>Year</th><th>Planned</th><th></th></tr></thead><tbody>
         {d.budget.lines.map(l=><tr key={l.id} data-cs-budget-line={l.name}><td><a href="#budget" style={{color:'var(--accent)',fontWeight:600,textDecoration:'none'}}>{l.name}</a>{l.tower&&<span style={{fontSize:12,color:'var(--t4)'}}> · {l.tower}</span>}</td><td style={{fontSize:13}}>FY{l.fy}</td><td style={{fontSize:13}}>{csMoney(l.amount)}</td>
-          <td>{d.budget.can_link&&open&&<button className="btn btn-g btn-sm" onClick={async()=>{ if(await opshConfirm('Unlink "'+l.name+'" from '+c.case_number+'? The line stays in the IT Budget.')) run(()=>api('DELETE','/cases/'+id+'/budget/'+l.id),'Unlinked'); }}>Unlink</button>}</td></tr>)}
+          <td>{d.budget.can_link&&open&&<button className="btn btn-g btn-sm" onClick={async()=>{ if(await itopsConfirm('Unlink "'+l.name+'" from '+c.case_number+'? The line stays in the IT Budget.')) run(()=>api('DELETE','/cases/'+id+'/budget/'+l.id),'Unlinked'); }}>Unlink</button>}</td></tr>)}
       </tbody></table>:<div style={{fontSize:13.5,color:'var(--t3)'}}>No budget lines yet. Link the IT Budget lines that pay for this project to see its planned cost here.</div>}
     </div>}
 
@@ -15610,7 +15610,7 @@ function CaseDetail({id,user,toast,lookups,onBack}){
           <td><a href={'#tickets/'+k.id} style={{fontFamily:'monospace',fontSize:12,fontWeight:600}}>{k.ticket_number}</a>{+k.case_main===1&&<span className="badge bb" style={{marginLeft:6}}>main</span>}</td><td>{k.subject}</td>
           <td style={{fontSize:13}}>{k.contact_name||k.contact_email||k.requester_name||'—'}</td><td><span className={'badge '+(BADGE[k.status]||'bb')}>{(k.status||'').replace('_',' ')}</span></td>
           <td style={{fontSize:13}}>{M&&open&&+k.case_main!==1?<Sel value={k.case_close_mode||'with'} onChange={v=>run(()=>api('PUT','/cases/'+id+'/tickets/'+k.id,{close_mode:v}),'Saved')} options={[{v:'with',l:'with the case'},{v:'own',l:'on its own'}]} style={{minWidth:150}}/>:(k.case_close_mode==='own'?'on its own':'with the case')}</td>
-          <td>{M&&open&&+k.case_main!==1&&<button className="btn btn-g btn-sm" onClick={async()=>{ if(await opshConfirm('Unlink '+k.ticket_number+' from '+c.case_number+'? It carries on as a regular ticket.')) run(()=>api('DELETE','/cases/'+id+'/tickets/'+k.id),'Unlinked'); }}>Unlink</button>}</td></tr>)}
+          <td>{M&&open&&+k.case_main!==1&&<button className="btn btn-g btn-sm" onClick={async()=>{ if(await itopsConfirm('Unlink '+k.ticket_number+' from '+c.case_number+'? It carries on as a regular ticket.')) run(()=>api('DELETE','/cases/'+id+'/tickets/'+k.id),'Unlinked'); }}>Unlink</button>}</td></tr>)}
       </tbody></table>
     </div>
 
@@ -15659,12 +15659,12 @@ function Tickets({lookups,user,toast,focus,setFocus}){
     catch(e){ toast(t.ticket_number+': '+e.message); }
     setIbusy(b=>{ const n={...b}; delete n[t.id]; return n; }); quiet(); };
   const runBulk=async(patch,label)=>{ const ids=pick.slice(); if(!ids.length)return;
-    if(!await opshConfirm(label+' for '+ids.length+' ticket'+(ids.length>1?'s':'')+'?'))return;
+    if(!await itopsConfirm(label+' for '+ids.length+' ticket'+(ids.length>1?'s':'')+'?'))return;
     setBulk({done:0,total:ids.length}); const fails=[];
     for(let i=0;i<ids.length;i++){ const t=(rows||[]).find(x=>x.id===ids[i]); try{ await api('PUT','/tickets/'+ids[i],patch); }catch(e){ fails.push((t?t.ticket_number:'#'+ids[i])+': '+e.message); } setBulk({done:i+1,total:ids.length}); }
     setBulk(null); setPick([]); await quiet();
     toast(fails.length?('Updated '+(ids.length-fails.length)+' of '+ids.length+' — '+fails.slice(0,2).join('; ')):('Updated '+ids.length+' ticket'+(ids.length>1?'s':'')),fails.length?undefined:'ok'); };
-  const tCan=(a)=>!!user&&opshCanFrom(user.role,user.role_permissions||{},'tickets',a);
+  const tCan=(a)=>!!user&&itopsCanFrom(user.role,user.role_permissions||{},'tickets',a);
   const cats=(lookups&&lookups.ticket_categories)||[];
   const parents=cats.filter(c=>!c.parent_id);
   const children=pid=>cats.filter(c=>c.parent_id===pid);
@@ -15694,23 +15694,23 @@ function Tickets({lookups,user,toast,focus,setFocus}){
   const [atts,setAtts]=React.useState([]);
   const [upbusy,setUpbusy]=React.useState(false); const [fint,setFint]=React.useState(false);
   /* BT92: the support team for this ticket — Tickets · All, or its owner or backup — writes internal notes and internal files */
-  const meId=+((window.__opshUser&&window.__opshUser.id)||0);
+  const meId=+((window.__itopsUser&&window.__itopsUser.id)||0);
   const canInt=tCan('all')||!!(view&&meId&&(+view.assignee_id===meId||+view.backup_id===meId));
   const loadAtts=React.useCallback(()=>{ if(view&&view.id) api('GET','/tickets/'+view.id+'/attachments').then(r=>setAtts(r.data||[])).catch(()=>setAtts([])); },[view]);
   React.useEffect(()=>{ if(view&&view.id) loadAtts(); else setAtts([]); },[view,loadAtts]);
   const uploadFile=async(file)=>{ if(!file)return; setUpbusy(true);
     try{ const fd=new FormData(); fd.append('file',file); if(fint&&canInt) fd.append('is_internal','1');
-      const res=await fetch(API_BASE+'/tickets/'+view.id+'/attachments',{method:'POST',headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin',body:fd});
+      const res=await fetch(API_BASE+'/tickets/'+view.id+'/attachments',{method:'POST',headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin',body:fd});
       if(!res.ok){ let m='Upload failed'; try{m=(JSON.parse(await res.text()).error||{}).message||m}catch(_){} throw new Error(m); }
       toast(fint&&canInt?'Uploaded (internal)':'Uploaded','ok'); setFint(false); loadAtts();
     }catch(e){ toast(e.message); } setUpbusy(false);
   };
   const downloadAtt=async(a)=>{ try{
-      const res=await fetch(API_BASE+'/tickets/'+view.id+'/attachments?download='+a.id,{headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin'});
+      const res=await fetch(API_BASE+'/tickets/'+view.id+'/attachments?download='+a.id,{headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin'});
       if(!res.ok)throw new Error('Download failed'); const blob=await res.blob(); const url=URL.createObjectURL(blob);
       const el=document.createElement('a'); el.href=url; el.download=a.file_name; el.click(); setTimeout((h=>()=>URL.revokeObjectURL(h))(url),4000);
     }catch(e){ toast(e.message); } };
-  const delAtt=async(a)=>{ if(!await opshConfirm('Delete '+a.file_name+'?'))return; try{ await api('DELETE','/tickets/'+view.id+'/attachments?att='+a.id); toast('Removed','ok'); loadAtts(); }catch(e){ toast(e.message); } };
+  const delAtt=async(a)=>{ if(!await itopsConfirm('Delete '+a.file_name+'?'))return; try{ await api('DELETE','/tickets/'+view.id+'/attachments?att='+a.id); toast('Removed','ok'); loadAtts(); }catch(e){ toast(e.message); } };
   React.useEffect(()=>{ let on=true;
     if(view&&view.id){ api('GET','/tickets/'+view.id+'/comments').then(r=>{if(on)setComments(r.data||[])}).catch(()=>{if(on)setComments([])}); }
     else { setComments([]); setCtext(''); }
@@ -15745,7 +15745,7 @@ function Tickets({lookups,user,toast,focus,setFocus}){
         toast(nt&&nt.routed&&nt.assignee_id?('Ticket created — assigned to '+un(nt.assignee_id)+(nt.backup_id?' · backup '+un(nt.backup_id):'')):'Ticket created','ok'); }
       setEdit(null); reload();
     }catch(e){ toast(e.message); } };
-  const del=async(row)=>{ if(!await opshConfirm('Delete '+row.ticket_number+'?'))return;
+  const del=async(row)=>{ if(!await itopsConfirm('Delete '+row.ticket_number+'?'))return;
     try{ await api('DELETE','/tickets/'+row.id); toast('Deleted','ok'); setView(null); reload(); }catch(e){ toast(e.message); } };
   const list = rows? rows.filter(t=>{
     const catOk = flt==='all' ? true : (function(){const p=parents.find(x=>x.id===flt);return p?children(p.id).some(c=>c.id===t.category_id):t.category_id===flt;})();
@@ -15838,9 +15838,9 @@ function Tickets({lookups,user,toast,focus,setFocus}){
       {view.sla&&<div style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:8,marginBottom:13}}><SLABadge s={view.sla.resp} label="Response"/><SLABadge s={view.sla.reso} label="Resolution"/>{view.due_date&&<span style={{fontSize:12,color:'var(--t4)'}}>· due {mhDateTime(view.due_date)}</span>}</div>}
       <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:14}}>{(()=>{ const vc=cats.find(x=>x.id===view.category_id), vg=vc&&vc.parent_id?cats.find(x=>x.id===vc.parent_id):null;   /* BT107: group and category named apart */
         return vc?(vg?[['Group',vg.name],['Category',vc.name]]:[['Group',vc.name]]):[['Category',view.category_name]]; })().concat(view.ticket_type?[['Type',view.ticket_type==='incident'?'Incident':'Service request']]:[]).concat([['Dept',view.dept_name],['Requester',view.contact_email?((view.contact_name?view.contact_name+' ':'')+'<'+view.contact_email+'> · '+(view.unconfirmed?'not confirmed yet (sent from a public page with the address of a person of the app)':'external')):(view.contact_name?view.contact_name+' · external, no email given':view.requester_name)],['Assignee',view.assignee_name||'Unassigned'],['Backup',view.backup_name||'—']]).map(([k,v])=><div key={k} style={{background:'var(--s3)',padding:'5px 11px',borderRadius:7,fontSize:13}}><span style={{color:'var(--t4)'}}>{k}: </span><b>{v||'—'}</b></div>)}</div>
-      <div style={{margin:'4px 0 14px'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}><div style={{fontSize:13,fontWeight:700,color:'var(--t3)'}}>Attachments</div><button type="button" className="btn btn-g btn-sm" style={{cursor:'pointer',margin:0}} disabled={upbusy} onClick={async()=>{const fs=await opshUpload({title:'Upload attachment',accept:OPSH_TICKET_ACCEPT,acceptLabel:'pictures, audio/video, PDF, Word, Excel, PowerPoint, CSV, TXT, XML, JSON · up to 50 MB'});if(fs&&fs[0])uploadFile(fs[0]);}}><I n="download" s={16}/>{upbusy?'Uploading…':'Upload'}</button></div>{canInt&&<label data-att-internal="1" style={{display:'flex',alignItems:'center',gap:6,fontSize:12.5,color:'var(--t3)',margin:'-2px 0 8px',cursor:'pointer'}}><input type="checkbox" checked={fint} onChange={e=>setFint(e.target.checked)}/>Next upload is internal (only the support team sees it)</label>}{atts.length?<div style={{display:'flex',flexDirection:'column',gap:6}}>{atts.map(a=>{const av=String(a.mime_type||'').indexOf('audio/')===0||String(a.mime_type||'').indexOf('video/')===0; return <div key={a.id} style={{display:'flex',flexDirection:'column',gap:6}}><div style={{display:'flex',alignItems:'center',gap:8,background:'var(--s3)',borderRadius:8,padding:'7px 10px'}}><I n="sop" s={18} c="var(--t3)"/><div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.file_name}{+a.is_internal?<span style={{marginLeft:6,fontSize:11,fontWeight:700,color:'#6b541a',background:'#f3e2b5',borderRadius:5,padding:'1px 6px'}}>INTERNAL</span>:null}</div><div style={{fontSize:11.5,color:'var(--t4)'}}>{Math.max(1,Math.round(a.file_size/1024))} KB{a.uploaded_by_name?' · '+a.uploaded_by_name:''}</div></div>{aiStt&&av&&<button type="button" className="btn btn-g btn-sm" style={{padding:'3px 8px'}} disabled={txr[a.id]&&txr[a.id].busy} onClick={()=>transcribe(a)}>{txr[a.id]&&txr[a.id].busy?'…':'Transcribe'}</button>}<span className="iconbtn" style={{display:'inline-flex',width:26,height:26}} onClick={()=>downloadAtt(a)} title="Download"><I n="download" s={16}/></span>{tCan('edit')&&(canInt||+a.uploaded_by===meId)&&<span className="iconbtn" style={{display:'inline-flex',width:26,height:26}} onClick={()=>delAtt(a)} title="Delete"><I n="trash" s={15} c="var(--red)"/></span>}</div>{txr[a.id]&&txr[a.id].text&&<div style={{fontSize:13,whiteSpace:'pre-wrap',background:'#fff',border:'1px solid var(--b1)',borderRadius:8,padding:'8px 10px',color:'var(--t2)'}}>{txr[a.id].text}<div style={{display:'flex',gap:6,marginTop:8}}><button type="button" className="btn btn-g btn-sm" onClick={()=>copyTx(a)}>Copy</button><button type="button" className="btn btn-g btn-sm" onClick={()=>txToComment(a)}>Add as comment</button></div></div>}</div>;})}</div>:<div style={{fontSize:13,color:'var(--t4)'}}>No attachments.</div>}</div><div style={{margin:'4px 0 14px'}}><div style={{fontSize:13,fontWeight:700,color:'var(--t3)',marginBottom:8}}>Activity & Comments</div><div style={{maxHeight:200,overflowY:'auto',display:'flex',flexDirection:'column',gap:8,marginBottom:10}}>{comments.length?comments.map(c=><div key={c.id} style={{background:+c.is_internal?'#fbf3e0':'var(--s3)',border:+c.is_internal?'1px solid #efe0bd':'none',color:+c.is_internal?'#3d3320':undefined,borderRadius:9,padding:'8px 11px'}}><div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}><span style={{fontSize:13,fontWeight:600}}>{c.author_name||(c.user_id?'User':'Email')}{+c.is_internal?<span style={{marginLeft:6,fontSize:11,fontWeight:700,color:'#6b541a',background:'#f3e2b5',borderRadius:5,padding:'1px 6px'}}>INTERNAL</span>:null}</span><span style={{fontSize:11.5,color:'var(--t4)'}}>{mhDateTime(c.created_at||'')}</span></div><div style={{fontSize:14,color:+c.is_internal?'#3d3320':'var(--t2)',whiteSpace:'pre-wrap'}}>{c.content}</div></div>):<div style={{fontSize:13,color:'var(--t4)'}}>No comments yet.</div>}</div><div style={{display:'flex',gap:6}}><input value={ctext} onChange={e=>setCtext(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&!e.repeat&&!(e.nativeEvent&&e.nativeEvent.isComposing)){ e.preventDefault(); addComment(); } }} placeholder={cint?'Internal note — only the support team sees this…':'Add a comment…'} style={{flex:1,padding:'8px 11px',background:'var(--s3)',border:'1px solid var(--b1)',borderRadius:8,color:'var(--t1)',fontFamily:'var(--font)',fontSize:14,outline:'none'}}/><button className="btn btn-p btn-sm" onClick={addComment} disabled={cbusy}>{cbusy?'…':(cint?'Add note':'Post')}</button></div>{canInt&&<label style={{display:'flex',alignItems:'center',gap:6,fontSize:12.5,color:'var(--t3)',marginTop:6,cursor:'pointer'}}><input type="checkbox" checked={cint} onChange={e=>setCint(e.target.checked)}/>Internal note (not shown to the requester, not emailed)</label>}</div>{mrg&&(()=>{ const same=x=>view.contact_email?String(x.contact_email||'').toLowerCase()===String(view.contact_email).toLowerCase():(!x.contact_email&&x.contact_name==null&&+x.requester_id===+view.requester_id);
+      <div style={{margin:'4px 0 14px'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}><div style={{fontSize:13,fontWeight:700,color:'var(--t3)'}}>Attachments</div><button type="button" className="btn btn-g btn-sm" style={{cursor:'pointer',margin:0}} disabled={upbusy} onClick={async()=>{const fs=await itopsUpload({title:'Upload attachment',accept:ITOPS_TICKET_ACCEPT,acceptLabel:'pictures, audio/video, PDF, Word, Excel, PowerPoint, CSV, TXT, XML, JSON · up to 50 MB'});if(fs&&fs[0])uploadFile(fs[0]);}}><I n="download" s={16}/>{upbusy?'Uploading…':'Upload'}</button></div>{canInt&&<label data-att-internal="1" style={{display:'flex',alignItems:'center',gap:6,fontSize:12.5,color:'var(--t3)',margin:'-2px 0 8px',cursor:'pointer'}}><input type="checkbox" checked={fint} onChange={e=>setFint(e.target.checked)}/>Next upload is internal (only the support team sees it)</label>}{atts.length?<div style={{display:'flex',flexDirection:'column',gap:6}}>{atts.map(a=>{const av=String(a.mime_type||'').indexOf('audio/')===0||String(a.mime_type||'').indexOf('video/')===0; return <div key={a.id} style={{display:'flex',flexDirection:'column',gap:6}}><div style={{display:'flex',alignItems:'center',gap:8,background:'var(--s3)',borderRadius:8,padding:'7px 10px'}}><I n="sop" s={18} c="var(--t3)"/><div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.file_name}{+a.is_internal?<span style={{marginLeft:6,fontSize:11,fontWeight:700,color:'#6b541a',background:'#f3e2b5',borderRadius:5,padding:'1px 6px'}}>INTERNAL</span>:null}</div><div style={{fontSize:11.5,color:'var(--t4)'}}>{Math.max(1,Math.round(a.file_size/1024))} KB{a.uploaded_by_name?' · '+a.uploaded_by_name:''}</div></div>{aiStt&&av&&<button type="button" className="btn btn-g btn-sm" style={{padding:'3px 8px'}} disabled={txr[a.id]&&txr[a.id].busy} onClick={()=>transcribe(a)}>{txr[a.id]&&txr[a.id].busy?'…':'Transcribe'}</button>}<span className="iconbtn" style={{display:'inline-flex',width:26,height:26}} onClick={()=>downloadAtt(a)} title="Download"><I n="download" s={16}/></span>{tCan('edit')&&(canInt||+a.uploaded_by===meId)&&<span className="iconbtn" style={{display:'inline-flex',width:26,height:26}} onClick={()=>delAtt(a)} title="Delete"><I n="trash" s={15} c="var(--red)"/></span>}</div>{txr[a.id]&&txr[a.id].text&&<div style={{fontSize:13,whiteSpace:'pre-wrap',background:'#fff',border:'1px solid var(--b1)',borderRadius:8,padding:'8px 10px',color:'var(--t2)'}}>{txr[a.id].text}<div style={{display:'flex',gap:6,marginTop:8}}><button type="button" className="btn btn-g btn-sm" onClick={()=>copyTx(a)}>Copy</button><button type="button" className="btn btn-g btn-sm" onClick={()=>txToComment(a)}>Add as comment</button></div></div>}</div>;})}</div>:<div style={{fontSize:13,color:'var(--t4)'}}>No attachments.</div>}</div><div style={{margin:'4px 0 14px'}}><div style={{fontSize:13,fontWeight:700,color:'var(--t3)',marginBottom:8}}>Activity & Comments</div><div style={{maxHeight:200,overflowY:'auto',display:'flex',flexDirection:'column',gap:8,marginBottom:10}}>{comments.length?comments.map(c=><div key={c.id} style={{background:+c.is_internal?'#fbf3e0':'var(--s3)',border:+c.is_internal?'1px solid #efe0bd':'none',color:+c.is_internal?'#3d3320':undefined,borderRadius:9,padding:'8px 11px'}}><div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}><span style={{fontSize:13,fontWeight:600}}>{c.author_name||(c.user_id?'User':'Email')}{+c.is_internal?<span style={{marginLeft:6,fontSize:11,fontWeight:700,color:'#6b541a',background:'#f3e2b5',borderRadius:5,padding:'1px 6px'}}>INTERNAL</span>:null}</span><span style={{fontSize:11.5,color:'var(--t4)'}}>{mhDateTime(c.created_at||'')}</span></div><div style={{fontSize:14,color:+c.is_internal?'#3d3320':'var(--t2)',whiteSpace:'pre-wrap'}}>{c.content}</div></div>):<div style={{fontSize:13,color:'var(--t4)'}}>No comments yet.</div>}</div><div style={{display:'flex',gap:6}}><input value={ctext} onChange={e=>setCtext(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'&&!e.repeat&&!(e.nativeEvent&&e.nativeEvent.isComposing)){ e.preventDefault(); addComment(); } }} placeholder={cint?'Internal note — only the support team sees this…':'Add a comment…'} style={{flex:1,padding:'8px 11px',background:'var(--s3)',border:'1px solid var(--b1)',borderRadius:8,color:'var(--t1)',fontFamily:'var(--font)',fontSize:14,outline:'none'}}/><button className="btn btn-p btn-sm" onClick={addComment} disabled={cbusy}>{cbusy?'…':(cint?'Add note':'Post')}</button></div>{canInt&&<label style={{display:'flex',alignItems:'center',gap:6,fontSize:12.5,color:'var(--t3)',marginTop:6,cursor:'pointer'}}><input type="checkbox" checked={cint} onChange={e=>setCint(e.target.checked)}/>Internal note (not shown to the requester, not emailed)</label>}</div>{mrg&&(()=>{ const same=x=>view.contact_email?String(x.contact_email||'').toLowerCase()===String(view.contact_email).toLowerCase():(!x.contact_email&&x.contact_name==null&&+x.requester_id===+view.requester_id);
         const cands=(rows||[]).filter(x=>+x.id!==+view.id&&['open','in_progress','pending'].indexOf(x.status)>=0&&!x.merged_into_id&&same(x));
-        const doMerge=async()=>{ const to=cands.find(x=>String(x.id)===String(mrg.into)); if(!to)return; if(!await opshConfirm('Merge '+view.ticket_number+' into '+to.ticket_number+'? Its comments and files move there and '+view.ticket_number+' is cancelled.'))return;
+        const doMerge=async()=>{ const to=cands.find(x=>String(x.id)===String(mrg.into)); if(!to)return; if(!await itopsConfirm('Merge '+view.ticket_number+' into '+to.ticket_number+'? Its comments and files move there and '+view.ticket_number+' is cancelled.'))return;
           setMbusy(true); try{ const r=await api('POST','/tickets/'+view.id+'/merge',{into_id:to.id}); toast('Merged into '+r.target,'ok'); setMrg(null); await quiet(); setView(to); }catch(e){ toast(e.message); } setMbusy(false); };
         return <div data-tk-merge="1" style={{background:'var(--s3)',border:'1px solid var(--b1)',borderRadius:10,padding:12,marginBottom:12}}>
           <div style={{fontSize:14,fontWeight:700,marginBottom:4}}>Merge into another ticket</div>
@@ -15848,7 +15848,7 @@ function Tickets({lookups,user,toast,focus,setFocus}){
           {cands.length?<div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}><Sel value={mrg.into} onChange={v=>setMrg({into:v})} options={[{v:'',l:'Choose a ticket…'}].concat(cands.map(x=>({v:String(x.id),l:x.ticket_number+' · '+x.subject})))} style={{minWidth:260}}/><button className="btn btn-p btn-sm" data-tk-merge-go="1" disabled={!mrg.into||mbusy} onClick={doMerge}>{mbusy?'Merging…':'Merge'}</button><button className="btn btn-g btn-sm" onClick={()=>setMrg(null)}>Cancel</button></div>
             :<div style={{fontSize:13,color:'var(--t3)'}}>This requester has no other open ticket to merge into. <a href="#" onClick={e=>{e.preventDefault(); setMrg(null);}}>Close</a></div>}
         </div>; })()}
-      <div style={{display:'flex',gap:8}}>{tCan('edit')&&<button className="btn btn-p" style={{flex:1}} onClick={()=>{open(view);}}>Edit</button>}{tCan('edit')&&['open','in_progress','pending'].indexOf(view.status)>=0&&!view.merged_into_id&&<button className="btn btn-g" data-tk-merge-open="1" onClick={()=>setMrg(m=>m?null:{into:''})}>Merge…</button>}{!view.case_id&&!view.merged_into_id&&['open','in_progress','pending'].indexOf(view.status)>=0&&!!user&&opshCanFrom(user.role,user.role_permissions||{},'cases','create')&&<button className="btn btn-g" data-cs-convert-open="1" onClick={()=>setCvt(v=>!v)}>Make it a case…</button>}{tCan('delete')&&<button className="btn btn-d" onClick={()=>del(view)}>Delete</button>}<button className="btn btn-g" style={tCan('edit')?null:{flex:1}} onClick={()=>setView(null)}>Close</button></div>
+      <div style={{display:'flex',gap:8}}>{tCan('edit')&&<button className="btn btn-p" style={{flex:1}} onClick={()=>{open(view);}}>Edit</button>}{tCan('edit')&&['open','in_progress','pending'].indexOf(view.status)>=0&&!view.merged_into_id&&<button className="btn btn-g" data-tk-merge-open="1" onClick={()=>setMrg(m=>m?null:{into:''})}>Merge…</button>}{!view.case_id&&!view.merged_into_id&&['open','in_progress','pending'].indexOf(view.status)>=0&&!!user&&itopsCanFrom(user.role,user.role_permissions||{},'cases','create')&&<button className="btn btn-g" data-cs-convert-open="1" onClick={()=>setCvt(v=>!v)}>Make it a case…</button>}{tCan('delete')&&<button className="btn btn-d" onClick={()=>del(view)}>Delete</button>}<button className="btn btn-g" style={tCan('edit')?null:{flex:1}} onClick={()=>setView(null)}>Close</button></div>
     </div></div>}
     {edit&&<div className="inl"><div className="inl-body" onClick={e=>e.stopPropagation()}>
       <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>{edit.id?'Edit Ticket':'New Ticket'}</div>
@@ -15887,7 +15887,7 @@ function Tickets({lookups,user,toast,focus,setFocus}){
       </div>}
       <div className="fmact" style={{display:'flex',gap:8}}><button className="btn btn-p" style={{flex:1}} disabled={svBusy} onClick={save}>{svBusy?'Saving…':(edit.id?'Save Changes':'Create Ticket')}</button><button className="btn btn-g" style={{flex:1}} onClick={()=>setEdit(null)}>Cancel</button></div>
     </div></div>}
-  {notify&&<NotifyModal users={lookups.users||[]} presets={notify.presets} defaults={notify} toast={toast} onClose={()=>setNotify(null)} canExt={tCan('all')||opshIsSuper()}/>}
+  {notify&&<NotifyModal users={lookups.users||[]} presets={notify.presets} defaults={notify} toast={toast} onClose={()=>setNotify(null)} canExt={tCan('all')||itopsIsSuper()}/>}
     </div>
   </div>;
 }
@@ -15902,7 +15902,7 @@ function KB({lookups,toast}){
   const [view,setView]=useState(null),[edit,setEdit]=useState(null);
   const blank={title:'',content:'',category_id:'',status:'draft',is_public:0};
   const [form,setForm]=useState(blank);
-  React.useEffect(()=>{ const hnd=(e)=>{ const d=(e&&e.detail)||{}; if(d.resource!=='kb')return; setView(v=>(v&&String(v.id)===String(d.id))?Object.assign({},v,d.fields||{}):v); reload(); }; window.addEventListener('opsh-doc-saved',hnd); return ()=>window.removeEventListener('opsh-doc-saved',hnd); },[]);
+  React.useEffect(()=>{ const hnd=(e)=>{ const d=(e&&e.detail)||{}; if(d.resource!=='kb')return; setView(v=>(v&&String(v.id)===String(d.id))?Object.assign({},v,d.fields||{}):v); reload(); }; window.addEventListener('itops-doc-saved',hnd); return ()=>window.removeEventListener('itops-doc-saved',hnd); },[]);
   const open=row=>{ setEdit(row||blank); setForm(row?{title:row.title,content:row.content||'',category_id:row.category_id||'',status:row.status,is_public:+row.is_public===1?1:0}:blank); };
   // BT24: view and edit open as their own full page; "← Back" returns to the list (kept as it was). Saving an
   // article you opened from its view goes back to that view, updated.
@@ -15914,11 +15914,11 @@ function KB({lookups,toast}){
           if(view&&String(view.id)===String(edit.id)){ try{ const r=await api('GET','/kb/'+edit.id); setView(r.data||r); }catch(_){ setView(v=>Object.assign({},v,form)); } } }
       else{await api('POST','/kb',body);toast('Article created','ok');} setEdit(null);reload();
     }catch(e){toast(e.message);} setBusy(false); };
-  const del=async row=>{ if(!await opshConfirm('Delete "'+row.title+'"?'))return; try{await api('DELETE','/kb/'+row.id);toast('Deleted','ok');setView(null);reload();}catch(e){toast(e.message);} };
+  const del=async row=>{ if(!await itopsConfirm('Delete "'+row.title+'"?'))return; try{await api('DELETE','/kb/'+row.id);toast('Deleted','ok');setView(null);reload();}catch(e){toast(e.message);} };
   return <div>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:13}}>
       <div style={{fontSize:13,color:'var(--t4)'}}>{rows?rows.length+' articles':'…'} · live</div>
-      <div style={{display:'flex',gap:7}}><button className="btn btn-g btn-sm" onClick={reload}><I n="refresh" s={16}/></button>{kC&&<button className="btn btn-g btn-sm" title="Create in a separate window" onClick={()=>opshDocWindow({resource:'kb',label:'Article',title:'',content:'',meta:kbMeta(null)})}>↗ New window</button>}{kC&&<button className="btn btn-p" onClick={()=>open(null)}><I n="plus" s={17} c="#fff"/>New Article</button>}</div>
+      <div style={{display:'flex',gap:7}}><button className="btn btn-g btn-sm" onClick={reload}><I n="refresh" s={16}/></button>{kC&&<button className="btn btn-g btn-sm" title="Create in a separate window" onClick={()=>itopsDocWindow({resource:'kb',label:'Article',title:'',content:'',meta:kbMeta(null)})}>↗ New window</button>}{kC&&<button className="btn btn-p" onClick={()=>open(null)}><I n="plus" s={17} c="#fff"/>New Article</button>}</div>
     </div>
     {loading?<div className="spin"/>:err?<div className="empty">{err}</div>:!rows||!rows.length?<div className="empty">No articles yet.</div>:
     <div className="card" style={{padding:0,overflow:'auto'}}><table className="tbl"><thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Help portal</th><th>Views</th><th></th></tr></thead>
@@ -15930,7 +15930,7 @@ function KB({lookups,toast}){
         {kD&&<span className="iconbtn" title="Delete" style={{display:'inline-flex',width:28,height:28}} onClick={()=>del(a)}><I n="trash" s={16} c="var(--red)"/></span>}
       </td></tr>)}</tbody></table></div>}
     {view&&!edit&&<EditPage title={view.title} badge={<B v={view.status}>{view.status}</B>} onClose={()=>setView(null)}
-      ribbon={<React.Fragment>{kE&&<button className="btn btn-p btn-sm" onClick={()=>open(view)}>✏ Edit</button>}<button className="btn btn-g btn-sm" onClick={()=>opshExportPdf(view.title||'article',view.content||'')}>⬇ PDF</button>{kE&&<button className="btn btn-g btn-sm" title="Open in a separate editable window" onClick={()=>opshDocWindow({resource:'kb',id:view.id,title:view.title,content:view.content||'',label:'Article',meta:kbMeta(view)})}>↗ Window</button>}<span style={{flex:1}}/>{kD&&<button className="btn btn-d btn-sm" onClick={()=>del(view)}>Delete</button>}</React.Fragment>}>
+      ribbon={<React.Fragment>{kE&&<button className="btn btn-p btn-sm" onClick={()=>open(view)}>✏ Edit</button>}<button className="btn btn-g btn-sm" onClick={()=>itopsExportPdf(view.title||'article',view.content||'')}>⬇ PDF</button>{kE&&<button className="btn btn-g btn-sm" title="Open in a separate editable window" onClick={()=>itopsDocWindow({resource:'kb',id:view.id,title:view.title,content:view.content||'',label:'Article',meta:kbMeta(view)})}>↗ Window</button>}<span style={{flex:1}}/>{kD&&<button className="btn btn-d btn-sm" onClick={()=>del(view)}>Delete</button>}</React.Fragment>}>
       <div style={{fontSize:13,color:'var(--t4)',marginBottom:12}}>{view.category_name||catName(view.category_id)} · {view.views_count??0} views{view.updated_at?' · updated '+String(view.updated_at).slice(0,10):''}</div>
       <div className="kb-content" style={{borderTop:'1px solid var(--b1)',paddingTop:13,fontSize:15,lineHeight:1.7}} dangerouslySetInnerHTML={shtml(view.content||'<em>No content.</em>')}/>
     </EditPage>}
@@ -16064,7 +16064,7 @@ function AnnEditor({a,lookups,channels,mailOn,toast,onClose,onDone}){
     if(sched&&!f.publish_at){ toast('Choose the date and time to publish.'); return; }
     const n=reach&&reach.count!=null?reach.count+((reach.outside&&reach.outside.count)||0):null; const where=['in the app',f.ch_email?'by email':null,chan?'in the Teams channel “'+chan.name+'”':null].filter(Boolean);
     const msg=sched?'Schedule this announcement for '+mhDateTime(f.publish_at)+'?':'Publish now'+(n!=null?' to '+n+(n===1?' person':' people'):'')+'? It goes out '+(where.length>1?where.slice(0,-1).join(', ')+' and '+where[where.length-1]:where[0])+'. After publishing you can correct the text but not who receives it.';
-    if(!await opshConfirm(msg))return;
+    if(!await itopsConfirm(msg))return;
     setBusy('pub'); try{ const x=await save(); const r=await api('POST','/announcements/'+x.id+'/publish',sched?{publish_at:annToIso(f.publish_at)}:{});
       if(r.scheduled) toast('Scheduled for '+mhDateTime(r.data.publish_at),'ok');
       else { const dl=r.delivery||{}; const bits=[(dl.recipients||0)+' people']; if(dl.external&&dl.external.people)bits.push(dl.external.people+' of them outside the app (personal link by email)'); if(dl.external&&dl.external.errors&&dl.external.errors.length)bits.push('a group could not be read: '+dl.external.errors.join('; ')); if(dl.email)bits.push(dl.email.off?'email is switched off':(dl.email.sent||0)+' email'+((dl.email.sent||0)===1?'':'s')+' sent'+(dl.email.left?', '+dl.email.left+' more going out in the next minutes':'')+(dl.email.failed?', '+dl.email.failed+' failed':'')); if(dl.teams)bits.push(dl.teams.ok?'posted to Teams':'Teams failed');
@@ -16165,11 +16165,11 @@ function AnnReport({id,toast,cE,cD,onClose,onEdit,onDone}){
   const out=all.filter(r=>r.active&&(a.requires_ack?!r.ack_at:!r.seen_at)).length;
   const rows=all.filter(r=>flt==='unseen'?!r.seen_at:flt==='unacked'?!r.ack_at:true);
   const pct=n=>s.total?Math.round(n*100/s.total)+'%':'—';
-  const remind=async()=>{ if(!await opshConfirm('Remind the '+out+(out===1?' person who has':' people who have')+' not '+(a.requires_ack?'confirmed':'opened')+' it? They get a bell notice'+(a.ch_email?' and an email':'')+'.'))return;
+  const remind=async()=>{ if(!await itopsConfirm('Remind the '+out+(out===1?' person who has':' people who have')+' not '+(a.requires_ack?'confirmed':'opened')+' it? They get a bell notice'+(a.ch_email?' and an email':'')+'.'))return;
     setBusy('remind'); try{ const r=await api('POST','/announcements/'+id+'/remind'); toast(r.reminded?'Reminder sent to '+r.reminded+(r.reminded===1?' person':' people')+'.':'Everyone has already '+(a.requires_ack?'confirmed':'opened')+' it.','ok'); load(); }catch(e){ toast(e.message); } setBusy(''); };
-  const archive=async()=>{ if(!await opshConfirm('Stop showing this announcement? It moves to “Earlier announcements” for the people who received it, and queued emails are cancelled.'))return;
+  const archive=async()=>{ if(!await itopsConfirm('Stop showing this announcement? It moves to “Earlier announcements” for the people who received it, and queued emails are cancelled.'))return;
     setBusy('arch'); try{ await api('POST','/announcements/'+id+'/archive'); toast('Archived','ok'); onDone(false); }catch(e){ toast(e.message); } setBusy(''); };
-  const del=async()=>{ if(!await opshConfirm('Delete “'+a.title+'” and its read report? A Super Admin can put it back from Deleted items.'))return;
+  const del=async()=>{ if(!await itopsConfirm('Delete “'+a.title+'” and its read report? A Super Admin can put it back from Deleted items.'))return;
     setBusy('del'); try{ await api('DELETE','/announcements/'+id); toast('Deleted','ok'); onDone(false); }catch(e){ toast(e.message); } setBusy(''); };
   const csv=()=>{ const o=[['Name','Email','Department','Opened','Confirmed','Email','Last reminder'].join(',')];
     all.forEach(r=>o.push([r.name,r.email,r.department,mhDateTime(r.seen_at,''),mhDateTime(r.ack_at,''),r.email_state,mhDateTime(r.reminded_at,'')].map(mhC).join(','))); mhCsv('announcement-'+id+'-readers-'+mhToday()+'.csv',o); };
@@ -16316,7 +16316,7 @@ function EmailTemplates({toast,canEdit}){
   const dirty=dirtyL('en')||dirtyL('es');
 
   const pick=async(key,force)=>{
-    if(!force&&dirty&&!await opshConfirm('Discard your unsaved changes to this email?'))return;
+    if(!force&&dirty&&!await itopsConfirm('Discard your unsaved changes to this email?'))return;
     setSel(key); selRef.current=key; setView('tpl'); setHist(null); setPv(null); setPvErr(''); setTpl(null);
     try{ const t=await api('GET','/email_templates/'+key); if(selRef.current!==key)return;   // a later click won — ignore this late answer
       setTpl(t); setDraft({en:{subject:t.en.subject,body:t.en.body},es:{subject:t.es.subject,body:t.es.body}}); preview(key,'en',null,'same'); setLang('en'); }catch(e){ toast(e.message); }
@@ -16350,7 +16350,7 @@ function EmailTemplates({toast,canEdit}){
   };
   const reset=async()=>{
     const nm=lang==='es'?'Spanish':'English';
-    if(!await opshConfirm('Reset the '+nm+' version of "'+tpl.label+'" to the built-in default? Your edited text is kept in the change history.'))return;
+    if(!await itopsConfirm('Reset the '+nm+' version of "'+tpl.label+'" to the built-in default? Your edited text is kept in the change history.'))return;
     setBusy('reset');
     try{ await api('DELETE','/email_templates/'+sel+'?lang='+lang); const t=await api('GET','/email_templates/'+sel); setTpl(t); setDraft(d=>Object.assign({},d,{[lang]:{subject:t[lang].subject,body:t[lang].body}})); loadList(); if(hist) loadHist(); toast('Reset to default','ok'); }catch(e){ toast(e.message); }
     setBusy('');
@@ -16381,7 +16381,7 @@ function EmailTemplates({toast,canEdit}){
     {S.mail_out_enabled!=='1'&&<div style={{padding:'9px 12px',background:'var(--amberL)',color:'var(--amber)',borderRadius:9,fontSize:13.5,marginBottom:12}}>Outbound email is switched off (Email tab → Outbound email), so none of these emails are being sent right now. You can still edit and preview them.</div>}
     <div className="et-grid">
       <div className="card et-list" style={{padding:10}}>
-        <div onClick={async()=>{ if(dirty&&!await opshConfirm('Discard your unsaved changes to this email?'))return; setView('wrap'); setSel(null); setTpl(null); }} className={'et-it'+(view==='wrap'?' on':'')} style={{marginBottom:8}}>
+        <div onClick={async()=>{ if(dirty&&!await itopsConfirm('Discard your unsaved changes to this email?'))return; setView('wrap'); setSel(null); setTpl(null); }} className={'et-it'+(view==='wrap'?' on':'')} style={{marginBottom:8}}>
           <div style={{fontWeight:700,fontSize:14}}>Header, footer & language</div>
           <div style={{fontSize:12,color:'var(--t4)'}}>Shared by every email · default language: {({en:'English',es:'Spanish',both:'English + Spanish'})[S.mail_default_lang]||'English'}</div>
         </div>
@@ -16570,7 +16570,7 @@ function ModulesSettings({toast,reloadLookups}){
     <div className="card" style={{padding:'14px 18px'}}>
       <div style={{fontSize:14,fontWeight:700,marginBottom:6}}>Plans</div>
       <table className="tbl" style={{width:'100%',fontSize:13}}><tbody>{(d.plans||[]).map(p=><tr key={p.key} data-mod-planrow={p.key}><td style={{fontWeight:600,width:180}}>{p.label}{d.plan===p.key?<span className="badge bb" style={{marginLeft:6}}>this installation</span>:null}</td><td>{p.modules.map(lbl).join(', ')}</td></tr>)}</tbody></table>
-      <div style={{fontSize:12.5,color:'var(--t4)',marginTop:6}}>The plan and any extra modules come from the license record (opsh-license.php: 'plan' and 'modules'). It cannot be changed in the app.</div>
+      <div style={{fontSize:12.5,color:'var(--t4)',marginTop:6}}>The plan and any extra modules come from the license record (itops-license.php: 'plan' and 'modules'). It cannot be changed in the app.</div>
     </div>
   </div>;
 }
@@ -16582,7 +16582,7 @@ function ApprovalsSettings({toast}){
   if(err) return <div className="card" style={{padding:16,color:'var(--red)'}}>{err}</div>;
   if(!d) return <div className="spin"/>;
   const dirty=Object.keys(v).some(k=>v[k]!==d.settings[k]);
-  const save=async()=>{ const offs=Object.keys(v).filter(k=>!v[k]&&d.settings[k]); if(offs.length&&!await opshConfirm('Switch off the second person for: '+d.catalog.filter(c=>offs.indexOf(c.key)>=0).map(c=>c.label).join(', ')+'?\n\nOne person will then be able to do these alone (reason and typed confirmation still asked; everything still in the Audit Log). The people who could approve get a bell.',{okText:'Switch off',danger:true}))return;
+  const save=async()=>{ const offs=Object.keys(v).filter(k=>!v[k]&&d.settings[k]); if(offs.length&&!await itopsConfirm('Switch off the second person for: '+d.catalog.filter(c=>offs.indexOf(c.key)>=0).map(c=>c.label).join(', ')+'?\n\nOne person will then be able to do these alone (reason and typed confirmation still asked; everything still in the Audit Log). The people who could approve get a bell.',{okText:'Switch off',danger:true}))return;
     setBusy(true); try{ await api('POST','/m365hub/approval-settings',{settings:v}); toast&&toast('Approvals saved','ok'); await load(); }catch(e){ toast&&toast(e.message); } setBusy(false); };
   return <div data-appr="1" style={{display:'flex',flexDirection:'column',gap:14,maxWidth:980}}>
     <div className="card" style={{padding:'14px 18px'}}>
@@ -16605,8 +16605,8 @@ function Connection({user,lookups,toast,reloadLookups}){   // the "Settings" pag
   const cfgOk=canGen||canBrand||canEmail||canSla; const cfgEdit=isSA||can('email_cfg','edit');
   const canSys=isSA||can('access');   /* BT48: Company systems lives here (it was a page of its own under IT Operations) */
   const TABS=[['general','General',canGen],['branding','Branding',canBrand],['email','Email',canEmail],['templates','Email templates',canEmail],['sla','SLA & Hours',canSla],['integrations','Sign-in & AI',canGen],['systems','Company systems',canSys],['visuals','Help visuals',isSA],['modules','Modules',isSA||can('license')],['approvals','Approvals',isSA],['maint','Maintenance',isSA]].filter(t=>t[2]);
-  const [ctab,setCtab]=React.useState(()=>{ let w=null; try{ w=window.__opshSettingsTab||null; window.__opshSettingsTab=null; }catch(e){} return (w&&TABS.some(t=>t[0]===w))?w:(TABS[0]||['general'])[0]; });
-  React.useEffect(()=>{ const on=e=>{ const w=e&&e.detail; if(w&&TABS.some(t=>t[0]===w)){ setCtab(w); try{ window.__opshSettingsTab=null; }catch(_){} } }; window.addEventListener('opsh-settings-tab',on); return ()=>window.removeEventListener('opsh-settings-tab',on); },[]);   /* BT71 */
+  const [ctab,setCtab]=React.useState(()=>{ let w=null; try{ w=window.__itopsSettingsTab||null; window.__itopsSettingsTab=null; }catch(e){} return (w&&TABS.some(t=>t[0]===w))?w:(TABS[0]||['general'])[0]; });
+  React.useEffect(()=>{ const on=e=>{ const w=e&&e.detail; if(w&&TABS.some(t=>t[0]===w)){ setCtab(w); try{ window.__itopsSettingsTab=null; }catch(_){} } }; window.addEventListener('itops-settings-tab',on); return ()=>window.removeEventListener('itops-settings-tab',on); },[]);   /* BT71 */
   const [emo,setEmo]=React.useState(()=>navEmojiMap(lookups&&lookups.branding&&lookups.branding.nav_emoji));
   const [emoBusy,setEmoBusy]=React.useState(false);
   const [pick,setPick]=React.useState(null);
@@ -16641,7 +16641,7 @@ function Connection({user,lookups,toast,reloadLookups}){   // the "Settings" pag
   React.useEffect(()=>{ fetch(API_BASE+'/health').then(r=>r.json()).then(j=>setMsSignin(!!(j&&j.o365))).catch(()=>setMsSignin(false)); },[]);
   const saveTagline=async()=>{ try{ const v=(brand.app_tagline||'').trim(); await api('PUT','/settings',{app_tagline:v}); setBrand(b=>({...b,app_tagline:v,_tag0:v})); toast('Sign-in tagline saved','ok'); }catch(e){ toast(e.message);} };
   const saveSigninDefault=async v=>{ const prev=brand.signin_default; setBrand(b=>({...b,signin_default:v})); try{ await api('PUT','/settings',{signin_default:v}); toast('Default sign-in saved','ok'); }catch(e){ setBrand(b=>({...b,signin_default:prev})); toast(e.message);} };
-  const saveAppName=async()=>{ try{ await api('PUT','/settings',{app_name:(brand.app_name||'').trim()}); opshSetAppName((brand.app_name||'').trim()); toast('App name saved','ok'); if(reloadLookups)reloadLookups(); }catch(e){ toast(e.message);} };
+  const saveAppName=async()=>{ try{ await api('PUT','/settings',{app_name:(brand.app_name||'').trim()}); itopsSetAppName((brand.app_name||'').trim()); toast('App name saved','ok'); if(reloadLookups)reloadLookups(); }catch(e){ toast(e.message);} };
   const saveRedir=async()=>{ try{ await api('PUT','/settings',{public_form_redirect_url:redir,redirect_allowed_hosts:rhosts}); toast('Saved','ok'); }catch(e){ toast(e.message);} };
   const [base,setBaseLocal]=useState(API_BASE);
   const [mail,setMail]=React.useState(null);
@@ -16684,7 +16684,7 @@ function Connection({user,lookups,toast,reloadLookups}){   // the "Settings" pag
     </div>
     <div className="card ct-general" style={{marginBottom:14}} data-set-about="1">
       <div style={{fontSize:15,fontWeight:700,marginBottom:12}}>About</div>
-      {[['Application',(lookups&&lookups.branding&&lookups.branding.name)||'OpsHub'],['Version','build '+APP_BUILD],['Signed-in role',cfgOk?'Super Admin':(user.role_name||user.role||'')]].map(function(r){return <div key={r[0]} style={{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:'1px solid var(--b1)',fontSize:14}}><span style={{color:'var(--t3)'}}>{r[0]}</span><span style={{fontWeight:600}}>{r[1]}</span></div>;})}
+      {[['Application',(lookups&&lookups.branding&&lookups.branding.name)||'ITOps'],['Version','build '+APP_BUILD],['Signed-in role',cfgOk?'Super Admin':(user.role_name||user.role||'')]].map(function(r){return <div key={r[0]} style={{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:'1px solid var(--b1)',fontSize:14}}><span style={{color:'var(--t3)'}}>{r[0]}</span><span style={{fontWeight:600}}>{r[1]}</span></div>;})}
       <div style={{fontSize:12.5,color:'var(--t4)',marginTop:8}}>If a recent update isn’t showing, hard-refresh (Ctrl/Cmd-Shift-R). This version label confirms which build is live.</div>
     </div>
     </>}
@@ -16783,10 +16783,10 @@ function Connection({user,lookups,toast,reloadLookups}){   // the "Settings" pag
       {mail&&mail.mail_cron_token&&<div style={{marginTop:14,paddingTop:12,borderTop:'1px solid var(--b1)'}}>
         <div style={{fontSize:13,fontWeight:600,color:'var(--t3)',marginBottom:6}}>Cron jobs (cPanel → Cron Jobs)</div>
         <div style={{fontSize:12,color:'var(--t4)',marginBottom:3}}>Every 15 minutes — breach alerts:</div>
-        <div style={{fontFamily:'monospace',fontSize:12,background:'var(--s3)',padding:'7px 9px',borderRadius:7,wordBreak:'break-all',marginBottom:8}}>curl -s -H "X-OpsHub-Cron-Token: {mail.mail_cron_token}" "{location.origin+location.pathname.replace(/\/(index\.html?)?$/,'')}/cron-sla.php"</div>
+        <div style={{fontFamily:'monospace',fontSize:12,background:'var(--s3)',padding:'7px 9px',borderRadius:7,wordBreak:'break-all',marginBottom:8}}>curl -s -H "X-ITOps-Cron-Token: {mail.mail_cron_token}" "{location.origin+location.pathname.replace(/\/(index\.html?)?$/,'')}/cron-sla.php"</div>
         <div style={{fontSize:12,color:'var(--t4)',marginBottom:3}}>Weekly (e.g. Monday 8am) — digest:</div>
-        <div style={{fontFamily:'monospace',fontSize:12,background:'var(--s3)',padding:'7px 9px',borderRadius:7,wordBreak:'break-all'}}>curl -s -H "X-OpsHub-Cron-Token: {mail.mail_cron_token}" "{location.origin+location.pathname.replace(/\/(index\.html?)?$/,'')}/cron-sla.php?digest=1"</div>
-        <div style={{fontSize:11.5,color:'var(--t4)',marginTop:6}}><a style={{cursor:'pointer',color:'var(--accent)',marginRight:6}} onClick={async()=>{ if(!await opshConfirm('Issue a new cron token? Cron jobs that use the old token stop working until you update them.'))return; try{ await api('POST','/mail/rotate_cron_token',{}); setMail(await api('GET','/mail')); toast('New cron token issued','ok'); }catch(e){toast(e.message);} }}>Rotate token</a>The token goes in a header so it never lands in web-server logs. Old cron lines with <span style={{fontFamily:'monospace'}}>?token=</span> keep working. Treat the token like a password — it runs scheduled jobs, including scheduled offboarding.</div>
+        <div style={{fontFamily:'monospace',fontSize:12,background:'var(--s3)',padding:'7px 9px',borderRadius:7,wordBreak:'break-all'}}>curl -s -H "X-ITOps-Cron-Token: {mail.mail_cron_token}" "{location.origin+location.pathname.replace(/\/(index\.html?)?$/,'')}/cron-sla.php?digest=1"</div>
+        <div style={{fontSize:11.5,color:'var(--t4)',marginTop:6}}><a style={{cursor:'pointer',color:'var(--accent)',marginRight:6}} onClick={async()=>{ if(!await itopsConfirm('Issue a new cron token? Cron jobs that use the old token stop working until you update them.'))return; try{ await api('POST','/mail/rotate_cron_token',{}); setMail(await api('GET','/mail')); toast('New cron token issued','ok'); }catch(e){toast(e.message);} }}>Rotate token</a>The token goes in a header so it never lands in web-server logs. Old cron lines with <span style={{fontFamily:'monospace'}}>?token=</span> keep working. Treat the token like a password — it runs scheduled jobs, including scheduled offboarding.</div>
       </div>}
     </div>}
     {canBrand&&<div className="card ct-branding ct-b1" style={{marginTop:14}}>
@@ -16794,10 +16794,10 @@ function Connection({user,lookups,toast,reloadLookups}){   // the "Settings" pag
       <div className="fld" style={{maxWidth:340,marginBottom:14}}>
         <label>Application name</label>
         <div style={{display:'flex',gap:8}}>
-          <input value={brand.app_name} onChange={e=>setBrand(b=>({...b,app_name:e.target.value}))} placeholder="OpsHub" style={{flex:1}} onKeyDown={e=>e.key==='Enter'&&saveAppName()}/>
+          <input value={brand.app_name} onChange={e=>setBrand(b=>({...b,app_name:e.target.value}))} placeholder="ITOps" style={{flex:1}} onKeyDown={e=>e.key==='Enter'&&saveAppName()}/>
           <button className="btn btn-p" onClick={saveAppName}>Save</button>
         </div>
-        <div style={{fontSize:12,color:'var(--t4)',marginTop:5,lineHeight:1.5}}>The name your people see everywhere: the menu, sign-in screen and browser tab, every screen and message, all emails (subject tags such as [{brand.app_name||'OpsHub'}] and the email header), the Help Center, the public request, form and signing pages, and the label in authenticator apps. Leave it blank to use OpsHub.</div>
+        <div style={{fontSize:12,color:'var(--t4)',marginTop:5,lineHeight:1.5}}>The name your people see everywhere: the menu, sign-in screen and browser tab, every screen and message, all emails (subject tags such as [{brand.app_name||'ITOps'}] and the email header), the Help Center, the public request, form and signing pages, and the label in authenticator apps. Leave it blank to use ITOps.</div>
       </div>
       <div className="fld" style={{maxWidth:520,marginBottom:14}} data-brand-signin="1">
         <label>Sign-in page</label>
@@ -16822,7 +16822,7 @@ function Connection({user,lookups,toast,reloadLookups}){   // the "Settings" pag
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <div style={{width:54,height:54,borderRadius:10,border:'1px solid var(--b1)',background:'var(--s3)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',flexShrink:0}}>{cur?<img src={cur} alt="" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}}/>:<span style={{fontSize:11.5,color:'var(--t4)'}}>none</span>}</div>
             <div style={{display:'flex',flexDirection:'column',gap:6}}>
-              <button type="button" className="btn btn-g btn-sm" style={{cursor:'pointer',margin:0}} onClick={async()=>{const fs=await opshUpload({title:'Upload image',accept:'.png,.jpg,.jpeg,.gif,.webp,.ico'});if(fs&&fs[0])onBrand(kind,skey,fs[0]);}}>{bbusy===kind?'Uploading…':'Upload'}</button>
+              <button type="button" className="btn btn-g btn-sm" style={{cursor:'pointer',margin:0}} onClick={async()=>{const fs=await itopsUpload({title:'Upload image',accept:'.png,.jpg,.jpeg,.gif,.webp,.ico'});if(fs&&fs[0])onBrand(kind,skey,fs[0]);}}>{bbusy===kind?'Uploading…':'Upload'}</button>
               {cur&&<button className="btn btn-g btn-sm" onClick={()=>clearBrand(skey)}>Remove</button>}
             </div>
           </div>
@@ -16935,7 +16935,7 @@ function Connection({user,lookups,toast,reloadLookups}){   // the "Settings" pag
         {mail.auto_tick_last&&<div style={{fontSize:12,color:'var(--t4)',marginBottom:10}}>Last automatic run: {mhDateTime(mail.auto_tick_last.at)} · {Object.entries(mail.auto_tick_last.result||{}).map(([k,v])=>k+': '+v).join(' · ')}</div>}
         <div style={{fontSize:12,fontWeight:700,color:'var(--t3)',marginBottom:5}}>OPTIONAL — cPanel cron (runs even when nobody is signed in; recommended for 24/7 intake)</div>
         <div style={{background:'var(--s3)',borderRadius:8,padding:'8px 10px',fontFamily:'monospace',fontSize:12,wordBreak:'break-all',marginBottom:6}} data-mail-croncmd="1">{mail.cron_mail_cmd||'The exact line for this installation is under IT Operations → Scheduled jobs.'}</div>
-        {mail.mail_cron_token ? <div style={{fontSize:12,color:'var(--t4)'}}>…or call by URL: <span style={{fontFamily:'monospace'}}>curl -s -H "X-OpsHub-Cron-Token: {mail.mail_cron_token}" "{location.origin+location.pathname.replace(/\/(index\.html?)?$/,'')}/cron-mail.php"</span></div>
+        {mail.mail_cron_token ? <div style={{fontSize:12,color:'var(--t4)'}}>…or call by URL: <span style={{fontFamily:'monospace'}}>curl -s -H "X-ITOps-Cron-Token: {mail.mail_cron_token}" "{location.origin+location.pathname.replace(/\/(index\.html?)?$/,'')}/cron-mail.php"</span></div>
           : <div style={{fontSize:12,color:'var(--t4)'}}>The cron token is only shown to a Super Admin.</div>}
       </div>}
     </div>}
@@ -17216,7 +17216,7 @@ function Reports({lookups,toast,setPg,setFocus}){
   const [rst,setRst]=React.useState(0); React.useEffect(()=>{ if(rst)load(); },[rst]);   // review UI2-6: Reset loads with the cleared filters
   const exportCsv=async()=>{ setBusy(true);
     try{
-      const res=await fetch(API_BASE+'/reports?format=csv'+(qs()?('&'+qs()):''),{headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin'});
+      const res=await fetch(API_BASE+'/reports?format=csv'+(qs()?('&'+qs()):''),{headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin'});
       if(!res.ok) throw new Error('Export failed ('+res.status+')');
       const blob=await res.blob(); const url=URL.createObjectURL(blob);
       const a=document.createElement('a'); a.href=url; a.download=appName().toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-tickets-'+mhToday()+'.csv'; a.click();
@@ -17410,7 +17410,7 @@ const CRUD={
 function Field({f,val,onChange,lookups}){
   const base={value:(val==null?'':val),onChange:e=>onChange(f.key, f.type==='number'?(e.target.value===''?'':+e.target.value):e.target.value)};
   if(f.type==='sop_audience') return <SopAudienceField val={val} onChange={v=>onChange(f.key,v)} lookups={lookups}/>;
-  if(f.type==='rich') return <RichEditor value={val==null?'':val} onChange={v=>onChange(f.key,v)} placeholder={f.ph} toast={window.__opshToast}/>;
+  if(f.type==='rich') return <RichEditor value={val==null?'':val} onChange={v=>onChange(f.key,v)} placeholder={f.ph} toast={window.__itopsToast}/>;
   if(f.type==='textarea') return <textarea {...base}/>;
   if(f.type==='checkbox') return <div style={{paddingTop:4}}><input type="checkbox" checked={!!val} onChange={e=>onChange(f.key,e.target.checked?1:0)} style={{width:18,height:18,accentColor:'var(--accent)'}}/></div>;
   if(f.type==='select') return <Sel value={base.value} onChange={v=>onChange(f.key,v)} options={(f.options.some(o=>o[0]==='')?[]:[{v:'',l:'—'}]).concat(f.options.map(o=>({v:o[0],l:o[1]})))}/>;
@@ -17498,10 +17498,10 @@ function SopCompliance({toast,onClose}){
   const load=React.useCallback(async()=>{ try{ const r=await api('GET','/sops/compliance'); setD(r); }catch(e){ toast(e.message); } },[]);
   React.useEffect(()=>{ load(); },[load]);
   const remind=async(id)=>{ setBusy(true); try{ const r=await api('POST','/sops/'+id+'/remind',{}); toast('Reminded '+(r.reminded||0)+' person(s)','ok'); }catch(e){ toast(e.message); } setBusy(false); };
-  const remindAll=async()=>{ if(!await opshConfirm('Send a reminder to everyone with outstanding acknowledgments?'))return; setBusy(true); try{ const r=await api('POST','/sops/compliance/remind',{}); toast('Reminded '+(r.reminded||0)+' person(s)','ok'); }catch(e){ toast(e.message); } setBusy(false); };
+  const remindAll=async()=>{ if(!await itopsConfirm('Send a reminder to everyone with outstanding acknowledgments?'))return; setBusy(true); try{ const r=await api('POST','/sops/compliance/remind',{}); toast('Reminded '+(r.reminded||0)+' person(s)','ok'); }catch(e){ toast(e.message); } setBusy(false); };
   const csv=()=>{
     if(!d||!d.sops)return;
-    const esc=v=>{ v=opshCsvSafe(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+    const esc=v=>{ v=itopsCsvSafe(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
     const lines=[['SOP','Version','Outstanding user','Email','Department'].map(esc).join(',')];
     d.sops.forEach(s=>{ (s.missing||[]).forEach(u=>{ lines.push([s.title,'v'+s.current_version,u.display_name,u.email||'',u.department_name||''].map(esc).join(',')); }); });
     const blob=new Blob([lines.join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sop_compliance_gaps.csv'; a.click(); setTimeout((h=>()=>URL.revokeObjectURL(h))(a.href),4000);
@@ -17536,14 +17536,14 @@ function SopCompliance({toast,onClose}){
 }
 /* ====== RECORD HISTORY (from the audit log) + CREDENTIAL REVEAL ====== */
 const HISTORY_TYPE={credentials:'credential',contracts:'contract',vendors:'vendor',sops:'sop',job_descriptions:'job_description',users:'user'};
-function opshFmtVal(v){ if(v==null||v==='')return '—'; if(typeof v==='object')return JSON.stringify(v); const t=String(v); return t.length>120?t.slice(0,117)+'…':t; }
+function itopsFmtVal(v){ if(v==null||v==='')return '—'; if(typeof v==='object')return JSON.stringify(v); const t=String(v); return t.length>120?t.slice(0,117)+'…':t; }
 function CredentialSecrets({id,toast,auditId,version,onClose}){
   const [data,setData]=React.useState(null); const [busy,setBusy]=React.useState(false); const [shown,setShown]=React.useState({}); const [reauth,setReauth]=React.useState(false);
   React.useEffect(()=>{ if(!data)return; const t=setTimeout(()=>{ setData(null); setShown({}); },120000); return ()=>clearTimeout(t); },[data]);   /* review UI2-23: revealed secrets are cleared after 2 minutes */
   const reveal=async()=>{
     setBusy(true);
     try{
-      const pwd=await opshPrompt(version?('Reveal the values of this credential as of '+version+'. Re-enter your '+appName()+' password to continue (Microsoft sign-in accounts: leave blank).'):'Re-enter your '+appName()+' password to reveal this credential (Microsoft sign-in accounts: leave blank). Every reveal is logged.','',{password:true});
+      const pwd=await itopsPrompt(version?('Reveal the values of this credential as of '+version+'. Re-enter your '+appName()+' password to continue (Microsoft sign-in accounts: leave blank).'):'Re-enter your '+appName()+' password to reveal this credential (Microsoft sign-in accounts: leave blank). Every reveal is logged.','',{password:true});
       if(pwd===null){ setBusy(false); return; }
       const body=Object.assign({password:pwd||''},auditId?{audit_id:auditId}:{});
       const url='/credentials/'+id+(auditId?'/history':'/reveal');
@@ -17551,7 +17551,7 @@ function CredentialSecrets({id,toast,auditId,version,onClose}){
       try{ r=await api('POST',url,body); }
       catch(e){
         /* BT90 (code audit M-10): with the app's 2FA on, a current code too; a Microsoft-only account signs in again first */
-        if(e.data&&e.data.needs_code){ const code=await opshPrompt('Enter the current 6-digit code from your authenticator app.',''); if(code===null){ setBusy(false); return; } r=await api('POST',url,Object.assign({},body,{code:code.trim()})); }
+        if(e.data&&e.data.needs_code){ const code=await itopsPrompt('Enter the current 6-digit code from your authenticator app.',''); if(code===null){ setBusy(false); return; } r=await api('POST',url,Object.assign({},body,{code:code.trim()})); }
         else if(e.data&&e.data.reauth){ setReauth(true); setBusy(false); return; }
         else throw e;
       }
@@ -17559,7 +17559,7 @@ function CredentialSecrets({id,toast,auditId,version,onClose}){
     }catch(e){ toast(e.message); }
     setBusy(false);
   };
-  const signAgain=async()=>{ try{ await api('POST','/auth/logout'); }catch(_){ } try{ localStorage.removeItem('opsh_user'); }catch(_){ } location.reload(); };
+  const signAgain=async()=>{ try{ await api('POST','/auth/logout'); }catch(_){ } try{ localStorage.removeItem('itops_user'); }catch(_){ } location.reload(); };
   const copy=async(k)=>{ try{ await navigator.clipboard.writeText(data[k]||''); toast(k+' copied','ok'); }catch(_){ toast('Copy failed'); } };
   const FIELDS=[['username','Username'],['password','Password'],['api_key','API key'],['mfa_details','MFA details'],['notes','Secure notes']];
   return <div style={{border:'1px solid var(--b1)',borderRadius:10,padding:'12px 14px',background:'var(--s1)',marginTop:10}}>
@@ -17622,7 +17622,7 @@ function TermsPanel({res,row,toast,canRenew,canEnd,onOpen,onChanged}){
   const doRenew=async()=>{ if(chk.err.length)return toast(chk.err[0]); if(!f.note||f.note.trim().length<3)return toast('Add a renewal note.');
     setBusy(true); try{ const r=await api('POST','/'+res+'/'+row.id+'/renew',f); toast('Renewed: '+r.previous_ref+' → '+r.ref,'ok'); setMode(null); onChanged&&onChanged(); onOpen&&onOpen(r.id,'terms'); }catch(e){ toast(e.message); } setBusy(false); };
   const doEnd=async()=>{ if(!f.note||f.note.trim().length<3)return toast('Add a short note explaining why the term is ending.');
-    if(!await opshConfirm('Close '+row.ref+' without renewing? It becomes read-only history.'))return;
+    if(!await itopsConfirm('Close '+row.ref+' without renewing? It becomes read-only history.'))return;
     setBusy(true); try{ await api('POST','/'+res+'/'+row.id+'/end',f); toast(row.ref+' closed','ok'); setMode(null); onChanged&&onChanged(); onOpen&&onOpen(row.id,'terms'); }catch(e){ toast(e.message); } setBusy(false); };
   const inp=(k,lbl,type,ph)=><div className="fld" style={{flex:'1 1 200px'}}><label>{lbl}</label><input type={type||'text'} value={f[k]??''} placeholder={ph||''} onChange={e=>setF(x=>({...x,[k]:e.target.value}))}/></div>;
   if(!terms)return <div className="spin"/>;
@@ -17698,7 +17698,7 @@ function RecordHistory({res,id,toast}){
           {h.changes.length?<table className="tbl" style={{margin:0,fontSize:13}}><thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead><tbody>
             {h.changes.map((c,i)=><tr key={i}><td style={{fontWeight:600,textTransform:'capitalize'}}>{label(c.field)}</td>
               {c.secret?<td colSpan={2} style={{color:'var(--amber)'}}>🔒 secret changed{res==='credentials'?' — use "Values before this change" to see the old value':''}</td>
-              :<React.Fragment><td style={{color:'var(--t3)'}}>{opshFmtVal(c.from)}</td><td>{opshFmtVal(c.to)}</td></React.Fragment>}
+              :<React.Fragment><td style={{color:'var(--t3)'}}>{itopsFmtVal(c.from)}</td><td>{itopsFmtVal(c.to)}</td></React.Fragment>}
             </tr>)}</tbody></table>
           :<div style={{fontSize:12.5,color:'var(--t4)'}}>Saved without changes.</div>}
         </div>}
@@ -17728,7 +17728,7 @@ const CRUD_PERM={sops:'sops',job_descriptions:'job_descriptions',credentials:'cr
 function UserMfaBox({u,toast,onDone}){
   const [busy,setBusy]=React.useState(false);
   const on=+u.mfa_enabled===1; const local=(u.auth_provider||'local')!=='o365';
-  const reset=async()=>{ if(!await opshConfirm('Reset two-factor authentication for '+(u.display_name||u.email)+'?\n\nUse it when they lost their authenticator app and their backup codes. They sign in with just their password and set 2FA up again. Their open sessions end.'))return;
+  const reset=async()=>{ if(!await itopsConfirm('Reset two-factor authentication for '+(u.display_name||u.email)+'?\n\nUse it when they lost their authenticator app and their backup codes. They sign in with just their password and set 2FA up again. Their open sessions end.'))return;
     setBusy(true); try{ const r=await api('POST','/auth/mfa/reset',{user_id:u.id}); toast('2FA reset'+(r.sessions_ended?' · '+r.sessions_ended+' session(s) ended':''),'ok'); onDone&&onDone(); }catch(e){ toast(e.message); } setBusy(false); };
   return <div className="card" style={{marginTop:14,padding:14}} data-user-mfa={u.id}>
     <div style={{fontSize:14,fontWeight:700,marginBottom:4}}>Two-factor authentication</div>
@@ -17752,7 +17752,7 @@ function CrudList({res,cfg,lookups,toast,setPg,focus,setFocus}){
   const [agentSrc,setAgentSrc]=React.useState(null);
   const [viewing,setViewing]=React.useState(null);
   const [sopView,setSopView]=React.useState('doc');
-  React.useEffect(()=>{ const hnd=(e)=>{ const d=(e&&e.detail)||{}; if(d.resource!==res)return; setViewing(v=>(v&&String(v.id)===String(d.id))?Object.assign({},v,d.fields||{}):v); reload(); }; window.addEventListener('opsh-doc-saved',hnd); return ()=>window.removeEventListener('opsh-doc-saved',hnd); },[res]);
+  React.useEffect(()=>{ const hnd=(e)=>{ const d=(e&&e.detail)||{}; if(d.resource!==res)return; setViewing(v=>(v&&String(v.id)===String(d.id))?Object.assign({},v,d.fields||{}):v); reload(); }; window.addEventListener('itops-doc-saved',hnd); return ()=>window.removeEventListener('itops-doc-saved',hnd); },[res]);
   const [form,setForm]=React.useState({});
   const open=(row)=>{ const init={}; cfg.fields.forEach(f=>{ init[f.key]= row?(row[f.key]==null?'':row[f.key]):(f.type==='checkbox'?0:''); });
     if(res==='sops'){ init.audience_cfg={audience:'all',users:[],departments:[]};
@@ -17762,20 +17762,20 @@ function CrudList({res,cfg,lookups,toast,setPg,focus,setFocus}){
   const setVal=(k,v)=>setForm(p=>({...p,[k]:v}));
   const docMeta=(row)=>{ row=row||{}; const skip={title:1,content:1,change_summary:1,current_version:1}; return cfg.fields.filter(f=>!skip[f.key]&&f.type!=='rich'&&f.type!=='sop_audience'&&!f.editOnly).map(f=>{ let options=null; if(f.type==='select')options=f.options||[]; else if(f.type==='lookup'){ const items=(lookups&&lookups[f.lookup])||[]; const lk=f.lookup==='users'?'display_name':'name'; options=items.map(it=>[it.id,it[lk]]); } return {key:f.key,label:f.label,type:f.type||'text',options:options,value:row[f.key]==null?'':row[f.key]}; }); };
   const save=async()=>{ const miss=cfg.fields.filter(f=>f.req&&(form[f.key]===''||form[f.key]==null)); if(miss.length){toast(miss[0].label+' is required');return;}
-    const payload={}; cfg.fields.forEach(f=>{ let v=form[f.key]; if(f.superOnly&&!opshIsSuper())return; if(f.secret&&(v===''||v==null))return; if(v===''||v==null)return; payload[f.key]=v; });
+    const payload={}; cfg.fields.forEach(f=>{ let v=form[f.key]; if(f.superOnly&&!itopsIsSuper())return; if(f.secret&&(v===''||v==null))return; if(v===''||v==null)return; payload[f.key]=v; });
     if(payload.audience_cfg){ const a=payload.audience_cfg; delete payload.audience_cfg; if(a.audience==='selected'&&!(a.users||[]).length&&!(a.departments||[]).length){ toast('Pick at least one person or department for this SOP, or choose Everyone'); return; }
       payload.audience=a.audience||'all'; payload.audience_users=a.users||[]; payload.audience_departments=a.departments||[]; }
     try{ if(edit&&edit.id){ await api('PUT','/'+res+'/'+edit.id,payload); toast(cfg.label+' updated','ok'); } else { await api('POST','/'+res,payload); toast(cfg.label+' created','ok'); } setEdit(null); reload(); }
     catch(e){ toast(e.message); } };
-  const del=async(row,confirmed)=>{ if(!confirmed){ if(!await opshConfirm('Delete "'+(row.title||row.name||cfg.label)+'"? A Super Admin can put it back from Deleted items.'))return; } try{ await api('DELETE','/'+res+'/'+row.id); toast('Deleted','ok'); setViewing(null); reload(); }catch(e){ toast(e.message); } };
+  const del=async(row,confirmed)=>{ if(!confirmed){ if(!await itopsConfirm('Delete "'+(row.title||row.name||cfg.label)+'"? A Super Admin can put it back from Deleted items.'))return; } try{ await api('DELETE','/'+res+'/'+row.id); toast('Deleted','ok'); setViewing(null); reload(); }catch(e){ toast(e.message); } };
   return <div>
     {!(viewing||edit)&&<React.Fragment>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:13,gap:8,flexWrap:'wrap'}}>
       <div style={{fontSize:13,color:'var(--t4)',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}><span>{rows?rows.length+' records':'…'} · live</span>{res==='sops'&&<Sel value={sopMine} onChange={v=>setSopMine(v)} options={[{v:'',l:'All SOPs'},{v:'assigned',l:'For me to read'},{v:'owner',l:'I own'}]} style={{minWidth:150}} title="Which SOPs"/>}{cfg.terms&&<label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',color:'var(--t3)'}}><input type="checkbox" checked={showEnded} onChange={e=>setShowEnded(e.target.checked)} style={{width:15,height:15,accentColor:'var(--accent)'}}/>Show closed / renewed terms</label>}</div>
-      <div style={{display:'flex',gap:7,flexWrap:'wrap'}}>{canC&&(res==='sops'||res==='job_descriptions')&&<button className="btn btn-p btn-sm" onClick={()=>{setAgentSrc(null);setAgentOpen(true);}}>✨ Build with AI</button>}{canC&&(res==='sops'||res==='job_descriptions')&&<button className="btn btn-g btn-sm" onClick={()=>setTplOpen(true)}>📋 Templates</button>}{res==='sops'&&<button className="btn btn-g btn-sm" onClick={()=>setCompOpen(true)}>Compliance</button>}<button className="btn btn-g btn-sm" onClick={reload}><I n="refresh" s={16}/></button>{canC&&(res==='sops'||res==='job_descriptions')&&<button className="btn btn-g btn-sm" title="Create in a separate window" onClick={()=>opshDocWindow({resource:res,label:cfg.label,title:'',content:'',meta:docMeta(null)})}>↗ New window</button>}{canC?<button className="btn btn-p" onClick={()=>open(null)}><I n="plus" s={17} c="#fff"/>New {cfg.label}</button>:<span style={{fontSize:12,color:'var(--t4)',alignSelf:'center'}}>Read-only access</span>}</div>
+      <div style={{display:'flex',gap:7,flexWrap:'wrap'}}>{canC&&(res==='sops'||res==='job_descriptions')&&<button className="btn btn-p btn-sm" onClick={()=>{setAgentSrc(null);setAgentOpen(true);}}>✨ Build with AI</button>}{canC&&(res==='sops'||res==='job_descriptions')&&<button className="btn btn-g btn-sm" onClick={()=>setTplOpen(true)}>📋 Templates</button>}{res==='sops'&&<button className="btn btn-g btn-sm" onClick={()=>setCompOpen(true)}>Compliance</button>}<button className="btn btn-g btn-sm" onClick={reload}><I n="refresh" s={16}/></button>{canC&&(res==='sops'||res==='job_descriptions')&&<button className="btn btn-g btn-sm" title="Create in a separate window" onClick={()=>itopsDocWindow({resource:res,label:cfg.label,title:'',content:'',meta:docMeta(null)})}>↗ New window</button>}{canC?<button className="btn btn-p" onClick={()=>open(null)}><I n="plus" s={17} c="#fff"/>New {cfg.label}</button>:<span style={{fontSize:12,color:'var(--t4)',alignSelf:'center'}}>Read-only access</span>}</div>
     </div>
     {res==='sops'&&compOpen&&<SopCompliance toast={toast} onClose={()=>setCompOpen(false)}/>}
-    {(res==='sops'||res==='job_descriptions')&&tplOpen&&<SopTemplateGallery templates={res==='job_descriptions'?JD_TEMPLATES:SOP_TEMPLATES} onClose={()=>setTplOpen(false)} onUse={t=>{ setTplOpen(false); open({title:t.title,content:String(t.html||'').replace(/created from OpsHub template/g,'created from '+appName()+' template'),review_frequency_days:t.review,status:'draft'}); }}/>}
+    {(res==='sops'||res==='job_descriptions')&&tplOpen&&<SopTemplateGallery templates={res==='job_descriptions'?JD_TEMPLATES:SOP_TEMPLATES} onClose={()=>setTplOpen(false)} onUse={t=>{ setTplOpen(false); open({title:t.title,content:String(t.html||'').replace(/created from ITOps template/g,'created from '+appName()+' template'),review_frequency_days:t.review,status:'draft'}); }}/>}
     {(res==='sops'||res==='job_descriptions')&&agentOpen&&<SopAgent toast={toast} kind={res==='job_descriptions'?'jd':'sop'} initialSource={agentSrc} onClose={()=>{setAgentOpen(false);setAgentSrc(null);}} onUse={d=>{ setAgentOpen(false); setAgentSrc(null); open({title:d.title,content:d.html,review_frequency_days:d.review,status:'draft'}); }}/>}
     {loading?<div className="spin"/>:err?<div className="empty">{err}</div>:!rows||!rows.length?<div className="empty">No records yet. Create the first one.</div>:
     <div className="card" style={{padding:0,overflow:'auto'}}><table className="tbl"><thead><tr>{cfg.cols.map(c=><th key={c[0]}>{c[1]}</th>)}<th></th></tr></thead>
@@ -17785,16 +17785,16 @@ function CrudList({res,cfg,lookups,toast,setPg,focus,setFocus}){
         {canD&&<span className="iconbtn" style={{display:'inline-flex',width:28,height:28}} onClick={()=>del(r)}><I n="trash" s={16} c="var(--red)"/></span>}
       </td></tr>)}</tbody></table></div>}
     </React.Fragment>}
-    {viewing&&<FloatWin title={viewing.title||viewing.name} badge={viewing.status?<B v={viewing.status}>{viewing.status}</B>:null} width={760} onClose={()=>setViewing(null)} onPopout={()=>{ if(res==='sops'||res==='job_descriptions'){ opshDocWindow({resource:res,id:viewing.id,title:viewing.title||viewing.name||'Document',content:viewing.content||'',label:cfg.label,meta:docMeta(viewing)}); } else { opshPopout(viewing.title||viewing.name||'Document',viewing.content||''); } }} ribbon={<React.Fragment>{(res==='sops'||res==='job_descriptions')&&<button className="btn btn-g btn-sm" onClick={()=>{ setAgentSrc(opshHtmlToText(viewing.content||'')); setAgentOpen(true); setViewing(null); }}>✨ Modernize</button>}{cfg.doc&&<button className="btn btn-g btn-sm" onClick={()=>opshExportWord(viewing.title||viewing.name||'document',viewing.content||'')}>⬇ Word</button>}{cfg.doc&&<button className="btn btn-g btn-sm" onClick={()=>opshExportPdf(viewing.title||viewing.name||'document',viewing.content||'')}>⬇ PDF</button>}{!viewing.is_locked&&canE&&<button className="btn btn-p btn-sm" onClick={()=>{open(viewing);setViewing(null);}}>✏ Edit</button>}{(res==='sops'||res==='job_descriptions')&&<button className="btn btn-g btn-sm" title="Open this in a separate editable window" onClick={()=>opshDocWindow({resource:res,id:viewing.id,title:viewing.title||viewing.name||'Document',content:viewing.content||'',label:cfg.label,meta:docMeta(viewing)})}>↗ Open in window</button>}<span style={{flex:1}}/><button className="btn btn-d btn-sm" onClick={async()=>{ const t=await opshPrompt('Permanently delete "'+(viewing.title||viewing.name)+'"? This cannot be undone. Type DELETE to confirm.',''); if(((t||'')+'').trim().toUpperCase()!=='DELETE')return; del(viewing,true); }}>Delete</button></React.Fragment>}><div style={{fontSize:13,color:'var(--t4)',marginBottom:12}}>{cfg.label}{viewing.current_version?(' · v'+viewing.current_version):''}{viewing.next_review_date?(' · review '+viewing.next_review_date):''}{res==='sops'&&<span> · owner: <b style={{color:'var(--t2)'}}>{viewing.owner_name||'none — set one with Edit'}</b>{viewing.audience_label?' · for: '+viewing.audience_label:''}{viewing.my_state&&viewing.my_state!=='—'?' · you: '+viewing.my_state:''}</span>}</div>{res==='sops'?<React.Fragment><div style={{display:'flex',gap:4,borderTop:'1px solid var(--b1)',paddingTop:11,marginBottom:6}}>{[['doc','Document'],['flow','Flowchart']].map(function(o){return <button key={o[0]} type="button" onClick={()=>setSopView(o[0])} className={'btn btn-sm '+(sopView===o[0]?'btn-p':'btn-g')} style={{fontSize:12}}>{o[1]}</button>;})}</div>{sopView==='flow'?<div style={{marginBottom:14,maxHeight:'none',overflow:'auto'}}><SopFlowchart html={viewing.content||''}/></div>:<div style={{fontSize:15,color:'var(--t2)',lineHeight:1.7,paddingTop:6,marginBottom:14,maxHeight:'none',overflow:'auto'}} dangerouslySetInnerHTML={shtml(viewing.content||'<em>No content yet. Click Edit to add the procedure.</em>')}/>}</React.Fragment>:(cfg.doc?<div style={{fontSize:15,color:'var(--t2)',lineHeight:1.7,borderTop:'1px solid var(--b1)',paddingTop:13,marginBottom:14,maxHeight:'none',overflow:'auto'}} dangerouslySetInnerHTML={shtml(viewing.content||'<em>No content yet. Click Edit to add the procedure.</em>')}/>:<React.Fragment>{cfg.terms&&viewing.ref&&<div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:10}}><span style={{fontFamily:'monospace',fontSize:14,fontWeight:700,background:'var(--s3)',padding:'3px 9px',borderRadius:6}}>{viewing.ref}</span>{viewing.term_no>1&&<span style={{fontSize:13,color:'var(--t3)'}}>Renewal #{viewing.term_no-1}</span>}<B v={viewing.term_state}>{viewing.term_state}</B>{viewing.days_left!=null&&!viewing.is_locked&&<span style={{fontSize:13,color:viewing.days_left<0?'var(--red)':'var(--t3)'}}>{viewing.days_left<0?('ended '+(-viewing.days_left)+' days ago'):(viewing.days_left+' days left in term')}</span>}</div>}{cfg.terms&&viewing.is_locked?<div style={{background:'var(--s3)',border:'1px solid var(--b1)',borderRadius:10,padding:'10px 12px',fontSize:14,color:'var(--t2)',marginBottom:12,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}><span>🔒 This term is closed ({viewing.status}{viewing.end_reason&&viewing.end_reason!==viewing.status?' · '+String(viewing.end_reason).replace('_',' '):''}) and kept read-only as history.</span>{viewing.renewed_to_id&&<button className="btn btn-p btn-sm" onClick={()=>openById(viewing.renewed_to_id,'terms')}>Open the renewed term →</button>}</div>:null}{(res==='vendors'||res==='contracts'||res==='credentials')&&<div className="conn-tabs" style={{marginBottom:12}}>{(res==='vendors'?[['details','Details'],['contracts','Contracts & renewals'],['contacts','Contacts'],['docs','Documents']].concat(can('invoices','view')?[['invoices','Invoices']]:[]).concat(can('budget','view')?[['budget','IT budget']]:[]).concat([['history','History']]):res==='contracts'?[['details','Details'],['terms','Terms & renewals'],['vendor','Vendor'],['docs','Documents']].concat(can('invoices','view')?[['invoices','Invoices']]:[]).concat(can('budget','view')?[['budget','IT budget']]:[]).concat([['history','History']]):[['details','Details'],['terms','Terms & renewals'],['history','Change history']]).map(t=><div key={t[0]} className={'conn-tab'+(vtab===t[0]?' on':'')} onClick={()=>setVtab(t[0])}>{t[1]}</div>)}</div>}{(!(res==='vendors'||res==='contracts'||res==='credentials')||vtab==='details')&&<React.Fragment><RecordDetails row={viewing} cfg={cfg} lookups={lookups}/>{res==='credentials'&&<CredentialSecrets key={viewing.id} id={viewing.id} toast={toast}/>}</React.Fragment>}{(res==='vendors'||res==='contracts'||res==='credentials')&&vtab==='history'&&<RecordHistory key={viewing.id} res={res} id={viewing.id} toast={toast}/>}{(res==='vendors'||res==='contracts')&&vtab==='budget'&&<BudLinksPanel key={res+viewing.id} res={res} id={viewing.id} setPg={setPg}/>}{cfg.terms&&vtab==='terms'&&<TermsPanel key={viewing.id} res={res} row={viewing} toast={toast} canRenew={canC} canEnd={canE} onOpen={openById} onChanged={reload}/>}</React.Fragment>)}{res==='sops'&&<SopExtras sop={viewing} toast={toast}/>}{(res==='sops'||res==='job_descriptions')&&<SignaturePanel docType={res} docId={viewing.id} docTitle={viewing.title||viewing.name} users={lookups.users||[]} toast={toast}/>}{res==='job_descriptions'&&<DocVersions docType={res} docId={viewing.id} toast={toast}/>}{(res==='sops'||res==='job_descriptions')&&<RelatedItems res={res} id={viewing.id} title={viewing.title||viewing.name} toast={toast}/>}{(res==='contracts'||res==='vendors')&&vtab==='invoices'&&<InvoicesFor res={res} id={viewing.id} setPg={setPg}/>}{res==='contracts'&&vtab==='vendor'&&<ContractVendorInfo contract={viewing} setPg={setPg} setFocus={setFocus} toast={toast}/>}{res==='contracts'&&vtab==='docs'&&<AttachmentsPanel entity="contracts" id={viewing.id} toast={toast} heading="Contract documents"/>}{res==='vendors'&&vtab==='contracts'&&<VendorContracts vendorId={viewing.id} toast={toast} setPg={setPg} setFocus={setFocus}/>}{res==='vendors'&&vtab==='contacts'&&<VendorContactsPanel vendorId={viewing.id} toast={toast}/>}{res==='vendors'&&vtab==='docs'&&<AttachmentsPanel entity="vendors" id={viewing.id} toast={toast} heading="Vendor documents"/>}</FloatWin>}
+    {viewing&&<FloatWin title={viewing.title||viewing.name} badge={viewing.status?<B v={viewing.status}>{viewing.status}</B>:null} width={760} onClose={()=>setViewing(null)} onPopout={()=>{ if(res==='sops'||res==='job_descriptions'){ itopsDocWindow({resource:res,id:viewing.id,title:viewing.title||viewing.name||'Document',content:viewing.content||'',label:cfg.label,meta:docMeta(viewing)}); } else { itopsPopout(viewing.title||viewing.name||'Document',viewing.content||''); } }} ribbon={<React.Fragment>{(res==='sops'||res==='job_descriptions')&&<button className="btn btn-g btn-sm" onClick={()=>{ setAgentSrc(itopsHtmlToText(viewing.content||'')); setAgentOpen(true); setViewing(null); }}>✨ Modernize</button>}{cfg.doc&&<button className="btn btn-g btn-sm" onClick={()=>itopsExportWord(viewing.title||viewing.name||'document',viewing.content||'')}>⬇ Word</button>}{cfg.doc&&<button className="btn btn-g btn-sm" onClick={()=>itopsExportPdf(viewing.title||viewing.name||'document',viewing.content||'')}>⬇ PDF</button>}{!viewing.is_locked&&canE&&<button className="btn btn-p btn-sm" onClick={()=>{open(viewing);setViewing(null);}}>✏ Edit</button>}{(res==='sops'||res==='job_descriptions')&&<button className="btn btn-g btn-sm" title="Open this in a separate editable window" onClick={()=>itopsDocWindow({resource:res,id:viewing.id,title:viewing.title||viewing.name||'Document',content:viewing.content||'',label:cfg.label,meta:docMeta(viewing)})}>↗ Open in window</button>}<span style={{flex:1}}/><button className="btn btn-d btn-sm" onClick={async()=>{ const t=await itopsPrompt('Permanently delete "'+(viewing.title||viewing.name)+'"? This cannot be undone. Type DELETE to confirm.',''); if(((t||'')+'').trim().toUpperCase()!=='DELETE')return; del(viewing,true); }}>Delete</button></React.Fragment>}><div style={{fontSize:13,color:'var(--t4)',marginBottom:12}}>{cfg.label}{viewing.current_version?(' · v'+viewing.current_version):''}{viewing.next_review_date?(' · review '+viewing.next_review_date):''}{res==='sops'&&<span> · owner: <b style={{color:'var(--t2)'}}>{viewing.owner_name||'none — set one with Edit'}</b>{viewing.audience_label?' · for: '+viewing.audience_label:''}{viewing.my_state&&viewing.my_state!=='—'?' · you: '+viewing.my_state:''}</span>}</div>{res==='sops'?<React.Fragment><div style={{display:'flex',gap:4,borderTop:'1px solid var(--b1)',paddingTop:11,marginBottom:6}}>{[['doc','Document'],['flow','Flowchart']].map(function(o){return <button key={o[0]} type="button" onClick={()=>setSopView(o[0])} className={'btn btn-sm '+(sopView===o[0]?'btn-p':'btn-g')} style={{fontSize:12}}>{o[1]}</button>;})}</div>{sopView==='flow'?<div style={{marginBottom:14,maxHeight:'none',overflow:'auto'}}><SopFlowchart html={viewing.content||''}/></div>:<div style={{fontSize:15,color:'var(--t2)',lineHeight:1.7,paddingTop:6,marginBottom:14,maxHeight:'none',overflow:'auto'}} dangerouslySetInnerHTML={shtml(viewing.content||'<em>No content yet. Click Edit to add the procedure.</em>')}/>}</React.Fragment>:(cfg.doc?<div style={{fontSize:15,color:'var(--t2)',lineHeight:1.7,borderTop:'1px solid var(--b1)',paddingTop:13,marginBottom:14,maxHeight:'none',overflow:'auto'}} dangerouslySetInnerHTML={shtml(viewing.content||'<em>No content yet. Click Edit to add the procedure.</em>')}/>:<React.Fragment>{cfg.terms&&viewing.ref&&<div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:10}}><span style={{fontFamily:'monospace',fontSize:14,fontWeight:700,background:'var(--s3)',padding:'3px 9px',borderRadius:6}}>{viewing.ref}</span>{viewing.term_no>1&&<span style={{fontSize:13,color:'var(--t3)'}}>Renewal #{viewing.term_no-1}</span>}<B v={viewing.term_state}>{viewing.term_state}</B>{viewing.days_left!=null&&!viewing.is_locked&&<span style={{fontSize:13,color:viewing.days_left<0?'var(--red)':'var(--t3)'}}>{viewing.days_left<0?('ended '+(-viewing.days_left)+' days ago'):(viewing.days_left+' days left in term')}</span>}</div>}{cfg.terms&&viewing.is_locked?<div style={{background:'var(--s3)',border:'1px solid var(--b1)',borderRadius:10,padding:'10px 12px',fontSize:14,color:'var(--t2)',marginBottom:12,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}><span>🔒 This term is closed ({viewing.status}{viewing.end_reason&&viewing.end_reason!==viewing.status?' · '+String(viewing.end_reason).replace('_',' '):''}) and kept read-only as history.</span>{viewing.renewed_to_id&&<button className="btn btn-p btn-sm" onClick={()=>openById(viewing.renewed_to_id,'terms')}>Open the renewed term →</button>}</div>:null}{(res==='vendors'||res==='contracts'||res==='credentials')&&<div className="conn-tabs" style={{marginBottom:12}}>{(res==='vendors'?[['details','Details'],['contracts','Contracts & renewals'],['contacts','Contacts'],['docs','Documents']].concat(can('invoices','view')?[['invoices','Invoices']]:[]).concat(can('budget','view')?[['budget','IT budget']]:[]).concat([['history','History']]):res==='contracts'?[['details','Details'],['terms','Terms & renewals'],['vendor','Vendor'],['docs','Documents']].concat(can('invoices','view')?[['invoices','Invoices']]:[]).concat(can('budget','view')?[['budget','IT budget']]:[]).concat([['history','History']]):[['details','Details'],['terms','Terms & renewals'],['history','Change history']]).map(t=><div key={t[0]} className={'conn-tab'+(vtab===t[0]?' on':'')} onClick={()=>setVtab(t[0])}>{t[1]}</div>)}</div>}{(!(res==='vendors'||res==='contracts'||res==='credentials')||vtab==='details')&&<React.Fragment><RecordDetails row={viewing} cfg={cfg} lookups={lookups}/>{res==='credentials'&&<CredentialSecrets key={viewing.id} id={viewing.id} toast={toast}/>}</React.Fragment>}{(res==='vendors'||res==='contracts'||res==='credentials')&&vtab==='history'&&<RecordHistory key={viewing.id} res={res} id={viewing.id} toast={toast}/>}{(res==='vendors'||res==='contracts')&&vtab==='budget'&&<BudLinksPanel key={res+viewing.id} res={res} id={viewing.id} setPg={setPg}/>}{cfg.terms&&vtab==='terms'&&<TermsPanel key={viewing.id} res={res} row={viewing} toast={toast} canRenew={canC} canEnd={canE} onOpen={openById} onChanged={reload}/>}</React.Fragment>)}{res==='sops'&&<SopExtras sop={viewing} toast={toast}/>}{(res==='sops'||res==='job_descriptions')&&<SignaturePanel docType={res} docId={viewing.id} docTitle={viewing.title||viewing.name} users={lookups.users||[]} toast={toast}/>}{res==='job_descriptions'&&<DocVersions docType={res} docId={viewing.id} toast={toast}/>}{(res==='sops'||res==='job_descriptions')&&<RelatedItems res={res} id={viewing.id} title={viewing.title||viewing.name} toast={toast}/>}{(res==='contracts'||res==='vendors')&&vtab==='invoices'&&<InvoicesFor res={res} id={viewing.id} setPg={setPg}/>}{res==='contracts'&&vtab==='vendor'&&<ContractVendorInfo contract={viewing} setPg={setPg} setFocus={setFocus} toast={toast}/>}{res==='contracts'&&vtab==='docs'&&<AttachmentsPanel entity="contracts" id={viewing.id} toast={toast} heading="Contract documents"/>}{res==='vendors'&&vtab==='contracts'&&<VendorContracts vendorId={viewing.id} toast={toast} setPg={setPg} setFocus={setFocus}/>}{res==='vendors'&&vtab==='contacts'&&<VendorContactsPanel vendorId={viewing.id} toast={toast}/>}{res==='vendors'&&vtab==='docs'&&<AttachmentsPanel entity="vendors" id={viewing.id} toast={toast} heading="Vendor documents"/>}</FloatWin>}
     {edit&&<FloatWin title={(edit.id?'Edit ':'New ')+cfg.label} width={cfg.doc?760:560} onClose={()=>setEdit(null)} ribbon={<React.Fragment><button className="btn btn-p btn-sm" onClick={save}>{edit.id?'💾 Save changes':'💾 Create '+cfg.label}</button><button className="btn btn-g btn-sm" onClick={()=>setEdit(null)}>Cancel</button>{res==='credentials'&&edit.id&&<button className="btn btn-g btn-sm" title="See the rotation date on the calendar" onClick={()=>{setEdit(null);setPg&&setPg('calendar');}}>📅 Calendar</button>}</React.Fragment>}>
       <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'stretch'}}>
-      {cfg.fields.map(f=>((f.editOnly&&!(edit&&edit.id))||(f.superOnly&&!opshIsSuper()))?null:<div key={f.key} className="fld" style={{flex:f.full?'1 1 100%':'1 1 calc(50% - 12px)',minWidth:f.full?'100%':'170px'}}>
+      {cfg.fields.map(f=>((f.editOnly&&!(edit&&edit.id))||(f.superOnly&&!itopsIsSuper()))?null:<div key={f.key} className="fld" style={{flex:f.full?'1 1 100%':'1 1 calc(50% - 12px)',minWidth:f.full?'100%':'170px'}}>
         <label>{f.label}{f.req?' *':''}{f.secret&&edit.id?' (blank = unchanged)':''}</label>
         <Field f={f} val={form[f.key]} onChange={setVal} lookups={lookups}/>
       </div>)}
       </div>
       {['credentials','contracts','vendors'].indexOf(res)>=0&&edit.id&&<RelatedItems res={res} id={edit.id} title={form.name||form.title||edit.name||edit.title} toast={toast}/>}
-      {res==='users'&&edit.id&&opshIsSuper()&&<UserMfaBox u={edit} toast={toast} onDone={()=>{ setEdit(e=>e?Object.assign({},e,{mfa_enabled:0}):e); reload&&reload(); }}/>}
+      {res==='users'&&edit.id&&itopsIsSuper()&&<UserMfaBox u={edit} toast={toast} onDone={()=>{ setEdit(e=>e?Object.assign({},e,{mfa_enabled:0}):e); reload&&reload(); }}/>}
     </FloatWin>}
   </div>;
 }
@@ -17803,7 +17803,7 @@ function CrudList({res,cfg,lookups,toast,setPg,focus,setFocus}){
 /* ====== ROLES & PERMISSIONS (granular, per-module / per-action) ======
  * PERM_GROUPS is the single registry of everything a role can be granted. It mirrors the
  * sidebar 1:1 — every menu item maps to exactly one module here — and the API enforces the
- * same keys (api/index.php opsh_can + opsh_require in each route).
+ * same keys (api/index.php itops_can + itops_require in each route).
  *   [key, label, description, allowedActions, flags]
  *   flags.sensitive → shown with a warning badge;  flags.note → extra rule shown under the label
  */
@@ -17882,7 +17882,7 @@ const PERM_MODULES=[].concat.apply([],PERM_GROUPS.map(g=>g.mods.map(m=>[m[0],m[1
 const PERM_ACTS_OF={}; PERM_GROUPS.forEach(g=>g.mods.forEach(m=>{PERM_ACTS_OF[m[0]]=m[3];}));
 const PERM_ACTIONS=[['view','View'],['create','Create'],['edit','Edit'],['delete','Delete'],['all','All records'],['admin','Admin']];
 const PERM_ALWAYS=['Dashboard','own profile & notifications'];
-/* BT143: sub-permissions that only work with a base View (same list as api/lib/Perms.php opsh_perm_bases) */
+/* BT143: sub-permissions that only work with a base View (same list as api/lib/Perms.php itops_perm_bases) */
 const PERM_BASE=(()=>{ const b={vtiger_credentials:'vtiger_users'}; ['m365_users','m365_credentials','m365_licenses','m365_groups','m365_roles','m365_devices','m365_keys','m365_mail','m365_admin','m365_ca','m365_incidents','m365_device_wipe'].forEach(k=>{b[k]='m365';}); return b; })();
 /* ticking a sub-permission ticks its base View; unticking a base View unticks what depends on it */
 function permWithBase(perms,changed){ const p={...perms}; const off={view:false,create:false,edit:false,delete:false,all:false};
@@ -17906,12 +17906,12 @@ const PERM_PRESETS=(function(){ const V=['view'],VC=['view','create'],VCE=['view
 function rolesParsePerms(raw){
   let p=raw; if(typeof raw==='string'){try{p=JSON.parse(raw)}catch(_){p={}}}
   p=p||{};
-  if(opshWild(p['*'])) return {full:true,perms:{},legacy:false};
+  if(itopsWild(p['*'])) return {full:true,perms:{},legacy:false};
   const out={}; let legacy=false;
   // OLD-format role (plain strings, no per-action arrays): show exactly the access the server really gives it —
   // including inherited modules and "All records" — so re-saving from this grid never silently removes access.
   if(!Object.keys(p).some(k=>Array.isArray(p[k]))&&Object.keys(p).length){
-    PERM_MODULES.forEach(([m])=>{ const a={view:false,create:false,edit:false,delete:false,all:false,admin:false}; (PERM_ACTS_OF[m]||['view']).concat(['view']).forEach(act=>{ if(a[act]!==undefined&&opshCanFrom('custom',p,m,act,true))a[act]=true; }); out[m]=a; });
+    PERM_MODULES.forEach(([m])=>{ const a={view:false,create:false,edit:false,delete:false,all:false,admin:false}; (PERM_ACTS_OF[m]||['view']).concat(['view']).forEach(act=>{ if(a[act]!==undefined&&itopsCanFrom('custom',p,m,act,true))a[act]=true; }); out[m]=a; });
     return {full:false,perms:out,legacy:true};
   }
   PERM_MODULES.forEach(([m])=>{ const v=p[m]; const a={view:false,create:false,edit:false,delete:false,all:false,admin:false};
@@ -17942,15 +17942,15 @@ function Roles({toast,user}){
   const tog=(m,k)=>setPstate(st=>{ const perms={...st.perms}; const a={...(perms[m]||{view:false,create:false,edit:false,delete:false,all:false})}; a[k]=!a[k]; if(k!=='view'&&a[k])a.view=true; if(k==='view'&&!a[k]){a.create=a.edit=a.delete=a.all=false;} perms[m]=a; return {...st,perms:permWithBase(perms,m)}; });
   const setRow=(m,on)=>setPstate(st=>{ const perms={...st.perms}; const allowed=PERM_ACTS_OF[m]||['view']; perms[m]={view:on,create:on&&allowed.includes('create'),edit:on&&allowed.includes('edit'),delete:on&&allowed.includes('delete'),all:on&&allowed.includes('all')}; return {...st,perms:permWithBase(perms,m)}; });
   const setGroup=(g,mode)=>setPstate(st=>{ const perms={...st.perms}; g.mods.forEach(([m])=>{ const allowed=PERM_ACTS_OF[m]||['view']; if(mode==='none')perms[m]={view:false,create:false,edit:false,delete:false,all:false}; else if(mode==='view')perms[m]={view:true,create:false,edit:false,delete:false,all:allowed.includes('all')}; else perms[m]={view:true,create:allowed.includes('create'),edit:allowed.includes('edit'),delete:allowed.includes('delete'),all:allowed.includes('all')}; }); return {...st,perms:permWithBase(perms,mode==='none'?g.mods.map(x=>x[0]).find(k=>Object.values(PERM_BASE).includes(k)):'')}; });
-  const applyPreset=async(p)=>{ const any=Object.values(pstate.perms).some(a=>a.view); if(any&&!await opshConfirm('Replace the current permission grid with the "'+p.name+'" preset?'))return; setPstate(rolesParsePerms(p.perms)); toast('Preset "'+p.name+'" applied — review and save','ok'); };
+  const applyPreset=async(p)=>{ const any=Object.values(pstate.perms).some(a=>a.view); if(any&&!await itopsConfirm('Replace the current permission grid with the "'+p.name+'" preset?'))return; setPstate(rolesParsePerms(p.perms)); toast('Preset "'+p.name+'" applied — review and save','ok'); };
   const save=async()=>{ if(!form.name){toast('Role name is required');return;} const slug=form.slug||slugify(form.name);
     const payload={name:form.name,slug,description:form.description,permissions:rolesBuildPerms(pstate)};
     try{ if(edit&&edit.id){ await api('PUT','/roles/'+edit.id,payload); toast('Role updated — users get the new access on their next page load','ok'); } else { await api('POST','/roles',payload); toast('Role created','ok'); } setEdit(null); reload(); }
     catch(e){ toast(e.message); } };
-  const del=async(row)=>{ if(!isSuper){toast('Only a Super Admin can delete roles');return;} if(row.is_system){toast('System roles cannot be deleted');return;} if(row.user_count){toast(row.user_count+' user(s) still hold this role — reassign them first');return;} if(!await opshConfirm('Delete role "'+row.name+'"?'))return; try{ await api('DELETE','/roles/'+row.id); toast('Deleted','ok'); reload(); }catch(e){ toast(e.message); } };
+  const del=async(row)=>{ if(!isSuper){toast('Only a Super Admin can delete roles');return;} if(row.is_system){toast('System roles cannot be deleted');return;} if(row.user_count){toast(row.user_count+' user(s) still hold this role — reassign them first');return;} if(!await itopsConfirm('Delete role "'+row.name+'"?'))return; try{ await api('DELETE','/roles/'+row.id); toast('Deleted','ok'); reload(); }catch(e){ toast(e.message); } };
   const permSummary=(raw)=>{ const s=rolesParsePerms(raw); if(s.full)return 'Full access'; const n=Object.values(s.perms).filter(a=>a.view).length; const w=Object.values(s.perms).filter(a=>a.create||a.edit||a.delete).length; return n+' of '+PERM_MODULES.length+' modules'+(w?' · edits '+w:' · read-only'); };
   // live preview: what will the sidebar show for this role?
-  const previewCan=(mod,act)=>opshCanFrom(pstate.full?'super_admin':'x',rolesBuildPerms(pstate),mod,act);
+  const previewCan=(mod,act)=>itopsCanFrom(pstate.full?'super_admin':'x',rolesBuildPerms(pstate),mod,act);
   const preview=NAVGROUPS.map(g=>{ if(g.type==='item')return (g.id==='dashboard'?previewCan('dashboard'):navCan(previewCan,g.perm))?{label:g.label,items:null}:null; const items=g.items.filter(it=>it.adminOnly?pstate.full:navCan(previewCan,it.perm)); return items.length?{label:g.label,items:items.map(i=>i.label)}:null; }).filter(Boolean);
   const nGranted=Object.values(pstate.perms).filter(a=>a.view).length;
   const editingSuper=edit&&edit.slug==='super_admin';
@@ -18009,7 +18009,7 @@ function Roles({toast,user}){
                 </div></td></tr>
               {!collapsed&&g.mods.map(([m,lbl,desc,acts,flags])=>{ const a=pstate.perms[m]||{}; const allowed=acts; const all=allowed.every(k=>a[k]); flags=flags||{}; return <tr key={m} style={{cursor:'default'}}>
                 <td style={{padding:'8px 10px'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}><span style={{fontWeight:600,fontSize:14,opacity:OPSH_MODS.permOff[m]?.55:1}}>{lbl}</span>{OPSH_MODS.permOff[m]&&<span data-perm-modoff={m} title="This module is not part of this installation: the permission is kept on the role and takes effect if the module is switched on" style={{fontSize:11,fontWeight:700,color:'var(--t3)',background:'var(--s3)',padding:'1px 6px',borderRadius:5}}>MODULE OFF</span>}{flags.personal&&<span title="The user's own page — on by default for every role; untick to hide it" style={{fontSize:11,fontWeight:700,color:'var(--accent)',background:'var(--accentL)',padding:'1px 6px',borderRadius:5}}>PERSONAL</span>}{flags.sensitive&&<span title="Grants access to sensitive data or powerful actions" style={{fontSize:11,fontWeight:700,color:'var(--red)',background:'var(--redL,#FDECEC)',padding:'1px 6px',borderRadius:5}}>SENSITIVE</span>}</div>
+                  <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}><span style={{fontWeight:600,fontSize:14,opacity:ITOPS_MODS.permOff[m]?.55:1}}>{lbl}</span>{ITOPS_MODS.permOff[m]&&<span data-perm-modoff={m} title="This module is not part of this installation: the permission is kept on the role and takes effect if the module is switched on" style={{fontSize:11,fontWeight:700,color:'var(--t3)',background:'var(--s3)',padding:'1px 6px',borderRadius:5}}>MODULE OFF</span>}{flags.personal&&<span title="The user's own page — on by default for every role; untick to hide it" style={{fontSize:11,fontWeight:700,color:'var(--accent)',background:'var(--accentL)',padding:'1px 6px',borderRadius:5}}>PERSONAL</span>}{flags.sensitive&&<span title="Grants access to sensitive data or powerful actions" style={{fontSize:11,fontWeight:700,color:'var(--red)',background:'var(--redL,#FDECEC)',padding:'1px 6px',borderRadius:5}}>SENSITIVE</span>}</div>
                   <div style={{fontSize:12,color:'var(--t4)',lineHeight:1.35,marginTop:2}}>{desc}</div>
                   {flags.note&&<div style={{fontSize:12,color:'var(--t3)',lineHeight:1.35,marginTop:2,fontStyle:'italic'}}>{flags.note}</div>}
                 </td>
@@ -18089,10 +18089,10 @@ function CalEventPage({ev,meta,toast,onClose,onSaved,setPg,setFocus}){
       if(isNew) await api('POST','/calendar',b); else await api('PUT','/calendar/'+ev.id,b);
       toast(isNew?'Event added':'Saved','ok'); onSaved(); }catch(x){ toast(x.message); setBusy(false); } };
   const del=async(scope)=>{ if(orig&&orig.recur&&ev.occ&&!scope){ setScopeFor('delete'); return; }
-    if(!scope&&!await opshConfirm('Remove this event?'))return; setBusy(true); setScopeFor(null);
+    if(!scope&&!await itopsConfirm('Remove this event?'))return; setBusy(true); setScopeFor(null);
     try{ await api('DELETE','/calendar/'+ev.id+(scope&&scope!=='series'?'?scope='+scope+'&occ='+ev.occ:'')); toast('Removed','ok'); onSaved(); }catch(x){ toast(x.message); setBusy(false); } };
   const respond=async r=>{ try{ await api('POST','/calendar/'+ev.id+'/respond',{response:r}); toast('Answer saved','ok'); set({_resp:Object.assign({},f._resp,{response:r})}); }catch(x){ toast(x.message); } };
-  const ics=async()=>{ try{ await opshFetchFile('/calendar/'+ev.id+'/ics',null,'event.ics'); }catch(x){ toast(x.message); } };
+  const ics=async()=>{ try{ await itopsFetchFile('/calendar/'+ev.id+'/ics',null,'event.ics'); }catch(x){ toast(x.message); } };
   const users=meta.users||[]; const uName=id=>(users.find(u=>u.id===id)||{}).name||('#'+id);
   const addU=()=>{ const id=+addUser; if(!id||f.attendees.some(a=>a.user_id===id))return; set({attendees:f.attendees.concat([{user_id:id,name:uName(id),email:'',response:'none'}])}); setAddUser(''); };
   const addE=()=>{ const m=addMail.trim().toLowerCase(); if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m)){ toast('That is not an email address.'); return; } if(f.attendees.some(a=>!a.user_id&&a.email===m))return; set({attendees:f.attendees.concat([{user_id:null,email:m,name:'',response:'none'}])}); setAddMail(''); };
@@ -18193,12 +18193,12 @@ function CalReports({meta,toast}){
   React.useEffect(()=>{ run(); },[run]);
   const loadSaved=()=>api('GET','/calendar/reports').then(r=>setSaved(r.reports||[])).catch(()=>{});
   React.useEffect(()=>{ loadSaved(); },[]);
-  const dl=async fmt=>{ await opshFetchFile('/calendar/report?'+qs(fmt),null,'calendar-report.'+fmt); };
+  const dl=async fmt=>{ await itopsFetchFile('/calendar/report?'+qs(fmt),null,'calendar-report.'+fmt); };
   const [prev,setPrev]=React.useState(false);
   const filters=()=>({period:fl.period,from:fl.period==='custom'?fl.from:'',to:fl.period==='custom'?fl.to:'',types:fl.types,site_id:+fl.site_id||0,user_id:+fl.user_id||0,mine:fl.mine,sources:fl.sources});
   const saveRep=async()=>{ if(!name.trim()){ toast('Give the report a name.'); return; } setBusy('save'); try{ if(cur&&cur.mine){ await api('PUT','/calendar/reports/'+cur.id,{name,type,filters:filters(),shared}); } else { await api('POST','/calendar/reports',{name,type,filters:filters(),shared}); } toast('Report saved','ok'); loadSaved(); }catch(e){ toast(e.message); } setBusy(''); };
   const openRep=r=>{ setCur(r); setName(r.name); setShared(r.shared); setType(r.type); const x=r.filters||{}; setFl({period:x.period||'this_month',from:x.from||'',to:x.to||'',types:x.types||[],site_id:x.site_id?String(x.site_id):'',user_id:x.user_id?String(x.user_id):'',mine:!!x.mine,sources:x.sources!==false}); };
-  const delRep=async r=>{ if(!await opshConfirm('Remove the saved report "'+r.name+'"?'))return; try{ await api('DELETE','/calendar/reports/'+r.id); if(cur&&cur.id===r.id){ setCur(null); setName(''); } loadSaved(); }catch(e){ toast(e.message); } };
+  const delRep=async r=>{ if(!await itopsConfirm('Remove the saved report "'+r.name+'"?'))return; try{ await api('DELETE','/calendar/reports/'+r.id); if(cur&&cur.id===r.id){ setCur(null); setName(''); } loadSaved(); }catch(e){ toast(e.message); } };
   const RT=(meta&&meta.report_types)||[]; const ctypes=((meta&&meta.types)||[]);
   const showKinds=!['deadlines','overdue'].includes(type);
   return <div style={{display:'grid',gridTemplateColumns:'minmax(220px,260px) 1fr',gap:14}} className="cal-rep" data-cal-reports="1">
@@ -18227,7 +18227,7 @@ function CalReports({meta,toast}){
         <MhCheck checked={shared} onChange={setShared} small>Shared</MhCheck>
         <button className="btn btn-g btn-sm" data-cal-rsave="1" disabled={!!busy} onClick={saveRep}>{cur&&cur.mine?'Update':'Save'}</button>
       </div>
-      {prev&&d&&<DocPreview title={d.title+' · '+d.subtitle} load={()=>opshFetchBlob('/calendar/report?'+qs('pdf')+'&preview=1')} onClose={()=>setPrev(false)}
+      {prev&&d&&<DocPreview title={d.title+' · '+d.subtitle} load={()=>itopsFetchBlob('/calendar/report?'+qs('pdf')+'&preview=1')} onClose={()=>setPrev(false)}
         note="The report as it will be printed. Go back to change the period or the filters."
         downloads={[['pdf','Download PDF',()=>dl('pdf')],['docx','Download Word',()=>dl('docx')],['csv','Download CSV',()=>dl('csv')]].concat(d.ics&&d.ics.length?[['ics','Calendar file (.ics)',()=>dl('ics')]]:[])}/>}
       {err&&<MhErr msg={err}/>}{!d&&!err&&<MhLoading/>}
@@ -18319,15 +18319,15 @@ function Calendar({toast,setPg,setFocus,lookups,user,focus}){
   // BT60: event builder (full page), kinds of event, filters, reports
   const [meta,setMeta]=React.useState(null); const [evPage,setEvPage]=React.useState(null); const [typesPage,setTypesPage]=React.useState(false); const [osPage,setOsPage]=React.useState(false);
   React.useEffect(()=>{ if(focus&&focus.res==='calendar'&&focus.id){ setEvPage({id:focus.id}); setFocus&&setFocus(null); } },[focus]);   // BT66: a link from Outlook (#calendar/ID)
-  const [hide,setHide]=React.useState(()=>{ try{ return JSON.parse(localStorage.getItem('opsh_cal_hide')||'[]')||[]; }catch(_){ return []; } });
-  const togHide=k=>setHide(h=>{ const n=h.includes(k)?h.filter(x=>x!==k):h.concat([k]); try{ localStorage.setItem('opsh_cal_hide',JSON.stringify(n)); }catch(_){} return n; });
+  const [hide,setHide]=React.useState(()=>{ try{ return JSON.parse(localStorage.getItem('itops_cal_hide')||'[]')||[]; }catch(_){ return []; } });
+  const togHide=k=>setHide(h=>{ const n=h.includes(k)?h.filter(x=>x!==k):h.concat([k]); try{ localStorage.setItem('itops_cal_hide',JSON.stringify(n)); }catch(_){} return n; });
   const loadMeta=React.useCallback(()=>api('GET','/calendar/meta').then(setMeta).catch(()=>{}),[]);
   React.useEffect(()=>{ loadMeta(); },[loadMeta]);
   // BT24: the server only returns what this role may see; "Only mine" narrows it to the viewer's own items.
   const can=usePerm(); const calC=can('calendar','create');
-  const [mine,setMine]=React.useState(()=>{ try{ return localStorage.getItem('opsh_cal_mine')==='1'; }catch(_){ return false; } });
+  const [mine,setMine]=React.useState(()=>{ try{ return localStorage.getItem('itops_cal_mine')==='1'; }catch(_){ return false; } });
   const [srcs,setSrcs]=React.useState(null);
-  const setMineP=v=>{ setMine(v); try{ localStorage.setItem('opsh_cal_mine',v?'1':'0'); }catch(_){} };
+  const setMineP=v=>{ setMine(v); try{ localStorage.setItem('itops_cal_mine',v?'1':'0'); }catch(_){} };
   const pad=n=>String(n).padStart(2,'0');
   const fmt=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   const sow=d=>{ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-x.getDay()); return x; };
@@ -18404,7 +18404,7 @@ function Calendar({toast,setPg,setFocus,lookups,user,focus}){
       setBusy(false);
     }
   };
-  const delEvent=async()=>{ if(!edit||edit._new||!edit._native)return; if(!await opshConfirm('Delete this event?'))return;
+  const delEvent=async()=>{ if(!edit||edit._new||!edit._native)return; if(!await itopsConfirm('Delete this event?'))return;
     try{ await api('DELETE','/calendar/'+edit.entity_id); toast('Deleted','ok'); setEdit(null); load(); }catch(e){ toast(e.message); } };
 
   const Chip=(e,j,showTime)=> <div key={j} draggable={canMove(e)} onDragStart={ev=>{ dragE.current=e; try{ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text','1');}catch(_){} }} onDragEnd={()=>{dragE.current=null;setDragOver(null);}} onClick={ev=>{ev.stopPropagation();openEvent(e);}} title={e.title+(e.type_label?(' · '+e.type_label):'')+(e.location?(' · '+e.location):'')+(e.subtitle?(' — '+e.subtitle):'')} data-cal-chip={e.type==='event'?e.event_type:e.type} style={{fontSize:11,fontWeight:600,color:'#fff',background:e.overdue?'#C44545':e.color,borderRadius:4,padding:'2px 5px',marginBottom:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',cursor:'pointer',textDecoration:e.status==='cancelled'?'line-through':'none',opacity:e.status==='cancelled'?.6:(e.status==='tentative'?.8:1)}}>{(showTime||e.type==='event')&&!e.all_day&&String(e.datetime||'').length>=16&&String(e.datetime).slice(11,16)!=='00:00'?(calTime(e.datetime)+' '):''}{e.recurring?'↻ ':''}{e.title}</div>;
@@ -18429,7 +18429,7 @@ function Calendar({toast,setPg,setFocus,lookups,user,focus}){
       <button className="btn btn-g btn-sm" data-cal-outlook="1" onClick={()=>setOsPage(true)}>Outlook &amp; Teams…</button>
     </div>
     {view!=='reports'&&<div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:12}} data-cal-filters="1">{legend.map(([c,l,,k])=>{ const off=hide.includes(k); return <button type="button" key={k} data-cal-filter={k} title={off?'Show':'Hide'} onClick={()=>togHide(k)} style={{fontSize:12,color:off?'var(--t4)':'var(--t2)',display:'inline-flex',alignItems:'center',gap:5,border:'1px solid var(--b1)',borderRadius:14,padding:'2px 9px',background:off?'transparent':'var(--s1)',cursor:'pointer',textDecoration:off?'line-through':'none'}}><span style={{width:9,height:9,borderRadius:3,background:off?'var(--b1)':c,display:'inline-block'}}/>{l}</button>; })}
-      {hide.length>0&&<button type="button" className="mh-link" onClick={()=>{ setHide([]); try{ localStorage.removeItem('opsh_cal_hide'); }catch(_){} }}>show all</button>}</div>}
+      {hide.length>0&&<button type="button" className="mh-link" onClick={()=>{ setHide([]); try{ localStorage.removeItem('itops_cal_hide'); }catch(_){} }}>show all</button>}</div>}
     {view==='reports'&&<CalReports meta={meta} toast={toast}/>}
 
     {view!=='reports'&&<div className="cal-layout">
@@ -18570,7 +18570,7 @@ function MfaSection({toast,forced,onClose}){
   },[stage,setupData]);
   const startSetup=async()=>{ setBusy(true); try{ const d=await api('POST','/auth/mfa/setup',{}); setSetupData(d); setStage('setup'); setCode(''); }catch(e){ toast(e.message); } setBusy(false); };
   const enable=async()=>{ setBusy(true); try{ const r=await api('POST','/auth/mfa/enable',{code}); setBackup(r.backup_codes||[]); setStage('codes'); await loadSt(); toast('Two-factor authentication is on','ok'); }catch(e){ toast(e.message); } setBusy(false); };
-  const disable=async()=>{ const c=await opshPrompt('Enter a current 6-digit code (or your password) to turn off 2FA:'); if(c==null)return; setBusy(true); try{ await api('POST','/auth/mfa/disable',{code:c}); await loadSt(); setStage('idle'); toast('Two-factor authentication turned off','ok'); }catch(e){ toast(e.message); } setBusy(false); };
+  const disable=async()=>{ const c=await itopsPrompt('Enter a current 6-digit code (or your password) to turn off 2FA:'); if(c==null)return; setBusy(true); try{ await api('POST','/auth/mfa/disable',{code:c}); await loadSt(); setStage('idle'); toast('Two-factor authentication turned off','ok'); }catch(e){ toast(e.message); } setBusy(false); };
   const copyCodes=()=>{ try{ navigator.clipboard.writeText((backup||[]).join('\n')); toast('Copied','ok'); }catch(_){} };
   return <div className="card" style={{marginBottom:14}} data-prof-mfa="1">
       <div style={{fontSize:14,fontWeight:700,marginBottom:8}}>Two-factor authentication</div>
@@ -18624,8 +18624,8 @@ function ProfileScreen({user,isAdm,toast,onLogout,theme,setTheme,reloadMe}){
   const changePw=async()=>{ setPwMsg(null); if(pw.new1!==pw.new2){ setPwMsg(['err','The two new passwords are not the same.']); return; } setPwBusy(true);
     try{ const r=await api('POST','/auth/password',{current:pw.current,new:pw.new1}); setPw({current:'',new1:'',new2:''}); setPwMsg(['ok','Password changed.'+(r.sessions_ended?' You were signed out on '+r.sessions_ended+' other device'+(r.sessions_ended===1?'':'s')+'.':'')]); toast('Password changed','ok'); loadSess(); load(); }
     catch(e){ setPwMsg(['err',e.message]); } setPwBusy(false); };
-  const endSess=async s=>{ if(!await opshConfirm(s.current?'Sign out of this browser?':'Sign out of '+s.device+' ('+(s.ip||'unknown address')+')?'))return; try{ const r=await api('DELETE','/auth/sessions/'+s.id); if(r.signed_out){ onLogout(); return; } toast('Signed out there','ok'); loadSess(); }catch(e){ toast(e.message); } };
-  const endOthers=async()=>{ const others=(sess||[]).filter(s=>!s.current); if(!others.length)return; if(!await opshConfirm('Sign out of the '+others.length+' other device'+(others.length===1?'':'s')+'? This browser stays signed in.'))return; for(const s of others){ try{ await api('DELETE','/auth/sessions/'+s.id); }catch(_){} } toast('Signed out of the other devices','ok'); loadSess(); };
+  const endSess=async s=>{ if(!await itopsConfirm(s.current?'Sign out of this browser?':'Sign out of '+s.device+' ('+(s.ip||'unknown address')+')?'))return; try{ const r=await api('DELETE','/auth/sessions/'+s.id); if(r.signed_out){ onLogout(); return; } toast('Signed out there','ok'); loadSess(); }catch(e){ toast(e.message); } };
+  const endOthers=async()=>{ const others=(sess||[]).filter(s=>!s.current); if(!others.length)return; if(!await itopsConfirm('Sign out of the '+others.length+' other device'+(others.length===1?'':'s')+'? This browser stays signed in.'))return; for(const s of others){ try{ await api('DELETE','/auth/sessions/'+s.id); }catch(_){} } toast('Signed out of the other devices','ok'); loadSess(); };
   const saveLang=async v=>{ const prev=elang; setElang(v); try{ await api('PUT','/auth/me',{language:v}); user.language=v||null; toast('Email language saved','ok'); }catch(e){ setElang(prev); toast(e.message); } };
   const PROV={local:'Email and password',microsoft:'Microsoft 365',o365:'Microsoft 365',both:'Microsoft 365 or email and password'};
   const ACT={login_success:'Signed in',login_first:'First sign-in',o365_login:'Signed in with Microsoft',teams_login:'Signed in from Teams',password_changed:'Password changed',logout_everywhere:'Signed out everywhere',session_ended:'Signed out of a device'};
@@ -18689,15 +18689,15 @@ function ProfileScreen({user,isAdm,toast,onLogout,theme,setTheme,reloadMe}){
             <span style={{width:150,flexShrink:0}} className="mh-mut">{mhDateTime(r.at)}</span><span style={{flex:1}}>{ACT[r.action]||r.action}{r.how?' · '+r.how:''}{r.ip?<span className="mh-mut"> · {r.ip}</span>:null}</span></div>)}
           <div className="mh-mut" style={{fontSize:12.5,marginTop:8}}>Something you don’t recognise? Change your password and sign out of the other devices, then tell IT.</div>
         </div>
-        {OPSH_HOST!=='teams'&&<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button className="btn btn-g" data-prof-signout="1" onClick={onLogout}>Sign out</button></div>}   {/* review UI2-21: Teams signs people in itself */}
+        {ITOPS_HOST!=='teams'&&<div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button className="btn btn-g" data-prof-signout="1" onClick={onLogout}>Sign out</button></div>}   {/* review UI2-21: Teams signs people in itself */}
       </div>
     </div>
   </div>;
 }
 
 /* BT108: keep the person's screen preferences on the signed-in user, also in the copy the browser keeps between visits */
-function opshKeepUiPrefs(user,p){ if(!user)return; user.ui_prefs=Object.assign({},user.ui_prefs||{},p||{});
-  try{ const raw=localStorage.getItem('opsh_user'); if(raw){ const u=JSON.parse(raw); if(u&&+u.id===+user.id){ u.ui_prefs=user.ui_prefs; localStorage.setItem('opsh_user',JSON.stringify(u)); } } }catch(e){} }
+function itopsKeepUiPrefs(user,p){ if(!user)return; user.ui_prefs=Object.assign({},user.ui_prefs||{},p||{});
+  try{ const raw=localStorage.getItem('itops_user'); if(raw){ const u=JSON.parse(raw); if(u&&+u.id===+user.id){ u.ui_prefs=user.ui_prefs; localStorage.setItem('itops_user',JSON.stringify(u)); } } }catch(e){} }
 function AccountModal({user,isAdm,toast,onClose,onLogout,forced,theme,setTheme}){
   const [st,setSt]=React.useState(null);          // {enabled,provider,can_enroll}
   const [stage,setStage]=React.useState('idle');  // idle | setup | codes
@@ -18719,8 +18719,8 @@ function AccountModal({user,isAdm,toast,onClose,onLogout,forced,theme,setTheme})
   },[stage,setupData]);
   const startSetup=async()=>{ setBusy(true); try{ const d=await api('POST','/auth/mfa/setup',{}); setSetupData(d); setStage('setup'); setCode(''); }catch(e){ toast(e.message); } setBusy(false); };
   const enable=async()=>{ setBusy(true); try{ const r=await api('POST','/auth/mfa/enable',{code}); setBackup(r.backup_codes||[]); setStage('codes'); await loadSt(); toast('Two-factor authentication is on','ok'); }catch(e){ toast(e.message); } setBusy(false); };
-  const disable=async()=>{ const c=await opshPrompt('Enter a current 6-digit code (or your password) to turn off 2FA:'); if(c==null)return; setBusy(true); try{ await api('POST','/auth/mfa/disable',{code:c}); await loadSt(); setStage('idle'); toast('Two-factor authentication turned off','ok'); }catch(e){ toast(e.message); } setBusy(false); };
-  const resetUser=async()=>{ if(!resetEmail){toast('Enter a user email');return;} if(!await opshConfirm('Reset 2FA for '+resetEmail+'? They will be able to sign in with just their password until they re-enrol.'))return; setBusy(true); try{ await api('POST','/auth/mfa/reset',{email:resetEmail}); toast('2FA reset for '+resetEmail,'ok'); setResetEmail(''); }catch(e){ toast(e.message); } setBusy(false); };
+  const disable=async()=>{ const c=await itopsPrompt('Enter a current 6-digit code (or your password) to turn off 2FA:'); if(c==null)return; setBusy(true); try{ await api('POST','/auth/mfa/disable',{code:c}); await loadSt(); setStage('idle'); toast('Two-factor authentication turned off','ok'); }catch(e){ toast(e.message); } setBusy(false); };
+  const resetUser=async()=>{ if(!resetEmail){toast('Enter a user email');return;} if(!await itopsConfirm('Reset 2FA for '+resetEmail+'? They will be able to sign in with just their password until they re-enrol.'))return; setBusy(true); try{ await api('POST','/auth/mfa/reset',{email:resetEmail}); toast('2FA reset for '+resetEmail,'ok'); setResetEmail(''); }catch(e){ toast(e.message); } setBusy(false); };
   const copyCodes=()=>{ try{ navigator.clipboard.writeText((backup||[]).join('\n')); toast('Copied','ok'); }catch(_){} };
   return <div className="msk" onClick={forced?undefined:onClose}><div className="mdl" style={{maxWidth:480}} onClick={e=>e.stopPropagation()}>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
@@ -18785,7 +18785,7 @@ function AccountModal({user,isAdm,toast,onClose,onLogout,forced,theme,setTheme})
 
     {setTheme&&<button className="btn btn-g" style={{width:'100%',justifyContent:'center',marginBottom:8}} onClick={()=>setTheme(t=>t==='dark'?'light':'dark')}>{theme==='dark'?'Switch to light mode':'Switch to dark mode'}</button>}
     <button className="btn btn-g" style={{width:'100%',justifyContent:'center'}} onClick={onLogout}>Sign out</button>
-    {!forced&&<button className="btn btn-g btn-sm" style={{width:'100%',justifyContent:'center',marginTop:8}} title={"Ends every "+appName()+" session for your account — use it if you signed in on a shared or lost computer"} onClick={async()=>{ if(!await opshConfirm('Sign out of '+appName()+' on every device and browser, including this one?'))return; try{ await api('POST','/auth/logout',{everywhere:true}); }catch(_){} onLogout(); }}>Sign out of all devices</button>}
+    {!forced&&<button className="btn btn-g btn-sm" style={{width:'100%',justifyContent:'center',marginTop:8}} title={"Ends every "+appName()+" session for your account — use it if you signed in on a shared or lost computer"} onClick={async()=>{ if(!await itopsConfirm('Sign out of '+appName()+' on every device and browser, including this one?'))return; try{ await api('POST','/auth/logout',{everywhere:true}); }catch(_){} onLogout(); }}>Sign out of all devices</button>}
   </div></div>;
 }
 
@@ -18808,7 +18808,7 @@ const FB_MAPS=[['','— Custom field —'],['subject','Ticket subject'],['descri
 const fbSlug=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
 const fbOptsToText=o=>(o||[]).map(x=>x.label===x.value?x.label:(x.label+'|'+x.value)).join('\n');
 const fbTextToOpts=t=>String(t||'').split('\n').map(s=>s.trim()).filter(Boolean).map(s=>{const p=s.split('|');return{label:p[0].trim(),value:(p[1]!==undefined?p[1].trim():p[0].trim())};});
-const fbCsvCell=v=>{ v=opshCsvSafe(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+const fbCsvCell=v=>{ v=itopsCsvSafe(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
 
 /* ═══ BT37 — the app's own dropdown ═══
    Every dropdown in the app is one of these two; never write a native select element in a screen (the browser draws its own
@@ -18931,22 +18931,22 @@ function StandardsPage({lookups,toast,user,canEdit,initFilter}){
     }catch(e){ toast(e.message); }
     setBusy(false);
   };
-  const del=async()=>{ if(!edit.id)return; if(!await opshConfirm('Delete this requirement and its evidence?'))return;
+  const del=async()=>{ if(!edit.id)return; if(!await itopsConfirm('Delete this requirement and its evidence?'))return;
     try{ await api('DELETE','/standards/'+edit.id); toast('Deleted','ok'); setEdit(null); await load(); }catch(e){ toast(e.message); } };
   const uploadEv=async(file)=>{ if(!file||!edit.id)return; setUpbusy(true);
     try{ const fd=new FormData(); fd.append('file',file);
-      const res=await fetch(API_BASE+'/standards/'+edit.id+'/evidence',{method:'POST',headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin',body:fd});
+      const res=await fetch(API_BASE+'/standards/'+edit.id+'/evidence',{method:'POST',headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin',body:fd});
       if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error((j.error&&j.error.message)||'Upload failed'); }
       const d=await api('GET','/standards/'+edit.id); setEv(d.evidence||[]); toast('Evidence added','ok'); load();
     }catch(e){ toast(e.message); }
     setUpbusy(false);
   };
   const dlEv=async(x)=>{
-    const res=await fetch(API_BASE+'/standards/'+edit.id+'/evidence?download='+x.id,{headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin'});
+    const res=await fetch(API_BASE+'/standards/'+edit.id+'/evidence?download='+x.id,{headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin'});
     if(!res.ok){ toast('Download failed'); return; }
     const blob=await res.blob(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=x.file_name; a.click(); setTimeout((h=>()=>URL.revokeObjectURL(h))(url),4000);
   };
-  const delEv=async(x)=>{ if(!await opshConfirm('Remove this evidence file?'))return;
+  const delEv=async(x)=>{ if(!await itopsConfirm('Remove this evidence file?'))return;
     try{ await api('DELETE','/standards/'+edit.id+'/evidence/'+x.id); const d=await api('GET','/standards/'+edit.id); setEv(d.evidence||[]); load(); }catch(e){ toast(e.message); } };
 
   /* BT19: this hook sat AFTER the "loading" return, so React saw a different number of hooks once data arrived
@@ -18962,7 +18962,7 @@ function StandardsPage({lookups,toast,user,canEdit,initFilter}){
   const isOverdue=d=>{ if(!d)return false; const t=new Date(d+'T00:00:00'); const now=new Date(); now.setHours(0,0,0,0); return t<now; };
   const Pill=s=>{ const x=STAT[s]||{l:s,c:'#7A8696'}; return <span style={{display:'inline-block',padding:'2px 9px',borderRadius:20,fontSize:12.5,fontWeight:600,color:'#fff',background:x.c,whiteSpace:'nowrap'}}>{x.l}</span>; };
 
-  const escC=v=>'"'+opshCsvSafe(v).replace(/"/g,'""')+'"';
+  const escC=v=>'"'+itopsCsvSafe(v).replace(/"/g,'""')+'"';
   const exportCsv=()=>{
     const hdr=['Code','Area','Title','Standard Ref','Status','Owner','Last Reviewed','Next Review','Evidence','Notes','Updated','Updated By'];
     const lines=[hdr.map(escC).join(',')];
@@ -19105,7 +19105,7 @@ function StandardsPage({lookups,toast,user,canEdit,initFilter}){
             <a onClick={()=>delEv(x)} style={{cursor:'pointer',color:'#C0392B',fontWeight:600}}>Remove</a>
           </div>)}
           {ev.length===0&&<div style={{fontSize:13,color:'var(--t4)'}}>No evidence files yet.</div>}
-          <button type="button" className="btn btn-g btn-sm" style={{alignSelf:'flex-start',cursor:'pointer'}} disabled={upbusy} onClick={async()=>{const fs=await opshUpload({title:'Add evidence file'});if(fs&&fs[0])uploadEv(fs[0]);}}>{upbusy?'Uploading…':'+ Add evidence file'}</button>
+          <button type="button" className="btn btn-g btn-sm" style={{alignSelf:'flex-start',cursor:'pointer'}} disabled={upbusy} onClick={async()=>{const fs=await itopsUpload({title:'Add evidence file'});if(fs&&fs[0])uploadEv(fs[0]);}}>{upbusy?'Uploading…':'+ Add evidence file'}</button>
         </div>
       </div>:<div style={{fontSize:12.5,color:'var(--t4)',marginBottom:8}}>Save first, then you can attach evidence files.</div>}
       {edit.id&&edit.updated_at?<div style={{fontSize:12,color:'var(--t4)',marginTop:8}}>Last updated {mhDate((edit.updated_at||'').slice(0,10))}{edit.updated_by_name?' by '+edit.updated_by_name:''}</div>:null}
@@ -19179,10 +19179,10 @@ function RecycleScreen({toast}){
   const load=React.useCallback(async()=>{ setErr(''); try{ const r=await api('GET','/recycle'); setD(r); setDays(String(r.keep_days)); }catch(e){ setErr(e.message); } },[]);
   React.useEffect(()=>{ load(); },[load]);
   const restore=async it=>{ setBusy(it.id); try{ const r=await api('POST','/recycle/'+it.id+'/restore',{}); setDone({name:it.kind_label+': '+it.name,notes:r.notes||[]}); toast('Put back: '+it.name,'ok'); }catch(e){ toast(e.message); } setBusy(0); load(); };
-  const purge=async it=>{ const t=await opshPrompt('Delete "'+it.name+'" for good?'+(it.files?' Its '+it.files+' file'+(it.files===1?'':'s')+' leave the disk.':'')+' It cannot be put back after this.\n\nType DELETE to confirm.','');
+  const purge=async it=>{ const t=await itopsPrompt('Delete "'+it.name+'" for good?'+(it.files?' Its '+it.files+' file'+(it.files===1?'':'s')+' leave the disk.':'')+' It cannot be put back after this.\n\nType DELETE to confirm.','');
     if(t===null||t===undefined)return; if((t+'').trim()!=='DELETE'){ toast('Not deleted: type DELETE to confirm.'); return; }
     setBusy(it.id); try{ await api('POST','/recycle/'+it.id+'/purge',{confirm:'DELETE'}); toast('Deleted for good','ok'); }catch(e){ toast(e.message); } setBusy(0); load(); };
-  const empty=async()=>{ const t=await opshPrompt('Delete all '+d.items.length+' entr'+(d.items.length===1?'y':'ies')+' for good? Their files leave the disk. Nothing can be put back after this.\n\nType EMPTY to confirm.','');
+  const empty=async()=>{ const t=await itopsPrompt('Delete all '+d.items.length+' entr'+(d.items.length===1?'y':'ies')+' for good? Their files leave the disk. Nothing can be put back after this.\n\nType EMPTY to confirm.','');
     if(t===null||t===undefined)return; if((t+'').trim()!=='EMPTY'){ toast('Not emptied: type EMPTY to confirm.'); return; }
     setBusy(-1); try{ const r=await api('POST','/recycle/empty',{confirm:'EMPTY'}); toast('Deleted for good: '+r.removed,'ok'); }catch(e){ toast(e.message); } setBusy(0); load(); };
   const saveDays=async()=>{ const v=(days+'').trim(); if(!/^\d+$/.test(v)){ toast('Enter a number of days (0 = until emptied by hand).'); return; }
@@ -19247,7 +19247,7 @@ function DataScreen({toast}){
       <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:8}}>{[['','All'],['editable','Editable'],['ref','Reference'],['main','Records'],['log','Logs'],['empty','Empty'],['unused','Unused']].map(([k,l])=><MhChip key={k} on={kind===k} onClick={()=>setKind(k)}>{l}</MhChip>)}</div>
       {Object.keys(areas).sort().map(a=><div key={a} style={{marginBottom:6}}><div className="mh-eyebrow mh-mut" style={{fontSize:10}}>{a}</div>
         {areas[a].map(t=><button type="button" key={t.name} data-dd-t={t.name} onClick={()=>setSel(t.name)} title={t.description} style={{display:'flex',width:'100%',justifyContent:'space-between',gap:6,border:0,background:sel===t.name?'var(--s2)':'transparent',padding:'3px 6px',borderRadius:6,cursor:'pointer',fontSize:12.5,textAlign:'left',color:'var(--t1)'}}>
-          <span className="mh-mono" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.name.replace(/^opsh_/,'')}{t.editable?' ✎':''}</span><span className="mh-mut">{t.rows.toLocaleString()}</span></button>)}</div>)}
+          <span className="mh-mono" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.name.replace(/^itops_/,'')}{t.editable?' ✎':''}</span><span className="mh-mut">{t.rows.toLocaleString()}</span></button>)}</div>)}
       {!list.length&&<div className="mh-mut" style={{fontSize:12.5}}>No table matches.</div>}
     </div>
     <div style={{minWidth:0}}>{sel===''?<DataReport d={d} open={setSel}/>:<DataTable key={sel} name={sel} meta={d.tables.find(x=>x.name===sel)} toast={toast} open={setSel}/>}</div>
@@ -19256,12 +19256,12 @@ function DataScreen({toast}){
 function DataReport({d,open}){
   const by={}; d.tables.forEach(t=>{ by[t.kind]=(by[t.kind]||0)+1; });
   const [dl,setDl]=React.useState(null);   /* BT138: the whole dictionary as a document (Markdown) */
-  const getDoc=async()=>{ setDl({busy:true}); try{ const r=await fetch(API_BASE+'/datadict/doc',{headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin'});
+  const getDoc=async()=>{ setDl({busy:true}); try{ const r=await fetch(API_BASE+'/datadict/doc',{headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin'});
       if(!r.ok){ let m='Download failed'; try{ m=(JSON.parse(await r.text()).error||{}).message||m; }catch(_){} throw new Error(m); }
       const fn=((r.headers.get('Content-Disposition')||'').match(/filename="([^"]+)"/)||[])[1]||'data-dictionary.md'; const u=URL.createObjectURL(await r.blob());
       const a=document.createElement('a'); a.href=u; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000); setDl({ok:'Downloaded '+fn+' (in the Audit Log).'}); }
     catch(e){ setDl({err:e.message}); } };
-  const tn=n=><button type="button" key={n} className="mh-link mh-mono" style={{fontSize:12.5,marginRight:8}} onClick={()=>open(n)}>{n.replace(/^opsh_/,'')}</button>;
+  const tn=n=><button type="button" key={n} className="mh-link mh-mono" style={{fontSize:12.5,marginRight:8}} onClick={()=>open(n)}>{n.replace(/^itops_/,'')}</button>;
   return <div data-dd-report="1">
     <MhHead eyebrow="Administration" title="Data" desc="Every table of this installation: what it is for, its columns, and its rows. Reference lists (marked ✎) can be changed in the grid; everything else is read only. Passwords, tokens, keys and other secrets are never shown or exported. Opening rows, exports and changes are in the Audit Log."/>
     <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap',margin:'-4px 0 12px'}}><button type="button" className="btn btn-g btn-sm" data-dd-doc="1" disabled={!!(dl&&dl.busy)} onClick={getDoc}>{dl&&dl.busy?'Preparing…':'Download the dictionary'}</button>
@@ -19292,7 +19292,7 @@ function DataTable({name,meta,toast,open}){
   React.useEffect(()=>{ if(tab==='data')loadRows(); },[loadRows,tab]);
   if(!info) return err?<MhErr msg={err}/>:<MhLoading/>;
   const cols=info.columns; const pk=info.primary; const canEdit=info.editable;
-  const download=async fmt=>{ setMsg(null); try{ const r=await fetch(API_BASE+'/datadict/t/'+name+'/export?format='+fmt+'&'+qs(),{headers:opshAuth({'X-OpsHub-CSRF':'1'}),credentials:'same-origin'});
+  const download=async fmt=>{ setMsg(null); try{ const r=await fetch(API_BASE+'/datadict/t/'+name+'/export?format='+fmt+'&'+qs(),{headers:itopsAuth({'X-ITOps-CSRF':'1'}),credentials:'same-origin'});
       if(!r.ok){ let m='Export failed'; try{ m=(JSON.parse(await r.text()).error||{}).message||m; }catch(_){} throw new Error(m); }
       const cd=r.headers.get('Content-Disposition')||''; const fn=(cd.match(/filename="([^"]+)"/)||[])[1]||(name+'.'+fmt); const blob=await r.blob(); const u=URL.createObjectURL(blob);
       const a=document.createElement('a'); a.href=u; a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000); setMsg({tone:'ok',text:'Exported '+(res?res.total:'')+' row(s) as '+(fmt==='xlsx'?'Excel':'CSV')+'.'}); }
@@ -19403,7 +19403,7 @@ function AuditLog({toast}){
     if(o&&n&&typeof o==='object'&&typeof n==='object'){ const ks=Object.keys(n).filter(k=>JSON.stringify(o[k])!==JSON.stringify(n[k])&&k!=='updated_at'&&k!=='updated_by'); if(!ks.length)return null; return ks.map(k=>({k,from:o[k],to:n[k]})); }
     return null;
   };
-  const esc=v=>'"'+opshCsvSafe(v).replace(/"/g,'""')+'"';
+  const esc=v=>'"'+itopsCsvSafe(v).replace(/"/g,'""')+'"';
   const exportCsv=async()=>{ try{ let all=[],p=1,pg=1;
       do{ const r=await api('GET','/audit?page='+p+'&limit=100'+fQuery()); all=all.concat(r.data||[]); pg=(r.pagination&&r.pagination.pages)||1; p++; }while(p<=pg&&p<=50);
       const hdr=['Time','User','Action','Entity Type','Entity','Entity ID','IP','Old','New']; const lines=[hdr.map(esc).join(',')];
@@ -19641,7 +19641,7 @@ function FormBuilder({f,setF,save,leaveEdit,busy,openSubs,lookups,toast}){
     if(!f.id) return <div style={{maxWidth:760}}>{header}<div className="empty" style={{marginTop:20}}>Save the form first to start collecting responses.</div></div>;
     const answerCols=[]; (subs||[]).forEach(s=>Object.keys(s.data||{}).forEach(k=>{ const lb=(s.data[k]&&s.data[k].label)||k; if(!answerCols.includes(lb)&&answerCols.length<4)answerCols.push(lb); }));
     const cellFor=(s,lb)=>{ const d=s.data||{}; for(const k in d){ const c=d[k]; if(((c&&c.label)||k)===lb){ let v=c&&c.value; if(Array.isArray(v))v=v.join(', '); return (v==null||v==='')?'':String(v); } } return ''; };
-    const esc=v=>'"'+opshCsvSafe(v).replace(/"/g,'""')+'"';
+    const esc=v=>'"'+itopsCsvSafe(v).replace(/"/g,'""')+'"';
     const exportCsv=()=>{ if(!subs||!subs.length)return; const labels=[]; subs.forEach(s=>Object.keys(s.data||{}).forEach(k=>{ const lb=(s.data[k]&&s.data[k].label)||k; if(!labels.includes(lb))labels.push(lb); })); const hdr=['Submitted','Name','Email'].concat(labels); const lines=[hdr.map(esc).join(',')]; subs.forEach(s=>{ lines.push([mhDateTime(s.created_at||''),s.submitter_name||'',s.submitter_email||''].concat(labels.map(lb=>cellFor(s,lb))).map(esc).join(',')); }); const blob=new Blob([lines.join('\n')],{type:'text/csv'}); const u=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=u; a.download=(f.slug||'form')+'-responses.csv'; a.click(); setTimeout((h=>()=>URL.revokeObjectURL(h))(u),4000); };
     return <div style={{maxWidth:1040}}>{header}
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}><div style={{fontWeight:700,fontSize:15,flex:1}}>{(subs?subs.length:0)+' response'+((subs&&subs.length===1)?'':'s')}</div><button className="btn btn-g btn-sm" onClick={exportCsv} disabled={!subs||!subs.length}><I n="download" s={16}/>Export CSV</button></div>
@@ -19842,7 +19842,7 @@ function FormsPage({toast}){
   const [palette,setPalette]=React.useState(false);
   const dirtyRef=React.useRef('');
   const serForm=x=>x?JSON.stringify({name:x.name,slug:x.slug,title:x.title,description:x.description,type:x.type,status:x.status,settings:x.settings,fields:x.fields}):'';
-  const leaveEdit=async()=>{ if(f&&dirtyRef.current&&dirtyRef.current!==serForm(f)){ if(!await opshConfirm('You have unsaved changes. Leave without saving?',{okText:'Leave without saving',danger:true}))return; } setMode('list'); };
+  const leaveEdit=async()=>{ if(f&&dirtyRef.current&&dirtyRef.current!==serForm(f)){ if(!await itopsConfirm('You have unsaved changes. Leave without saving?',{okText:'Leave without saving',danger:true}))return; } setMode('list'); };
 
   const load=React.useCallback(async()=>{ try{ const r=await api('GET','/forms'); setForms(r.data||[]); }catch(e){ toast(e.message); } },[]);
   React.useEffect(()=>{ load(); },[load]);
@@ -19892,7 +19892,7 @@ function FormsPage({toast}){
     catch(e){ toast(e.message); }
     setBusy(false);
   };
-  const del=async(frm)=>{ if(!await opshConfirm('Delete the form "'+frm.name+'" and all its submissions? A Super Admin can put it back from Deleted items.'))return; try{ await api('DELETE','/forms/'+frm.id); toast('Deleted','ok'); await load(); }catch(e){ toast(e.message); } };
+  const del=async(frm)=>{ if(!await itopsConfirm('Delete the form "'+frm.name+'" and all its submissions? A Super Admin can put it back from Deleted items.'))return; try{ await api('DELETE','/forms/'+frm.id); toast('Deleted','ok'); await load(); }catch(e){ toast(e.message); } };
   const dup=async(frm)=>{ try{ const d=await api('GET','/forms/'+frm.id); await api('POST','/forms',{name:(d.name||frm.name)+' (copy)',type:d.type,title:d.title||'',description:d.description||'',status:'inactive',settings:d.settings||{},fields:d.fields||[]}); toast('Form duplicated (inactive)','ok'); await load(); }catch(e){ toast(e.message); } };
 
   const openSubs=async(frm)=>{ setSubsForm(frm); setMode('subs'); setSubs(null); try{ const r=await api('GET','/forms/'+frm.id+'/submissions'); setSubs(r.data||[]); }catch(e){ toast(e.message); } };
@@ -20026,8 +20026,8 @@ function TcGrid({rows,setRows,uOpts,uname,toast,refresh,onDelete,routing}){
   const anyFilter=!!q||Object.keys(flt).some(k=>flt[k]);
   /* BT109: collapse a group to its own row. Only in the order people see, with no filter or search (then every match shows).
      Remembered in this browser. */
-  const [col,setColS]=React.useState(()=>{ try{ return JSON.parse(localStorage.getItem('opsh_tc_collapsed')||'[]').map(Number); }catch(e){ return []; } });
-  const setCol=fn=>setColS(c=>{ const n=fn(c); try{ localStorage.setItem('opsh_tc_collapsed',JSON.stringify(n)); }catch(e){} return n; });
+  const [col,setColS]=React.useState(()=>{ try{ return JSON.parse(localStorage.getItem('itops_tc_collapsed')||'[]').map(Number); }catch(e){ return []; } });
+  const setCol=fn=>setColS(c=>{ const n=fn(c); try{ localStorage.setItem('itops_tc_collapsed',JSON.stringify(n)); }catch(e){} return n; });
   const canFold=!sort&&!anyFilter;
   const isFolded=id=>canFold&&col.indexOf(+id)>=0;
   const fold=(id,on)=>setCol(c=>on?(c.indexOf(+id)>=0?c:c.concat([+id])):c.filter(x=>x!==+id));
@@ -20086,7 +20086,7 @@ function TcGrid({rows,setRows,uOpts,uname,toast,refresh,onDelete,routing}){
   const commit=async(r,c,val,dir)=>{ const e=edRef.current; if(!e||e.id!==r.id||e.k!==c.k||e.busy)return;
     const v=val===undefined?e.v:val; const go=()=>setEd(dir?nextCell(r,c,dir):null);
     if(String(v)===String(c.raw(r))){ go(); return; }
-    if(fieldOf(c,r)==='parent_id'&&!v&&!await opshConfirm('Make "'+r.name+'" a group of its own? It will no longer be inside "'+gname(r.parent_id)+'".')){ setEd(null); return; }
+    if(fieldOf(c,r)==='parent_id'&&!v&&!await itopsConfirm('Make "'+r.name+'" a group of its own? It will no longer be inside "'+gname(r.parent_id)+'".')){ setEd(null); return; }
     const bad=check(c,v,r); if(bad){ setEd(Object.assign({},e,{v,err:bad})); return; }
     setEd(Object.assign({},e,{v,busy:true,err:''}));
     try{ const body=toBody(c,v,r); await api('PUT','/ticket_categories/'+r.id,body);
@@ -20213,7 +20213,7 @@ function CategoriesPage({lookups,toast,reloadLookups,user}){
   const uname=id=>{ const u=users.find(x=>+x.id===+id); return u?u.display_name:''; };
   const [routing,setRouting]=React.useState(null); const [rBusy,setRBusy]=React.useState(false);
   React.useEffect(()=>{ api('GET','/ticket_categories/routing').then(r=>setRouting({default_owner:r.default_owner||'',default_backup:r.default_backup||'',alert_ids:r.alert_ids||[],alert_always:!!r.alert_always})).catch(()=>setRouting(false)); },[]);
-  const del=async(c)=>{ if(kids(c.id).length){ toast('Move or delete its categories first'); return; } const tn=+c.tickets_total||0; if(!await opshConfirm('Delete the '+(c.parent_id?'category':'group')+' "'+c.name+'"?'+(tn?' Its '+tn+' ticket'+(tn===1?'':'s')+' will have no category.':' No ticket uses it.')+' Setting it to Inactive instead hides it and keeps the history.'))return; try{ await api('DELETE','/ticket_categories/'+c.id); toast('Deleted','ok'); await refresh(); }catch(e){ toast(e.message); } };
+  const del=async(c)=>{ if(kids(c.id).length){ toast('Move or delete its categories first'); return; } const tn=+c.tickets_total||0; if(!await itopsConfirm('Delete the '+(c.parent_id?'category':'group')+' "'+c.name+'"?'+(tn?' Its '+tn+' ticket'+(tn===1?'':'s')+' will have no category.':' No ticket uses it.')+' Setting it to Inactive instead hides it and keeps the history.'))return; try{ await api('DELETE','/ticket_categories/'+c.id); toast('Deleted','ok'); await refresh(); }catch(e){ toast(e.message); } };
   const saveRouting=async()=>{ if(routing.default_owner&&String(routing.default_owner)===String(routing.default_backup)){ toast('The owner and the backup must be different people'); return; }
     setRBusy(true); try{ await api('PUT','/ticket_categories/routing',{default_owner:routing.default_owner?+routing.default_owner:null,default_backup:routing.default_backup?+routing.default_backup:null,alert_ids:routing.alert_ids.map(Number),alert_always:routing.alert_always}); toast('Routing saved','ok'); }catch(e){ toast(e.message); } setRBusy(false); };
   const uOpts=(none,all,keep)=>[{v:'',l:none}].concat(users.filter(u=>all||u.tk!==0||(keep!=null&&String(u.id)===String(keep))).map(u=>({v:u.id,l:u.display_name})));   // BT52: owners / backups only people who can work tickets
@@ -20298,7 +20298,7 @@ function ImportPage({toast}){
       <div style={{fontSize:12,color:'var(--t4)',marginBottom:10}}>{t.note}</div>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
         <button className="btn btn-g btn-sm" onClick={tmpl}><I n="download" s={16}/>Download template</button>
-        <button type="button" className="btn btn-g btn-sm" style={{cursor:'pointer',margin:0}} onClick={async()=>{const fs=await opshUpload({title:'Upload CSV',accept:'.csv, text/csv',hint:'Select a .csv file to import.'});if(fs&&fs[0])onFile(fs[0]);}}>Upload CSV file</button>
+        <button type="button" className="btn btn-g btn-sm" style={{cursor:'pointer',margin:0}} onClick={async()=>{const fs=await itopsUpload({title:'Upload CSV',accept:'.csv, text/csv',hint:'Select a .csv file to import.'});if(fs&&fs[0])onFile(fs[0]);}}>Upload CSV file</button>
       </div>
       <textarea value={text} onChange={e=>{setText(e.target.value);setResult(null);}} placeholder={t.cols.join(',')+'\n...your rows...'} style={{width:'100%',minHeight:150,padding:'10px 12px',background:'var(--s3)',border:'1px solid var(--b1)',borderRadius:8,color:'var(--t1)',fontFamily:'monospace',fontSize:13,resize:'vertical'}}/>
     </div>
@@ -20328,4 +20328,4 @@ function ImportPage({toast}){
 (function(){ try{ if(window.top!==window.self&&window.parent.location.origin===window.location.origin&&window.frameElement&&window.frameElement.hasAttribute('data-help-frame')){ window.top.location.href=window.location.href; } }catch(_){} })();
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 
-;window.__opshBooted=true;
+;window.__itopsBooted=true;

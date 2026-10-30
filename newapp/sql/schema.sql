@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- OpsHub — Complete MySQL Schema
+-- ITOps — Complete MySQL Schema
 -- © 2026 Indisse-BTS. All rights reserved. Proprietary; licensed, not sold.
 -- ═══════════════════════════════════════════════════════════════
 
@@ -8,54 +8,54 @@ SET NAMES utf8mb4;
 
 -- ── CLEAN SLATE (installer is a fresh-setup tool; makes retries idempotent) ──
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS `opsh_notifications`;
-DROP TABLE IF EXISTS `opsh_case_updates`;
-DROP TABLE IF EXISTS `opsh_case_digest`;
-DROP TABLE IF EXISTS `opsh_case_svc`;
-DROP TABLE IF EXISTS `opsh_ci_links`;
-DROP TABLE IF EXISTS `opsh_ticket_csat`;
-DROP TABLE IF EXISTS `opsh_major_reviews`;
-DROP TABLE IF EXISTS `opsh_case_phases`;
-DROP TABLE IF EXISTS `opsh_case_budget`;
-DROP TABLE IF EXISTS `opsh_case_template_tasks`;
-DROP TABLE IF EXISTS `opsh_case_templates`;
-DROP TABLE IF EXISTS `opsh_case_tasks`;
-DROP TABLE IF EXISTS `opsh_case_watchers`;
-DROP TABLE IF EXISTS `opsh_improvements`;
-DROP TABLE IF EXISTS `opsh_case_task_checks`;
-DROP TABLE IF EXISTS `opsh_cases`;
-DROP TABLE IF EXISTS `opsh_notification_prefs`;
-DROP TABLE IF EXISTS `opsh_std_domains`;
-DROP TABLE IF EXISTS `opsh_calendar_events`;
-DROP TABLE IF EXISTS `opsh_ticket_attachments`;
-DROP TABLE IF EXISTS `opsh_ticket_comments`;
-DROP TABLE IF EXISTS `opsh_tickets`;
-DROP TABLE IF EXISTS `opsh_ticket_categories`;
-DROP TABLE IF EXISTS `opsh_kb_votes`;
-DROP TABLE IF EXISTS `opsh_kb_articles`;
-DROP TABLE IF EXISTS `opsh_kb_categories`;
-DROP TABLE IF EXISTS `opsh_contracts`;
-DROP TABLE IF EXISTS `opsh_vendors`;
-DROP TABLE IF EXISTS `opsh_cred_access_log`;
-DROP TABLE IF EXISTS `opsh_credentials`;
-DROP TABLE IF EXISTS `opsh_cred_categories`;
-DROP TABLE IF EXISTS `opsh_doc_access_log`;
-DROP TABLE IF EXISTS `opsh_documents`;
-DROP TABLE IF EXISTS `opsh_doc_categories`;
-DROP TABLE IF EXISTS `opsh_sop_acks`;
-DROP TABLE IF EXISTS `opsh_sop_versions`;
-DROP TABLE IF EXISTS `opsh_sops`;
-DROP TABLE IF EXISTS `opsh_sop_categories`;
-DROP TABLE IF EXISTS `opsh_audit_log`;
-DROP TABLE IF EXISTS `opsh_sessions`;
-DROP TABLE IF EXISTS `opsh_users`;
-DROP TABLE IF EXISTS `opsh_departments`;
-DROP TABLE IF EXISTS `opsh_roles`;
-DROP TABLE IF EXISTS `opsh_settings`;
+DROP TABLE IF EXISTS `itops_notifications`;
+DROP TABLE IF EXISTS `itops_case_updates`;
+DROP TABLE IF EXISTS `itops_case_digest`;
+DROP TABLE IF EXISTS `itops_case_svc`;
+DROP TABLE IF EXISTS `itops_ci_links`;
+DROP TABLE IF EXISTS `itops_ticket_csat`;
+DROP TABLE IF EXISTS `itops_major_reviews`;
+DROP TABLE IF EXISTS `itops_case_phases`;
+DROP TABLE IF EXISTS `itops_case_budget`;
+DROP TABLE IF EXISTS `itops_case_template_tasks`;
+DROP TABLE IF EXISTS `itops_case_templates`;
+DROP TABLE IF EXISTS `itops_case_tasks`;
+DROP TABLE IF EXISTS `itops_case_watchers`;
+DROP TABLE IF EXISTS `itops_improvements`;
+DROP TABLE IF EXISTS `itops_case_task_checks`;
+DROP TABLE IF EXISTS `itops_cases`;
+DROP TABLE IF EXISTS `itops_notification_prefs`;
+DROP TABLE IF EXISTS `itops_std_domains`;
+DROP TABLE IF EXISTS `itops_calendar_events`;
+DROP TABLE IF EXISTS `itops_ticket_attachments`;
+DROP TABLE IF EXISTS `itops_ticket_comments`;
+DROP TABLE IF EXISTS `itops_tickets`;
+DROP TABLE IF EXISTS `itops_ticket_categories`;
+DROP TABLE IF EXISTS `itops_kb_votes`;
+DROP TABLE IF EXISTS `itops_kb_articles`;
+DROP TABLE IF EXISTS `itops_kb_categories`;
+DROP TABLE IF EXISTS `itops_contracts`;
+DROP TABLE IF EXISTS `itops_vendors`;
+DROP TABLE IF EXISTS `itops_cred_access_log`;
+DROP TABLE IF EXISTS `itops_credentials`;
+DROP TABLE IF EXISTS `itops_cred_categories`;
+DROP TABLE IF EXISTS `itops_doc_access_log`;
+DROP TABLE IF EXISTS `itops_documents`;
+DROP TABLE IF EXISTS `itops_doc_categories`;
+DROP TABLE IF EXISTS `itops_sop_acks`;
+DROP TABLE IF EXISTS `itops_sop_versions`;
+DROP TABLE IF EXISTS `itops_sops`;
+DROP TABLE IF EXISTS `itops_sop_categories`;
+DROP TABLE IF EXISTS `itops_audit_log`;
+DROP TABLE IF EXISTS `itops_sessions`;
+DROP TABLE IF EXISTS `itops_users`;
+DROP TABLE IF EXISTS `itops_departments`;
+DROP TABLE IF EXISTS `itops_roles`;
+DROP TABLE IF EXISTS `itops_settings`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ── SETTINGS ──────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_settings` (
+CREATE TABLE IF NOT EXISTS `itops_settings` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `skey` VARCHAR(100) NOT NULL UNIQUE,
   `sval` TEXT,
@@ -63,8 +63,8 @@ CREATE TABLE IF NOT EXISTS `opsh_settings` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `opsh_settings` (`skey`,`sval`) VALUES
-('app_name','OpsHub'),
+INSERT INTO `itops_settings` (`skey`,`sval`) VALUES
+('app_name','ITOps'),
 ('app_tagline','IT Master Operations Hub'),
 ('logo_path',''),
 ('favicon_path',''),
@@ -81,7 +81,7 @@ INSERT INTO `opsh_settings` (`skey`,`sval`) VALUES
 ('installed_at',NOW());
 
 -- ── ROLES ─────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_roles` (
+CREATE TABLE IF NOT EXISTS `itops_roles` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(80) NOT NULL,
   `slug` VARCHAR(80) NOT NULL UNIQUE,
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS `opsh_roles` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `opsh_roles` (`name`,`slug`,`description`,`permissions`,`is_system`) VALUES
+INSERT INTO `itops_roles` (`name`,`slug`,`description`,`permissions`,`is_system`) VALUES
 ('Super Admin','super_admin','Full system access across all departments and modules','{"*":true}',1),
 ('Department Admin','dept_admin','Full CRUD within assigned department, user management within department','{"sops":"crud","docs":"crud","creds":"read_use","contracts":"crud","kb":"crud","tickets":"crud","users":"dept_manage","reports":"dept"}',1),
 ('Manager','manager','Create/edit SOPs, view credentials, manage tickets, view contracts','{"sops":"crud","docs":"crud","creds":"read","contracts":"read","kb":"crud","tickets":"crud","reports":"dept"}',1),
@@ -101,7 +101,7 @@ INSERT INTO `opsh_roles` (`name`,`slug`,`description`,`permissions`,`is_system`)
 ('Auditor','auditor','Read-only access to all content and audit trails','{"sops":"read_all","docs":"read_all","creds":"audit","contracts":"read_all","kb":"read_all","tickets":"read_all","reports":"all","audit":"read"}',1);
 
 -- ── DEPARTMENTS ───────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_departments` (
+CREATE TABLE IF NOT EXISTS `itops_departments` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(100) NOT NULL,
   `slug` VARCHAR(100) NOT NULL UNIQUE,
@@ -112,10 +112,10 @@ CREATE TABLE IF NOT EXISTS `opsh_departments` (
   `icon` VARCHAR(50) DEFAULT 'folder',
   `status` ENUM('active','inactive') DEFAULT 'active',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`parent_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`parent_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `opsh_departments` (`name`,`slug`,`description`,`color`) VALUES
+INSERT INTO `itops_departments` (`name`,`slug`,`description`,`color`) VALUES
 ('Information Technology','it','IT infrastructure, systems, security, and support','#4A7FB5'),
 ('Human Resources','hr','Employee management, recruitment, training, and benefits','#7B6AAF'),
 ('Finance','finance','Accounting, budgeting, payroll, and financial reporting','#3D9A6E'),
@@ -125,7 +125,7 @@ INSERT INTO `opsh_departments` (`name`,`slug`,`description`,`color`) VALUES
 ('Executive','executive','Executive leadership and strategic planning','#2B2926');
 
 -- ── USERS ──────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_users` (
+CREATE TABLE IF NOT EXISTS `itops_users` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `email` VARCHAR(255) NOT NULL UNIQUE,
   `password_hash` VARCHAR(255) DEFAULT NULL,
@@ -146,12 +146,12 @@ CREATE TABLE IF NOT EXISTS `opsh_users` (
   `login_count` INT UNSIGNED DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (`role_id`) REFERENCES `opsh_roles`(`id`),
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`role_id`) REFERENCES `itops_roles`(`id`),
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── SESSIONS ──────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_sessions` (
+CREATE TABLE IF NOT EXISTS `itops_sessions` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `user_id` INT UNSIGNED NOT NULL,
   `token_hash` VARCHAR(255) NOT NULL UNIQUE,
@@ -160,11 +160,11 @@ CREATE TABLE IF NOT EXISTS `opsh_sessions` (
   `user_agent` VARCHAR(500),
   `expires_at` DATETIME NOT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`user_id`) REFERENCES `opsh_users`(`id`) ON DELETE CASCADE
+  FOREIGN KEY (`user_id`) REFERENCES `itops_users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── AUDIT LOG ─────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_audit_log` (
+CREATE TABLE IF NOT EXISTS `itops_audit_log` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `user_id` INT UNSIGNED DEFAULT NULL,
   `user_name` VARCHAR(150) DEFAULT 'System',
@@ -182,8 +182,8 @@ CREATE TABLE IF NOT EXISTS `opsh_audit_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── SOP CATEGORIES ────────────────────────────────────────────
--- BT138: moved into opsh_categories by the database update that runs right after installation.
-CREATE TABLE IF NOT EXISTS `opsh_sop_categories` (
+-- BT138: moved into itops_categories by the database update that runs right after installation.
+CREATE TABLE IF NOT EXISTS `itops_sop_categories` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(150) NOT NULL,
   `slug` VARCHAR(150) NOT NULL,
@@ -194,10 +194,10 @@ CREATE TABLE IF NOT EXISTS `opsh_sop_categories` (
   `color` VARCHAR(7) DEFAULT '',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY `uq_cat_slug_dept` (`slug`, `department_id`),
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `opsh_sop_categories` (`name`,`slug`,`department_id`,`sort_order`) VALUES
+INSERT INTO `itops_sop_categories` (`name`,`slug`,`department_id`,`sort_order`) VALUES
 ('Systems','systems',1,1),('Business Platforms','business-platforms',1,2),('Infrastructure','infrastructure',1,3),
 ('Operations','operations',1,4),('Security','security',1,5),('Compliance','compliance',1,6),
 ('HR Policies','hr-policies',2,1),('Recruitment','recruitment',2,2),('Training','training',2,3),
@@ -206,7 +206,7 @@ INSERT INTO `opsh_sop_categories` (`name`,`slug`,`department_id`,`sort_order`) V
 ('Operations SOPs','ops-sops',5,1);
 
 -- ── SOPs ──────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_sops` (
+CREATE TABLE IF NOT EXISTS `itops_sops` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(255) NOT NULL,
   `slug` VARCHAR(255) NOT NULL,
@@ -222,13 +222,13 @@ CREATE TABLE IF NOT EXISTS `opsh_sops` (
   `tags` JSON DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (`category_id`) REFERENCES `opsh_sop_categories`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`owner_id`) REFERENCES `opsh_users`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`category_id`) REFERENCES `itops_sop_categories`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`owner_id`) REFERENCES `itops_users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── SOP VERSIONS ──────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_sop_versions` (
+CREATE TABLE IF NOT EXISTS `itops_sop_versions` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `sop_id` INT UNSIGNED NOT NULL,
   `version_number` INT UNSIGNED NOT NULL,
@@ -238,12 +238,12 @@ CREATE TABLE IF NOT EXISTS `opsh_sop_versions` (
   `approved_by` INT UNSIGNED DEFAULT NULL,
   `approved_at` DATETIME DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`sop_id`) REFERENCES `opsh_sops`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`created_by`) REFERENCES `opsh_users`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`sop_id`) REFERENCES `itops_sops`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`created_by`) REFERENCES `itops_users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── SOP ACKNOWLEDGMENTS ───────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_sop_acks` (
+CREATE TABLE IF NOT EXISTS `itops_sop_acks` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `sop_id` INT UNSIGNED NOT NULL,
   `version_number` INT UNSIGNED NOT NULL,
@@ -251,13 +251,13 @@ CREATE TABLE IF NOT EXISTS `opsh_sop_acks` (
   `acknowledged_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `ip_address` VARCHAR(45) DEFAULT '',
   UNIQUE KEY `uq_ack` (`sop_id`,`version_number`,`user_id`),
-  FOREIGN KEY (`sop_id`) REFERENCES `opsh_sops`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`user_id`) REFERENCES `opsh_users`(`id`) ON DELETE CASCADE
+  FOREIGN KEY (`sop_id`) REFERENCES `itops_sops`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `itops_users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── DOCUMENT CATEGORIES ───────────────────────────────────────
--- BT138: moved into opsh_categories by the database update that runs right after installation.
-CREATE TABLE IF NOT EXISTS `opsh_doc_categories` (
+-- BT138: moved into itops_categories by the database update that runs right after installation.
+CREATE TABLE IF NOT EXISTS `itops_doc_categories` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(150) NOT NULL,
   `slug` VARCHAR(150) NOT NULL,
@@ -266,10 +266,10 @@ CREATE TABLE IF NOT EXISTS `opsh_doc_categories` (
   `retention_days` INT DEFAULT NULL,
   `sort_order` INT DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `opsh_doc_categories` (`name`,`slug`,`department_id`,`sort_order`) VALUES
+INSERT INTO `itops_doc_categories` (`name`,`slug`,`department_id`,`sort_order`) VALUES
 ('Network Diagrams','network-diagrams',1,1),('Vendor Quotes','vendor-quotes',1,2),
 ('Policies','policies',1,3),('Accreditation Evidence','accreditation-evidence',6,1),
 ('Hardware Specs','hardware-specs',1,4),('Budgets','budgets',3,1),
@@ -277,7 +277,7 @@ INSERT INTO `opsh_doc_categories` (`name`,`slug`,`department_id`,`sort_order`) V
 ('Marketing Assets','marketing-assets',4,1),('Training Materials','training-materials',2,2);
 
 -- ── DOCUMENTS ─────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_documents` (
+CREATE TABLE IF NOT EXISTS `itops_documents` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(255) NOT NULL,
   `description` TEXT DEFAULT '',
@@ -295,42 +295,42 @@ CREATE TABLE IF NOT EXISTS `opsh_documents` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FULLTEXT KEY `ft_docs` (`title`,`description`),
-  FOREIGN KEY (`category_id`) REFERENCES `opsh_doc_categories`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`uploaded_by`) REFERENCES `opsh_users`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`category_id`) REFERENCES `itops_doc_categories`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`uploaded_by`) REFERENCES `itops_users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── DOCUMENT ACCESS LOG ───────────────────────────────────────
--- BT138: moved into opsh_access_log by the database update that runs right after installation.
-CREATE TABLE IF NOT EXISTS `opsh_doc_access_log` (
+-- BT138: moved into itops_access_log by the database update that runs right after installation.
+CREATE TABLE IF NOT EXISTS `itops_doc_access_log` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `document_id` INT UNSIGNED NOT NULL,
   `user_id` INT UNSIGNED NOT NULL,
   `action` ENUM('view','download','print','share') NOT NULL,
   `ip_address` VARCHAR(45) DEFAULT '',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`document_id`) REFERENCES `opsh_documents`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`user_id`) REFERENCES `opsh_users`(`id`) ON DELETE CASCADE
+  FOREIGN KEY (`document_id`) REFERENCES `itops_documents`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `itops_users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── CREDENTIAL CATEGORIES ─────────────────────────────────────
--- BT138: moved into opsh_categories by the database update that runs right after installation.
-CREATE TABLE IF NOT EXISTS `opsh_cred_categories` (
+-- BT138: moved into itops_categories by the database update that runs right after installation.
+CREATE TABLE IF NOT EXISTS `itops_cred_categories` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(100) NOT NULL,
   `icon` VARCHAR(50) DEFAULT 'vault',
   `sort_order` INT DEFAULT 0,
   `department_id` INT UNSIGNED DEFAULT NULL,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `opsh_cred_categories` (`name`,`icon`,`sort_order`,`department_id`) VALUES
+INSERT INTO `itops_cred_categories` (`name`,`icon`,`sort_order`,`department_id`) VALUES
 ('SaaS Platforms','cloud',1,1),('Cloud Admin','shield',2,1),('Infrastructure','server',3,1),
 ('Network Equipment','router',4,1),('Database','database',5,1),('Vendor Portals','globe',6,1),
 ('API Keys','key',7,1),('Finance Systems','dollar',8,3);
 
 -- ── CREDENTIALS ───────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_credentials` (
+CREATE TABLE IF NOT EXISTS `itops_credentials` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(200) NOT NULL,
   `description` TEXT DEFAULT '',
@@ -350,26 +350,26 @@ CREATE TABLE IF NOT EXISTS `opsh_credentials` (
   `status` ENUM('current','due_soon','overdue','disabled') DEFAULT 'current',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (`category_id`) REFERENCES `opsh_cred_categories`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`owner_id`) REFERENCES `opsh_users`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`category_id`) REFERENCES `itops_cred_categories`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`owner_id`) REFERENCES `itops_users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── CREDENTIAL ACCESS LOG ─────────────────────────────────────
--- BT138: moved into opsh_access_log by the database update that runs right after installation.
-CREATE TABLE IF NOT EXISTS `opsh_cred_access_log` (
+-- BT138: moved into itops_access_log by the database update that runs right after installation.
+CREATE TABLE IF NOT EXISTS `itops_cred_access_log` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `credential_id` INT UNSIGNED NOT NULL,
   `user_id` INT UNSIGNED NOT NULL,
   `action` ENUM('view','copy','update','rotate','create','delete') NOT NULL,
   `ip_address` VARCHAR(45) DEFAULT '',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`credential_id`) REFERENCES `opsh_credentials`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`user_id`) REFERENCES `opsh_users`(`id`) ON DELETE CASCADE
+  FOREIGN KEY (`credential_id`) REFERENCES `itops_credentials`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `itops_users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── VENDORS ───────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_vendors` (
+CREATE TABLE IF NOT EXISTS `itops_vendors` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(200) NOT NULL,
   `website` VARCHAR(500) DEFAULT '',
@@ -388,10 +388,10 @@ CREATE TABLE IF NOT EXISTS `opsh_vendors` (
   `status` ENUM('active','inactive','under_review','archived') DEFAULT 'active',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `opsh_vendors` (`name`,`website`,`primary_contact_name`,`primary_contact_email`,`support_url`,`sla_response_hours`,`risk_tier`,`category`,`department_id`,`status`) VALUES
+INSERT INTO `itops_vendors` (`name`,`website`,`primary_contact_name`,`primary_contact_email`,`support_url`,`sla_response_hours`,`risk_tier`,`category`,`department_id`,`status`) VALUES
 ('Phone system provider','','Account Manager','','',4,'medium','Cloud Phone/SMS',1,'active'),
 ('Forms provider','','Account Manager','','',8,'low','Forms/Workflows',1,'active'),
 ('E-signature provider','','Account Manager','','',4,'medium','E-Signatures',1,'active'),
@@ -405,7 +405,7 @@ INSERT INTO `opsh_vendors` (`name`,`website`,`primary_contact_name`,`primary_con
 ('Internet provider (backup)','','Account Team','','',8,'medium','ISP / Connectivity',1,'active');
 
 -- ── CONTRACTS ─────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_contracts` (
+CREATE TABLE IF NOT EXISTS `itops_contracts` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(255) NOT NULL,
   `vendor_id` INT UNSIGNED DEFAULT NULL,
@@ -425,14 +425,14 @@ CREATE TABLE IF NOT EXISTS `opsh_contracts` (
   `tags` JSON DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (`vendor_id`) REFERENCES `opsh_vendors`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`owner_id`) REFERENCES `opsh_users`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`vendor_id`) REFERENCES `itops_vendors`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`owner_id`) REFERENCES `itops_users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── KB CATEGORIES ─────────────────────────────────────────────
--- BT138: moved into opsh_categories by the database update that runs right after installation.
-CREATE TABLE IF NOT EXISTS `opsh_kb_categories` (
+-- BT138: moved into itops_categories by the database update that runs right after installation.
+CREATE TABLE IF NOT EXISTS `itops_kb_categories` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(150) NOT NULL,
   `slug` VARCHAR(150) NOT NULL UNIQUE,
@@ -441,17 +441,17 @@ CREATE TABLE IF NOT EXISTS `opsh_kb_categories` (
   `icon` VARCHAR(50) DEFAULT '',
   `sort_order` INT DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `opsh_kb_categories` (`name`,`slug`,`department_id`,`sort_order`) VALUES
+INSERT INTO `itops_kb_categories` (`name`,`slug`,`department_id`,`sort_order`) VALUES
 ('Microsoft 365','microsoft-365',1,1),('Phone System','phone-system',1,2),('Forms','forms',1,3),
 ('Network','network',1,4),('eFax','efax',1,5),('Hardware','hardware',1,6),
 ('Security','security',1,7),('Finance','finance-kb',3,1),('HR','hr-kb',2,1),
 ('General','general',NULL,99);
 
 -- ── KB ARTICLES ───────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_kb_articles` (
+CREATE TABLE IF NOT EXISTS `itops_kb_articles` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(255) NOT NULL,
   `slug` VARCHAR(255) NOT NULL,
@@ -468,12 +468,12 @@ CREATE TABLE IF NOT EXISTS `opsh_kb_articles` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FULLTEXT KEY `ft_kb` (`title`,`content`),
-  FOREIGN KEY (`category_id`) REFERENCES `opsh_kb_categories`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`author_id`) REFERENCES `opsh_users`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`category_id`) REFERENCES `itops_kb_categories`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`author_id`) REFERENCES `itops_users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `opsh_kb_votes` (
+CREATE TABLE IF NOT EXISTS `itops_kb_votes` (
   `article_id` INT NOT NULL,
   `voter` CHAR(32) NOT NULL,
   `kind` VARCHAR(8) NOT NULL,
@@ -482,7 +482,7 @@ CREATE TABLE IF NOT EXISTS `opsh_kb_votes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── TICKET CATEGORIES ─────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_ticket_categories` (
+CREATE TABLE IF NOT EXISTS `itops_ticket_categories` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(150) NOT NULL,
   `slug` VARCHAR(150) NOT NULL,
@@ -496,11 +496,11 @@ CREATE TABLE IF NOT EXISTS `opsh_ticket_categories` (
   `icon` VARCHAR(50) DEFAULT '',
   `status` ENUM('active','inactive') DEFAULT 'active',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- IT Department ticket categories
-INSERT INTO `opsh_ticket_categories` (`name`,`slug`,`department_id`,`parent_id`,`description`,`sla_hours`,`sort_order`,`icon`) VALUES
+INSERT INTO `itops_ticket_categories` (`name`,`slug`,`department_id`,`parent_id`,`description`,`sla_hours`,`sort_order`,`icon`) VALUES
 -- IT > Hardware
 ('Hardware Request','it-hardware',1,NULL,'Hardware-related requests and issues',24,1,'desktop'),
 ('New PC/Laptop Request','it-new-pc',1,1,'Request a new workstation for a new hire or replacement',48,1,''),
@@ -573,7 +573,7 @@ INSERT INTO `opsh_ticket_categories` (`name`,`slug`,`department_id`,`parent_id`,
 ('Campaign Support','mkt-campaign',4,55,'Help with email campaign, ad setup, analytics',48,3,'');
 
 -- ── TICKETS ───────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_tickets` (
+CREATE TABLE IF NOT EXISTS `itops_tickets` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `ticket_number` VARCHAR(20) NOT NULL UNIQUE,
   `subject` VARCHAR(255) NOT NULL,
@@ -616,14 +616,14 @@ CREATE TABLE IF NOT EXISTS `opsh_tickets` (
   INDEX `idx_tk_merged` (`merged_into_id`),
   INDEX `idx_major_parent` (`major_parent_id`),
   INDEX `idx_tk_case` (`case_id`),
-  FOREIGN KEY (`category_id`) REFERENCES `opsh_ticket_categories`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`requester_id`) REFERENCES `opsh_users`(`id`),
-  FOREIGN KEY (`assignee_id`) REFERENCES `opsh_users`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`category_id`) REFERENCES `itops_ticket_categories`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`requester_id`) REFERENCES `itops_users`(`id`),
+  FOREIGN KEY (`assignee_id`) REFERENCES `itops_users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── CASES (BT76: tickets that need several people) ──────────
-CREATE TABLE IF NOT EXISTS `opsh_cases` (
+CREATE TABLE IF NOT EXISTS `itops_cases` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `case_number` VARCHAR(20) NOT NULL,
   `title` VARCHAR(255) NOT NULL,
@@ -647,7 +647,7 @@ CREATE TABLE IF NOT EXISTS `opsh_cases` (
   INDEX `idx_case_status` (`status`),
   INDEX `idx_case_owner` (`owner_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS `opsh_case_task_checks` (
+CREATE TABLE IF NOT EXISTS `itops_case_task_checks` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `task_id` INT NOT NULL,
   `seq` INT NOT NULL DEFAULT 0,
@@ -658,7 +658,7 @@ CREATE TABLE IF NOT EXISTS `opsh_case_task_checks` (
   `created_at` DATETIME NULL,
   INDEX `idx_check_task` (`task_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS `opsh_improvements` (
+CREATE TABLE IF NOT EXISTS `itops_improvements` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `number` VARCHAR(20) NOT NULL,
   `title` VARCHAR(200) NOT NULL,
@@ -689,13 +689,13 @@ CREATE TABLE IF NOT EXISTS `opsh_improvements` (
   INDEX `idx_imp_owner` (`owner_id`),
   INDEX `idx_imp_by` (`suggested_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS `opsh_case_watchers` (
+CREATE TABLE IF NOT EXISTS `itops_case_watchers` (
   `case_id` INT NOT NULL,
   `user_id` INT NOT NULL,
   PRIMARY KEY (`case_id`, `user_id`),
   INDEX `idx_cw_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS `opsh_case_tasks` (
+CREATE TABLE IF NOT EXISTS `itops_case_tasks` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `case_id` INT NOT NULL,
   `seq` INT NOT NULL DEFAULT 0,
@@ -724,7 +724,7 @@ CREATE TABLE IF NOT EXISTS `opsh_case_tasks` (
   INDEX `idx_ct_assignee` (`assignee_id`),
   INDEX `idx_ct_event` (`event_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS `opsh_case_templates` (
+CREATE TABLE IF NOT EXISTS `itops_case_templates` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(150) NOT NULL,
   `description` TEXT NULL,
@@ -739,7 +739,7 @@ CREATE TABLE IF NOT EXISTS `opsh_case_templates` (
   `updated_at` DATETIME NULL,
   UNIQUE KEY `uq_ctpl_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS `opsh_case_template_tasks` (
+CREATE TABLE IF NOT EXISTS `itops_case_template_tasks` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `template_id` INT NOT NULL,
   `seq` INT NOT NULL,
@@ -759,7 +759,7 @@ CREATE TABLE IF NOT EXISTS `opsh_case_template_tasks` (
   `phase_name` VARCHAR(100) NULL,
   INDEX `idx_ctt_tpl` (`template_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS `opsh_case_svc` (
+CREATE TABLE IF NOT EXISTS `itops_case_svc` (
   `case_id` INT NOT NULL PRIMARY KEY,
   `root_cause` TEXT NULL,
   `workaround` TEXT NULL,
@@ -780,7 +780,7 @@ CREATE TABLE IF NOT EXISTS `opsh_case_svc` (
   `updated_at` DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `opsh_ci_links` (
+CREATE TABLE IF NOT EXISTS `itops_ci_links` (
   `entity_type` VARCHAR(8) NOT NULL,
   `entity_id` INT NOT NULL,
   `asset_id` INT NOT NULL,
@@ -790,7 +790,7 @@ CREATE TABLE IF NOT EXISTS `opsh_ci_links` (
   INDEX `idx_ci_asset` (`asset_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `opsh_ticket_csat` (
+CREATE TABLE IF NOT EXISTS `itops_ticket_csat` (
   `ticket_id` INT NOT NULL PRIMARY KEY,
   `token` CHAR(48) NOT NULL,
   `rating` VARCHAR(10) NULL,
@@ -803,7 +803,7 @@ CREATE TABLE IF NOT EXISTS `opsh_ticket_csat` (
   INDEX `idx_csat_rated` (`rated_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `opsh_major_reviews` (
+CREATE TABLE IF NOT EXISTS `itops_major_reviews` (
   `ticket_id` INT NOT NULL PRIMARY KEY,
   `what_happened` TEXT NULL,
   `cause` TEXT NULL,
@@ -813,7 +813,7 @@ CREATE TABLE IF NOT EXISTS `opsh_major_reviews` (
   `written_at` DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `opsh_case_phases` (
+CREATE TABLE IF NOT EXISTS `itops_case_phases` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `case_id` INT NOT NULL,
   `seq` INT NOT NULL DEFAULT 0,
@@ -822,18 +822,18 @@ CREATE TABLE IF NOT EXISTS `opsh_case_phases` (
   `created_at` DATETIME NULL,
   INDEX `idx_cph_case` (`case_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS `opsh_case_budget` (
+CREATE TABLE IF NOT EXISTS `itops_case_budget` (
   `case_id` INT NOT NULL,
   `line_id` INT NOT NULL,
   PRIMARY KEY (`case_id`, `line_id`),
   INDEX `idx_cb_line` (`line_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS `opsh_case_digest` (
+CREATE TABLE IF NOT EXISTS `itops_case_digest` (
   `user_id` INT NOT NULL PRIMARY KEY,
   `last_date` DATE NULL,
   `last_at` DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS `opsh_case_updates` (
+CREATE TABLE IF NOT EXISTS `itops_case_updates` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `case_id` INT NOT NULL,
   `user_id` INT NULL,
@@ -844,19 +844,19 @@ CREATE TABLE IF NOT EXISTS `opsh_case_updates` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── TICKET COMMENTS ───────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_ticket_comments` (
+CREATE TABLE IF NOT EXISTS `itops_ticket_comments` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `ticket_id` INT UNSIGNED NOT NULL,
   `user_id` INT UNSIGNED NOT NULL,
   `content` TEXT NOT NULL,
   `is_internal` TINYINT(1) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`ticket_id`) REFERENCES `opsh_tickets`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`user_id`) REFERENCES `opsh_users`(`id`) ON DELETE CASCADE
+  FOREIGN KEY (`ticket_id`) REFERENCES `itops_tickets`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `itops_users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── TICKET ATTACHMENTS ────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_ticket_attachments` (
+CREATE TABLE IF NOT EXISTS `itops_ticket_attachments` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `ticket_id` INT UNSIGNED NOT NULL,
   `file_path` VARCHAR(500) NOT NULL,
@@ -865,12 +865,12 @@ CREATE TABLE IF NOT EXISTS `opsh_ticket_attachments` (
   `mime_type` VARCHAR(100) DEFAULT '',
   `uploaded_by` INT UNSIGNED DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`ticket_id`) REFERENCES `opsh_tickets`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`uploaded_by`) REFERENCES `opsh_users`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`ticket_id`) REFERENCES `itops_tickets`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`uploaded_by`) REFERENCES `itops_users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── CALENDAR EVENTS ───────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_calendar_events` (
+CREATE TABLE IF NOT EXISTS `itops_calendar_events` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(255) NOT NULL,
   `description` TEXT DEFAULT '',
@@ -886,12 +886,12 @@ CREATE TABLE IF NOT EXISTS `opsh_calendar_events` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_cal_dates` (`start_date`,`end_date`),
   INDEX `idx_cal_entity` (`entity_type`,`entity_id`),
-  FOREIGN KEY (`department_id`) REFERENCES `opsh_departments`(`id`) ON DELETE SET NULL,
-  FOREIGN KEY (`created_by`) REFERENCES `opsh_users`(`id`) ON DELETE SET NULL
+  FOREIGN KEY (`department_id`) REFERENCES `itops_departments`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`created_by`) REFERENCES `itops_users`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── ACCREDITATION COMPLIANCE ───────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_std_domains` (
+CREATE TABLE IF NOT EXISTS `itops_std_domains` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(150) NOT NULL,
   `description` TEXT DEFAULT '',
@@ -904,7 +904,7 @@ CREATE TABLE IF NOT EXISTS `opsh_std_domains` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `opsh_std_domains` (`name`,`description`,`sort_order`,`score`,`evidence_count`) VALUES
+INSERT INTO `itops_std_domains` (`name`,`description`,`sort_order`,`score`,`evidence_count`) VALUES
 ('Information Management Plan','Documented plan for managing organizational information',1,0,0),
 ('Data Collection & Analysis','Systematic collection, analysis, and use of data',2,0,0),
 ('Accessibility & Availability','Information systems accessible to authorized users',3,0,0),
@@ -917,7 +917,7 @@ INSERT INTO `opsh_std_domains` (`name`,`description`,`sort_order`,`score`,`evide
 
 
 -- ── NOTIFICATIONS ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS `opsh_sla_alerts` (
+CREATE TABLE IF NOT EXISTS `itops_sla_alerts` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `ticket_id` INT UNSIGNED NOT NULL,
   `kind` VARCHAR(40) NOT NULL,
@@ -925,7 +925,7 @@ CREATE TABLE IF NOT EXISTS `opsh_sla_alerts` (
   UNIQUE KEY `uniq_ticket_kind` (`ticket_id`,`kind`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `opsh_forms` (
+CREATE TABLE IF NOT EXISTS `itops_forms` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `slug` VARCHAR(150) NOT NULL UNIQUE,
   `name` VARCHAR(190) NOT NULL,
@@ -940,7 +940,7 @@ CREATE TABLE IF NOT EXISTS `opsh_forms` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `opsh_form_submissions` (
+CREATE TABLE IF NOT EXISTS `itops_form_submissions` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `form_id` INT UNSIGNED NOT NULL,
   `ticket_id` INT UNSIGNED DEFAULT NULL,
@@ -953,11 +953,11 @@ CREATE TABLE IF NOT EXISTS `opsh_form_submissions` (
   KEY `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `opsh_forms` (`slug`,`name`,`title`,`description`,`type`,`schema_json`,`settings_json`,`status`)
+INSERT INTO `itops_forms` (`slug`,`name`,`title`,`description`,`type`,`schema_json`,`settings_json`,`status`)
 SELECT 'support','Help Request','Submit a Help Request','Tell us what you need and we will get back to you.','ticket','{"fields":[{"key":"name","label":"Your name","type":"text","required":false,"maps_to":"requester_name","placeholder":"Jane Doe"},{"key":"email","label":"Email","type":"email","required":true,"maps_to":"requester_email","placeholder":"jane@company.com"},{"key":"category","label":"Category","type":"group_category","required":false,"maps_to":"category"},{"key":"subject","label":"Subject","type":"text","required":true,"maps_to":"subject"},{"key":"description","label":"Description","type":"textarea","required":true,"maps_to":"description"}]}','{"success_message":"Thanks! Your request has been logged and we will follow up shortly.","redirect_url":""}','active'
-WHERE NOT EXISTS (SELECT 1 FROM `opsh_forms` WHERE `slug`='support');
+WHERE NOT EXISTS (SELECT 1 FROM `itops_forms` WHERE `slug`='support');
 
-CREATE TABLE IF NOT EXISTS `opsh_notifications` (
+CREATE TABLE IF NOT EXISTS `itops_notifications` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `user_id` INT UNSIGNED NOT NULL,
   `title` VARCHAR(255) NOT NULL,
@@ -967,10 +967,10 @@ CREATE TABLE IF NOT EXISTS `opsh_notifications` (
   `is_read` TINYINT(1) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_notif_user` (`user_id`,`is_read`,`created_at`),
-  FOREIGN KEY (`user_id`) REFERENCES `opsh_users`(`id`) ON DELETE CASCADE
+  FOREIGN KEY (`user_id`) REFERENCES `itops_users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `opsh_job_descriptions` (
+CREATE TABLE IF NOT EXISTS `itops_job_descriptions` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(255) NOT NULL,
   `slug` VARCHAR(255) DEFAULT NULL,
@@ -991,7 +991,7 @@ CREATE TABLE IF NOT EXISTS `opsh_job_descriptions` (
 
 
 -- ---- Feature tables (added 0621-U): ensure fresh installs include these ----
-CREATE TABLE IF NOT EXISTS opsh_kb_gaps (
+CREATE TABLE IF NOT EXISTS itops_kb_gaps (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         query_norm VARCHAR(180) NOT NULL,
         query_text VARCHAR(500),
@@ -1004,7 +1004,7 @@ CREATE TABLE IF NOT EXISTS opsh_kb_gaps (
         KEY idx_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_ob_templates (
+CREATE TABLE IF NOT EXISTS itops_ob_templates (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(160) NOT NULL,
         kind ENUM('onboard','offboard') NOT NULL DEFAULT 'onboard',
@@ -1016,7 +1016,7 @@ CREATE TABLE IF NOT EXISTS opsh_ob_templates (
         KEY idx_kind (kind, status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_ob_template_tasks (
+CREATE TABLE IF NOT EXISTS itops_ob_template_tasks (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         template_id INT UNSIGNED NOT NULL,
         sort_order INT NOT NULL DEFAULT 0,
@@ -1028,7 +1028,7 @@ CREATE TABLE IF NOT EXISTS opsh_ob_template_tasks (
         KEY idx_tpl (template_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_ob_runs (
+CREATE TABLE IF NOT EXISTS itops_ob_runs (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         template_id INT UNSIGNED DEFAULT NULL,
         kind ENUM('onboard','offboard') NOT NULL DEFAULT 'onboard',
@@ -1045,7 +1045,7 @@ CREATE TABLE IF NOT EXISTS opsh_ob_runs (
         KEY idx_status (kind, status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_ob_run_tasks (
+CREATE TABLE IF NOT EXISTS itops_ob_run_tasks (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         run_id INT UNSIGNED NOT NULL,
         sort_order INT NOT NULL DEFAULT 0,
@@ -1061,7 +1061,7 @@ CREATE TABLE IF NOT EXISTS opsh_ob_run_tasks (
         KEY idx_run (run_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_alerts (
+CREATE TABLE IF NOT EXISTS itops_alerts (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         alert_key VARCHAR(160) NOT NULL,
         level ENUM('warning','error') DEFAULT 'warning',
@@ -1075,7 +1075,7 @@ CREATE TABLE IF NOT EXISTS opsh_alerts (
         KEY idx_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_event_log (
+CREATE TABLE IF NOT EXISTS itops_event_log (
                 id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 ts DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 level ENUM('error','warning','info','debug') NOT NULL DEFAULT 'info',
@@ -1089,7 +1089,7 @@ CREATE TABLE IF NOT EXISTS opsh_event_log (
                 KEY idx_channel_ts (channel, ts)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_links (
+CREATE TABLE IF NOT EXISTS itops_links (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         a_type VARCHAR(32) NOT NULL,
         a_id INT UNSIGNED NOT NULL,
@@ -1101,7 +1101,7 @@ CREATE TABLE IF NOT EXISTS opsh_links (
         KEY idx_b (b_type, b_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_jd_versions (
+CREATE TABLE IF NOT EXISTS itops_jd_versions (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         jd_id INT UNSIGNED NOT NULL,
         version_number INT UNSIGNED NOT NULL,
@@ -1112,7 +1112,7 @@ CREATE TABLE IF NOT EXISTS opsh_jd_versions (
         KEY idx_jd (jd_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_signature_requests (
+CREATE TABLE IF NOT EXISTS itops_signature_requests (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         doc_type VARCHAR(32) NOT NULL,
         doc_id INT UNSIGNED NOT NULL,
@@ -1126,7 +1126,7 @@ CREATE TABLE IF NOT EXISTS opsh_signature_requests (
         KEY idx_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_signature_signers (
+CREATE TABLE IF NOT EXISTS itops_signature_signers (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         request_id INT UNSIGNED NOT NULL,
         user_id INT UNSIGNED DEFAULT NULL,
@@ -1142,7 +1142,7 @@ CREATE TABLE IF NOT EXISTS opsh_signature_signers (
         KEY idx_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_api_keys (
+CREATE TABLE IF NOT EXISTS itops_api_keys (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(120) NOT NULL,
         key_prefix VARCHAR(32) NOT NULL,
@@ -1157,7 +1157,7 @@ CREATE TABLE IF NOT EXISTS opsh_api_keys (
         KEY idx_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_webhooks (
+CREATE TABLE IF NOT EXISTS itops_webhooks (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(120) NOT NULL,
         url VARCHAR(500) NOT NULL,
@@ -1169,7 +1169,7 @@ CREATE TABLE IF NOT EXISTS opsh_webhooks (
         KEY idx_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_webhook_deliveries (
+CREATE TABLE IF NOT EXISTS itops_webhook_deliveries (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         webhook_id INT UNSIGNED NOT NULL,
         delivery_id VARCHAR(32) NOT NULL,
@@ -1184,7 +1184,7 @@ CREATE TABLE IF NOT EXISTS opsh_webhook_deliveries (
         KEY idx_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_job_descriptions (
+CREATE TABLE IF NOT EXISTS itops_job_descriptions (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
         slug VARCHAR(255) DEFAULT NULL,
@@ -1203,9 +1203,9 @@ CREATE TABLE IF NOT EXISTS opsh_job_descriptions (
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_forms (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, slug VARCHAR(150) NOT NULL UNIQUE, name VARCHAR(190) NOT NULL, title VARCHAR(190) DEFAULT '', description TEXT DEFAULT NULL, type ENUM('ticket','data') NOT NULL DEFAULT 'ticket', schema_json MEDIUMTEXT DEFAULT NULL, settings_json TEXT DEFAULT NULL, status ENUM('active','inactive') DEFAULT 'active', created_by INT UNSIGNED DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS itops_forms (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, slug VARCHAR(150) NOT NULL UNIQUE, name VARCHAR(190) NOT NULL, title VARCHAR(190) DEFAULT '', description TEXT DEFAULT NULL, type ENUM('ticket','data') NOT NULL DEFAULT 'ticket', schema_json MEDIUMTEXT DEFAULT NULL, settings_json TEXT DEFAULT NULL, status ENUM('active','inactive') DEFAULT 'active', created_by INT UNSIGNED DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_form_submissions (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, form_id INT UNSIGNED NOT NULL, ticket_id INT UNSIGNED DEFAULT NULL, data_json MEDIUMTEXT DEFAULT NULL, submitter_name VARCHAR(190) DEFAULT NULL, submitter_email VARCHAR(190) DEFAULT NULL, ip_address VARCHAR(64) DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, KEY idx_form (form_id), KEY idx_created (created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS itops_form_submissions (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, form_id INT UNSIGNED NOT NULL, ticket_id INT UNSIGNED DEFAULT NULL, data_json MEDIUMTEXT DEFAULT NULL, submitter_name VARCHAR(190) DEFAULT NULL, submitter_email VARCHAR(190) DEFAULT NULL, ip_address VARCHAR(64) DEFAULT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, KEY idx_form (form_id), KEY idx_created (created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS opsh_sla_alerts (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, ticket_id INT UNSIGNED NOT NULL, kind VARCHAR(40) NOT NULL, sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uniq_ticket_kind (ticket_id,kind)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS itops_sla_alerts (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, ticket_id INT UNSIGNED NOT NULL, kind VARCHAR(40) NOT NULL, sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uniq_ticket_kind (ticket_id,kind)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

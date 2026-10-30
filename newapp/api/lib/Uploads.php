@@ -1,14 +1,14 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — shared upload allow-list for ticket attachments and public form files.
+ * ITOps — shared upload allow-list for ticket attachments and public form files.
  * A file is accepted only when its EXTENSION is on the list AND the server-detected content type is plausible for
  * that extension (so a script renamed to .pdf is refused). The stored content type comes from this table, never
  * from the browser. SVG / HTML / scripts / executables are never accepted.
  */
-if (!function_exists('opsh_upload_types')) {
+if (!function_exists('itops_upload_types')) {
     /** ext => [content type to store, [plausible detected types (prefix match allowed with *)]] */
-    function opsh_upload_types(): array {
+    function itops_upload_types(): array {
         $ole = ['application/msword', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint', 'application/vnd.ms-office', 'application/x-ole-storage', 'application/CDFV2', 'application/cdfv2', 'application/octet-stream'];
         $ooxml = ['application/vnd.openxmlformats-officedocument.*', 'application/zip', 'application/octet-stream'];
         $txt = ['text/plain', 'application/octet-stream', 'inode/x-empty'];
@@ -33,11 +33,11 @@ if (!function_exists('opsh_upload_types')) {
             'json' => ['application/json', array_merge($txt, ['application/json'])],
         ];
     }
-    function opsh_upload_accept_attr(): string { return '.' . implode(',.', array_keys(opsh_upload_types())); }
+    function itops_upload_accept_attr(): string { return '.' . implode(',.', array_keys(itops_upload_types())); }
     /** Returns ['ext'=>…, 'mime'=>…] or ['error'=>message]. */
-    function opsh_upload_check(string $tmpPath, string $origName): array {
+    function itops_upload_check(string $tmpPath, string $origName): array {
         $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
-        $types = opsh_upload_types();
+        $types = itops_upload_types();
         $human = 'pictures, audio/video, PDF, Word, Excel, PowerPoint, CSV, TXT, XML and JSON';
         if ($ext === '' || !isset($types[$ext])) return ['error' => 'This file type isn\'t allowed. Allowed: ' . $human . '.'];
         $det = function_exists('finfo_open') ? (string)finfo_file(finfo_open(FILEINFO_MIME_TYPE), $tmpPath) : '';

@@ -1,5 +1,5 @@
 /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
-/* OpsHub BT134 — the script of pc.html: protect a personal computer with Microsoft Defender, by choice.
+/* ITOps BT134 — the script of pc.html: protect a personal computer with Microsoft Defender, by choice.
    A file of its own: the site's Content-Security-Policy allows no inline script. Everything shown is built with
    textContent, never as HTML from the server. */
 (function () {

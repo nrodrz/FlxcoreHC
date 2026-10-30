@@ -1,17 +1,17 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — AI assist (server-side proxy to an LLM provider).
+ * ITOps — AI assist (server-side proxy to an LLM provider).
  * The API key is stored encrypted (vault) and never sent to the browser.
  * GET  /api/ai          -> { enabled, provider, model, key_set }
  * POST /api/ai/config   -> save { enabled, provider, model, api_key? }   (super_admin)
  * POST /api/ai/assist   -> { ticket_id } -> { summary, category_id, category_name, priority, draft_reply }
  */
-define('JD_BUILDER_SYS', 'You are OpsHub\'s Job Description Builder, an expert, inclusive HR writer for an organization that may operate across several offices and work to external quality standards. Work conversationally with the user to build ONE job description. Ask only one or two focused questions at a time when key details are missing (job title, department, who it reports to, employment type, location or remote, the role purpose, key responsibilities, required vs preferred qualifications, core competencies, and any pay range provided). Proactively suggest modern, bias-free, inclusive language and clear, measurable responsibilities. Be concise and friendly. You MUST reply with ONLY a single JSON object and nothing else (no markdown, no code fences). Use exactly these keys: reply (your conversational message to the user, a string); draft (an object with title set to the job title, html string, and review_days integer); suggestions (an array of up to 3 short clickable next-step ideas as strings); done (boolean, true only when the user says it is complete). The html must be clean semantic HTML using only h2, p, ul, ol, li, b, table, tr, th, td tags. Prefer these sections when relevant: Position Summary, Key Responsibilities, Required Qualifications, Preferred Qualifications, Core Competencies, Reporting and Structure, Work Environment, and a brief Equal Opportunity statement. Always return the COMPLETE updated draft every turn. Use placeholders like [department] or [pay range] when a detail is unknown rather than inventing facts. Avoid discriminatory or non-inclusive language and avoid age, gender, or other protected-class assumptions.');
-define('SOP_BUILDER_SYS', 'You are OpsHub\'s SOP Builder, an expert at writing clear, modern Standard Operating Procedures for an organization that may operate across several offices and work to external quality standards. Work conversationally with the user to build ONE SOP. Ask only one or two focused questions at a time when key details are missing (what triggers it, who performs it, the steps, the systems used, what done looks like, and edge cases). Proactively suggest modern best practices: clear ownership and RACI, least-privilege and security, measurable and testable steps, automation opportunities, a rollback or exception path, and a sensible review cadence. Be concise and friendly. You MUST reply with ONLY a single JSON object and nothing else (no markdown, no code fences). Use exactly these keys: reply (your conversational message to the user, a string); draft (an object with title string, html string, and review_days integer representing the CURRENT full SOP so far); suggestions (an array of up to 3 short clickable next-step ideas as strings); done (boolean, true only when the user says the SOP is complete). The html must be clean semantic HTML using only h2, p, ul, ol, li, b, table, tr, th, td tags. Prefer these sections when relevant: Purpose, Scope, Roles and Responsibilities, Prerequisites, Procedure (numbered steps), Exceptions and Rollback, References. Always return the COMPLETE updated draft every turn, not just the changes. Use placeholders like [role] or [system] when a detail is unknown rather than inventing facts. Never reproduce copyrighted standards text, including the standards of any accreditation body. If there is not enough information to draft yet, return an empty html string and focus on questions.');
+define('JD_BUILDER_SYS', 'You are ITOps\'s Job Description Builder, an expert, inclusive HR writer for an organization that may operate across several offices and work to external quality standards. Work conversationally with the user to build ONE job description. Ask only one or two focused questions at a time when key details are missing (job title, department, who it reports to, employment type, location or remote, the role purpose, key responsibilities, required vs preferred qualifications, core competencies, and any pay range provided). Proactively suggest modern, bias-free, inclusive language and clear, measurable responsibilities. Be concise and friendly. You MUST reply with ONLY a single JSON object and nothing else (no markdown, no code fences). Use exactly these keys: reply (your conversational message to the user, a string); draft (an object with title set to the job title, html string, and review_days integer); suggestions (an array of up to 3 short clickable next-step ideas as strings); done (boolean, true only when the user says it is complete). The html must be clean semantic HTML using only h2, p, ul, ol, li, b, table, tr, th, td tags. Prefer these sections when relevant: Position Summary, Key Responsibilities, Required Qualifications, Preferred Qualifications, Core Competencies, Reporting and Structure, Work Environment, and a brief Equal Opportunity statement. Always return the COMPLETE updated draft every turn. Use placeholders like [department] or [pay range] when a detail is unknown rather than inventing facts. Avoid discriminatory or non-inclusive language and avoid age, gender, or other protected-class assumptions.');
+define('SOP_BUILDER_SYS', 'You are ITOps\'s SOP Builder, an expert at writing clear, modern Standard Operating Procedures for an organization that may operate across several offices and work to external quality standards. Work conversationally with the user to build ONE SOP. Ask only one or two focused questions at a time when key details are missing (what triggers it, who performs it, the steps, the systems used, what done looks like, and edge cases). Proactively suggest modern best practices: clear ownership and RACI, least-privilege and security, measurable and testable steps, automation opportunities, a rollback or exception path, and a sensible review cadence. Be concise and friendly. You MUST reply with ONLY a single JSON object and nothing else (no markdown, no code fences). Use exactly these keys: reply (your conversational message to the user, a string); draft (an object with title string, html string, and review_days integer representing the CURRENT full SOP so far); suggestions (an array of up to 3 short clickable next-step ideas as strings); done (boolean, true only when the user says the SOP is complete). The html must be clean semantic HTML using only h2, p, ul, ol, li, b, table, tr, th, td tags. Prefer these sections when relevant: Purpose, Scope, Roles and Responsibilities, Prerequisites, Procedure (numbered steps), Exceptions and Rollback, References. Always return the COMPLETE updated draft every turn, not just the changes. Use placeholders like [role] or [system] when a detail is unknown rather than inventing facts. Never reproduce copyrighted standards text, including the standards of any accreditation body. If there is not enough information to draft yet, return an empty html string and focus on questions.');
 $db = getDB();
 
-define('KB_ASSIST_SYS', "You are OpsHub's IT Help Assistant for an organization that runs on Microsoft 365. You help an EMPLOYEE find the right answer in the internal Knowledge Base. Behave like a thoughtful help-desk agent:\n- Work out what the person ACTUALLY needs. If the request is vague, or they may be asking for the wrong thing (wrong product/feature name, or an XY problem where they ask about their attempted fix instead of the real goal), ask ONE short clarifying question BEFORE answering.\n- Answer ONLY from the Knowledge Base context provided below. Do NOT invent steps, settings, policies, menu names, or article content. If the answer is not in the context, say you do not have an article on that yet and offer to raise a support ticket.\n- Cite the specific article(s) you used by their #id.\n- Gently correct mistaken assumptions using facts from the articles (e.g. if they ask to reset a password 'in Outlook' but the article says use the self-service portal, steer them there).\n- Be concise, friendly, plain language, one task at a time. Never reproduce copyrighted text.\nReply with ONLY a single JSON object (no markdown, no code fences) with keys: reply (string, your message to the user), article_ids (array of integer #ids you cite from the context; may be empty), suggestions (array of up to 3 short next-step questions the user might tap), need_clarification (boolean, true when your reply is a clarifying question rather than an answer).");
+define('KB_ASSIST_SYS', "You are ITOps's IT Help Assistant for an organization that runs on Microsoft 365. You help an EMPLOYEE find the right answer in the internal Knowledge Base. Behave like a thoughtful help-desk agent:\n- Work out what the person ACTUALLY needs. If the request is vague, or they may be asking for the wrong thing (wrong product/feature name, or an XY problem where they ask about their attempted fix instead of the real goal), ask ONE short clarifying question BEFORE answering.\n- Answer ONLY from the Knowledge Base context provided below. Do NOT invent steps, settings, policies, menu names, or article content. If the answer is not in the context, say you do not have an article on that yet and offer to raise a support ticket.\n- Cite the specific article(s) you used by their #id.\n- Gently correct mistaken assumptions using facts from the articles (e.g. if they ask to reset a password 'in Outlook' but the article says use the self-service portal, steer them there).\n- Be concise, friendly, plain language, one task at a time. Never reproduce copyrighted text.\nReply with ONLY a single JSON object (no markdown, no code fences) with keys: reply (string, your message to the user), article_ids (array of integer #ids you cite from the context; may be empty), suggestions (array of up to 3 short next-step questions the user might tap), need_clarification (boolean, true when your reply is a clarifying question rather than an answer).");
 
 function kb_assist_retrieve($db, $query, $limit = 6) {
     $query = trim($query);
@@ -19,7 +19,7 @@ function kb_assist_retrieve($db, $query, $limit = 6) {
     $rows = [];
     try {
         $st = $db->prepare("SELECT id, title, content, MATCH(title,content) AGAINST (? IN NATURAL LANGUAGE MODE) AS score
-                            FROM opsh_kb_articles
+                            FROM itops_kb_articles
                             WHERE status='published' AND MATCH(title,content) AGAINST (? IN NATURAL LANGUAGE MODE)
                             ORDER BY score DESC LIMIT ?");
         $st->bindValue(1, $query); $st->bindValue(2, $query); $st->bindValue(3, (int)$limit, PDO::PARAM_INT);
@@ -32,7 +32,7 @@ function kb_assist_retrieve($db, $query, $limit = 6) {
             if ($terms) {
                 $where = []; $bind = [];
                 foreach ($terms as $tm) { $where[] = "(title LIKE ? OR content LIKE ?)"; $bind[] = '%'.$tm.'%'; $bind[] = '%'.$tm.'%'; }
-                $sql = "SELECT id, title, content FROM opsh_kb_articles WHERE status='published' AND (".implode(' OR ', $where).") LIMIT ".(int)$limit;
+                $sql = "SELECT id, title, content FROM itops_kb_articles WHERE status='published' AND (".implode(' OR ', $where).") LIMIT ".(int)$limit;
                 $st = $db->prepare($sql); $st->execute($bind); $rows = $st->fetchAll();
             }
         } catch (\Throwable $e) { $rows = []; }
@@ -81,13 +81,13 @@ function kb_fetch_trusted($url, $allowHosts) {
     if (!$host || !$allowHosts || !kb_host_allowed($host, $allowHosts)) return null;
     if (!function_exists('curl_init')) return null;
     require_once __DIR__ . '/../lib/NetGuard.php';   // BT88: every address of the name public (IPv6 too), and the call pinned to it
-    $chk = opsh_net_check((string)$url); if (!$chk['ok']) return null;
+    $chk = itops_net_check((string)$url); if (!$chk['ok']) return null;
     $ch = curl_init($url);
-    opsh_net_pin($ch, $chk);
+    itops_net_pin($ch, $chk);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 4,
         CURLOPT_FOLLOWLOCATION => false, CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2,
-        CURLOPT_USERAGENT => 'OpsHub-KB-Assistant/1.0', CURLOPT_HTTPHEADER => ['Accept: text/html,text/plain'],
+        CURLOPT_USERAGENT => 'ITOps-KB-Assistant/1.0', CURLOPT_HTTPHEADER => ['Accept: text/html,text/plain'],
     ]);
     $resp = curl_exec($ch);
     $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -107,7 +107,7 @@ function kb_gap_log($db, $query, $answeredFrom) {
     if ($q === '' || mb_strlen($q) < 3) return;
     $norm = mb_strtolower(mb_substr($q, 0, 180));
     try {
-        $db->prepare("INSERT INTO opsh_kb_gaps (query_norm, query_text, hits, answered_from, status, last_at, created_at)
+        $db->prepare("INSERT INTO itops_kb_gaps (query_norm, query_text, hits, answered_from, status, last_at, created_at)
                       VALUES (?,?,1,?, 'open', NOW(), NOW())
                       ON DUPLICATE KEY UPDATE hits = hits + 1, last_at = NOW(), answered_from = VALUES(answered_from),
                         status = IF(status='resolved','open',status)")
@@ -117,13 +117,13 @@ function kb_gap_log($db, $query, $answeredFrom) {
 
 /* A user without tickets:"all" may only use AI on tickets they opened or are assigned (same scope as the Tickets API). */
 function ai_assert_ticket_scope($db, $currentUser, $tid) {
-    if (opsh_can($currentUser, 'tickets', 'all')) return;
-    $st = $db->prepare('SELECT 1 FROM opsh_tickets WHERE id=? AND (assignee_id=? OR requester_id=? OR backup_id=?)');
+    if (itops_can($currentUser, 'tickets', 'all')) return;
+    $st = $db->prepare('SELECT 1 FROM itops_tickets WHERE id=? AND (assignee_id=? OR requester_id=? OR backup_id=?)');
     $st->execute([(int)$tid, (int)$currentUser['id'], (int)$currentUser['id'], (int)$currentUser['id']]);
     if (!$st->fetchColumn()) error_response('You can only use this on tickets you created or that are assigned to you', 403);
 }
-function ai_get($db, $k, $def = '') { $s = $db->prepare("SELECT sval FROM opsh_settings WHERE skey=?"); $s->execute([$k]); $v = $s->fetchColumn(); return $v === false ? $def : $v; }
-function ai_put($db, $k, $v, $uid) { $db->prepare("INSERT INTO opsh_settings (skey,sval,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval),updated_by=VALUES(updated_by)")->execute([$k, $v, $uid]); }
+function ai_get($db, $k, $def = '') { $s = $db->prepare("SELECT sval FROM itops_settings WHERE skey=?"); $s->execute([$k]); $v = $s->fetchColumn(); return $v === false ? $def : $v; }
+function ai_put($db, $k, $v, $uid) { $db->prepare("INSERT INTO itops_settings (skey,sval,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval),updated_by=VALUES(updated_by)")->execute([$k, $v, $uid]); }
 
 function ai_call($provider, $key, $model, $sys, $user) {
     if ($provider === 'openai') {
@@ -175,7 +175,7 @@ function ai_call_chat($provider, $key, $model, $sys, $messages, $maxTokens = 200
 }
 
 if ($method === 'GET' && !$id) {
-    opsh_require($currentUser, 'tickets', 'view');
+    itops_require($currentUser, 'tickets', 'view');
     $prov = ai_get($db, 'ai_provider', 'anthropic');
     $mainKey = ai_get($db, 'ai_api_key_enc', '');
     $sttKey = ai_get($db, 'ai_stt_key_enc', '');
@@ -193,7 +193,7 @@ if ($method === 'GET' && !$id) {
 }
 
 if ($method === 'POST' && $id === 'config') {
-    opsh_require($currentUser, 'settings', 'edit');   // Settings → Sign-in & AI (General area)
+    itops_require($currentUser, 'settings', 'edit');   // Settings → Sign-in & AI (General area)
     $b = json_decode(file_get_contents('php://input'), true) ?: [];
     // New API keys are secrets: Super Admin only (same rule as other connection secrets).
     if (((isset($b['api_key']) && trim((string)$b['api_key']) !== '') || (isset($b['stt_api_key']) && trim((string)$b['stt_api_key']) !== '')) && ($currentUser['role_slug'] ?? '') !== 'super_admin')
@@ -243,7 +243,7 @@ if ($method === 'POST' && $id === 'config') {
 }
 
 if ($method === 'POST' && $id === 'assist') {
-    opsh_require($currentUser, 'tickets', 'view');
+    itops_require($currentUser, 'tickets', 'view');
     { $__b = json_decode(file_get_contents('php://input'), true) ?: []; if (!empty($__b['ticket_id'])) ai_assert_ticket_scope($db, $currentUser, (int)$__b['ticket_id']); }   // scope first
     if (ai_get($db, 'ai_enabled', '0') !== '1') error_response('AI assist is not enabled', 400);
     $keyEnc = ai_get($db, 'ai_api_key_enc', '');
@@ -255,13 +255,13 @@ if ($method === 'POST' && $id === 'assist') {
     $tid = (int)($b['ticket_id'] ?? 0);
     if (!$tid) error_response('ticket_id required');
     ai_assert_ticket_scope($db, $currentUser, $tid);
-    $t = $db->prepare("SELECT t.*, tc.name AS cat_name FROM opsh_tickets t LEFT JOIN opsh_ticket_categories tc ON t.category_id=tc.id WHERE t.id=?");
+    $t = $db->prepare("SELECT t.*, tc.name AS cat_name FROM itops_tickets t LEFT JOIN itops_ticket_categories tc ON t.category_id=tc.id WHERE t.id=?");
     $t->execute([$tid]);
     $tk = $t->fetch();
     if (!$tk) error_response('Ticket not found', 404);
 
-    $cats = $db->query("SELECT id,name FROM opsh_ticket_categories WHERE (status IS NULL OR status='active') AND parent_id IS NOT NULL ORDER BY name")->fetchAll();
-    if (!$cats) $cats = $db->query("SELECT id,name FROM opsh_ticket_categories WHERE (status IS NULL OR status='active') ORDER BY name")->fetchAll();
+    $cats = $db->query("SELECT id,name FROM itops_ticket_categories WHERE (status IS NULL OR status='active') AND parent_id IS NOT NULL ORDER BY name")->fetchAll();
+    if (!$cats) $cats = $db->query("SELECT id,name FROM itops_ticket_categories WHERE (status IS NULL OR status='active') ORDER BY name")->fetchAll();
     $catNames = array_map(fn($c) => $c['name'], $cats);
     $priorities = ['p1_critical', 'p2_high', 'p3_medium', 'p4_low'];
 
@@ -301,7 +301,7 @@ if ($method === 'POST' && $id === 'assist') {
 
 if ($method === 'POST' && $id === 'sop') {
     $__b0 = json_decode(file_get_contents('php://input') ?: '', true) ?: [];
-    opsh_require($currentUser, (($__b0['kind'] ?? 'sop') === 'jd') ? 'job_descriptions' : 'sops', 'create');   // review WORK-9: a job description needs Job descriptions · Create
+    itops_require($currentUser, (($__b0['kind'] ?? 'sop') === 'jd') ? 'job_descriptions' : 'sops', 'create');   // review WORK-9: a job description needs Job descriptions · Create
     if (ai_get($db, 'ai_enabled', '0') !== '1') error_response('The AI builder is not enabled. An administrator can set it up under Settings then AI.', 400);
     $keyEnc = ai_get($db, 'ai_api_key_enc', '');
     if ($keyEnc === '') error_response('No AI API key is configured', 400);
@@ -325,16 +325,16 @@ if ($method === 'POST' && $id === 'sop') {
     $provider = ai_get($db, 'ai_provider', 'anthropic');
     $model = ai_get($db, 'ai_model', '') ?: ($provider === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5-20251001');
 
-    $OPSH_FORMATS = [
+    $ITOPS_FORMATS = [
         'stepwise'     => ' STRUCTURE: STEP-BY-STEP - present the Procedure as a simple numbered list with one clear action per step; keep it concise and linear.',
         'hierarchical' => ' STRUCTURE: HIERARCHICAL - organize the Procedure into numbered phases, each with numbered sub-steps (1, 1.1, 1.2); use this for complex multi-stage processes.',
         'checklist'    => ' STRUCTURE: CHECKLIST - present the Procedure as a verification checklist of short imperative items that can each be checked off, grouped into logical sections.',
         'flowchart'    => ' STRUCTURE: FLOWCHART-READY - write the Procedure as discrete sequential steps and phrase decision points as questions ending with a question mark, so it maps cleanly to a flow diagram.',
         'policy'       => ' STRUCTURE: POLICY / NARRATIVE - use mostly prose under clear section headings and minimise numbered steps.',
     ];
-    $sys = opsh_brand(($kind === 'jd') ? JD_BUILDER_SYS : SOP_BUILDER_SYS);   // BT20: the assistant introduces itself with the client's app name
+    $sys = itops_brand(($kind === 'jd') ? JD_BUILDER_SYS : SOP_BUILDER_SYS);   // BT20: the assistant introduces itself with the client's app name
     $fmt = trim((string)($b['format'] ?? ''));
-    if ($fmt !== '' && isset($OPSH_FORMATS[$fmt])) $sys .= $OPSH_FORMATS[$fmt];
+    if ($fmt !== '' && isset($ITOPS_FORMATS[$fmt])) $sys .= $ITOPS_FORMATS[$fmt];
     elseif (!empty($b['format_note'])) $sys .= ' STRUCTURE (custom): ' . trim((string)$b['format_note']);
 
     $raw = ai_call_chat($provider, $apiKey, $model, $sys, $clean, 2600);
@@ -362,7 +362,7 @@ if ($method === 'POST' && $id === 'sop') {
 }
 
 if ($method === 'POST' && $id === 'transcribe') {
-    opsh_require($currentUser, 'tickets', 'view');
+    itops_require($currentUser, 'tickets', 'view');
     { $__b = json_decode(file_get_contents('php://input'), true) ?: []; if (!empty($__b['ticket_id'])) ai_assert_ticket_scope($db, $currentUser, (int)$__b['ticket_id']); }   // scope first
     $prov = ai_get($db, 'ai_provider', 'anthropic');
     $sttEnc = ai_get($db, 'ai_stt_key_enc', '');
@@ -373,7 +373,7 @@ if ($method === 'POST' && $id === 'transcribe') {
     $tid = (int)($b['ticket_id'] ?? 0); $aid = (int)($b['attachment_id'] ?? 0);
     if (!$tid || !$aid) error_response('ticket_id and attachment_id required');
     ai_assert_ticket_scope($db, $currentUser, $tid);
-    $a = $db->prepare("SELECT file_path,file_name,mime_type FROM opsh_ticket_attachments WHERE id=? AND ticket_id=?");
+    $a = $db->prepare("SELECT file_path,file_name,mime_type FROM itops_ticket_attachments WHERE id=? AND ticket_id=?");
     $a->execute([$aid, $tid]); $att = $a->fetch();
     if (!$att) error_response('Attachment not found', 404);
     $mime = (string)$att['mime_type'];
@@ -396,7 +396,7 @@ if ($method === 'POST' && $id === 'transcribe') {
 }
 
 if ($method === 'POST' && $id === 'kb_assist') {
-    opsh_require($currentUser, 'kb_assist', 'view');   // kb_assist inherits Knowledge Base view when not set explicitly
+    itops_require($currentUser, 'kb_assist', 'view');   // kb_assist inherits Knowledge Base view when not set explicitly
     if (ai_get($db, 'ai_enabled', '0') !== '1') error_response('The AI assistant is not enabled. An administrator can turn it on under AI settings.', 400);
     $provider = ai_get($db, 'ai_provider', 'anthropic');
     $model    = ai_get($db, 'ai_model', '') ?: ($provider === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5-20251001');   // same default as the other AI features (review WORK-2)
@@ -437,7 +437,7 @@ if ($method === 'POST' && $id === 'kb_assist') {
     }
     $policy .= "\nAlways include the key answered_from with value 'kb', 'general', or 'none'.";
 
-    $sys = opsh_brand(KB_ASSIST_SYS) . $policy . "\n\n=== KNOWLEDGE BASE CONTEXT ===\n" . $ctx;
+    $sys = itops_brand(KB_ASSIST_SYS) . $policy . "\n\n=== KNOWLEDGE BASE CONTEXT ===\n" . $ctx;
 
     $raw = ai_call_chat($provider, $apiKey, $model, $sys, $clean, 900);
     if ($raw === null) error_response('The AI service did not respond', 502);
@@ -449,7 +449,7 @@ if ($method === 'POST' && $id === 'kb_assist') {
     if ($fetchUrl !== '' && empty($j['article_ids'])) {
         $page = kb_fetch_trusted($fetchUrl, kb_trusted_hosts($sources));
         if ($page) {
-            $sys2 = opsh_brand(KB_ASSIST_SYS) . "\n\n=== LIVE CONTENT FROM TRUSTED SOURCE (" . $fetchUrl . ") ===\n" . $page
+            $sys2 = itops_brand(KB_ASSIST_SYS) . "\n\n=== LIVE CONTENT FROM TRUSTED SOURCE (" . $fetchUrl . ") ===\n" . $page
                   . "\n\nUsing this content, answer the user's question and cite this source URL in your reply. Set answered_from='trusted'. If this page does not actually answer it, set answered_from='none' and offer to raise a ticket. Reply with the same JSON shape (reply, article_ids, suggestions, need_clarification, answered_from).";
             $raw2 = ai_call_chat($provider, $apiKey, $model, $sys2, $clean, 900);
             if ($raw2 !== null) {
@@ -485,10 +485,10 @@ if ($method === 'POST' && $id === 'kb_assist') {
 }
 
 if ($method === 'GET' && $id === 'kb_gaps') {
-    opsh_require($currentUser, 'kb_gaps', 'view');
+    itops_require($currentUser, 'kb_gaps', 'view');
     try {
         $rows = $db->query("SELECT id, query_text, hits, answered_from, status, last_at
-                            FROM opsh_kb_gaps WHERE status='open' ORDER BY hits DESC, last_at DESC LIMIT 200")->fetchAll();
+                            FROM itops_kb_gaps WHERE status='open' ORDER BY hits DESC, last_at DESC LIMIT 200")->fetchAll();
     } catch (\Throwable $e) {
         if (in_array($e->getCode(), ['42S02', 1146], true)) json_response(['data' => [], 'needs_migration' => true]);
         throw $e;
@@ -497,15 +497,15 @@ if ($method === 'GET' && $id === 'kb_gaps') {
     return;
 }
 if ($method === 'POST' && $id === 'kb_gaps') {
-    opsh_require($currentUser, 'kb_gaps', 'edit');
+    itops_require($currentUser, 'kb_gaps', 'edit');
     $b = json_decode(file_get_contents('php://input'), true) ?: [];
     $gid = (int)($b['id'] ?? 0);
     if (!$gid) error_response('id required');
-    $gq = $db->prepare("SELECT * FROM opsh_kb_gaps WHERE id=?"); $gq->execute([$gid]); $gap = $gq->fetch(PDO::FETCH_ASSOC);
+    $gq = $db->prepare("SELECT * FROM itops_kb_gaps WHERE id=?"); $gq->execute([$gid]); $gap = $gq->fetch(PDO::FETCH_ASSOC);
     if (!$gap) error_response('Not found', 404);
     $gName = mb_substr((string)($gap['query_text'] ?? ($gap['query_norm'] ?? ('#' . $gid))), 0, 200);
-    if (($b['action'] ?? 'resolve') === 'delete') { $db->prepare("DELETE FROM opsh_kb_gaps WHERE id=?")->execute([$gid]); audit_log('kb_gap_deleted', 'kb', $gid, $gName); }   // review WORK-13
-    else { $db->prepare("UPDATE opsh_kb_gaps SET status='resolved' WHERE id=?")->execute([$gid]); audit_log('kb_gap_resolved', 'kb', $gid, $gName, ['status' => (string)($gap['status'] ?? '')], ['status' => 'resolved']); }
+    if (($b['action'] ?? 'resolve') === 'delete') { $db->prepare("DELETE FROM itops_kb_gaps WHERE id=?")->execute([$gid]); audit_log('kb_gap_deleted', 'kb', $gid, $gName); }   // review WORK-13
+    else { $db->prepare("UPDATE itops_kb_gaps SET status='resolved' WHERE id=?")->execute([$gid]); audit_log('kb_gap_resolved', 'kb', $gid, $gName, ['status' => (string)($gap['status'] ?? '')], ['status' => 'resolved']); }
     json_response(['ok' => true]);
     return;
 }

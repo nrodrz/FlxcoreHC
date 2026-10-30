@@ -6,15 +6,15 @@ the install package of the owner's reference IT-operations app (build 0621-BT169
 ownership, API keys, scheduled jobs, Help) and only its Microsoft modules. Read `docs/NEW-APP-SPEC.md` before the first
 change and `STARTER-REPORT.md` for what the script removed and what is left to prune.
 
-Product name: **NewApp** (placeholder until the owner chooses; set in `api/lib/Brand.php` → `OPSH_PRODUCT`, plus page
-titles — see the spec, step 1). Owner: **Indisse-BTS**. The owner's development standards are in `docs/standards/`
+Product name: **ITOps** (owner decision, build 0001-A002; set in `api/lib/Brand.php` → `ITOPS_PRODUCT`; screens use the
+app-name helpers). Owner: **Indisse-BTS**. The owner's development standards are in `docs/standards/`
 and are binding.
 
 ## Rules that always apply
 
 - **Owner and names.** Owner is Indisse-BTS; never a person. No customer organization, person, domain or hosting
   provider in code, data, tests or docs (made-up data only: example.com, "Ada Admin"). Never hard-code the product
-  name in screens: use the app-name helpers (`opsh_app_name()` on the server, `appName()` in the screens).
+  name in screens: use the app-name helpers (`itops_app_name()` on the server, `appName()` in the screens).
 - **Secrets.** API keys, client secrets and passwords are typed by an administrator in the app's configuration screens.
   Never ask for, accept or write a secret in chat, code, tests or docs. Stored secrets are wrapped, never returned to
   the browser, never logged.
@@ -35,10 +35,10 @@ and are binding.
 
 | Path | What |
 | --- | --- |
-| `api/index.php` | Router: sessions, CSRF, 2FA and Terms gates, module gate (`opsh_route_module` → 404 when off), then `api/routes/<resource>.php` |
+| `api/index.php` | Router: sessions, CSRF, 2FA and Terms gates, module gate (`itops_route_module` → 404 when off), then `api/routes/<resource>.php` |
 | `api/routes/` | One file per resource (`$method`, `$segments`, `$currentUser`, `json_response()`, `error_response()`) |
-| `api/lib/` | Libraries. Microsoft: `Graph.php` (token, paging), `M365Hub.php` (`OpshM365` class: accounts, groups, licenses…), `M365Permissions.php` (the Graph permission catalog shown in the app — keep it current), `ExchangeAdmin.php`, `MsBilling.php`, `SecAssess.php`/`SaProof.php` (posture), `RiskUsers.php`, `CaOps.php`/`CaDetail.php` (Conditional Access), `ObTasks.php` (onboarding/offboarding engine), `TeamsApp.php`, `Approvals.php` (second-person approval) |
-| `api/lib/Modules.php` | Module catalog, plans, **`opsh_product_modules()`** (the modules this product has; everything else is always off) |
+| `api/lib/` | Libraries. Microsoft: `Graph.php` (token, paging), `M365Hub.php` (`ItopsM365` class: accounts, groups, licenses…), `M365Permissions.php` (the Graph permission catalog shown in the app — keep it current), `ExchangeAdmin.php`, `MsBilling.php`, `SecAssess.php`/`SaProof.php` (posture), `RiskUsers.php`, `CaOps.php`/`CaDetail.php` (Conditional Access), `ObTasks.php` (onboarding/offboarding engine), `TeamsApp.php`, `Approvals.php` (second-person approval) |
+| `api/lib/Modules.php` | Module catalog, plans, **`itops_product_modules()`** (the modules this product has; everything else is always off) |
 | `api/lib/Brand.php` | Product constants, ownership texts, license record |
 | `api/lib/License.php`, `Updates.php` | Public key lines of **this app's own** License Hub (empty until its hub is installed — spec step 5) |
 | `src/app.jsx` | All screens (React, one file); `src/help.jsx`; compiled by `src/build.js` into `app.js` / `help.js` |
@@ -49,9 +49,10 @@ and are binding.
 | `dev/` | Not shipped: `make-ms-app.py`, `fresh-install.sh`, `check-app.mjs`, `router.php` |
 | `docs/` | Not shipped: spec, standards, reference documents |
 
-Code identifiers keep the reference app's `opsh_` prefix (functions, tables, settings, headers such as
-`X-OpsHub-CSRF`); that is allowed by the standards (identifiers already in use). Renaming the prefix is an owner
-decision (spec, step 1).
+Code identifiers use the `itops_` prefix (functions, tables, settings; `ITOPS_` constants; `Itops` classes; headers such
+as `X-ITOps-CSRF`). The reference app's `opsh_` / `OpsHub` names were renamed in build 0001-A002 (owner decision). A
+fix ported from the reference app must be translated to these names. `dev/make-ms-app.py` still works on the reference
+app's package and produces `opsh_` names.
 
 ## Build, run, test
 
@@ -65,24 +66,26 @@ NODE_PATH=dev/node_modules node src/build.js
 # every PHP file parses
 find . -name '*.php' -not -path './vendor/*' -not -path './dev/node_modules/*' -print0 | xargs -0 -n1 php -l | grep -v '^No syntax errors'
 
-# fresh local install (MariaDB/MySQL with root over the socket; PHP 8.1+) and the starter check (13 checks)
+# fresh local install (MariaDB/MySQL with root over the socket; PHP 8.1+) and the starter check (15 checks)
 DB_USER=appdev DB_PASS=appdevpw dev/fresh-install.sh /tmp/app-run 8301 app_dev
-PLAYWRIGHT=$PWD/dev/node_modules/playwright node dev/check-app.mjs
+PLAYWRIGHT=$PWD/dev/node_modules/playwright node dev/check-app.mjs   # or the system Playwright: $(npm root -g)/playwright
 ```
 
 `dev/check-app.mjs` installs a fresh copy, signs in with the made-up admin, and checks: only the product modules are on;
 About & ownership shows the product and the owner; the removed modules' APIs answer 404; product and platform APIs
 answer; the Modules screen lists the product modules and plans; the menu has no removed module; every page opens with
-no script error and no server error; every scheduled job runs. Extend it as features are added; add a test per feature
+no script error and no server error; every scheduled job runs; every table uses the `itops_` prefix; the installer
+applied every database update. Extend it as features are added; add a test per feature
 (server answers, refusals, Audit Log entries, screens).
 
 ## Each build
 
-1. Change the build id in **both** `api/lib/Build.php` (`OPSH_BUILD`) and `src/app.jsx` (`APP_BUILD`): `0001-A002`, …
+1. Change the build id in **both** `api/lib/Build.php` (`ITOPS_BUILD`) and `src/app.jsx` (`APP_BUILD`): `0001-A003`, …
 2. `CHANGELOG.txt` entry (format in `docs/standards/03-DEVELOPMENT-PROCESS.md`), the Help Center (`guide.js`) and
    `docs/APP-AUDIT.md` (the technical entry: files, functions, routes, tests and counts) updated with the change.
 3. Database changes only as a new update step (never edit an installation's data by hand); a fresh install and an
    update must reach the same structure.
 4. Build, php -l, `dev/check-app.mjs` and the feature tests; then package:
-   `zip -qr -X ../NewApp-<build>-Full-Install.zip . -x 'dev/*' 'docs/*' 'CLAUDE.md' 'STARTER-REPORT.md' 'config.php' '*-license.php'`
-   and install that zip fresh once before delivering it.
+   `zip -qr -X ../ITOps-<build>-Full-Install.zip . -x 'dev/*' 'docs/*' 'CLAUDE.md' 'STARTER-REPORT.md' 'config.php' '*-license.php' '.gitignore'`
+   (`dev/package.sh` does this and names the zip), and install that zip fresh once before delivering it. The zip is
+   extracted at the root of the web folder (see INSTALL-FIRST.txt).

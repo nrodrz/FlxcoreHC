@@ -1,6 +1,19 @@
-NewApp — CHANGELOG
+ITOps — CHANGELOG
 Microsoft 365 Administration. Newest first.
 Build IDs match the stamp shown under the app and in the browser console.
+
+========================================================================
+0001-A002 — Name ITOps, itops_ prefix, root-folder package (10/30/2026)
+            [Fresh installation only (no installation exists yet). Press Ctrl+F5 after uploading.]
+  - Product name ITOps (was the placeholder NewApp): About & ownership, page titles, installer, emails.
+  - Code prefix renamed from opsh_ to itops_ everywhere: database tables, settings, functions, constants (ITOPS_),
+    classes (Itops…), HTTP headers (X-ITOps-…), files (itops-boot.js, itops-select.js, itops-hostcheck.php,
+    api/lib/ItopsGraphClient.php). The content-library update (stored base64-encoded) was converted too.
+  - The package is extracted at the root of the web folder; INSTALL-FIRST.txt rewritten for that.
+  - Security: api/lib/, api/routes/ and api/migrations/ answer 403 when requested directly (api/.htaccess); before,
+    a direct request ran the file (empty answer, or a server error for a route file). Inherited from the reference app.
+  - Tests: dev/check-app.mjs now also checks that every table uses the itops_ prefix and that the installer applied
+    every database update (15 checks).
 
 ========================================================================
 0001-A001 — Starting code (10/30/2026), made by make-ms-app.py from the reference app's install package

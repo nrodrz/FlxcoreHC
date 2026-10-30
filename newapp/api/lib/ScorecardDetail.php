@@ -3,39 +3,39 @@
 /**
  * BT94 — Scorecard: rows for each priority target, and "the data behind the number".
  *
- *   opsh_scp_*   the priority rows: for each priority (Critical P1 … Planning P5), the share of tickets that got their
+ *   itops_scp_*   the priority rows: for each priority (Critical P1 … Planning P5), the share of tickets that got their
  *                first response on time and the share resolved on time — the targets set under Settings → SLA & Hours.
  *                Settings → Scorecard → "Priority targets" chooses which of them are on the Scorecard.
- *   opsh_scd_*   what a Scorecard number means: its definition, the rule, the count behind it and the records counted
+ *   itops_scd_*   what a Scorecard number means: its definition, the rule, the count behind it and the records counted
  *                (Scorecard → click a value). Ticket records are listed only for people who see every ticket.
  *
  * Ticket times are the ones stored on each ticket (sla_response_due, due_date), so business hours, paused time and a
  * category's own hours are already in them; the numbers here never recalculate a target.
  */
 
-if (!function_exists('opsh_scp_prios')) {
+if (!function_exists('itops_scp_prios')) {
 
     /** The five priorities: key => [short code, name]. */
-    function opsh_scp_prios(): array {
+    function itops_scp_prios(): array {
         return ['p1_critical' => ['P1', 'Critical'], 'p2_high' => ['P2', 'High'], 'p3_medium' => ['P3', 'Medium'], 'p4_low' => ['P4', 'Low'], 'p5_planned' => ['P5', 'Planning']];
     }
     /** The two measures of a priority target. */
-    function opsh_scp_kinds(): array { return ['resp' => 'first response on time', 'res' => 'resolved on time']; }
+    function itops_scp_kinds(): array { return ['resp' => 'first response on time', 'res' => 'resolved on time']; }
 
     /** Scorecard sources: pri_resp_p1_critical => "Critical (P1): first response on time (%)", … */
-    function opsh_scp_sources(): array {
+    function itops_scp_sources(): array {
         $o = [];
-        foreach (opsh_scp_prios() as $k => [$p, $n]) foreach (opsh_scp_kinds() as $kk => $l) $o['pri_' . $kk . '_' . $k] = $n . ' (' . $p . '): ' . $l . ' (%)';
+        foreach (itops_scp_prios() as $k => [$p, $n]) foreach (itops_scp_kinds() as $kk => $l) $o['pri_' . $kk . '_' . $k] = $n . ' (' . $p . '): ' . $l . ' (%)';
         return $o;
     }
     /** 'pri_resp_p2_high' → ['resp', 'p2_high'], anything else → null. */
-    function opsh_scp_parse(string $src): ?array {
-        if (!preg_match('/^pri_(resp|res)_(p[1-5]_[a-z]+)$/', $src, $m) || !isset(opsh_scp_prios()[$m[2]])) return null;
+    function itops_scp_parse(string $src): ?array {
+        if (!preg_match('/^pri_(resp|res)_(p[1-5]_[a-z]+)$/', $src, $m) || !isset(itops_scp_prios()[$m[2]])) return null;
         return [$m[1], $m[2]];
     }
     /** The name a new priority row gets: "Critical (P1) — first response on time". */
-    function opsh_scp_row_name(string $kind, string $prio): string {
-        [$p, $n] = opsh_scp_prios()[$prio]; return $n . ' (' . $p . ') — ' . opsh_scp_kinds()[$kind];
+    function itops_scp_row_name(string $kind, string $prio): string {
+        [$p, $n] = itops_scp_prios()[$prio]; return $n . ' (' . $p . ') — ' . itops_scp_kinds()[$kind];
     }
 
     /**
@@ -47,35 +47,35 @@ if (!function_exists('opsh_scp_prios')) {
      *        "Tickets closed within SLA", for one priority.
      * Returns ['met'=>n, 'missed'=>n, 'waiting'=>n].
      */
-    function opsh_scp_counts(PDO $db, string $kind, string $prio, string $s, string $e): array {
+    function itops_scp_counts(PDO $db, string $kind, string $prio, string $s, string $e): array {
         if ($kind === 'resp') {
             $st = $db->prepare("SELECT SUM(first_response_at IS NOT NULL AND first_response_at <= sla_response_due) met,
                                        SUM((first_response_at IS NOT NULL AND first_response_at > sla_response_due) OR (first_response_at IS NULL AND sla_response_due < NOW())) missed,
                                        SUM(first_response_at IS NULL AND sla_response_due >= NOW()) waiting
-                                FROM opsh_tickets WHERE priority=? AND status<>'cancelled' AND merged_into_id IS NULL AND sla_response_due IS NOT NULL AND created_at >= ? AND created_at < ?");
+                                FROM itops_tickets WHERE priority=? AND status<>'cancelled' AND merged_into_id IS NULL AND sla_response_due IS NOT NULL AND created_at >= ? AND created_at < ?");
         } else {
             $st = $db->prepare("SELECT SUM(due_date IS NULL OR resolved_at <= due_date) met, SUM(due_date IS NOT NULL AND resolved_at > due_date) missed, 0 waiting
-                                FROM opsh_tickets WHERE priority=? AND resolved_at IS NOT NULL AND resolved_at >= ? AND resolved_at < ?");
+                                FROM itops_tickets WHERE priority=? AND resolved_at IS NOT NULL AND resolved_at >= ? AND resolved_at < ?");
         }
         $st->execute([$prio, $s, $e]); $r = $st->fetch(PDO::FETCH_ASSOC) ?: [];
         return ['met' => (int)($r['met'] ?? 0), 'missed' => (int)($r['missed'] ?? 0), 'waiting' => (int)($r['waiting'] ?? 0)];
     }
     /** The Scorecard value of a priority source over [$s, $e): the % met, or null when nothing was counted. */
-    function opsh_scp_value(PDO $db, string $src, string $s, string $e): ?float {
-        $k = opsh_scp_parse($src); if (!$k) return null;
-        try { $c = opsh_scp_counts($db, $k[0], $k[1], $s, $e); } catch (Throwable $ex) { return null; }
+    function itops_scp_value(PDO $db, string $src, string $s, string $e): ?float {
+        $k = itops_scp_parse($src); if (!$k) return null;
+        try { $c = itops_scp_counts($db, $k[0], $k[1], $s, $e); } catch (Throwable $ex) { return null; }
         $tot = $c['met'] + $c['missed'];
         return $tot ? round(100.0 * $c['met'] / $tot, 1) : null;
     }
     /** The priority sources with their row on the Scorecard (if any) and whether it is shown: for the chooser. */
-    function opsh_scp_matrix(PDO $db): array {
+    function itops_scp_matrix(PDO $db): array {
         $rows = [];
-        try { foreach ($db->query("SELECT id, name, source, active, goal_op, goal_value, unit FROM opsh_scorecard_measurables WHERE source LIKE 'pri\\_%'")->fetchAll(PDO::FETCH_ASSOC) as $r) $rows[$r['source']] = $r; } catch (Throwable $e) {}
-        $tg = function_exists('opsh_sla_priority_targets') ? opsh_sla_priority_targets($db) : [];
+        try { foreach ($db->query("SELECT id, name, source, active, goal_op, goal_value, unit FROM itops_scorecard_measurables WHERE source LIKE 'pri\\_%'")->fetchAll(PDO::FETCH_ASSOC) as $r) $rows[$r['source']] = $r; } catch (Throwable $e) {}
+        $tg = function_exists('itops_sla_priority_targets') ? itops_sla_priority_targets($db) : [];
         $out = [];
-        foreach (opsh_scp_prios() as $k => [$p, $n]) {
+        foreach (itops_scp_prios() as $k => [$p, $n]) {
             $line = ['priority' => $k, 'code' => $p, 'name' => $n, 'response_h' => $tg[$k][0] ?? null, 'resolution_h' => $tg[$k][1] ?? null, 'measures' => []];
-            foreach (opsh_scp_kinds() as $kk => $l) {
+            foreach (itops_scp_kinds() as $kk => $l) {
                 $src = 'pri_' . $kk . '_' . $k; $r = $rows[$src] ?? null;
                 $line['measures'][$kk] = ['source' => $src, 'label' => $l, 'on' => $r && (int)$r['active'] === 1, 'row_id' => $r ? (int)$r['id'] : null,
                                           'row_name' => $r ? (string)$r['name'] : null, 'goal' => $r ? (float)$r['goal_value'] : null];
@@ -91,7 +91,7 @@ if (!function_exists('opsh_scp_prios')) {
      * What each priority means, with examples (priority = impact × urgency). Editable under Settings → SLA & Hours
      * (setting "sla_priority_defs"); what is not set keeps these words.
      */
-    function opsh_prio_defs_default(): array {
+    function itops_prio_defs_default(): array {
         return [
             'p1_critical' => ['meaning' => 'A whole service is down or a security incident is under way: many people or a critical part of the work are stopped and there is no workaround. High impact, high urgency.',
                               'examples' => "Email or the internet is down for everyone at a site\nA phone system outage at the main office\nRansomware, or an administrator account that may be compromised\nThe payroll or client records system is unavailable when it is needed"],
@@ -106,10 +106,10 @@ if (!function_exists('opsh_scp_prios')) {
         ];
     }
     /** The definitions in use: the saved ones over the defaults. */
-    function opsh_prio_defs(PDO $db): array {
-        $d = opsh_prio_defs_default();
+    function itops_prio_defs(PDO $db): array {
+        $d = itops_prio_defs_default();
         try {
-            $st = $db->prepare("SELECT sval FROM opsh_settings WHERE skey='sla_priority_defs'"); $st->execute();
+            $st = $db->prepare("SELECT sval FROM itops_settings WHERE skey='sla_priority_defs'"); $st->execute();
             $j = json_decode((string)$st->fetchColumn(), true);
             if (is_array($j)) foreach ($d as $k => $v) foreach (['meaning', 'examples'] as $f) {
                 if (isset($j[$k][$f]) && is_string($j[$k][$f]) && trim($j[$k][$f]) !== '') $d[$k][$f] = trim($j[$k][$f]);
@@ -118,18 +118,18 @@ if (!function_exists('opsh_scp_prios')) {
         return $d;
     }
     /** Clean what Settings sends: meaning up to 600 characters, examples up to 8 lines of 160. Throws on a bad shape. */
-    function opsh_prio_defs_clean($v): array {
+    function itops_prio_defs_clean($v): array {
         if (is_string($v)) $v = json_decode($v, true);
         if (!is_array($v)) throw new InvalidArgumentException('Priority definitions: a meaning and examples per priority are expected.');
         $out = [];
-        foreach (array_keys(opsh_scp_prios()) as $k) {
+        foreach (array_keys(itops_scp_prios()) as $k) {
             $x = $v[$k] ?? null; if ($x === null) continue;
             if (!is_array($x)) throw new InvalidArgumentException('Priority definitions: a meaning and examples per priority are expected.');
             $m = trim((string)($x['meaning'] ?? '')); $ex = trim(str_replace("\r", '', (string)($x['examples'] ?? '')));
-            if (mb_strlen($m) > 600) throw new InvalidArgumentException('Priority definitions: the meaning of ' . opsh_scp_prios()[$k][1] . ' is longer than 600 characters.');
+            if (mb_strlen($m) > 600) throw new InvalidArgumentException('Priority definitions: the meaning of ' . itops_scp_prios()[$k][1] . ' is longer than 600 characters.');
             $lines = array_values(array_filter(array_map('trim', explode("\n", $ex)), fn($l) => $l !== ''));
-            if (count($lines) > 8) throw new InvalidArgumentException('Priority definitions: up to 8 examples for ' . opsh_scp_prios()[$k][1] . '.');
-            foreach ($lines as $l) if (mb_strlen($l) > 160) throw new InvalidArgumentException('Priority definitions: one example of ' . opsh_scp_prios()[$k][1] . ' is longer than 160 characters.');
+            if (count($lines) > 8) throw new InvalidArgumentException('Priority definitions: up to 8 examples for ' . itops_scp_prios()[$k][1] . '.');
+            foreach ($lines as $l) if (mb_strlen($l) > 160) throw new InvalidArgumentException('Priority definitions: one example of ' . itops_scp_prios()[$k][1] . ' is longer than 160 characters.');
             $out[$k] = ['meaning' => $m, 'examples' => implode("\n", $lines)];
         }
         return $out;
@@ -138,10 +138,10 @@ if (!function_exists('opsh_scp_prios')) {
     // ───────────────────────────── The data behind a number ─────────────────────────────
 
     /** Plain words for what a source measures and how. [what, rule, area page or ''] */
-    function opsh_scd_definition(string $src, string $label): array {
-        $pk = opsh_scp_parse($src);
+    function itops_scd_definition(string $src, string $label): array {
+        $pk = itops_scp_parse($src);
         if ($pk) {
-            [$p, $n] = opsh_scp_prios()[$pk[1]];
+            [$p, $n] = itops_scp_prios()[$pk[1]];
             return $pk[0] === 'resp'
                 ? ['The share of ' . $n . ' (' . $p . ') tickets that got their first response within the response target.',
                    'Counted: tickets created in the period with priority ' . $n . ' (not cancelled or merged). On time = the first response (a public reply, Pending, or Resolved by someone other than the requester) came by the response due time on the ticket. Late = it came after, or there is none yet and the due time has passed. Tickets still inside their response time are not counted yet. Value = on time ÷ counted × 100.', 'tickets']
@@ -174,12 +174,12 @@ if (!function_exists('opsh_scp_prios')) {
     }
 
     /** True when the source is about tickets (its records are tickets). */
-    function opsh_scd_ticket_source(string $src): bool {
-        return opsh_scp_parse($src) !== null || in_array($src, ['p1_incidents', 'ticket_volume', 'frt_minutes', 'sla_closure_pct'], true);
+    function itops_scd_ticket_source(string $src): bool {
+        return itops_scp_parse($src) !== null || in_array($src, ['p1_incidents', 'ticket_volume', 'frt_minutes', 'sla_closure_pct'], true);
     }
 
     /** Minutes between two date-times, as "2 h 5 min" / "3 d 4 h". */
-    function opsh_scd_span(int $sec): string {
+    function itops_scd_span(int $sec): string {
         $m = (int)round(abs($sec) / 60);
         if ($m < 60) return $m . ' min';
         if ($m < 1440) return intdiv($m, 60) . ' h' . ($m % 60 ? ' ' . ($m % 60) . ' min' : '');
@@ -192,11 +192,11 @@ if (!function_exists('opsh_scp_prios')) {
      *          'extra'=>[…]] or null when the source has no record list. $limit caps the rows (the counts are always whole).
      * Each row: ['id'=>, 'link'=>'#tickets/12' or '', 'cells'=>[…], 'result'=>'met'|'missed'|'waiting'|'counted'].
      */
-    function opsh_scd_records(PDO $db, string $src, string $s, string $e, int $limit = 500): ?array {
+    function itops_scd_records(PDO $db, string $src, string $s, string $e, int $limit = 500): ?array {
         $fmt = fn($d) => $d ? date('m/d/Y g:i A', strtotime((string)$d)) : '—';
-        $pl = function ($p) { $x = opsh_scp_prios()[$p] ?? null; return $x ? $x[1] : (string)$p; };
+        $pl = function ($p) { $x = itops_scp_prios()[$p] ?? null; return $x ? $x[1] : (string)$p; };
         $tkCols = ['Ticket', 'Subject', 'Priority'];
-        $pk = opsh_scp_parse($src);
+        $pk = itops_scp_parse($src);
         if ($pk && $pk[0] === 'resp') { $kind = 'resp'; $prio = $pk[1]; }
         elseif ($pk) { $kind = 'res'; $prio = $pk[1]; }
         elseif ($src === 'sla_closure_pct') { $kind = 'res'; $prio = null; }
@@ -207,14 +207,14 @@ if (!function_exists('opsh_scp_prios')) {
 
         $rows = []; $met = 0; $missed = 0; $waiting = 0; $sum = 0; $n = 0; $now = time();
         if ($kind === 'resp') {
-            $st = $db->prepare("SELECT id, ticket_number, subject, priority, created_at, sla_response_due, first_response_at FROM opsh_tickets
+            $st = $db->prepare("SELECT id, ticket_number, subject, priority, created_at, sla_response_due, first_response_at FROM itops_tickets
                                 WHERE priority=? AND status<>'cancelled' AND merged_into_id IS NULL AND sla_response_due IS NOT NULL AND created_at >= ? AND created_at < ? ORDER BY created_at");
             $st->execute([$prio, $s, $e]);
             foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $t) {
                 $due = strtotime((string)$t['sla_response_due']); $fr = $t['first_response_at'] ? strtotime((string)$t['first_response_at']) : null;
-                if ($fr !== null) { $res = $fr <= $due ? 'met' : 'missed'; $how = $fr <= $due ? 'On time' : 'Late by ' . opsh_scd_span($fr - $due); }
-                elseif ($due < $now) { $res = 'missed'; $how = 'No response yet — overdue by ' . opsh_scd_span($now - $due); }
-                else { $res = 'waiting'; $how = 'Not counted yet — due in ' . opsh_scd_span($due - $now); }
+                if ($fr !== null) { $res = $fr <= $due ? 'met' : 'missed'; $how = $fr <= $due ? 'On time' : 'Late by ' . itops_scd_span($fr - $due); }
+                elseif ($due < $now) { $res = 'missed'; $how = 'No response yet — overdue by ' . itops_scd_span($now - $due); }
+                else { $res = 'waiting'; $how = 'Not counted yet — due in ' . itops_scd_span($due - $now); }
                 if ($res === 'met') $met++; elseif ($res === 'missed') $missed++; else $waiting++;
                 $rows[] = ['id' => (int)$t['id'], 'link' => '#tickets/' . (int)$t['id'], 'result' => $res,
                            'cells' => [$t['ticket_number'], $t['subject'], $pl($t['priority']), $fmt($t['created_at']), $fmt($t['sla_response_due']), $fmt($t['first_response_at']), $how]];
@@ -223,19 +223,19 @@ if (!function_exists('opsh_scp_prios')) {
                     'numerator' => $met, 'denominator' => $met + $missed, 'num_label' => 'on time', 'den_label' => 'counted', 'extra' => $waiting ? [$waiting . ' ticket' . ($waiting === 1 ? ' is' : 's are') . ' still inside the response time and not counted yet.'] : []];
         }
         if ($kind === 'res') {
-            $st = $db->prepare("SELECT id, ticket_number, subject, priority, created_at, due_date, resolved_at FROM opsh_tickets
+            $st = $db->prepare("SELECT id, ticket_number, subject, priority, created_at, due_date, resolved_at FROM itops_tickets
                                 WHERE resolved_at IS NOT NULL AND resolved_at >= ? AND resolved_at < ?" . ($prio ? ' AND priority=?' : '') . " ORDER BY resolved_at");
             $st->execute($prio ? [$s, $e, $prio] : [$s, $e]);
             foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $t) {
                 $ok = !$t['due_date'] || strtotime((string)$t['resolved_at']) <= strtotime((string)$t['due_date']);
                 $ok ? $met++ : $missed++;
-                $how = !$t['due_date'] ? 'On time (no due time)' : ($ok ? 'On time' : 'Late by ' . opsh_scd_span(strtotime((string)$t['resolved_at']) - strtotime((string)$t['due_date'])));
+                $how = !$t['due_date'] ? 'On time (no due time)' : ($ok ? 'On time' : 'Late by ' . itops_scd_span(strtotime((string)$t['resolved_at']) - strtotime((string)$t['due_date'])));
                 $rows[] = ['id' => (int)$t['id'], 'link' => '#tickets/' . (int)$t['id'], 'result' => $ok ? 'met' : 'missed',
                            'cells' => [$t['ticket_number'], $t['subject'], $pl($t['priority']), $fmt($t['created_at']), $fmt($t['due_date']), $fmt($t['resolved_at']), $how]];
             }
             $extra = [];
             try {   // tickets of the same scope still open past their due time: not in the number yet, worth knowing
-                $q = $db->prepare("SELECT COUNT(*) FROM opsh_tickets WHERE status IN ('open','in_progress','pending') AND due_date IS NOT NULL AND due_date < NOW()" . ($prio ? ' AND priority=?' : ''));
+                $q = $db->prepare("SELECT COUNT(*) FROM itops_tickets WHERE status IN ('open','in_progress','pending') AND due_date IS NOT NULL AND due_date < NOW()" . ($prio ? ' AND priority=?' : ''));
                 $q->execute($prio ? [$prio] : []); $od = (int)$q->fetchColumn();
                 if ($od) $extra[] = $od . ' open ticket' . ($od === 1 ? ' is' : 's are') . ' past the due time right now' . ($prio ? ' at this priority' : '') . '; ' . ($od === 1 ? 'it counts' : 'they count') . ' when resolved.';
             } catch (Throwable $ex) {}
@@ -243,7 +243,7 @@ if (!function_exists('opsh_scp_prios')) {
                     'numerator' => $met, 'denominator' => $met + $missed, 'num_label' => 'on time', 'den_label' => 'resolved', 'extra' => $extra];
         }
         if ($kind === 'count') {
-            $st = $db->prepare("SELECT t.id, t.ticket_number, t.subject, t.priority, t.status, t.created_at, u.display_name rq FROM opsh_tickets t LEFT JOIN opsh_users u ON u.id=t.requester_id
+            $st = $db->prepare("SELECT t.id, t.ticket_number, t.subject, t.priority, t.status, t.created_at, u.display_name rq FROM itops_tickets t LEFT JOIN itops_users u ON u.id=t.requester_id
                                 WHERE t.created_at >= ? AND t.created_at < ?" . ($prio ? ' AND t.priority=?' : '') . " ORDER BY t.created_at");
             $st->execute($prio ? [$s, $e, $prio] : [$s, $e]);
             foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $t) $rows[] = ['id' => (int)$t['id'], 'link' => '#tickets/' . (int)$t['id'], 'result' => 'counted',
@@ -252,7 +252,7 @@ if (!function_exists('opsh_scp_prios')) {
                     'numerator' => count($rows), 'denominator' => null, 'num_label' => 'tickets', 'den_label' => '', 'extra' => []];
         }
         if ($kind === 'frt') {
-            $st = $db->prepare("SELECT id, ticket_number, subject, priority, created_at, first_response_at, TIMESTAMPDIFF(MINUTE, created_at, first_response_at) mins FROM opsh_tickets
+            $st = $db->prepare("SELECT id, ticket_number, subject, priority, created_at, first_response_at, TIMESTAMPDIFF(MINUTE, created_at, first_response_at) mins FROM itops_tickets
                                 WHERE first_response_at IS NOT NULL AND created_at >= ? AND created_at < ? ORDER BY mins DESC");
             $st->execute([$s, $e]);
             foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $t) { $sum += (int)$t['mins']; $n++;
@@ -262,8 +262,8 @@ if (!function_exists('opsh_scp_prios')) {
                     'numerator' => $sum, 'denominator' => $n, 'num_label' => 'minutes in all', 'den_label' => 'tickets', 'extra' => ['Longest waits first.']];
         }
         // onboarding
-        $st = $db->prepare("SELECT r.id, r.subject_name, r.completed_at, (SELECT COUNT(*) FROM opsh_ob_run_tasks t WHERE t.run_id=r.id AND t.due_date IS NOT NULL AND t.status='done' AND t.due_date < DATE(COALESCE(t.completed_at, r.completed_at))) AS late
-                            FROM opsh_ob_runs r WHERE r.kind='onboard' AND r.status='completed' AND r.completed_at >= ? AND r.completed_at < ? ORDER BY r.completed_at");
+        $st = $db->prepare("SELECT r.id, r.subject_name, r.completed_at, (SELECT COUNT(*) FROM itops_ob_run_tasks t WHERE t.run_id=r.id AND t.due_date IS NOT NULL AND t.status='done' AND t.due_date < DATE(COALESCE(t.completed_at, r.completed_at))) AS late
+                            FROM itops_ob_runs r WHERE r.kind='onboard' AND r.status='completed' AND r.completed_at >= ? AND r.completed_at < ? ORDER BY r.completed_at");
         $st->execute([$s, $e]);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) { $ok = (int)$r['late'] === 0; $ok ? $met++ : $missed++;
             $rows[] = ['id' => (int)$r['id'], 'link' => '', 'result' => $ok ? 'met' : 'missed',

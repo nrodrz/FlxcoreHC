@@ -1,21 +1,21 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — formal documents in PDF and Word (BT60).
+ * ITOps — formal documents in PDF and Word (BT60).
  *
- * One document model (OpshDoc: a cover, headings, paragraphs, figures, tables, bar charts, notes, sign-off blocks)
+ * One document model (ItopsDoc: a cover, headings, paragraphs, figures, tables, bar charts, notes, sign-off blocks)
  * rendered two ways from the same content:
- *   - opsh_doc_pdf($doc)  → a PDF built here (standard Helvetica fonts, no library needed);
- *   - opsh_doc_docx($doc) → a Word .docx built here (Office Open XML), editable before it is sent.
- * Used by the IT Budget document and the Calendar reports. Nothing here reads the network; only opsh_doc_brand() reads
+ *   - itops_doc_pdf($doc)  → a PDF built here (standard Helvetica fonts, no library needed);
+ *   - itops_doc_docx($doc) → a Word .docx built here (Office Open XML), editable before it is sent.
+ * Used by the IT Budget document and the Calendar reports. Nothing here reads the network; only itops_doc_brand() reads
  * the document branding settings (Settings → Branding → Documents), and the logo only ever from this app's own uploads.
  *
  * Text: PDF uses the Windows-1252 character set of the standard fonts; characters outside it are transliterated.
  */
 
-if (!class_exists('OpshDoc')) {
+if (!class_exists('ItopsDoc')) {
 
-    final class OpshDoc {
+    final class ItopsDoc {
         public array $meta;
         public array $blocks = [];
         public function __construct(array $meta) {
@@ -48,20 +48,20 @@ if (!class_exists('OpshDoc')) {
     }
 
     /** Text helpers shared by both formats. */
-    function opsh_doc_money(?float $v, string $cur = 'USD', bool $cents = false): string {
+    function itops_doc_money(?float $v, string $cur = 'USD', bool $cents = false): string {
         if ($v === null) return '—';
         $sym = ['USD' => '$', 'EUR' => '€', 'GBP' => '£', 'CAD' => 'CA$', 'MXN' => 'MX$'][$cur] ?? ($cur . ' ');
         $s = number_format(abs($v), $cents ? 2 : 0);
         return ($v < 0 ? '-' : '') . $sym . $s;
     }
-    function opsh_doc_pct(?float $v, int $dec = 1): string { return $v === null ? '—' : number_format($v, $dec) . '%'; }
+    function itops_doc_pct(?float $v, int $dec = 1): string { return $v === null ? '—' : number_format($v, $dec) . '%'; }
 
     /**
      * A logo for documents from a LOCAL file (never a URL): PNG, JPEG, GIF or WEBP. Re-encoded through GD when present
      * (flattened on white, at most 900 px wide) so only clean image data reaches the document. Returns null when the
      * file is not a usable image.
      */
-    function opsh_doc_logo_load(string $file): ?array {
+    function itops_doc_logo_load(string $file): ?array {
         if (!is_file($file) || filesize($file) > 6 * 1024 * 1024) return null;
         $raw = (string)@file_get_contents($file); if ($raw === '') return null;
         $info = @getimagesizefromstring($raw); if (!$info) return null;
@@ -81,12 +81,12 @@ if (!class_exists('OpshDoc')) {
             }
         }
         if ($info[2] === IMAGETYPE_JPEG) return ['data' => $raw, 'type' => 'jpg', 'w' => (int)$info[0], 'h' => (int)$info[1]];
-        if ($info[2] === IMAGETYPE_PNG && opsh_pdf_png_parse($raw) !== null) return ['data' => $raw, 'type' => 'png', 'w' => (int)$info[0], 'h' => (int)$info[1]];
+        if ($info[2] === IMAGETYPE_PNG && itops_pdf_png_parse($raw) !== null) return ['data' => $raw, 'type' => 'png', 'w' => (int)$info[0], 'h' => (int)$info[1]];
         return null;
     }
 
     /** PNG → [width, height, colors, idat] when the PDF can embed it as is (8-bit grey or RGB, not interlaced, no alpha). */
-    function opsh_pdf_png_parse(string $png): ?array {
+    function itops_pdf_png_parse(string $png): ?array {
         if (substr($png, 0, 8) !== "\x89PNG\r\n\x1a\n") return null;
         $p = 8; $idat = ''; $w = $h = $bits = $ct = $il = null;
         while ($p + 8 <= strlen($png)) {
@@ -101,7 +101,7 @@ if (!class_exists('OpshDoc')) {
 
     // ═══════════════════════════════════════════════ PDF ═══════════════════════════════════════════════
 
-    final class OpshPdfWriter {
+    final class ItopsPdfWriter {
         private const HELV = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584,761,556,556,222,556,333,1000,556,556,333,1000,667,333,1000,556,611,556,556,222,222,333,333,350,556,1000,333,1000,500,333,944,556,500,667,278,333,556,556,556,556,260,556,333,737,370,556,584,333,737,333,400,584,333,333,333,556,537,278,333,333,365,556,834,834,834,611,667,667,667,667,667,667,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,500,556,556,556,556,278,278,278,278,556,556,556,556,556,556,556,584,611,556,556,556,556,500,556,500];
         private const HELVB = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584,761,556,556,278,556,500,1000,556,556,333,1000,667,333,1000,556,611,556,556,278,278,500,500,350,556,1000,333,1000,556,333,944,556,500,667,278,333,556,556,556,556,280,556,333,737,370,556,584,333,737,333,400,584,333,333,333,611,556,278,333,333,365,556,834,834,834,611,722,722,722,722,722,722,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,556,556,556,556,556,278,278,278,278,611,611,611,611,611,611,611,584,611,611,611,611,611,556,611,556];
         private float $W = 612, $H = 792, $ml = 54, $mr = 54, $mt = 76, $mb = 58;
@@ -112,9 +112,9 @@ if (!class_exists('OpshDoc')) {
         private ?int $tocPage = null;
         private bool $hasLogo = false;
         private string $acc;
-        private OpshDoc $doc;
+        private ItopsDoc $doc;
 
-        public function __construct(OpshDoc $doc) {
+        public function __construct(ItopsDoc $doc) {
             $this->doc = $doc; $this->acc = $doc->meta['accent'];
             if (!empty($doc->meta['landscape'])) { $this->W = 792; $this->H = 612; }
             $this->hasLogo = is_array($doc->meta['logo']) && !empty($doc->meta['logo']['data']);
@@ -408,7 +408,7 @@ if (!class_exists('OpshDoc')) {
                 if ($L['type'] === 'jpg') {
                     $img = $add(sprintf("<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length %d >>\nstream\n", $L['w'], $L['h'], strlen($L['data'])) . $L['data'] . "\nendstream");
                 } else {
-                    $p = opsh_pdf_png_parse($L['data']);
+                    $p = itops_pdf_png_parse($L['data']);
                     if ($p) $img = $add(sprintf("<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace /%s /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors %d /BitsPerComponent 8 /Columns %d >> /Length %d >>\nstream\n",
                         $p['w'], $p['h'], $p['colors'] === 3 ? 'DeviceRGB' : 'DeviceGray', $p['colors'], $p['w'], strlen($p['idat'])) . $p['idat'] . "\nendstream");
                 }
@@ -424,7 +424,7 @@ if (!class_exists('OpshDoc')) {
             $objs[$catalog - 1] = '<< /Type /Catalog /Pages ' . $pagesId . ' 0 R >>';
             $objs[$pagesId - 1] = '<< /Type /Pages /Kids [' . implode(' ', array_map(fn($k) => $k . ' 0 R', $kids)) . '] /Count ' . count($kids) . ' >>';
             $m = $this->doc->meta;
-            $info = $add('<< /Title (' . self::esc(self::enc((string)$m['title'])) . ') /Author (' . self::esc(self::enc((string)($m['author'] ?: $m['org']))) . ') /Producer (' . self::esc(self::enc((string)($m['producer'] ?? 'OpsHub'))) . ') /CreationDate (D:' . date('YmdHis') . ') >>');
+            $info = $add('<< /Title (' . self::esc(self::enc((string)$m['title'])) . ') /Author (' . self::esc(self::enc((string)($m['author'] ?: $m['org']))) . ') /Producer (' . self::esc(self::enc((string)($m['producer'] ?? 'ITOps'))) . ') /CreationDate (D:' . date('YmdHis') . ') >>');
             $pdf = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n"; $off = [];
             foreach ($objs as $i => $b) { $off[$i + 1] = strlen($pdf); $pdf .= ($i + 1) . " 0 obj\n" . $b . "\nendobj\n"; }
             $x = strlen($pdf);
@@ -435,14 +435,14 @@ if (!class_exists('OpshDoc')) {
         }
     }
 
-    function opsh_doc_pdf(OpshDoc $doc): string { return (new OpshPdfWriter($doc))->render(); }
+    function itops_doc_pdf(ItopsDoc $doc): string { return (new ItopsPdfWriter($doc))->render(); }
 
     // ═══════════════════════════════════════════════ WORD (.docx) ═══════════════════════════════════════════════
 
-    final class OpshDocxWriter {
-        private OpshDoc $doc; private string $acc; private int $cw; private bool $logo; private string $logoExt = 'png';
+    final class ItopsDocxWriter {
+        private ItopsDoc $doc; private string $acc; private int $cw; private bool $logo; private string $logoExt = 'png';
         private int $pid = 100;
-        public function __construct(OpshDoc $doc) {
+        public function __construct(ItopsDoc $doc) {
             $this->doc = $doc; $this->acc = $doc->meta['accent'];
             $this->cw = !empty($doc->meta['landscape']) ? 12960 : 10080;   // content width in twentieths of a point (0.75" margins)
             $this->logo = is_array($doc->meta['logo']) && !empty($doc->meta['logo']['data']);
@@ -687,7 +687,7 @@ if (!class_exists('OpshDoc')) {
                     . '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>',
                 '_rels/.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' . $R . 'officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="' . $R . 'extended-properties" Target="docProps/app.xml"/></Relationships>',
                 'docProps/core.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>' . self::x((string)$m['title']) . '</dc:title><dc:creator>' . self::x((string)($m['author'] ?: $m['org'])) . '</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">' . gmdate('Y-m-d\TH:i:s\Z') . '</dcterms:created></cp:coreProperties>',
-                'docProps/app.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>' . self::x((string)($m['producer'] ?? 'OpsHub')) . '</Application></Properties>',
+                'docProps/app.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>' . self::x((string)($m['producer'] ?? 'ITOps')) . '</Application></Properties>',
                 'word/_rels/document.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="' . $R . 'styles" Target="styles.xml"/><Relationship Id="rIdN" Type="' . $R . 'numbering" Target="numbering.xml"/><Relationship Id="rIdSet" Type="' . $R . 'settings" Target="settings.xml"/>'
                     . '<Relationship Id="rIdH1" Type="' . $R . 'header" Target="header1.xml"/><Relationship Id="rIdH2" Type="' . $R . 'header" Target="header2.xml"/><Relationship Id="rIdF1" Type="' . $R . 'footer" Target="footer1.xml"/><Relationship Id="rIdF2" Type="' . $R . 'footer" Target="footer2.xml"/>' . $logoRel . '</Relationships>',
                 'word/_rels/header1.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' . $logoRel . '</Relationships>',
@@ -701,40 +701,40 @@ if (!class_exists('OpshDoc')) {
                 'word/footer2.xml' => $empty('ftr'),
             ];
             if ($this->logo) $files['word/media/logo.' . $this->logoExt] = $m['logo']['data'];
-            return opsh_doc_zip($files);
+            return itops_doc_zip($files);
         }
     }
 
-    function opsh_doc_docx(OpshDoc $doc): string { return (new OpshDocxWriter($doc))->render(); }
+    function itops_doc_docx(ItopsDoc $doc): string { return (new ItopsDocxWriter($doc))->render(); }
 
     /**
      * The organization's document branding: name, logo (Settings → Branding → Documents, else the app logo), footer and
      * accent colour. The logo is read only from this app's own upload folder — a URL is never fetched.
      */
-    function opsh_doc_brand(PDO $db): array {
+    function itops_doc_brand(PDO $db): array {
         $s = [];
-        try { foreach ($db->query("SELECT skey, sval FROM opsh_settings WHERE skey IN ('doc_org_name','doc_logo_url','doc_footer','doc_accent','app_logo_url','app_name','org_name')") as $r) $s[$r['skey']] = (string)$r['sval']; } catch (Throwable $e) {}
-        $org = trim($s['doc_org_name'] ?? '') ?: (trim($s['org_name'] ?? '') ?: (function_exists('opsh_app_name') ? opsh_app_name() : (trim($s['app_name'] ?? '') ?: 'OpsHub')));
+        try { foreach ($db->query("SELECT skey, sval FROM itops_settings WHERE skey IN ('doc_org_name','doc_logo_url','doc_footer','doc_accent','app_logo_url','app_name','org_name')") as $r) $s[$r['skey']] = (string)$r['sval']; } catch (Throwable $e) {}
+        $org = trim($s['doc_org_name'] ?? '') ?: (trim($s['org_name'] ?? '') ?: (function_exists('itops_app_name') ? itops_app_name() : (trim($s['app_name'] ?? '') ?: 'ITOps')));
         $logo = null; $from = 'none';
         foreach (['doc_logo_url' => 'documents', 'app_logo_url' => 'app'] as $k => $src) {
-            $f = opsh_doc_upload_file((string)($s[$k] ?? '')); if ($f === null) continue;
-            $logo = opsh_doc_logo_load($f); if ($logo) { $from = $src; break; }
+            $f = itops_doc_upload_file((string)($s[$k] ?? '')); if ($f === null) continue;
+            $logo = itops_doc_logo_load($f); if ($logo) { $from = $src; break; }
         }
         $acc = strtoupper(ltrim(trim($s['doc_accent'] ?? ''), '#'));
         return ['org' => $org, 'logo' => $logo, 'logo_from' => $from, 'footer' => trim($s['doc_footer'] ?? '') !== '' ? trim($s['doc_footer']) : $org . ' · Confidential — for internal use',
                 'accent' => preg_match('/^[0-9A-F]{6}$/', $acc) ? $acc : '1D4D7A'];
     }
     /** The local file behind a logo URL this app stored (…/public/uploads/logos/<name>), or null. */
-    function opsh_doc_upload_file(string $url): ?string {
+    function itops_doc_upload_file(string $url): ?string {
         if ($url === '' || !preg_match('~/public/uploads/logos/([a-z]+_[0-9a-f]{12}\.(?:png|jpg|gif|webp))$~', $url, $m) || !defined('UPLOAD_DIR')) return null;
         $f = rtrim(UPLOAD_DIR, '/') . '/logos/' . $m[1];
         return is_file($f) ? $f : null;
     }
 
     /** A zip in memory: ZipArchive when present, else a small writer of our own (deflate when zlib is there). */
-    function opsh_doc_zip(array $files): string {
+    function itops_doc_zip(array $files): string {
         if (class_exists('ZipArchive')) {
-            $tmp = tempnam(sys_get_temp_dir(), 'opshdoc'); $z = new ZipArchive();
+            $tmp = tempnam(sys_get_temp_dir(), 'itopsdoc'); $z = new ZipArchive();
             if ($tmp && $z->open($tmp, ZipArchive::OVERWRITE) === true) {
                 foreach ($files as $n => $c) $z->addFromString($n, $c);
                 $z->close(); $out = (string)file_get_contents($tmp); @unlink($tmp);

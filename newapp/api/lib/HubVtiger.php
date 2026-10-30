@@ -1,39 +1,39 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub BT21 — vTiger helpers for the Microsoft 365 area (provisioning endpoints).
+ * ITOps BT21 — vTiger helpers for the Microsoft 365 area (provisioning endpoints).
  *
- * vTiger is read through a read-only DB connection and written through the bridge. OpsHub has
- * both too: the optional read-only DB ('vtiger_db') and the provisioning bridge (opsh-bridge.php,
+ * vTiger is read through a read-only DB connection and written through the bridge. ITOps has
+ * both too: the optional read-only DB ('vtiger_db') and the provisioning bridge (itops-bridge.php,
  * which can also look users up). Reads use the DB when it is configured, otherwise the bridge, so
  * linkage works with either. Results keep one shape so the screens stay the same.
  */
 require_once __DIR__ . '/VTigerProvision.php';
 require_once __DIR__ . '/Offboarding.php';
 
-if (!function_exists('opsh_hub_vtiger_available')) {
+if (!function_exists('itops_hub_vtiger_available')) {
 
-    function opsh_hub_vt_cfg(): array { static $c = null; if ($c === null) $c = opsh_vtiger_cfg(getDB()); return $c; }
-    function opsh_hub_vt_db(): ?OpshVTigerDb {
-        $c = opsh_hub_vt_cfg();
+    function itops_hub_vt_cfg(): array { static $c = null; if ($c === null) $c = itops_vtiger_cfg(getDB()); return $c; }
+    function itops_hub_vt_db(): ?ItopsVTigerDb {
+        $c = itops_hub_vt_cfg();
         if (empty($c['db']) || empty($c['db']['db']) || empty($c['db']['user'])) return null;
-        try { return new OpshVTigerDb($c['db']); } catch (Throwable $e) { return null; }
+        try { return new ItopsVTigerDb($c['db']); } catch (Throwable $e) { return null; }
     }
-    function opsh_hub_bridge_ready(): bool { return opsh_vtiger_bridge_ready(opsh_hub_vt_cfg()['prov']); }
+    function itops_hub_bridge_ready(): bool { return itops_vtiger_bridge_ready(itops_hub_vt_cfg()['prov']); }
 
     /** vTiger linkage is possible when either the read-only DB or the bridge is configured. */
-    function opsh_hub_vtiger_available(): bool {
-        $c = opsh_hub_vt_cfg();
-        return (!empty($c['db']['db']) && !empty($c['db']['user'])) || opsh_hub_bridge_ready();
+    function itops_hub_vtiger_available(): bool {
+        $c = itops_hub_vt_cfg();
+        return (!empty($c['db']['db']) && !empty($c['db']['user'])) || itops_hub_bridge_ready();
     }
 
     /** Every non-deleted vTiger user: [{id,user_name,first_name,last_name,email,status,is_admin,roleid}]. */
-    function opsh_hub_vtiger_all_users(): array {
+    function itops_hub_vtiger_all_users(): array {
         static $cache = null; if ($cache !== null) return $cache;
-        $db = opsh_hub_vt_db();
+        $db = itops_hub_vt_db();
         if ($db) { try { return $cache = $db->allUsers(); } catch (Throwable $e) { /* fall back to the bridge */ } }
-        if (opsh_hub_bridge_ready()) {
-            $r = opsh_vt_call(getDB(), 'list_users', ['status' => 'all']);
+        if (itops_hub_bridge_ready()) {
+            $r = itops_vt_call(getDB(), 'list_users', ['status' => 'all']);
             if (!empty($r['ok'])) return $cache = array_map(fn($u) => [
                 'id' => (string)$u['id'], 'user_name' => (string)$u['user_name'], 'first_name' => (string)($u['first_name'] ?? ''),
                 'last_name' => (string)($u['last_name'] ?? ''), 'email' => (string)($u['email'] ?? ''), 'status' => (string)($u['status'] ?? ''),
@@ -45,33 +45,33 @@ if (!function_exists('opsh_hub_vtiger_available')) {
 
     /**
      * BT36 — the vTiger user of a Microsoft 365 person, or null. $emails = their mail and sign-in name; $signIn = the
-     * sign-in name (UPN), whose first part is tried as vTiger user name when no email matches. See opsh_vt_match_user().
+     * sign-in name (UPN), whose first part is tried as vTiger user name when no email matches. See itops_vt_match_user().
      */
-    function opsh_hub_vtiger_match(array $emails, string $signIn = ''): ?array {
-        return opsh_vt_match_user(opsh_hub_vtiger_all_users(), $emails, $signIn);
+    function itops_hub_vtiger_match(array $emails, string $signIn = ''): ?array {
+        return itops_vt_match_user(itops_hub_vtiger_all_users(), $emails, $signIn);
     }
 
     /** email => {username,status,is_admin} (Active first, then admin, then lowest id — the matching rule). Email matches only. */
-    function opsh_hub_vtiger_by_emails(array $emails): array {
+    function itops_hub_vtiger_by_emails(array $emails): array {
         $map = [];
         foreach (array_filter(array_map(fn($e) => strtolower(trim((string)$e)), $emails)) as $e) {
             if (isset($map[$e])) continue;
-            $u = opsh_hub_vtiger_match([$e], '#');   // '#' = never fall back to the user name here
+            $u = itops_hub_vtiger_match([$e], '#');   // '#' = never fall back to the user name here
             if ($u) $map[$e] = ['username' => $u['user_name'], 'status' => $u['status'], 'is_admin' => (bool)$u['is_admin']];
         }
         return $map;
     }
 
     /** One vTiger user by email, else by user name (the part before the "@") — same preference order — or null.
-     *  For showing and checking only. Anything that changes vTiger goes through opsh_hub_vtiger_resolve(). */
-    function opsh_hub_vtiger_find_by_email(string $email): ?array {
+     *  For showing and checking only. Anything that changes vTiger goes through itops_hub_vtiger_resolve(). */
+    function itops_hub_vtiger_find_by_email(string $email): ?array {
         $email = strtolower(trim($email)); if ($email === '') return null;
-        return opsh_hub_vtiger_match([$email], $email);
+        return itops_hub_vtiger_match([$email], $email);
     }
 
     /** Active vTiger users sorted by user_name — the reassignment target list. */
-    function opsh_hub_vtiger_active_users(): array {
-        $a = array_values(array_filter(opsh_hub_vtiger_all_users(), fn($u) => strcasecmp((string)$u['status'], 'Active') === 0));
+    function itops_hub_vtiger_active_users(): array {
+        $a = array_values(array_filter(itops_hub_vtiger_all_users(), fn($u) => strcasecmp((string)$u['status'], 'Active') === 0));
         usort($a, fn($x, $y) => strcasecmp($x['user_name'], $y['user_name']));
         return array_map(fn($u) => ['id' => $u['id'], 'user_name' => $u['user_name'], 'email' => $u['email'], 'status' => $u['status'], 'is_admin' => $u['is_admin']], $a);
     }
@@ -79,22 +79,22 @@ if (!function_exists('opsh_hub_vtiger_available')) {
     /** vTiger roles [{id,name}] — BT24: the bridge first (the same signed connection that creates users), then the
      *  optional read-only DB. The bridge answers from vTiger itself, so no database credentials are needed and an
      *  unreachable DB host can't slow the pickers down. */
-    function opsh_hub_vtiger_roles(?string &$via = null): array {
+    function itops_hub_vtiger_roles(?string &$via = null): array {
         $via = ''; $err = null;
-        if (opsh_hub_bridge_ready()) {
-            $r = opsh_vt_call(getDB(), 'list_roles');
+        if (itops_hub_bridge_ready()) {
+            $r = itops_vt_call(getDB(), 'list_roles');
             if (!empty($r['ok'])) { $via = 'bridge'; return array_map(fn($x) => ['id' => (string)$x['roleid'], 'name' => (string)$x['rolename']], $r['roles'] ?? []); }
             $err = (string)($r['error'] ?? 'vTiger bridge error');
         }
-        $db = opsh_hub_vt_db();
+        $db = itops_hub_vt_db();
         if ($db) { $r = $db->roles(); if ($r) { $via = 'db'; return array_map(fn($x) => ['id' => (string)$x['roleid'], 'name' => (string)$x['rolename']], $r); } }
         if ($err !== null) throw new RuntimeException($err);
         return [];
     }
 
     /** Records owned by a vTiger user: ['from_id', 'modules' => [{module,count}] sorted by count desc]. */
-    function opsh_hub_vtiger_preview(string $fromId): array {
-        $r = opsh_vt_call(getDB(), 'reassign_preview', ['from' => $fromId]);
+    function itops_hub_vtiger_preview(string $fromId): array {
+        $r = itops_vt_call(getDB(), 'reassign_preview', ['from' => $fromId]);
         if (empty($r['ok'])) throw new RuntimeException((string)($r['error'] ?? 'preview failed.'));
         $mods = [];
         foreach ((array)($r['modules'] ?? []) as $m => $c) $mods[] = ['module' => (string)$m, 'count' => (int)$c];
@@ -103,22 +103,22 @@ if (!function_exists('opsh_hub_vtiger_available')) {
     }
 
     /** Move ownership. $modules [] = all. Returns ['reassigned' => {module|"(all)": n}, 'total' => n]. */
-    function opsh_hub_vtiger_reassign(string $fromId, string $toId, array $modules): array {
-        $r = opsh_vt_call(getDB(), 'reassign', ['from' => $fromId, 'to' => $toId, 'modules' => $modules]);
+    function itops_hub_vtiger_reassign(string $fromId, string $toId, array $modules): array {
+        $r = itops_vt_call(getDB(), 'reassign', ['from' => $fromId, 'to' => $toId, 'modules' => $modules]);
         if (empty($r['ok'])) throw new RuntimeException((string)($r['error'] ?? 'reassign failed.'));
         $moved = (array)($r['moved'] ?? []);
         return ['reassigned' => $modules ? $moved : ($moved ?: ['(all)' => (int)($r['moved_total'] ?? 0)]), 'total' => (int)($r['moved_total'] ?? array_sum($moved))];
     }
 
     /** Resolve a vTiger id from an id or an email ("No vTiger user matches that email."). */
-    function opsh_hub_vtiger_resolve(string $id, string $email): string {
+    function itops_hub_vtiger_resolve(string $id, string $email): string {
         if ($id !== '') return $id;
         if ($email === '') throw new InvalidArgumentException('An email or vTiger id is required.');
         // BT40: by email only. A user found by user name is a guess (a person on another domain can have the same
         // user name): the screens show it and send its id once a person has looked; the server never acts on it by itself.
-        $u = opsh_hub_vtiger_match([$email], '#');
+        $u = itops_hub_vtiger_match([$email], '#');
         if ($u) return (string)$u['id'];
-        $guess = opsh_hub_vtiger_find_by_email($email);
+        $guess = itops_hub_vtiger_find_by_email($email);
         if ($guess) throw new DomainException('No vTiger user matches that email. A vTiger user named "' . $guess['user_name'] . '" exists with another email (' . (($guess['email'] ?? '') !== '' ? $guess['email'] : 'none')
             . '). If it is the same person, reload the page and use the vTiger user shown there.');
         throw new DomainException('No vTiger user matches that email.');

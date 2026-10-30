@@ -2,15 +2,15 @@
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 require_once __DIR__ . '/Brand.php';
 /**
- * OpsHub — Email templates (English + Spanish).
+ * ITOps — Email templates (English + Spanish).
  *
  * Every email the system sends has a KEY in the catalog below with built-in default subject/body
- * in English and Spanish. Admins can override the text per language (opsh_email_templates table)
+ * in English and Spanish. Admins can override the text per language (itops_email_templates table)
  * and switch individual emails off; "Reset" deletes the override so the default applies again.
  *
- *   opsh_email($key, $to, $vars, $opts)   → render in the recipient's language and send (logged)
- *   opsh_tpl_render($key, $lang, $vars, $override = null) → ['subject','text','html']
- *   opsh_tpl_validate($key, $subject, $body) → [] or list of problems
+ *   itops_email($key, $to, $vars, $opts)   → render in the recipient's language and send (logged)
+ *   itops_tpl_render($key, $lang, $vars, $override = null) → ['subject','text','html']
+ *   itops_tpl_validate($key, $subject, $body) → [] or list of problems
  *
  * TEMPLATE SYNTAX (deliberately small):
  *   {{placeholder}}        value for this email (see each template's "vars"); unknown names are rejected on save
@@ -25,9 +25,9 @@ require_once __DIR__ . '/Brand.php';
  * "both" sends the English text followed by the Spanish text in one email.
  */
 
-if (!function_exists('opsh_tpl_catalog')) {
+if (!function_exists('itops_tpl_catalog')) {
 
-function opsh_tpl_common_vars(): array {
+function itops_tpl_common_vars(): array {
     return [
         'greeting'       => ['Hello Alex,', 'Greeting with the recipient\'s name in their language ("Hello Alex," / "Hola Alex,")'],
         'recipient_name' => ['Alex Sample', 'Recipient\'s name (may be empty for people without an account)'],
@@ -35,27 +35,27 @@ function opsh_tpl_common_vars(): array {
         'helpdesk_name'  => ['IT Help Desk', 'From name (Connection → Email)'],
         'helpdesk_email' => ['itops@example.org', 'From address (Connection → Email)'],
         'app_url'        => ['https://ops.example.com', 'Link to the app'],
-        'app_name'       => [opsh_app_name(), 'The app name set under Settings → Branding → App name'],
-        'portal_link'    => ['Follow it online: sign in to ' . opsh_app_name() . ' to see the status, reply to the team or add files — Open TK-2026-0142 in ' . opsh_app_name(), 'Sign-in box with a link straight to the ticket. Only filled in for people who have an account in the app (empty for outside requesters). On its own line.'],
+        'app_name'       => [itops_app_name(), 'The app name set under Settings → Branding → App name'],
+        'portal_link'    => ['Follow it online: sign in to ' . itops_app_name() . ' to see the status, reply to the team or add files — Open TK-2026-0142 in ' . itops_app_name(), 'Sign-in box with a link straight to the ticket. Only filled in for people who have an account in the app (empty for outside requesters). On its own line.'],
     ];
 }
 
 /** Ticket emails that get the "follow it online" box (added automatically if an edited template leaves it out). */
-function opsh_tpl_portal_keys(): array { return ['ticket_ack_email', 'ticket_ack_form', 'ticket_reply', 'ticket_status', 'ticket_resolved']; }
+function itops_tpl_portal_keys(): array { return ['ticket_ack_email', 'ticket_ack_form', 'ticket_reply', 'ticket_status', 'ticket_resolved']; }
 
 /** Link that opens a ticket in the app (the app keeps it through sign-in). */
-function opsh_tpl_ticket_url(int $ticketId): string { return defined('APP_URL') ? rtrim(APP_URL, '/') . '/#tickets/' . $ticketId : ''; }
+function itops_tpl_ticket_url(int $ticketId): string { return defined('APP_URL') ? rtrim(APP_URL, '/') . '/#tickets/' . $ticketId : ''; }
 
 /** The "follow it online" paragraph (markdown), per language. */
-function opsh_tpl_portal_link(string $url, string $ticketNumber): array {
+function itops_tpl_portal_link(string $url, string $ticketNumber): array {
     if ($url === '') return ['en' => '', 'es' => ''];
-    $an = opsh_app_name();   // BT20
+    $an = itops_app_name();   // BT20
     return ['en' => "**Follow it online:** sign in to $an to see the status and every update, reply to the person working on it, or add files — [Open " . ($ticketNumber !== '' ? $ticketNumber : 'your ticket') . " in $an]($url)",
             'es' => "**Sígala en línea:** inicie sesión en $an para ver el estado y cada actualización, responder a quien la atiende o añadir archivos — [Abrir " . ($ticketNumber !== '' ? $ticketNumber : 'su ticket') . " en $an]($url)"];
 }
 
 /** key => [group, label, description, recipients, master-setting|null, vars{name=>[sample,help]}, required-in-subject[], en[subj,body], es[subj,body]] */
-function opsh_tpl_catalog(): array {
+function itops_tpl_catalog(): array {
     $T = ['ticket_number' => ['TK-2026-0142', 'Ticket number — keep it in the subject so replies thread onto the ticket'],
           'subject'       => ['Laptop will not connect to Wi-Fi', 'Ticket subject'],
           'link'          => ['https://ops.example.com', 'Link to the app']];
@@ -80,7 +80,7 @@ function opsh_tpl_catalog(): array {
          "{{greeting}}\n\nGracias por su envío. Quedó registrado como **{{ticket_number}}** y nuestro equipo le dará seguimiento en breve.\n\n**Asunto:** {{subject}}\n\nSi responde a este correo, mantenga **{{ticket_number}}** en la línea de asunto.\n\n{{portal_link}}"]],
     'ticket_confirm_form' => ['Tickets', 'Was this you? (request sent with your address)', 'BT87: sent instead of "Request received" when someone submits the public ticket page or an intake form with the address of a person of the app. The request is filed in their name only when they confirm it.',
         'The address given', null,
-        ['ticket_number' => $T['ticket_number'], 'subject' => $T['subject'], 'confirm_link' => ['https://opshub.example.org/confirm.html?t=…', 'The page where the person confirms the request (it lasts 30 days)']],
+        ['ticket_number' => $T['ticket_number'], 'subject' => $T['subject'], 'confirm_link' => ['https://itops.example.org/confirm.html?t=…', 'The page where the person confirms the request (it lasts 30 days)']],
         ['ticket_number'],
         ['[{{ticket_number}}] Please confirm your request',
          "{{greeting}}\n\nA request was sent from our help page with your email address and logged as **{{ticket_number}}** (subject: {{subject}}).\n\n**Was this you?** Confirm it here so it is filed under your account: {{confirm_link}}\n\nIf you did not send it, you can ignore this email — nothing is filed under your account and the help desk will review it."],
@@ -107,7 +107,7 @@ function opsh_tpl_catalog(): array {
         ['ticket_number' => $T['ticket_number'], 'subject' => $T['subject'], 'status' => ['Resolved', 'Resolved or Closed, in the recipient\'s language'], 'agent_name' => ['Jordan Lee', 'Who resolved it'],
          'resolution_note' => ['What we did: Cleared the saved Office sign-in and signed you in again.', 'BT75: the resolution note, as a line starting "What we did:" (empty when there is none)'],
          'reopen_line' => ['Not fixed? Reply to this email within 3 business days and the ticket reopens. After that it closes on its own.', 'BT75: how to reopen, with the business days set under SLA & Hours (for Closed: how to get more help)'],
-         'csat_line' => ['**How did we do?** [Happy with how it was handled](https://opshub.example.org/rate.html?t=…&r=happy) · [Not happy](https://opshub.example.org/rate.html?t=…&r=unhappy)', 'BT81: two links to rate the ticket (empty when ratings are off in Settings → SLA & Hours)']],
+         'csat_line' => ['**How did we do?** [Happy with how it was handled](https://itops.example.org/rate.html?t=…&r=happy) · [Not happy](https://itops.example.org/rate.html?t=…&r=unhappy)', 'BT81: two links to rate the ticket (empty when ratings are off in Settings → SLA & Hours)']],
         ['ticket_number'],
         ['[{{ticket_number}}] {{status}}: {{subject}}',
          "{{greeting}}\n\nYour request **{{ticket_number}}** — {{subject}} — has been marked **{{status}}**.\n\n{{resolution_note}}\n\n{{reopen_line}}\n\n{{csat_line}}\n\n{{portal_link}}"],
@@ -515,7 +515,7 @@ function opsh_tpl_catalog(): array {
          'level' => ['Important', 'Announcement, Important or Urgent'], 'sender_name' => ['Jordan Lee', 'Who published it'],
          'reminder_line' => ['This is a reminder: you have not confirmed this announcement yet.', 'Only filled in on a reminder'],
          'ack_line' => ['Please open it and confirm that you have read it by Oct 10, 2026.', 'Only filled in when the announcement asks people to confirm they read it'],
-         'link_label' => ['Open it and confirm you have read it', 'The words of the button'], 'link' => ['https://opshub.example.org/read.html?t=…', 'The personal link (no account needed)']],
+         'link_label' => ['Open it and confirm you have read it', 'The words of the button'], 'link' => ['https://itops.example.org/read.html?t=…', 'The personal link (no account needed)']],
         [],
         ['[{{app_name}}] {{level}}: {{title}}',
          "{{greeting}}\n\n{{reminder_line}}\n\n**{{title}}**\n\n{{body_md}}\n\n{{ack_line}}\n\n[{{link_label}}]({{link}})\n\nThis link is for you only.\n\n— {{sender_name}}"],
@@ -560,52 +560,52 @@ function opsh_tpl_catalog(): array {
 }
 
 /** Default header/footer wrapped around every email, per language. */
-function opsh_tpl_wrapper_defaults(): array {
+function itops_tpl_wrapper_defaults(): array {
     return [
         'en' => ['header' => '', 'footer' => "{{helpdesk_name}} · {{org_name}}\n{{helpdesk_email}}"],
         'es' => ['header' => '', 'footer' => "{{helpdesk_name}} · {{org_name}}\n{{helpdesk_email}}"],
     ];
 }
 
-function opsh_tpl_setting(string $k, $default = null) {
+function itops_tpl_setting(string $k, $default = null) {
     static $cache = null;
     if ($cache === null) {
         $cache = [];
         try {
-            foreach (getDB()->query("SELECT skey, sval FROM opsh_settings WHERE skey LIKE 'mail\\_%' OR skey LIKE 'tpl\\_%' OR skey IN ('app_name','branding_name','app_logo_url')")->fetchAll() as $r) $cache[$r['skey']] = $r['sval'];
+            foreach (getDB()->query("SELECT skey, sval FROM itops_settings WHERE skey LIKE 'mail\\_%' OR skey LIKE 'tpl\\_%' OR skey IN ('app_name','branding_name','app_logo_url')")->fetchAll() as $r) $cache[$r['skey']] = $r['sval'];
         } catch (Throwable $e) {}
     }
     return array_key_exists($k, $cache) ? $cache[$k] : $default;
 }
 
-function opsh_tpl_enabled(string $key): bool {
-    $cat = opsh_tpl_catalog(); if (!isset($cat[$key])) return false;
-    if (opsh_tpl_setting('tpl_on_' . $key, '1') !== '1') return false;
+function itops_tpl_enabled(string $key): bool {
+    $cat = itops_tpl_catalog(); if (!isset($cat[$key])) return false;
+    if (itops_tpl_setting('tpl_on_' . $key, '1') !== '1') return false;
     $master = $cat[$key][4];
     if ($master) {
         $mdef = $master === 'mail_notify_assign' ? '1' : '0';
-        if (opsh_tpl_setting($master, $mdef) !== '1') return false;
+        if (itops_tpl_setting($master, $mdef) !== '1') return false;
     }
     return true;
 }
 
 /** Stored override for key+lang, or null. */
-function opsh_tpl_override(string $key, string $lang): ?array {
+function itops_tpl_override(string $key, string $lang): ?array {
     try {
-        $st = getDB()->prepare('SELECT subject, body FROM opsh_email_templates WHERE tpl_key=? AND lang=?');
+        $st = getDB()->prepare('SELECT subject, body FROM itops_email_templates WHERE tpl_key=? AND lang=?');
         $st->execute([$key, $lang]); $r = $st->fetch();
         return $r ?: null;
     } catch (Throwable $e) { return null; }   // table not created yet → defaults
 }
 
-function opsh_tpl_wrapper(string $lang): array {
-    $d = opsh_tpl_wrapper_defaults()[$lang] ?? opsh_tpl_wrapper_defaults()['en'];
-    $h = opsh_tpl_setting('tpl_wrap_header_' . $lang); $f = opsh_tpl_setting('tpl_wrap_footer_' . $lang);
+function itops_tpl_wrapper(string $lang): array {
+    $d = itops_tpl_wrapper_defaults()[$lang] ?? itops_tpl_wrapper_defaults()['en'];
+    $h = itops_tpl_setting('tpl_wrap_header_' . $lang); $f = itops_tpl_setting('tpl_wrap_footer_' . $lang);
     return ['header' => $h !== null ? $h : $d['header'], 'footer' => $f !== null ? $f : $d['footer']];
 }
 
 /** Localised labels used for status / priority / SLA type values. */
-function opsh_tpl_label(string $kind, string $v, string $lang): string {
+function itops_tpl_label(string $kind, string $v, string $lang): string {
     $M = [
       'status' => ['en' => ['open'=>'Open','in_progress'=>'In progress','pending'=>'Pending','on_hold'=>'On hold','resolved'=>'Resolved','closed'=>'Closed','cancelled'=>'Cancelled'],
                    'es' => ['open'=>'Abierta','in_progress'=>'En progreso','pending'=>'Pendiente','on_hold'=>'En espera','resolved'=>'Resuelta','closed'=>'Cerrada','cancelled'=>'Cancelada']],
@@ -617,7 +617,7 @@ function opsh_tpl_label(string $kind, string $v, string $lang): string {
 }
 
 /** Human date in the recipient's language: "Sep 30, 2026" / "30 sep 2026" (+ time when present). */
-function opsh_tpl_date(?string $d, string $lang): string {
+function itops_tpl_date(?string $d, string $lang): string {
     if (!$d) return '';
     $t = strtotime($d); if ($t === false) return (string)$d;
     $hasTime = strlen($d) > 10 && substr($d, 11, 5) !== '00:00';
@@ -629,34 +629,34 @@ function opsh_tpl_date(?string $d, string $lang): string {
 }
 
 /** Placeholders found in a text. */
-function opsh_tpl_names(string $s): array {
+function itops_tpl_names(string $s): array {
     preg_match_all('/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/', $s, $m);
     return array_values(array_unique($m[1]));
 }
 
 /** [] when OK, else a list of human-readable problems. */
-function opsh_tpl_validate(string $key, string $subject, string $body): array {
-    $cat = opsh_tpl_catalog(); if (!isset($cat[$key])) return ['Unknown template.'];
-    $allowed = array_merge(array_keys(opsh_tpl_common_vars()), array_keys($cat[$key][5]));
+function itops_tpl_validate(string $key, string $subject, string $body): array {
+    $cat = itops_tpl_catalog(); if (!isset($cat[$key])) return ['Unknown template.'];
+    $allowed = array_merge(array_keys(itops_tpl_common_vars()), array_keys($cat[$key][5]));
     $err = [];
     if (trim($subject) === '') $err[] = 'The subject cannot be empty.';
     if (mb_strlen($subject) > 250) $err[] = 'The subject is longer than 250 characters.';
     if (trim($body) === '') $err[] = 'The message cannot be empty.';
     if (mb_strlen($body) > 20000) $err[] = 'The message is longer than 20,000 characters.';
-    $bad = array_diff(array_merge(opsh_tpl_names($subject), opsh_tpl_names($body)), $allowed);
+    $bad = array_diff(array_merge(itops_tpl_names($subject), itops_tpl_names($body)), $allowed);
     if ($bad) $err[] = 'Unknown placeholder(s): ' . implode(', ', array_map(fn($n) => '{{' . $n . '}}', $bad)) . '. Use only the ones listed for this email.';
     foreach ($cat[$key][6] as $req) {
-        if (!in_array($req, opsh_tpl_names($subject), true)) $err[] = 'The subject must contain {{' . $req . '}} — replies are matched to the ticket by that number.';
+        if (!in_array($req, itops_tpl_names($subject), true)) $err[] = 'The subject must contain {{' . $req . '}} — replies are matched to the ticket by that number.';
     }
     return $err;
 }
 
 /** Replace placeholders; $esc = HTML-escape values. Array values are per-language. */
-function opsh_tpl_tidy(string $s): string {
+function itops_tpl_tidy(string $s): string {
     $lines = array_map(fn($l) => trim(preg_replace('/^\s*(·|\||,)\s*|\s*(·|\||,)\s*$/u', '', $l)), explode("\n", str_replace("\r", '', $s)));
     return trim(preg_replace('/\n{3,}/', "\n\n", implode("\n", $lines)));
 }
-function opsh_tpl_fill(string $tpl, array $vars, string $lang, bool $esc): string {
+function itops_tpl_fill(string $tpl, array $vars, string $lang, bool $esc): string {
     return preg_replace_callback('/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/', function ($m) use ($vars, $lang, $esc) {
         $v = $vars[$m[1]] ?? '';
         if (is_array($v)) $v = $v[$lang] ?? ($v['en'] ?? '');
@@ -666,7 +666,7 @@ function opsh_tpl_fill(string $tpl, array $vars, string $lang, bool $esc): strin
 }
 
 /** Markdown-lite → HTML on ALREADY-ESCAPED text. */
-function opsh_tpl_md_html(string $s): string {
+function itops_tpl_md_html(string $s): string {
     $s = str_replace(["\r\n", "\r"], "\n", $s);
     $s = preg_replace('/\n{3,}/', "\n\n", trim($s));
     $link = function ($m) {
@@ -680,7 +680,7 @@ function opsh_tpl_md_html(string $s): string {
         $isList = count(array_filter($lines, fn($l) => preg_match('/^\s*[-•]\s+/', $l))) === count($lines);
         $fmt = function ($t) use ($link) {
             $t = preg_replace_callback('/\[([^\]]+)\]\(([^)\s]+)\)/', $link, $t);
-            $t = opsh_tpl_autolink($t);
+            $t = itops_tpl_autolink($t);
             return preg_replace('/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $t);
         };
         if ($isList) {
@@ -693,7 +693,7 @@ function opsh_tpl_md_html(string $s): string {
 }
 
 /** Link bare http(s) URLs in already-escaped HTML — only in text, never inside a tag or an existing link. */
-function opsh_tpl_autolink(string $html): string {
+function itops_tpl_autolink(string $html): string {
     $parts = preg_split('#(<a\b[^>]*>.*?</a>|<[^>]+>)#is', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
     foreach ($parts as $i => $p) {
         if ($p === '' || $p[0] === '<') continue;
@@ -709,7 +709,7 @@ function opsh_tpl_autolink(string $html): string {
  * link target, e.g. [Open]({{link}}), only accepts an http(s)/mailto value. {{report}} is generated
  * by the system and may contain "- " lists, so it is rendered as markdown (after escaping).
  */
-function opsh_tpl_html(string $tpl, array $vars, string $lang): string {
+function itops_tpl_html(string $tpl, array $vars, string $lang): string {
     $val = function (string $n) use ($vars, $lang): string { $v = $vars[$n] ?? ''; if (is_array($v)) $v = $v[$lang] ?? ($v['en'] ?? ''); return (string)$v; };
     $esc = fn($t) => htmlspecialchars($t, ENT_QUOTES, 'UTF-8');
     $t = $esc($tpl);
@@ -720,25 +720,25 @@ function opsh_tpl_html(string $tpl, array $vars, string $lang): string {
         return '](' . $esc(str_replace([' ', '(', ')'], ['%20', '%28', '%29'], $u)) . ')';
     }, $t);
     // 2) markdown on the template text
-    $t = opsh_tpl_md_html($t);
+    $t = itops_tpl_md_html($t);
     // 3) values, escaped
     // "Follow it online" box: rendered as a callout with a button (value = "text — [label](url)")
     $t = preg_replace_callback('#<p style="margin:0 0 14px">\{\{\s*portal_link\s*\}\}</p>#', function () use ($val, $esc) {
         $v = trim($val('portal_link'));
-        if ($v === '' || !preg_match('/^(.*?)\s*—?\s*\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)\s*$/su', $v, $m)) return $v === '' ? '' : opsh_tpl_md_html($esc($v));
-        $color = opsh_tpl_setting('tpl_brand_color') ?: '#1D4D7A'; if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) $color = '#1D4D7A';
-        $intro = preg_replace('#^<p[^>]*>|</p>$#', '', opsh_tpl_md_html($esc(rtrim($m[1], " —-"))));
+        if ($v === '' || !preg_match('/^(.*?)\s*—?\s*\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)\s*$/su', $v, $m)) return $v === '' ? '' : itops_tpl_md_html($esc($v));
+        $color = itops_tpl_setting('tpl_brand_color') ?: '#1D4D7A'; if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) $color = '#1D4D7A';
+        $intro = preg_replace('#^<p[^>]*>|</p>$#', '', itops_tpl_md_html($esc(rtrim($m[1], " —-"))));
         return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 14px"><tr><td style="background:#F3F7FB;border:1px solid #D8E2EC;border-radius:8px;padding:14px 16px;font-size:14px;line-height:1.5;color:#1F2A36">'
              . $intro . '<br><a href="' . $esc($m[3]) . '" style="display:inline-block;margin-top:10px;background:' . $color . ';color:#ffffff;text-decoration:none;font-weight:600;padding:9px 16px;border-radius:6px">' . $esc($m[2]) . '</a></td></tr></table>';
     }, $t);
     $blockVars = ['report', 'portal_link', 'body_md', 'csat_line'];   // csat_line (BT81): system-made rating links   // body_md (BT28): announcement text, written by a role allowed to publish
-    $t = preg_replace_callback('#<p style="margin:0 0 14px">\{\{\s*(' . implode('|', $blockVars) . ')\s*\}\}</p>#', fn($m) => opsh_tpl_md_html($esc($val($m[1]))), $t);
+    $t = preg_replace_callback('#<p style="margin:0 0 14px">\{\{\s*(' . implode('|', $blockVars) . ')\s*\}\}</p>#', fn($m) => itops_tpl_md_html($esc($val($m[1]))), $t);
     $t = preg_replace_callback('/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/', function ($m) use ($val, $esc, $blockVars) {
         $v = $val($m[1]);
-        if (in_array($m[1], $blockVars, true)) return preg_replace('#^<p[^>]*>|</p>$#', '', opsh_tpl_md_html($esc($v)));
+        if (in_array($m[1], $blockVars, true)) return preg_replace('#^<p[^>]*>|</p>$#', '', itops_tpl_md_html($esc($v)));
         // BT124 (code review DESK-12): only addresses the system made become links; a web address inside a subject, a
         // comment or a name (often typed by someone outside) stays plain text
-        if ($m[1] === 'link' || $m[1] === 'url' || preg_match('/_(link|url)$/', $m[1])) return opsh_tpl_autolink(nl2br($esc($v), false));
+        if ($m[1] === 'link' || $m[1] === 'url' || preg_match('/_(link|url)$/', $m[1])) return itops_tpl_autolink(nl2br($esc($v), false));
         return nl2br($esc($v), false);
     }, $t);
     // BT28: a paragraph that held only an empty optional value (e.g. {{ack_line}}) leaves no blank gap
@@ -746,22 +746,22 @@ function opsh_tpl_html(string $tpl, array $vars, string $lang): string {
 }
 
 /** Markdown-lite → readable plain text. */
-function opsh_tpl_md_text(string $s): string {
+function itops_tpl_md_text(string $s): string {
     $s = str_replace(["\r\n", "\r"], "\n", $s);
     $s = preg_replace('/\[([^\]]+)\]\(([^)\s]+)\)/', '$1: $2', $s);
     $s = preg_replace('/\*\*(.+?)\*\*/s', '$1', $s);
     return trim(preg_replace('/\n{3,}/', "\n\n", $s));
 }
 
-function opsh_tpl_common_values(array $vars, string $lang): array {
-    $org = opsh_tpl_setting('app_name') ?: (opsh_tpl_setting('branding_name') ?: (function_exists('opsh_app_name') ? opsh_app_name() : 'OpsHub'));
+function itops_tpl_common_values(array $vars, string $lang): array {
+    $org = itops_tpl_setting('app_name') ?: (itops_tpl_setting('branding_name') ?: (function_exists('itops_app_name') ? itops_app_name() : 'ITOps'));
     $name = trim((string)($vars['recipient_name'] ?? ''));
     $first = $name !== '' ? preg_split('/\s+/', $name)[0] : '';
     return [
         'org_name' => $org,
-        'app_name' => (function_exists('opsh_app_name') ? opsh_app_name() : $org),   // BT20: {{app_name}} in every template
-        'helpdesk_name' => opsh_tpl_setting('mail_from_name') ?: 'IT Help Desk',
-        'helpdesk_email' => opsh_tpl_setting('mail_from_email') ?: '',
+        'app_name' => (function_exists('itops_app_name') ? itops_app_name() : $org),   // BT20: {{app_name}} in every template
+        'helpdesk_name' => itops_tpl_setting('mail_from_name') ?: 'IT Help Desk',
+        'helpdesk_email' => itops_tpl_setting('mail_from_email') ?: '',
         'app_url' => defined('APP_URL') ? rtrim(APP_URL, '/') : '',
         'recipient_name' => $name,
         'greeting' => ['en' => $first !== '' ? "Hello $first," : 'Hello,', 'es' => $first !== '' ? "Hola $first," : 'Hola,'],
@@ -769,39 +769,39 @@ function opsh_tpl_common_values(array $vars, string $lang): array {
 }
 
 /** Render one language. $override = ['subject'=>..,'body'=>..] to preview unsaved edits. */
-function opsh_tpl_render_one(string $key, string $lang, array $vars, ?array $override = null): array {
-    $cat = opsh_tpl_catalog(); $def = $cat[$key];
-    $src = $override ?: (opsh_tpl_override($key, $lang) ?: null);
+function itops_tpl_render_one(string $key, string $lang, array $vars, ?array $override = null): array {
+    $cat = itops_tpl_catalog(); $def = $cat[$key];
+    $src = $override ?: (itops_tpl_override($key, $lang) ?: null);
     $d = $lang === 'es' ? $def[8] : $def[7];
     $subjectT = $src['subject'] ?? $d[0];
     $bodyT = $src['body'] ?? $d[1];
-    if (in_array($key, opsh_tpl_portal_keys(), true) && strpos($bodyT, 'portal_link') === false) $bodyT = rtrim($bodyT) . "\n\n{{portal_link}}";
-    $vars = array_merge(opsh_tpl_common_values($vars, $lang), $vars);
+    if (in_array($key, itops_tpl_portal_keys(), true) && strpos($bodyT, 'portal_link') === false) $bodyT = rtrim($bodyT) . "\n\n{{portal_link}}";
+    $vars = array_merge(itops_tpl_common_values($vars, $lang), $vars);
     if (!isset($vars['link']) || $vars['link'] === '') $vars['link'] = $vars['app_url'];
-    $subject = trim(preg_replace('/\s+/', ' ', opsh_tpl_fill($subjectT, $vars, $lang, false)));
-    $wrap = opsh_tpl_wrapper($lang);
+    $subject = trim(preg_replace('/\s+/', ' ', itops_tpl_fill($subjectT, $vars, $lang, false)));
+    $wrap = itops_tpl_wrapper($lang);
     // Plain text: markdown applied to the template, then raw values filled in (no markup in plain text).
     $tvars = $vars;   // plain text: markdown inside block values (the portal link) becomes readable text
-    foreach (['portal_link', 'body_md', 'csat_line'] as $bv) if (isset($tvars[$bv])) { $x = $tvars[$bv]; $tvars[$bv] = is_array($x) ? array_map('opsh_tpl_md_text', $x) : opsh_tpl_md_text((string)$x); }
-    $text = trim(preg_replace('/\n{3,}/', "\n\n", opsh_tpl_fill(opsh_tpl_md_text(($wrap['header'] ? $wrap['header'] . "\n\n" : '') . $bodyT), $tvars, $lang, false)))
-          . ($wrap['footer'] ? "\n\n--\n" . opsh_tpl_tidy(opsh_tpl_fill(opsh_tpl_md_text($wrap['footer']), $vars, $lang, false)) : '');
-    $html = ($wrap['header'] ? opsh_tpl_html($wrap['header'], $vars, $lang) : '') . opsh_tpl_html($bodyT, $vars, $lang);
+    foreach (['portal_link', 'body_md', 'csat_line'] as $bv) if (isset($tvars[$bv])) { $x = $tvars[$bv]; $tvars[$bv] = is_array($x) ? array_map('itops_tpl_md_text', $x) : itops_tpl_md_text((string)$x); }
+    $text = trim(preg_replace('/\n{3,}/', "\n\n", itops_tpl_fill(itops_tpl_md_text(($wrap['header'] ? $wrap['header'] . "\n\n" : '') . $bodyT), $tvars, $lang, false)))
+          . ($wrap['footer'] ? "\n\n--\n" . itops_tpl_tidy(itops_tpl_fill(itops_tpl_md_text($wrap['footer']), $vars, $lang, false)) : '');
+    $html = ($wrap['header'] ? itops_tpl_html($wrap['header'], $vars, $lang) : '') . itops_tpl_html($bodyT, $vars, $lang);
     $foot = '';
     if ($wrap['footer']) {   // drop separators left dangling by empty values ("IT Help Desk · " when there is no org name)
-        $foot = opsh_tpl_html($wrap['footer'], $vars, $lang);
+        $foot = itops_tpl_html($wrap['footer'], $vars, $lang);
         $foot = preg_replace(['#(<p[^>]*>|<br>)\s*(·|\||,)\s*#u', '#\s*(·|\||,)\s*(<br>|</p>)#u', '#<br>\s*(<br>|</p>)#'], ['$1', '$2', '$1'], $foot);
     }
-    // BT20: templates saved before {{app_name}} existed may still say "OpsHub" — show the client's name instead.
-    return ['subject' => opsh_brand($subject), 'text' => opsh_brand($text), 'body_html' => opsh_brand($html), 'footer_html' => opsh_brand($foot), 'org' => $vars['org_name']];
+    // BT20: templates saved before {{app_name}} existed may still say "ITOps" — show the client's name instead.
+    return ['subject' => itops_brand($subject), 'text' => itops_brand($text), 'body_html' => itops_brand($html), 'footer_html' => itops_brand($foot), 'org' => $vars['org_name']];
 }
 
 /** Branded, Outlook-safe HTML shell around rendered content. */
-function opsh_tpl_shell(string $org, string $contentHtml, string $footerHtml, string $lang): string {
-    $color = opsh_tpl_setting('tpl_brand_color') ?: '#1D4D7A';
+function itops_tpl_shell(string $org, string $contentHtml, string $footerHtml, string $lang): string {
+    $color = itops_tpl_setting('tpl_brand_color') ?: '#1D4D7A';
     if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) $color = '#1D4D7A';
-    $logo = opsh_tpl_setting('app_logo_url') ?: '';
+    $logo = itops_tpl_setting('app_logo_url') ?: '';
     if ($logo && !preg_match('#^https?://#i', $logo) && defined('APP_URL')) $logo = rtrim(APP_URL, '/') . '/' . ltrim($logo, '/');
-    $brand = ($logo && preg_match('#^https://#i', $logo) && opsh_tpl_setting('tpl_show_logo', '1') === '1')
+    $brand = ($logo && preg_match('#^https://#i', $logo) && itops_tpl_setting('tpl_show_logo', '1') === '1')
         ? '<img src="' . htmlspecialchars($logo, ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars($org, ENT_QUOTES, 'UTF-8') . '" style="max-height:40px;max-width:200px;display:block">'
         : '<span style="font-size:18px;font-weight:700;color:#ffffff">' . htmlspecialchars($org, ENT_QUOTES, 'UTF-8') . '</span>';
     return '<!DOCTYPE html><html lang="' . $lang . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>'
@@ -815,67 +815,67 @@ function opsh_tpl_shell(string $org, string $contentHtml, string $footerHtml, st
 }
 
 /** Full render for a language mode (en | es | both). */
-function opsh_tpl_render(string $key, string $mode, array $vars, ?array $override = null, ?string $overrideLang = null): array {
+function itops_tpl_render(string $key, string $mode, array $vars, ?array $override = null, ?string $overrideLang = null): array {
     $langs = $mode === 'both' ? ['en', 'es'] : [$mode === 'es' ? 'es' : 'en'];
     $parts = [];
-    foreach ($langs as $l) $parts[$l] = opsh_tpl_render_one($key, $l, $vars, ($override && $overrideLang === $l) ? $override : null);
+    foreach ($langs as $l) $parts[$l] = itops_tpl_render_one($key, $l, $vars, ($override && $overrideLang === $l) ? $override : null);
     $first = reset($parts);
     if (count($parts) === 1) {
-        return ['subject' => $first['subject'], 'text' => $first['text'], 'html' => opsh_tpl_shell($first['org'], $first['body_html'], $first['footer_html'], $langs[0])];
+        return ['subject' => $first['subject'], 'text' => $first['text'], 'html' => itops_tpl_shell($first['org'], $first['body_html'], $first['footer_html'], $langs[0])];
     }
     $en = $parts['en']; $es = $parts['es'];
     $sep = '<div style="border-top:1px dashed #C9D3DD;margin:18px 0 16px;padding-top:6px;font-size:12px;color:#8793A0;letter-spacing:.04em">ESPAÑOL</div>';
     return ['subject' => $en['subject'],
             'text' => $en['text'] . "\n\n— — — ESPAÑOL — — —\n\n" . $es['text'],
-            'html' => opsh_tpl_shell($en['org'], $en['body_html'] . $sep . $es['body_html'], $en['footer_html'], 'en')];
+            'html' => itops_tpl_shell($en['org'], $en['body_html'] . $sep . $es['body_html'], $en['footer_html'], 'en')];
 }
 
 /** Per-language label / date pairs for placeholders whose value depends on the recipient's language. */
-function opsh_tpl_l10n(string $kind, string $v): array { return ['en' => opsh_tpl_label($kind, $v, 'en'), 'es' => opsh_tpl_label($kind, $v, 'es')]; }
-function opsh_tpl_d2(?string $d): array { return ['en' => opsh_tpl_date($d, 'en'), 'es' => opsh_tpl_date($d, 'es')]; }
+function itops_tpl_l10n(string $kind, string $v): array { return ['en' => itops_tpl_label($kind, $v, 'en'), 'es' => itops_tpl_label($kind, $v, 'es')]; }
+function itops_tpl_d2(?string $d): array { return ['en' => itops_tpl_date($d, 'en'), 'es' => itops_tpl_date($d, 'es')]; }
 
 /** Recipient language: the user's own setting, else the organisation default (en | es | both). */
-function opsh_email_lang(?string $to, ?int $uid = null): string {
+function itops_email_lang(?string $to, ?int $uid = null): string {
     try {
         $db = getDB();
-        if ($uid) { $st = $db->prepare('SELECT language FROM opsh_users WHERE id=?'); $st->execute([$uid]); }
-        elseif ($to) { $st = $db->prepare('SELECT language FROM opsh_users WHERE email=? LIMIT 1'); $st->execute([$to]); }
+        if ($uid) { $st = $db->prepare('SELECT language FROM itops_users WHERE id=?'); $st->execute([$uid]); }
+        elseif ($to) { $st = $db->prepare('SELECT language FROM itops_users WHERE email=? LIMIT 1'); $st->execute([$to]); }
         if (isset($st)) { $l = $st->fetchColumn(); if ($l === 'en' || $l === 'es') return $l; }
     } catch (Throwable $e) {}
-    $d = opsh_tpl_setting('mail_default_lang', 'en');
+    $d = itops_tpl_setting('mail_default_lang', 'en');
     return in_array($d, ['en', 'es', 'both'], true) ? $d : 'en';
 }
 
 /** Render + send a system email. Returns the mail_send result (or ['skipped'=>true] when disabled). */
-function opsh_email(string $key, string $to, array $vars = [], array $opt = []): array {
-    $cat = opsh_tpl_catalog();
+function itops_email(string $key, string $to, array $vars = [], array $opt = []): array {
+    $cat = itops_tpl_catalog();
     if (!isset($cat[$key])) return ['ok' => false, 'error' => 'Unknown email template ' . $key];
     // BT101: no email of a module that is not part of this installation (test sends included)
     require_once __DIR__ . '/Modules.php';
-    if (($tm = opsh_tpl_module($key)) !== null && !opsh_module_on($tm)) return ['ok' => false, 'skipped' => true, 'error' => 'Email "' . $cat[$key][1] . '" belongs to ' . (opsh_modules_catalog()[$tm][0] ?? $tm) . ', which is not part of this installation'];
-    if (empty($opt['force']) && !opsh_tpl_enabled($key)) return ['ok' => false, 'skipped' => true, 'error' => 'Email "' . $cat[$key][1] . '" is switched off'];
+    if (($tm = itops_tpl_module($key)) !== null && !itops_module_on($tm)) return ['ok' => false, 'skipped' => true, 'error' => 'Email "' . $cat[$key][1] . '" belongs to ' . (itops_modules_catalog()[$tm][0] ?? $tm) . ', which is not part of this installation'];
+    if (empty($opt['force']) && !itops_tpl_enabled($key)) return ['ok' => false, 'skipped' => true, 'error' => 'Email "' . $cat[$key][1] . '" is switched off'];
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return ['ok' => false, 'error' => 'Invalid recipient'];
     // Outbound switched off: skip quietly (not logged) unless this is an explicit test send.
-    if (empty($opt['force']) && opsh_tpl_setting('mail_out_enabled', '0') !== '1') return ['ok' => false, 'skipped' => true, 'error' => 'Outbound email is disabled'];
+    if (empty($opt['force']) && itops_tpl_setting('mail_out_enabled', '0') !== '1') return ['ok' => false, 'skipped' => true, 'error' => 'Outbound email is disabled'];
     if (!isset($vars['recipient_name'])) {
-        try { $st = getDB()->prepare('SELECT display_name FROM opsh_users WHERE email=? LIMIT 1'); $st->execute([$to]); $vars['recipient_name'] = (string)($st->fetchColumn() ?: ''); } catch (Throwable $e) {}
+        try { $st = getDB()->prepare('SELECT display_name FROM itops_users WHERE email=? LIMIT 1'); $st->execute([$to]); $vars['recipient_name'] = (string)($st->fetchColumn() ?: ''); } catch (Throwable $e) {}
     }
-    // Ticket emails: links open that ticket in the app; people with an OpsHub account also get the "follow it online" box.
+    // Ticket emails: links open that ticket in the app; people with an ITOps account also get the "follow it online" box.
     if (!empty($opt['ticket_id'])) {
-        $turl = opsh_tpl_ticket_url((int)$opt['ticket_id']);
+        $turl = itops_tpl_ticket_url((int)$opt['ticket_id']);
         $base = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
         if (!isset($vars['link']) || $vars['link'] === '' || rtrim((string)$vars['link'], '/') === $base) $vars['link'] = $turl;
         if (!isset($vars['portal_link'])) {
             $hasAccount = false;
             try {
-                $st = getDB()->prepare(!empty($opt['user_id']) ? "SELECT 1 FROM opsh_users WHERE id=? AND status='active'" : "SELECT 1 FROM opsh_users WHERE email=? AND status='active' LIMIT 1");
+                $st = getDB()->prepare(!empty($opt['user_id']) ? "SELECT 1 FROM itops_users WHERE id=? AND status='active'" : "SELECT 1 FROM itops_users WHERE email=? AND status='active' LIMIT 1");
                 $st->execute([!empty($opt['user_id']) ? (int)$opt['user_id'] : $to]); $hasAccount = (bool)$st->fetchColumn();
             } catch (Throwable $e) {}
-            $vars['portal_link'] = $hasAccount ? opsh_tpl_portal_link($turl, (string)($vars['ticket_number'] ?? '')) : '';
+            $vars['portal_link'] = $hasAccount ? itops_tpl_portal_link($turl, (string)($vars['ticket_number'] ?? '')) : '';
         }
     }
-    $lang = $opt['lang'] ?? opsh_email_lang($to, $opt['user_id'] ?? null);
-    $r = opsh_tpl_render($key, $lang, $vars);
+    $lang = $opt['lang'] ?? itops_email_lang($to, $opt['user_id'] ?? null);
+    $r = itops_tpl_render($key, $lang, $vars);
     if (!function_exists('mail_send')) require_once __DIR__ . '/MailIntake.php';
     return mail_send($to, $r['subject'], $r['text'], ['kind' => $key, 'ticket_id' => $opt['ticket_id'] ?? null, 'html' => $r['html'], 'lang' => $lang]);
 }

@@ -1,16 +1,16 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Email security (DNS layer): SPF / DKIM / DMARC checks per verified domain.
+ * ITOps — Email security (DNS layer): SPF / DKIM / DMARC checks per verified domain.
  * Pure DNS — no Graph permission needed. Used by /api/m365/email-dns and the Guardian
  * "Email security" card. The EOP policy layer (anti-phish, Safe Links, quarantine) is
- * PowerShell-only; OpsHub generates those commands in the hardening checklist instead.
+ * PowerShell-only; ITOps generates those commands in the hardening checklist instead.
  */
 
-if (!function_exists('opsh_dns_txt')) {
+if (!function_exists('itops_dns_txt')) {
 
     /** TXT records for a name (lower-cased), [] on failure. Overridable in tests. */
-    function opsh_dns_txt(string $name): array {
+    function itops_dns_txt(string $name): array {
         $out = [];
         try {
             foreach ((@dns_get_record($name, DNS_TXT) ?: []) as $r) {
@@ -22,7 +22,7 @@ if (!function_exists('opsh_dns_txt')) {
     }
 
     /** CNAME target for a name, '' when none. Overridable in tests. */
-    function opsh_dns_cname(string $name): string {
+    function itops_dns_cname(string $name): string {
         try {
             foreach ((@dns_get_record($name, DNS_CNAME) ?: []) as $r) {
                 if (!empty($r['target'])) return strtolower((string)$r['target']);
@@ -32,16 +32,16 @@ if (!function_exists('opsh_dns_txt')) {
     }
 }
 
-if (!function_exists('opsh_mailsec_domain')) {
+if (!function_exists('itops_mailsec_domain')) {
 
     /** Full SPF / DKIM / DMARC picture for one domain. */
-    function opsh_mailsec_domain(string $domain): array {
+    function itops_mailsec_domain(string $domain): array {
         $domain = strtolower(trim($domain));
         $out = ['domain' => $domain];
 
         // ── SPF ──
         $spf = ''; $spfN = 0;
-        foreach (opsh_dns_txt($domain) as $t) if (stripos($t, 'v=spf1') === 0) { $spfN++; if ($spf === '') $spf = $t; }
+        foreach (itops_dns_txt($domain) as $t) if (stripos($t, 'v=spf1') === 0) { $spfN++; if ($spf === '') $spf = $t; }
         $spfOk = $spf !== '' && $spfN === 1 && stripos($spf, 'spf.protection.outlook.com') !== false;
         // Review M365A-20: a bare "all" means "+all"; two SPF records make SPF fail for everyone
         $hard = $spf !== '' && preg_match('/(?:^|\s)([-~?+]?)all\s*$/i', $spf, $m) ? ($m[1] !== '' ? strtolower($m[1]) : '+') : '';
@@ -55,8 +55,8 @@ if (!function_exists('opsh_mailsec_domain')) {
                 : ($hard === '?' || $hard === '' ? 'Finish the record with -all (hard fail) once all senders are listed.' : ''))))];
 
         // ── DKIM (Microsoft 365 selectors) ──
-        $s1 = opsh_dns_cname('selector1._domainkey.' . $domain);
-        $s2 = opsh_dns_cname('selector2._domainkey.' . $domain);
+        $s1 = itops_dns_cname('selector1._domainkey.' . $domain);
+        $s2 = itops_dns_cname('selector2._domainkey.' . $domain);
         // Microsoft 365 selector targets: classic "…._domainkey.<tenant>.onmicrosoft.com", or the newer format
         // (domains configured from 2025) "…._domainkey.<tenant>.<x>.dkim.mail.microsoft". Accept both — never assume.
         $msTarget = fn($t) => strpos($t, 'onmicrosoft.com') !== false || strpos($t, '.dkim.mail.microsoft') !== false;
@@ -66,7 +66,7 @@ if (!function_exists('opsh_mailsec_domain')) {
 
         // ── DMARC ──
         $dm = '';
-        foreach (opsh_dns_txt('_dmarc.' . $domain) as $t) if (stripos($t, 'v=DMARC1') === 0) { $dm = $t; break; }
+        foreach (itops_dns_txt('_dmarc.' . $domain) as $t) if (stripos($t, 'v=DMARC1') === 0) { $dm = $t; break; }
         $policy = '';
         if ($dm !== '' && preg_match('/\bp\s*=\s*(none|quarantine|reject)/i', $dm, $m)) $policy = strtolower($m[1]);
         $hasRua = $dm !== '' && stripos($dm, 'rua=') !== false;
@@ -83,13 +83,13 @@ if (!function_exists('opsh_mailsec_domain')) {
     }
 }
 
-if (!function_exists('opsh_mailsec_skip_reason')) {
+if (!function_exists('itops_mailsec_skip_reason')) {
     /**
      * Domains that must NOT be graded or given SPF/DKIM/DMARC commands: Microsoft-managed domains, domains not
      * used for email, and third-party routing domains whose DNS belongs to a vendor (e.g. the unique
      * "<id>.smtp.codetwo.online" domain CodeTwo's signature service adds to a tenant). Returns '' for a normal domain.
      */
-    function opsh_mailsec_skip_reason(string $domain, ?array $supportedServices = null): string {
+    function itops_mailsec_skip_reason(string $domain, ?array $supportedServices = null): string {
         $d = strtolower($domain);
         if (substr($d, -16) === '.onmicrosoft.com') return 'managed by Microsoft — nothing to do';
         $VENDORS = ['codetwo.online' => 'CodeTwo', 'codetwo.com' => 'CodeTwo', 'exclaimer.net' => 'Exclaimer', 'exclaimer.cloud' => 'Exclaimer',

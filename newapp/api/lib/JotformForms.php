@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub BT149 — Jotform beyond its team members (those go through SystemConnect.php / SaasUsers.php): the forms of the
+ * ITOps BT149 — Jotform beyond its team members (those go through SystemConnect.php / SaasUsers.php): the forms of the
  * account with who owns each, and the forms you choose whose new submissions become tickets. Read only: the key needs
  * "Read Access" only, and nothing is ever written to Jotform (no webhook is created there; the app asks every ten
  * minutes instead: one call per form switched on, 144 a day, inside even the Starter plan's 1,000 calls a day).
@@ -10,9 +10,9 @@
  *             updated_at, count, new, last_submission, url) · GET /v1/form/{id}/submissions?offset&limit&filter&orderby
  *             (content: id, form_id, created_at, status, answers {qid: {name, text, type, answer, prettyFormat}}).
  *             Header "APIKEY", never in an address. The US, EU and HIPAA servers as the connection says.
- *   settings  opsh_settings.jotform_tickets = {forms: {form id: {on, title, category_id, priority, baseline, on_since,
+ *   settings  itops_settings.jotform_tickets = {forms: {form id: {on, title, category_id, priority, baseline, on_since,
  *             by}}, last_poll, last_result}
- *   table     opsh_jf_submissions: every submission looked at, once (UNIQUE form + submission), with what was done.
+ *   table     itops_jf_submissions: every submission looked at, once (UNIQUE form + submission), with what was done.
  *
  * Rules to keep:
  *   - Submissions sent before a form was switched on never make tickets: switching on records the newest submission
@@ -24,8 +24,8 @@
  */
 require_once __DIR__ . '/SystemConnect.php';
 
-if (!class_exists('OpshJotform')) {
-    final class OpshJotform
+if (!class_exists('ItopsJotform')) {
+    final class ItopsJotform
     {
         private string $key; private string $region;
         public function __construct(string $key, string $region = '')
@@ -36,7 +36,7 @@ if (!class_exists('OpshJotform')) {
         }
         public function base(): string
         {
-            if (defined('OPSH_SAAS_BASE_JOTFORM') && is_string(OPSH_SAAS_BASE_JOTFORM) && OPSH_SAAS_BASE_JOTFORM !== '') return rtrim(OPSH_SAAS_BASE_JOTFORM, '/');
+            if (defined('ITOPS_SAAS_BASE_JOTFORM') && is_string(ITOPS_SAAS_BASE_JOTFORM) && ITOPS_SAAS_BASE_JOTFORM !== '') return rtrim(ITOPS_SAAS_BASE_JOTFORM, '/');
             return $this->region === 'eu' ? 'https://eu-api.jotform.com' : ($this->region === 'hipaa' ? 'https://hipaa-api.jotform.com' : 'https://api.jotform.com');
         }
         /** Where a person opens a submission in Jotform's own pages. */
@@ -48,7 +48,7 @@ if (!class_exists('OpshJotform')) {
             for ($try = 0; $try < 2; $try++) {
                 $ch = curl_init($this->base() . $path . ($q ? '?' . http_build_query($q) : '')); $hdr = [];
                 curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPGET => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => 20,
-                    CURLOPT_HTTPHEADER => ['APIKEY: ' . $this->key, 'Accept: application/json', 'User-Agent: ' . (function_exists('opsh_app_name') ? preg_replace('/[^A-Za-z0-9 ._-]/', '', opsh_app_name()) : 'app') . ' forms reader'],
+                    CURLOPT_HTTPHEADER => ['APIKEY: ' . $this->key, 'Accept: application/json', 'User-Agent: ' . (function_exists('itops_app_name') ? preg_replace('/[^A-Za-z0-9 ._-]/', '', itops_app_name()) : 'app') . ' forms reader'],
                     CURLOPT_HEADERFUNCTION => function ($c, $line) use (&$hdr) { $p = explode(':', $line, 2); if (count($p) === 2) $hdr[strtolower(trim($p[0]))] = trim($p[1]); return strlen($line); }]);
                 $raw = curl_exec($ch);
                 if ($raw === false) { $e = curl_error($ch); curl_close($ch); throw new RuntimeException('No answer from Jotform (' . $e . ').'); }
@@ -122,17 +122,17 @@ if (!class_exists('OpshJotform')) {
     }
 }
 
-if (!function_exists('opsh_jf_client')) {
+if (!function_exists('itops_jf_client')) {
 
-    function opsh_jf_client(PDO $db): OpshJotform {
-        $cn = opsh_conn_public($db, 'jotform');
+    function itops_jf_client(PDO $db): ItopsJotform {
+        $cn = itops_conn_public($db, 'jotform');
         if (!$cn || !$cn['configured']) throw new RuntimeException('Jotform is not connected: a Super Admin enters its key under Settings → Company systems → Jotform → Set up.');
-        $c = opsh_conn_creds($db, 'jotform');
-        return new OpshJotform($c['api_key'] ?? '', $c['region'] ?? '');
+        $c = itops_conn_creds($db, 'jotform');
+        return new ItopsJotform($c['api_key'] ?? '', $c['region'] ?? '');
     }
 
-    function opsh_jf_cfg(PDO $db): array {
-        try { $q = $db->prepare('SELECT sval FROM opsh_settings WHERE skey=?'); $q->execute(['jotform_tickets']); $j = json_decode((string)$q->fetchColumn(), true); } catch (Throwable $e) { $j = null; }
+    function itops_jf_cfg(PDO $db): array {
+        try { $q = $db->prepare('SELECT sval FROM itops_settings WHERE skey=?'); $q->execute(['jotform_tickets']); $j = json_decode((string)$q->fetchColumn(), true); } catch (Throwable $e) { $j = null; }
         $j = (is_array($j) ? $j : []) + ['forms' => [], 'last_poll' => 0, 'last_result' => null];
         if (!is_array($j['forms'])) $j['forms'] = [];
         $clean = [];
@@ -140,31 +140,31 @@ if (!function_exists('opsh_jf_client')) {
         $j['forms'] = $clean;
         return $j;
     }
-    function opsh_jf_save(PDO $db, array $c): void {
-        $db->prepare('INSERT INTO opsh_settings (skey, sval) VALUES (?, ?) ON DUPLICATE KEY UPDATE sval = VALUES(sval)')->execute(['jotform_tickets', json_encode($c, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
+    function itops_jf_save(PDO $db, array $c): void {
+        $db->prepare('INSERT INTO itops_settings (skey, sval) VALUES (?, ?) ON DUPLICATE KEY UPDATE sval = VALUES(sval)')->execute(['jotform_tickets', json_encode($c, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
     }
-    function opsh_jf_any_on(array $c): bool { foreach ($c['forms'] as $f) if (!empty($f['on'])) return true; return false; }
+    function itops_jf_any_on(array $c): bool { foreach ($c['forms'] as $f) if (!empty($f['on'])) return true; return false; }
 
-    function opsh_jf_table(PDO $db): void {
-        $db->exec("CREATE TABLE IF NOT EXISTS opsh_jf_submissions (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, form_id VARCHAR(24) NOT NULL, submission_id VARCHAR(32) NOT NULL,
+    function itops_jf_table(PDO $db): void {
+        $db->exec("CREATE TABLE IF NOT EXISTS itops_jf_submissions (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, form_id VARCHAR(24) NOT NULL, submission_id VARCHAR(32) NOT NULL,
             form_title VARCHAR(190) NOT NULL DEFAULT '', submitted_at VARCHAR(25) NOT NULL DEFAULT '', submitter VARCHAR(190) NOT NULL DEFAULT '', action VARCHAR(10) NOT NULL DEFAULT '',
             reason VARCHAR(160) NOT NULL DEFAULT '', ticket_id INT UNSIGNED NULL, created_at DATETIME NOT NULL,
             UNIQUE KEY uq_jf_sub (form_id, submission_id), INDEX idx_jf_ticket (ticket_id), INDEX idx_jf_created (created_at))
             ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     }
-    function opsh_jf_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM opsh_jf_submissions LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
+    function itops_jf_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM itops_jf_submissions LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
 
     /** The forms, kept five minutes, with who owns each (matched to the team members read) and which make tickets. */
-    function opsh_jf_forms(PDO $db, bool $fresh = false): array {
+    function itops_jf_forms(PDO $db, bool $fresh = false): array {
         require_once __DIR__ . '/SafeCache.php';
-        $f = opsh_cache_dir('jotform') . '/forms.json'; $j = null;
-        if (!$fresh && ($raw = opsh_cache_read($f)) !== null) { $x = json_decode($raw, true); if (is_array($x) && time() - (int)($x['at'] ?? 0) < 300) $j = $x; }
-        if ($j === null) { $rows = opsh_jf_client($db)->forms(); $j = ['at' => time(), 'rows' => $rows]; opsh_cache_write($f, json_encode($j)); }
+        $f = itops_cache_dir('jotform') . '/forms.json'; $j = null;
+        if (!$fresh && ($raw = itops_cache_read($f)) !== null) { $x = json_decode($raw, true); if (is_array($x) && time() - (int)($x['at'] ?? 0) < 300) $j = $x; }
+        if ($j === null) { $rows = itops_jf_client($db)->forms(); $j = ['at' => time(), 'rows' => $rows]; itops_cache_write($f, json_encode($j)); }
         // owner username → the person (the team members read from Jotform carry their username as the account id)
         $who = [];
-        try { $q = $db->prepare("SELECT ext_id, email, person_name, account FROM opsh_people_links WHERE system_key='jotform' AND status='active' AND ext_id IS NOT NULL"); $q->execute();
-              foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) $who[mb_strtolower((string)$r['ext_id'])] = ['email' => opsh_conn_is_placeholder((string)$r['email']) ? '' : (string)$r['email'], 'name' => (string)($r['person_name'] ?? '')]; } catch (Throwable $e) {}
-        $cfg = opsh_jf_cfg($db);
+        try { $q = $db->prepare("SELECT ext_id, email, person_name, account FROM itops_people_links WHERE system_key='jotform' AND status='active' AND ext_id IS NOT NULL"); $q->execute();
+              foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) $who[mb_strtolower((string)$r['ext_id'])] = ['email' => itops_conn_is_placeholder((string)$r['email']) ? '' : (string)$r['email'], 'name' => (string)($r['person_name'] ?? '')]; } catch (Throwable $e) {}
+        $cfg = itops_jf_cfg($db);
         foreach ($j['rows'] as &$r) { $o = $who[mb_strtolower($r['owner'])] ?? null; $r['owner_email'] = $o['email'] ?? ''; $r['owner_name'] = $o['name'] ?? ''; $r['tickets'] = !empty($cfg['forms'][$r['id']]['on']); }
         unset($r);
         usort($j['rows'], fn($a, $b) => [$a['tickets'] ? 0 : 1, mb_strtolower($a['title'])] <=> [$b['tickets'] ? 0 : 1, mb_strtolower($b['title'])]);
@@ -172,15 +172,15 @@ if (!function_exists('opsh_jf_client')) {
     }
 
     /** The forms a person owns (by their Jotform username), for the offboarding step. null = could not be read. */
-    function opsh_jf_forms_of(PDO $db, array $usernames): ?array {
+    function itops_jf_forms_of(PDO $db, array $usernames): ?array {
         if (!$usernames) return [];
-        try { $all = opsh_jf_forms($db)['rows']; } catch (Throwable $e) { return null; }
+        try { $all = itops_jf_forms($db)['rows']; } catch (Throwable $e) { return null; }
         $u = array_flip(array_map('mb_strtolower', $usernames));
         return array_values(array_map(fn($f) => ['id' => $f['id'], 'title' => $f['title'], 'status' => $f['status'], 'count' => $f['count']], array_filter($all, fn($f) => isset($u[mb_strtolower($f['owner'])]))));
     }
 
     /** One answer as text, or null for parts of a form that are not answers (headings, buttons, pictures). */
-    function opsh_jf_answer(array $a): ?string {
+    function itops_jf_answer(array $a): ?string {
         $type = (string)($a['type'] ?? '');
         if (in_array($type, ['control_head', 'control_button', 'control_text', 'control_divider', 'control_image', 'control_collapse', 'control_pagebreak', 'control_captcha', 'control_widget_html'], true)) return null;
         if (!array_key_exists('answer', $a)) return null;
@@ -197,29 +197,29 @@ if (!function_exists('opsh_jf_client')) {
      * The check (the scheduled job every ten minutes, or "Check now"): for each form switched on, the submissions above
      * its baseline become tickets. Returns counts.
      */
-    function opsh_jf_poll(PDO $db, ?int $now = null): array {
-        $now = $now ?? time(); $cfg = opsh_jf_cfg($db);
+    function itops_jf_poll(PDO $db, ?int $now = null): array {
+        $now = $now ?? time(); $cfg = itops_jf_cfg($db);
         $res = ['at' => date('Y-m-d H:i:s', $now), 'forms' => 0, 'read' => 0, 'tickets' => 0, 'skipped' => 0, 'errors' => []];
-        if (!opsh_jf_any_on($cfg)) return $res + ['off' => true];
-        $sys = opsh_sys_get($db, 'jotform');
+        if (!itops_jf_any_on($cfg)) return $res + ['off' => true];
+        $sys = itops_sys_get($db, 'jotform');
         if (!$sys || $sys['mode'] !== 'connected') { $res['errors'][] = 'Jotform is not set to Connected'; return $res; }
-        opsh_jf_table($db);
-        try { $cl = opsh_jf_client($db); } catch (Throwable $e) { $res['errors'][] = $e->getMessage(); return $res; }
-        require_once __DIR__ . '/PhoneTickets.php';   // opsh_ph_requester: who opens a ticket nobody in the app sent
-        $ins = $db->prepare("INSERT IGNORE INTO opsh_jf_submissions (form_id, submission_id, form_title, submitted_at, submitter, action, reason, created_at) VALUES (?,?,?,?,?,'','',NOW())");
+        itops_jf_table($db);
+        try { $cl = itops_jf_client($db); } catch (Throwable $e) { $res['errors'][] = $e->getMessage(); return $res; }
+        require_once __DIR__ . '/PhoneTickets.php';   // itops_ph_requester: who opens a ticket nobody in the app sent
+        $ins = $db->prepare("INSERT IGNORE INTO itops_jf_submissions (form_id, submission_id, form_title, submitted_at, submitter, action, reason, created_at) VALUES (?,?,?,?,?,'','',NOW())");
         foreach ($cfg['forms'] as $fid => $fc) {
             if (empty($fc['on'])) continue;
             $res['forms']++;
             try { $subs = $cl->submissions((string)$fid, (string)$fc['baseline'], 500); }
             catch (Throwable $e) { $res['errors'][] = ($fc['title'] ?: 'form ' . $fid) . ': ' . $e->getMessage(); continue; }
-            $req = opsh_ph_requester($db, (int)$fc['by']);
+            $req = itops_ph_requester($db, (int)$fc['by']);
             foreach ($subs as $s) {
-                $sid = OpshJotform::txt($s['id'] ?? ''); if ($sid === '') continue;
+                $sid = ItopsJotform::txt($s['id'] ?? ''); if ($sid === '') continue;
                 $res['read']++;
                 $answers = []; $email = ''; $name = '';
                 foreach ((array)($s['answers'] ?? []) as $a) {
                     if (!is_array($a)) continue;
-                    $txt = opsh_jf_answer($a); if ($txt === null) continue;
+                    $txt = itops_jf_answer($a); if ($txt === null) continue;
                     $label = trim(strip_tags((string)($a['text'] ?? ($a['name'] ?? ''))));
                     $type = (string)($a['type'] ?? '');
                     if ($type === 'control_email' && $email === '' && filter_var($txt, FILTER_VALIDATE_EMAIL)) $email = mb_strtolower($txt);
@@ -227,59 +227,59 @@ if (!function_exists('opsh_jf_client')) {
                     $answers[] = [$label !== '' ? $label : 'Answer', $txt];
                 }
                 $who = $name !== '' && $email !== '' ? $name . ' (' . $email . ')' : ($name !== '' ? $name : ($email !== '' ? $email : 'someone who gave no name'));
-                $ins->execute([(string)$fid, $sid, mb_substr((string)$fc['title'], 0, 190), mb_substr(OpshJotform::txt($s['created_at'] ?? ''), 0, 25), mb_substr($who, 0, 190)]);
+                $ins->execute([(string)$fid, $sid, mb_substr((string)$fc['title'], 0, 190), mb_substr(ItopsJotform::txt($s['created_at'] ?? ''), 0, 25), mb_substr($who, 0, 190)]);
                 $isNew = $ins->rowCount() > 0;
                 if ($isNew) $rowId = (int)$db->lastInsertId();
                 // the baseline moves on as each submission is handled, so the next check starts after it
-                $cfg2 = opsh_jf_cfg($db); if (isset($cfg2['forms'][$fid]) && OpshJotform::cmp($sid, (string)$cfg2['forms'][$fid]['baseline']) > 0) { $cfg2['forms'][$fid]['baseline'] = $sid; opsh_jf_save($db, $cfg2); }
+                $cfg2 = itops_jf_cfg($db); if (isset($cfg2['forms'][$fid]) && ItopsJotform::cmp($sid, (string)$cfg2['forms'][$fid]['baseline']) > 0) { $cfg2['forms'][$fid]['baseline'] = $sid; itops_jf_save($db, $cfg2); }
                 if (!$isNew) continue;
-                $mark = function (string $act, string $why, ?int $tid) use ($db, $rowId) { $db->prepare('UPDATE opsh_jf_submissions SET action=?, reason=?, ticket_id=? WHERE id=?')->execute([$act, mb_substr($why, 0, 160), $tid, $rowId]); };
-                if (strtoupper(OpshJotform::txt($s['status'] ?? '')) === 'DELETED') { $mark('skipped', 'deleted in Jotform', null); $res['skipped']++; continue; }
+                $mark = function (string $act, string $why, ?int $tid) use ($db, $rowId) { $db->prepare('UPDATE itops_jf_submissions SET action=?, reason=?, ticket_id=? WHERE id=?')->execute([$act, mb_substr($why, 0, 160), $tid, $rowId]); };
+                if (strtoupper(ItopsJotform::txt($s['status'] ?? '')) === 'DELETED') { $mark('skipped', 'deleted in Jotform', null); $res['skipped']++; continue; }
                 $rid = 0; $known = false;
-                if ($email !== '') { $u = $db->prepare("SELECT id FROM opsh_users WHERE LOWER(email)=? AND status='active' LIMIT 1"); $u->execute([$email]); $rid = (int)$u->fetchColumn(); $known = $rid > 0; }
+                if ($email !== '') { $u = $db->prepare("SELECT id FROM itops_users WHERE LOWER(email)=? AND status='active' LIMIT 1"); $u->execute([$email]); $rid = (int)$u->fetchColumn(); $known = $rid > 0; }
                 if (!$rid) $rid = $req;
                 if (!$rid) { $mark('skipped', 'no active Super Admin to open the ticket', null); $res['skipped']++; continue; }
                 $title = (string)($fc['title'] ?: 'Jotform form ' . $fid);
                 $subj = mb_substr($title . ': ' . $who, 0, 250);
-                $body = 'Sent on the Jotform form "' . $title . '"' . (OpshJotform::txt($s['created_at'] ?? '') !== '' ? ' on ' . OpshJotform::txt($s['created_at']) . ' (Jotform\'s time)' : '') . ".\n\n";
+                $body = 'Sent on the Jotform form "' . $title . '"' . (ItopsJotform::txt($s['created_at'] ?? '') !== '' ? ' on ' . ItopsJotform::txt($s['created_at']) . ' (Jotform\'s time)' : '') . ".\n\n";
                 foreach ($answers as [$q, $v]) $body .= $q . ': ' . ($v !== '' ? $v : '—') . "\n";
                 $body .= "\nIn Jotform: " . $cl->web() . '/inbox/' . $fid . '/' . $sid . "\n\nThis ticket was made by the forms check; each submission makes one ticket.";
                 $body = mb_substr($body, 0, 20000);
                 $cat = (int)$fc['category_id']; $pri = in_array($fc['priority'], ['p1_critical', 'p2_high', 'p3_medium', 'p4_low'], true) ? $fc['priority'] : 'p3_medium';
-                $type = 'request'; try { require_once __DIR__ . '/ServiceMgmt.php'; $type = opsh_svc_type_for($db, $cat ?: null); } catch (Throwable $e) {}
+                $type = 'request'; try { require_once __DIR__ . '/ServiceMgmt.php'; $type = itops_svc_type_for($db, $cat ?: null); } catch (Throwable $e) {}
                 require_once __DIR__ . '/TicketNumbers.php';
                 try {
-                    [$tn, $tid] = opsh_ticket_create_numbered($db, function (string $tn) use ($db, $subj, $body, $cat, $pri, $type, $rid, $known, $name, $email) {
-                        $db->prepare("INSERT INTO opsh_tickets (ticket_number,subject,description,category_id,priority,status,ticket_type,requester_id,contact_email,contact_name) VALUES (?,?,?,?,?,'open',?,?,?,?)")
+                    [$tn, $tid] = itops_ticket_create_numbered($db, function (string $tn) use ($db, $subj, $body, $cat, $pri, $type, $rid, $known, $name, $email) {
+                        $db->prepare("INSERT INTO itops_tickets (ticket_number,subject,description,category_id,priority,status,ticket_type,requester_id,contact_email,contact_name) VALUES (?,?,?,?,?,'open',?,?,?,?)")
                            ->execute([$tn, $subj, $body, $cat ?: null, $pri, $type, $rid, $known || $email === '' ? null : $email, $known ? null : ($name !== '' ? $name : null)]);
                         return [$tn, (int)$db->lastInsertId()];
                     });
                 } catch (Throwable $e) { $mark('skipped', 'the ticket could not be made: ' . $e->getMessage(), null); $res['skipped']++; continue; }
-                if (!function_exists('opsh_ticket_sla_fill')) require_once __DIR__ . '/BusinessHours.php';
-                try { opsh_ticket_sla_fill($db, $tid); } catch (Throwable $e) {}
-                try { require_once __DIR__ . '/TicketRouting.php'; opsh_tr_on_created($db, $tid, null, 'jotform'); } catch (Throwable $e) {}
+                if (!function_exists('itops_ticket_sla_fill')) require_once __DIR__ . '/BusinessHours.php';
+                try { itops_ticket_sla_fill($db, $tid); } catch (Throwable $e) {}
+                try { require_once __DIR__ . '/TicketRouting.php'; itops_tr_on_created($db, $tid, null, 'jotform'); } catch (Throwable $e) {}
                 $mark('ticket', $known ? 'sent by a person of the app' : '', $tid); $res['tickets']++;
                 if (function_exists('audit_log')) audit_log('ticket_created', 'ticket', $tid, $tn, null, ['From' => 'Jotform form', 'Form' => $title, 'Submission' => $sid, 'Sent by' => $who]);
             }
         }
-        $c = opsh_jf_cfg($db); $c['last_poll'] = $now; $c['last_result'] = $res; opsh_jf_save($db, $c);
+        $c = itops_jf_cfg($db); $c['last_poll'] = $now; $c['last_result'] = $res; itops_jf_save($db, $c);
         return $res;
     }
 
     /** What a screen may see: the forms switched on, and the submissions looked at lately. */
-    function opsh_jf_public(PDO $db, int $recent = 40): array {
-        $c = opsh_jf_cfg($db); $rows = [];
-        if (opsh_jf_ready($db)) {
-            $q = $db->query('SELECT s.*, t.ticket_number, t.status AS ticket_status FROM opsh_jf_submissions s LEFT JOIN opsh_tickets t ON t.id=s.ticket_id ORDER BY s.id DESC LIMIT ' . max(1, min(200, $recent)));
+    function itops_jf_public(PDO $db, int $recent = 40): array {
+        $c = itops_jf_cfg($db); $rows = [];
+        if (itops_jf_ready($db)) {
+            $q = $db->query('SELECT s.*, t.ticket_number, t.status AS ticket_status FROM itops_jf_submissions s LEFT JOIN itops_tickets t ON t.id=s.ticket_id ORDER BY s.id DESC LIMIT ' . max(1, min(200, $recent)));
             foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) $rows[] = ['form_id' => (string)$r['form_id'], 'form' => (string)$r['form_title'], 'submission' => (string)$r['submission_id'], 'at' => (string)$r['submitted_at'],
                 'who' => (string)$r['submitter'], 'action' => (string)$r['action'], 'reason' => (string)$r['reason'], 'ticket_id' => $r['ticket_id'] !== null ? (int)$r['ticket_id'] : null,
                 'ticket_number' => (string)($r['ticket_number'] ?? ''), 'ticket_status' => (string)($r['ticket_status'] ?? '')];
         }
         $forms = [];
         foreach ($c['forms'] as $id => $f) {
-            $by = ''; if ((int)$f['by']) { try { $q = $db->prepare('SELECT display_name FROM opsh_users WHERE id=?'); $q->execute([(int)$f['by']]); $by = (string)$q->fetchColumn(); } catch (Throwable $e) {} }
+            $by = ''; if ((int)$f['by']) { try { $q = $db->prepare('SELECT display_name FROM itops_users WHERE id=?'); $q->execute([(int)$f['by']]); $by = (string)$q->fetchColumn(); } catch (Throwable $e) {} }
             $forms[] = ['id' => (string)$id, 'on' => (bool)$f['on'], 'title' => (string)$f['title'], 'category_id' => (int)$f['category_id'], 'priority' => (string)$f['priority'], 'on_since' => $f['on_since'], 'by_name' => $by];
         }
-        return ['forms' => $forms, 'last_poll' => $c['last_poll'] ? date('Y-m-d H:i:s', (int)$c['last_poll']) : '', 'last_result' => $c['last_result'], 'recent' => $rows, 'ready' => opsh_jf_ready($db)];
+        return ['forms' => $forms, 'last_poll' => $c['last_poll'] ? date('Y-m-d H:i:s', (int)$c['last_poll']) : '', 'last_result' => $c['last_result'], 'recent' => $rows, 'ready' => itops_jf_ready($db)];
     }
 }

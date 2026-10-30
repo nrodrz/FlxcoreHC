@@ -1,5 +1,7 @@
-# OpsHub — API .htaccess
+# ITOps — API .htaccess
 RewriteEngine On
+# 0001-A002: the code folders are only included by index.php, never requested over the web
+RewriteRule ^(lib|routes|migrations)(/|$) - [F,L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^(.*)$ index.php [QSA,L]
 

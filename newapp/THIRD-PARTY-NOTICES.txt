@@ -1,6 +1,6 @@
-OpsHub — third-party components
+ITOps — third-party components
 ================================
-OpsHub is proprietary software (see LICENSE.txt). It ships with the open-source
+ITOps is proprietary software (see LICENSE.txt). It ships with the open-source
 components below, each under its own license. The full license texts are in
 vendor/LICENSES.txt and public/teams/TEAMS-JS-LICENSE.txt. Each component remains the property of its authors.
 

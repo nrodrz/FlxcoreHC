@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub BT134 — personal computers: protected with Microsoft Defender, by choice, without Intune enrollment.
+ * ITOps BT134 — personal computers: protected with Microsoft Defender, by choice, without Intune enrollment.
  *
  * The person receives a link (public page pc.html). There they read what the organization will and will not see,
  * agree by typing their name, and run a read-only check that reports their computer's Windows edition and Defender
@@ -28,11 +28,11 @@
  * and reported. Permission: DeviceManagementConfiguration.ReadWrite.All (already used), Group.ReadWrite.All (group).
  */
 require_once __DIR__ . '/Secrets.php';
-if (!function_exists('opsh_pc_table')) {
-    if (!defined('OPSH_PC_LINK_DAYS')) define('OPSH_PC_LINK_DAYS', 60);
+if (!function_exists('itops_pc_table')) {
+    if (!defined('ITOPS_PC_LINK_DAYS')) define('ITOPS_PC_LINK_DAYS', 60);
 
-    function opsh_pc_table(PDO $db): void {
-        $db->exec("CREATE TABLE IF NOT EXISTS opsh_pc_people (
+    function itops_pc_table(PDO $db): void {
+        $db->exec("CREATE TABLE IF NOT EXISTS itops_pc_people (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             email VARCHAR(190) NOT NULL,
             person_name VARCHAR(190) NOT NULL DEFAULT '',
@@ -46,12 +46,12 @@ if (!function_exists('opsh_pc_table')) {
             UNIQUE KEY uq_token (token_hash), KEY k_email (email)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     }
-    function opsh_pc_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM opsh_pc_people LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
+    function itops_pc_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM itops_pc_people LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
 
     // ───────────────────────────── the program's settings ─────────────────────────────
 
     /** The text the person agrees to. Plain text; {{org}} becomes the organization's name. */
-    function opsh_pc_default_consent(): string {
+    function itops_pc_default_consent(): string {
         return "Protecting my own computer with Microsoft Defender — {{org}}\n\n"
             . "I choose to protect my personal computer, which I use for work, with Microsoft Defender managed by {{org}}.\n\n"
             . "What {{org}} will do:\n"
@@ -63,56 +63,56 @@ if (!function_exists('opsh_pc_table')) {
             . "• It records security activity (programs started, files changed, network connections) to detect attacks. Security staff of {{org}} can see that activity in Microsoft Defender when they look into an alert, and can disconnect the computer from the network during an attack.\n\n"
             . "I can withdraw at any time on this page. {{org}} then gives me the file that removes Defender's connection; Microsoft Defender Antivirus stays on my computer as part of Windows.";
     }
-    function opsh_pc_cfg(PDO $db): array {
-        $v = []; try { $q = $db->prepare("SELECT sval FROM opsh_settings WHERE skey='pc_program'"); $q->execute(); $v = json_decode((string)$q->fetchColumn(), true) ?: []; } catch (Throwable $e) {}
-        return $v + ['consent' => '', 'consent_version' => 1, 'steps' => [], 'group_id' => '', 'group_name' => '', 'policies' => [], 'av' => opsh_pc_av_defaults(), 'fw' => opsh_pc_fw_defaults()];
+    function itops_pc_cfg(PDO $db): array {
+        $v = []; try { $q = $db->prepare("SELECT sval FROM itops_settings WHERE skey='pc_program'"); $q->execute(); $v = json_decode((string)$q->fetchColumn(), true) ?: []; } catch (Throwable $e) {}
+        return $v + ['consent' => '', 'consent_version' => 1, 'steps' => [], 'group_id' => '', 'group_name' => '', 'policies' => [], 'av' => itops_pc_av_defaults(), 'fw' => itops_pc_fw_defaults()];
     }
-    function opsh_pc_cfg_put(PDO $db, array $c): void {
-        $db->prepare("INSERT INTO opsh_settings (skey, sval) VALUES ('pc_program', ?) ON DUPLICATE KEY UPDATE sval = VALUES(sval)")->execute([json_encode($c, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
+    function itops_pc_cfg_put(PDO $db, array $c): void {
+        $db->prepare("INSERT INTO itops_settings (skey, sval) VALUES ('pc_program', ?) ON DUPLICATE KEY UPDATE sval = VALUES(sval)")->execute([json_encode($c, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
     }
-    function opsh_pc_consent_text(PDO $db): string {
-        $c = opsh_pc_cfg($db); $t = trim((string)$c['consent']) !== '' ? (string)$c['consent'] : opsh_pc_default_consent();
-        if (!function_exists('opsh_org_name')) @include_once __DIR__ . '/Brand.php';
-        $org = ''; try { $org = function_exists('opsh_org_name') ? trim(opsh_org_name($db)) : ''; } catch (Throwable $e) {}
+    function itops_pc_consent_text(PDO $db): string {
+        $c = itops_pc_cfg($db); $t = trim((string)$c['consent']) !== '' ? (string)$c['consent'] : itops_pc_default_consent();
+        if (!function_exists('itops_org_name')) @include_once __DIR__ . '/Brand.php';
+        $org = ''; try { $org = function_exists('itops_org_name') ? trim(itops_org_name($db)) : ''; } catch (Throwable $e) {}
         return str_replace('{{org}}', $org !== '' ? $org : 'the organization', $t);
     }
 
     /** Onboarding / offboarding packages, kept wrapped (they let a computer join the tenant's Defender). */
-    function opsh_pc_pkg_kinds(): array {
+    function itops_pc_pkg_kinds(): array {
         return ['win_on' => ['Windows onboarding package', 'WindowsDefenderATPOnboardingPackage.zip'], 'mac_on' => ['Mac onboarding package', 'WindowsDefenderATPOnboardingPackage.zip'],
                 'win_off' => ['Windows offboarding package', 'WindowsDefenderATPOffboardingPackage.zip']];
     }
-    function opsh_pc_pkg_get(PDO $db, string $k): ?array {
-        try { $q = $db->prepare('SELECT sval FROM opsh_settings WHERE skey=?'); $q->execute(['pc_pkg_' . $k]); $v = json_decode((string)$q->fetchColumn(), true); } catch (Throwable $e) { return null; }
+    function itops_pc_pkg_get(PDO $db, string $k): ?array {
+        try { $q = $db->prepare('SELECT sval FROM itops_settings WHERE skey=?'); $q->execute(['pc_pkg_' . $k]); $v = json_decode((string)$q->fetchColumn(), true); } catch (Throwable $e) { return null; }
         return is_array($v) && !empty($v['data']) ? $v : null;
     }
-    function opsh_pc_pkg_put(PDO $db, string $k, string $name, string $bytes, string $by): void {
-        if (!isset(opsh_pc_pkg_kinds()[$k])) throw new InvalidArgumentException('Unknown package.');
+    function itops_pc_pkg_put(PDO $db, string $k, string $name, string $bytes, string $by): void {
+        if (!isset(itops_pc_pkg_kinds()[$k])) throw new InvalidArgumentException('Unknown package.');
         if ($bytes === '' || strlen($bytes) > 2 * 1024 * 1024) throw new InvalidArgumentException('The package must be a file of up to 2 MB.');
         $isZip = substr($bytes, 0, 4) === "PK\x03\x04";
         $isScript = !$isZip && !preg_match('/[\x00-\x08\x0E-\x1F]/', substr($bytes, 0, 4096));
         if (!$isZip && !$isScript) throw new InvalidArgumentException('That is not the package Microsoft gives (a .zip, or its script).');
-        $name = preg_replace('/[^A-Za-z0-9._ -]/', '', basename($name)) ?: opsh_pc_pkg_kinds()[$k][1];
-        $w = function_exists('opsh_secret_wrap_checked') ? opsh_secret_wrap_checked(base64_encode($bytes)) : null;
+        $name = preg_replace('/[^A-Za-z0-9._ -]/', '', basename($name)) ?: itops_pc_pkg_kinds()[$k][1];
+        $w = function_exists('itops_secret_wrap_checked') ? itops_secret_wrap_checked(base64_encode($bytes)) : null;
         if ($w === null) throw new RuntimeException('This installation cannot store secrets (VAULT_ENCRYPTION_KEY in config.php). The package was not saved.');
-        $db->prepare("INSERT INTO opsh_settings (skey, sval) VALUES (?, ?) ON DUPLICATE KEY UPDATE sval = VALUES(sval)")
+        $db->prepare("INSERT INTO itops_settings (skey, sval) VALUES (?, ?) ON DUPLICATE KEY UPDATE sval = VALUES(sval)")
            ->execute(['pc_pkg_' . $k, json_encode(['name' => $name, 'size' => strlen($bytes), 'at' => date('c'), 'by' => $by, 'data' => $w])]);
     }
-    function opsh_pc_pkg_bytes(array $p): string { return (string)base64_decode(opsh_secret_unwrap((string)$p['data']), true); }
-    function opsh_pc_pkg_public(PDO $db): array {
-        $o = []; foreach (opsh_pc_pkg_kinds() as $k => [$label]) { $p = opsh_pc_pkg_get($db, $k); $o[$k] = ['label' => $label, 'saved' => (bool)$p, 'name' => $p['name'] ?? '', 'size' => (int)($p['size'] ?? 0), 'at' => $p['at'] ?? null, 'by' => $p['by'] ?? '']; }
+    function itops_pc_pkg_bytes(array $p): string { return (string)base64_decode(itops_secret_unwrap((string)$p['data']), true); }
+    function itops_pc_pkg_public(PDO $db): array {
+        $o = []; foreach (itops_pc_pkg_kinds() as $k => [$label]) { $p = itops_pc_pkg_get($db, $k); $o[$k] = ['label' => $label, 'saved' => (bool)$p, 'name' => $p['name'] ?? '', 'size' => (int)($p['size'] ?? 0), 'at' => $p['at'] ?? null, 'by' => $p['by'] ?? '']; }
         return $o;
     }
 
     // ───────────────────────────── people and their links ─────────────────────────────
 
-    function opsh_pc_new_token(): string { return bin2hex(random_bytes(24)); }
-    function opsh_pc_by_token(PDO $db, string $tok): ?array {
+    function itops_pc_new_token(): string { return bin2hex(random_bytes(24)); }
+    function itops_pc_by_token(PDO $db, string $tok): ?array {
         if (!preg_match('/^[a-f0-9]{48}$/', $tok)) return null;
-        $q = $db->prepare('SELECT * FROM opsh_pc_people WHERE token_hash=?'); $q->execute([hash('sha256', $tok)]); $r = $q->fetch(PDO::FETCH_ASSOC);
+        $q = $db->prepare('SELECT * FROM itops_pc_people WHERE token_hash=?'); $q->execute([hash('sha256', $tok)]); $r = $q->fetch(PDO::FETCH_ASSOC);
         return $r ?: null;
     }
-    function opsh_pc_row(array $r): array {
+    function itops_pc_row(array $r): array {
         $rep = $r['report'] ? (json_decode((string)$r['report'], true) ?: null) : null;
         return ['id' => (int)$r['id'], 'email' => (string)$r['email'], 'name' => (string)$r['person_name'], 'status' => (string)$r['status'],
                 'invited_at' => $r['invited_at'], 'expires_at' => $r['expires_at'], 'consent_at' => $r['consent_at'], 'consent_name' => (string)($r['consent_name'] ?? ''),
@@ -122,7 +122,7 @@ if (!function_exists('opsh_pc_table')) {
     }
 
     /** Which way a reported computer goes: pro (Defender for Endpoint), home (built-in Defender only), unknown. */
-    function opsh_pc_path_of(array $rep): string {
+    function itops_pc_path_of(array $rep): string {
         $e = strtolower((string)($rep['edition'] ?? ''));
         if ($e === '') return 'unknown';
         if (preg_match('/^(core|home)/', $e)) return 'home';
@@ -135,7 +135,7 @@ if (!function_exists('opsh_pc_table')) {
      * Windows Security Center's productState is decoded the way it is commonly read: the middle byte 0x10/0x11 = on,
      * the low byte 0x00 = definitions up to date.
      */
-    function opsh_pc_clean_report($in): array {
+    function itops_pc_clean_report($in): array {
         if (!is_array($in)) throw new InvalidArgumentException('The check sent nothing usable.');
         $s = fn($v, $n = 120) => is_scalar($v) ? mb_substr(trim(preg_replace('/[\x00-\x1F\x7F]/u', ' ', (string)$v)), 0, $n) : '';
         $b = fn($v) => $v === true || $v === 1 || $v === '1' || (is_string($v) && strtolower($v) === 'true') ? true : (($v === false || $v === 0 || $v === '0' || (is_string($v) && strtolower($v) === 'false')) ? false : null);
@@ -155,7 +155,7 @@ if (!function_exists('opsh_pc_table')) {
     }
 
     /** What needs doing on a reported computer, in words. */
-    function opsh_pc_problems(array $rep): array {
+    function itops_pc_problems(array $rep): array {
         $d = $rep['defender'] ?? []; $p = [];
         $others = array_values(array_filter($rep['products'] ?? [], fn($x) => !preg_match('/defender/i', (string)$x['name']) && $x['on']));
         if (($d['antivirus'] ?? null) === false || ($d['service'] ?? null) === false) $p[] = $others ? 'Microsoft Defender is off because ' . $others[0]['name'] . ' is the active antivirus' : 'Microsoft Defender Antivirus is off';
@@ -173,7 +173,7 @@ if (!function_exists('opsh_pc_table')) {
      * The antivirus rules the screen edits: key => [CSP setting (device_vendor_msft_policy_config_defender_<key>), label,
      * kind (choice | int | list), options [value => label] for a choice, [min, max] for an int].
      */
-    function opsh_pc_av_fields(): array {
+    function itops_pc_av_fields(): array {
         $onoff = [1 => 'On', 0 => 'Off'];
         return [
             'allowrealtimemonitoring' => ['Real-time protection', 'choice', $onoff],
@@ -196,21 +196,21 @@ if (!function_exists('opsh_pc_table')) {
             'excludedprocesses' => ['Programs whose files are not scanned', 'list', null],
         ];
     }
-    function opsh_pc_av_defaults(): array {
+    function itops_pc_av_defaults(): array {
         return ['allowrealtimemonitoring' => 1, 'allowbehaviormonitoring' => 1, 'allowcloudprotection' => 1, 'cloudblocklevel' => 2, 'cloudextendedtimeout' => 50,
                 'puaprotection' => 1, 'enablenetworkprotection' => 2, 'allowioavprotection' => 1, 'allowarchivescanning' => 1, 'allowemailscanning' => 1,
                 'allowscanningnetworkfiles' => 1, 'submitsamplesconsent' => 1, 'signatureupdateinterval' => 4, 'schedulequickscantime' => 720, 'allowuseruiaccess' => 1,
                 'excludedpaths' => [], 'excludedextensions' => [], 'excludedprocesses' => []];
     }
     /** Firewall: the three network profiles on, inbound connections blocked unless allowed. */
-    function opsh_pc_fw_defaults(): array { return ['enable' => true, 'block_inbound' => true]; }
+    function itops_pc_fw_defaults(): array { return ['enable' => true, 'block_inbound' => true]; }
 
     /** Check the rules typed on the screen. Returns the clean set. Throws InvalidArgumentException. */
-    function opsh_pc_av_clean($in): array {
+    function itops_pc_av_clean($in): array {
         if (!is_array($in)) throw new InvalidArgumentException('The rules are not in the expected form.');
         $out = [];
-        foreach (opsh_pc_av_fields() as $k => [$label, $kind, $opt]) {
-            $v = $in[$k] ?? opsh_pc_av_defaults()[$k];
+        foreach (itops_pc_av_fields() as $k => [$label, $kind, $opt]) {
+            $v = $in[$k] ?? itops_pc_av_defaults()[$k];
             if ($kind === 'choice') { if (!is_numeric($v) || !array_key_exists((int)$v, $opt)) throw new InvalidArgumentException('Choose a value for "' . $label . '".'); $out[$k] = (int)$v; }
             elseif ($kind === 'int') { if (!is_numeric($v) || (int)$v < $opt[0] || (int)$v > $opt[1]) throw new InvalidArgumentException('"' . $label . '" must be between ' . $opt[0] . ' and ' . $opt[1] . '.'); $out[$k] = (int)$v; }
             else {
@@ -235,25 +235,25 @@ if (!function_exists('opsh_pc_table')) {
         return $out;
     }
     /** For the Audit Log: what a rule set says, in words. */
-    function opsh_pc_av_view(array $av): array {
-        $o = []; foreach (opsh_pc_av_fields() as $k => [$label, $kind, $opt]) { $v = $av[$k] ?? null;
+    function itops_pc_av_view(array $av): array {
+        $o = []; foreach (itops_pc_av_fields() as $k => [$label, $kind, $opt]) { $v = $av[$k] ?? null;
             $o[$label] = $kind === 'choice' ? (string)($opt[(int)$v] ?? $v) : ($kind === 'list' ? (implode(', ', (array)$v) ?: '(none)') : (string)$v); }
         return $o;
     }
 
     // ───────────────────────────── Microsoft: the group, the templates, the policies ─────────────────────────────
 
-    function opsh_pc_policy_names(): array {
-        $app = function_exists('opsh_app_name') ? opsh_app_name() : 'OpsHub';
+    function itops_pc_policy_names(): array {
+        $app = function_exists('itops_app_name') ? itops_app_name() : 'ITOps';
         return ['av' => $app . ' personal computers — Antivirus', 'fw' => $app . ' personal computers — Firewall'];
     }
 
     /** Create the dynamic device group of computers managed by Defender only. Returns [id, name]. */
-    function opsh_pc_make_group(): array {
-        $app = function_exists('opsh_app_name') ? opsh_app_name() : 'OpsHub';
+    function itops_pc_make_group(): array {
+        $app = function_exists('itops_app_name') ? itops_app_name() : 'ITOps';
         $name = $app . ' - Personal computers (Defender only)';
         $nick = 'pc-defender-' . substr(bin2hex(random_bytes(4)), 0, 8);
-        $g = opsh_graph_send('POST', 'groups', ['displayName' => $name, 'description' => 'Computers onboarded to Microsoft Defender and not enrolled in Intune (security settings management). Created by ' . $app . '.',
+        $g = itops_graph_send('POST', 'groups', ['displayName' => $name, 'description' => 'Computers onboarded to Microsoft Defender and not enrolled in Intune (security settings management). Created by ' . $app . '.',
             'mailEnabled' => false, 'mailNickname' => $nick, 'securityEnabled' => true, 'groupTypes' => ['DynamicMembership'],
             'membershipRule' => '(device.managementType -eq "MicrosoftSense")', 'membershipRuleProcessingState' => 'On']);
         if (empty($g['id'])) throw new RuntimeException('Microsoft did not return the new group.');
@@ -261,8 +261,8 @@ if (!function_exists('opsh_pc_table')) {
     }
 
     /** The tenant's template of a family for Windows with Defender (microsoftSense) technology. */
-    function opsh_pc_template(string $family, string $display): array {
-        $r = opsh_graph_get('deviceManagement/configurationPolicyTemplates?$top=100&$filter=' . rawurlencode("templateFamily eq '" . $family . "'"), 'beta');
+    function itops_pc_template(string $family, string $display): array {
+        $r = itops_graph_get('deviceManagement/configurationPolicyTemplates?$top=100&$filter=' . rawurlencode("templateFamily eq '" . $family . "'"), 'beta');
         $best = null;
         foreach ((array)($r['value'] ?? []) as $t) {
             if (!is_array($t) || strtolower((string)($t['platforms'] ?? '')) !== 'windows10') continue;
@@ -275,7 +275,7 @@ if (!function_exists('opsh_pc_table')) {
         $tid = (string)$best['id']; $sts = [];
         $url = 'deviceManagement/configurationPolicyTemplates/' . rawurlencode($tid) . '/settingTemplates?$expand=settingDefinitions&$top=500';
         for ($n = 0; $n < 6 && $url !== ''; $n++) {
-            $p = opsh_graph_get($url, 'beta');
+            $p = itops_graph_get($url, 'beta');
             foreach ((array)($p['value'] ?? []) as $s) if (is_array($s)) $sts[] = $s;
             $nx = (string)($p['@odata.nextLink'] ?? '');
             $url = preg_match('#^https://graph\.microsoft\.com/beta/(.+)$#', $nx, $m) ? $m[1] : '';
@@ -284,7 +284,7 @@ if (!function_exists('opsh_pc_table')) {
     }
 
     /** One setting instance from the template, or null when the template does not have it. $value: int|bool|string[] */
-    function opsh_pc_instance(array $tpl, string $defId, $value): ?array {
+    function itops_pc_instance(array $tpl, string $defId, $value): ?array {
         foreach ($tpl['settings'] as $st) {
             $it = (array)($st['settingInstanceTemplate'] ?? []);
             if (strcasecmp((string)($it['settingDefinitionId'] ?? ''), $defId) !== 0) continue;
@@ -324,22 +324,22 @@ if (!function_exists('opsh_pc_table')) {
     }
 
     /** The policy body for 'av' or 'fw'. Returns [body, skipped settings]. */
-    function opsh_pc_policy_body(string $which, array $cfg): array {
-        $names = opsh_pc_policy_names(); $app = function_exists('opsh_app_name') ? opsh_app_name() : 'OpsHub';
+    function itops_pc_policy_body(string $which, array $cfg): array {
+        $names = itops_pc_policy_names(); $app = function_exists('itops_app_name') ? itops_app_name() : 'ITOps';
         $settings = []; $skipped = [];
         if ($which === 'av') {
-            $tpl = opsh_pc_template('endpointSecurityAntivirus', 'Microsoft Defender Antivirus');
-            foreach (opsh_pc_av_fields() as $k => [$label, $kind]) {
+            $tpl = itops_pc_template('endpointSecurityAntivirus', 'Microsoft Defender Antivirus');
+            foreach (itops_pc_av_fields() as $k => [$label, $kind]) {
                 $v = $cfg['av'][$k] ?? null; if ($kind === 'list' && !$v) continue;
-                $inst = opsh_pc_instance($tpl, 'device_vendor_msft_policy_config_defender_' . $k, $v);
+                $inst = itops_pc_instance($tpl, 'device_vendor_msft_policy_config_defender_' . $k, $v);
                 if ($inst) $settings[] = ['@odata.type' => '#microsoft.graph.deviceManagementConfigurationSetting', 'settingInstance' => $inst]; else $skipped[] = $label;
             }
             $desc = 'Antivirus rules for personal computers protected by Microsoft Defender (not enrolled in Intune). Kept by ' . $app . ': change them there.';
         } else {
-            $tpl = opsh_pc_template('endpointSecurityFirewall', 'Windows Firewall');
+            $tpl = itops_pc_template('endpointSecurityFirewall', 'Windows Firewall');
             foreach (['domain', 'private', 'public'] as $pf) {
                 foreach ([['enablefirewall', (bool)$cfg['fw']['enable'], 'Firewall on (' . $pf . ')'], ['defaultinboundaction', $cfg['fw']['block_inbound'] ? 1 : 0, 'Block inbound (' . $pf . ')']] as [$s, $v, $label]) {
-                    $inst = opsh_pc_instance($tpl, 'vendor_msft_firewall_mdmstore_' . $pf . 'profile_' . $s, $v) ?? opsh_pc_instance($tpl, 'device_vendor_msft_firewall_mdmstore_' . $pf . 'profile_' . $s, $v);
+                    $inst = itops_pc_instance($tpl, 'vendor_msft_firewall_mdmstore_' . $pf . 'profile_' . $s, $v) ?? itops_pc_instance($tpl, 'device_vendor_msft_firewall_mdmstore_' . $pf . 'profile_' . $s, $v);
                     if ($inst) $settings[] = ['@odata.type' => '#microsoft.graph.deviceManagementConfigurationSetting', 'settingInstance' => $inst]; else $skipped[] = $label;
                 }
             }
@@ -354,28 +354,28 @@ if (!function_exists('opsh_pc_table')) {
      * Create the policy (or replace its settings when it exists) and assign it to the group. Returns
      * ['id', 'created' => bool, 'skipped' => [...]].
      */
-    function opsh_pc_push(string $which, array $cfg): array {
+    function itops_pc_push(string $which, array $cfg): array {
         if (!preg_match('/^[0-9a-f-]{36}$/i', (string)$cfg['group_id'])) throw new InvalidArgumentException('Create the device group first (step 3).');
-        [$body, $skipped] = opsh_pc_policy_body($which, $cfg);
+        [$body, $skipped] = itops_pc_policy_body($which, $cfg);
         $id = (string)($cfg['policies'][$which]['id'] ?? ''); $created = false;
         if ($id !== '') {
-            try { opsh_graph_get('deviceManagement/configurationPolicies/' . rawurlencode($id) . '?$select=id', 'beta'); }
+            try { itops_graph_get('deviceManagement/configurationPolicies/' . rawurlencode($id) . '?$select=id', 'beta'); }
             catch (Throwable $e) { if (preg_match('/HTTP 404/', $e->getMessage())) $id = ''; else throw $e; }
         }
-        if ($id === '') { $r = opsh_graph_send('POST', 'deviceManagement/configurationPolicies', $body, 'beta'); $id = (string)($r['id'] ?? ''); $created = true;
+        if ($id === '') { $r = itops_graph_send('POST', 'deviceManagement/configurationPolicies', $body, 'beta'); $id = (string)($r['id'] ?? ''); $created = true;
             if ($id === '') throw new RuntimeException('Microsoft did not return the new policy.'); }
-        else opsh_graph_send('PUT', 'deviceManagement/configurationPolicies/' . rawurlencode($id), $body, 'beta');
-        opsh_graph_send('POST', 'deviceManagement/configurationPolicies/' . rawurlencode($id) . '/assign',
+        else itops_graph_send('PUT', 'deviceManagement/configurationPolicies/' . rawurlencode($id), $body, 'beta');
+        itops_graph_send('POST', 'deviceManagement/configurationPolicies/' . rawurlencode($id) . '/assign',
             ['assignments' => [['target' => ['@odata.type' => '#microsoft.graph.groupAssignmentTarget', 'groupId' => (string)$cfg['group_id']]]]], 'beta');
         return ['id' => $id, 'created' => $created, 'skipped' => $skipped];
     }
 
     /** Has someone changed the policy in Intune since this app last saved it? */
-    function opsh_pc_policy_state(array $cfg): array {
+    function itops_pc_policy_state(array $cfg): array {
         $o = [];
         foreach (['av', 'fw'] as $w) {
             $p = $cfg['policies'][$w] ?? null; if (!$p || empty($p['id'])) { $o[$w] = null; continue; }
-            try { $r = opsh_graph_get('deviceManagement/configurationPolicies/' . rawurlencode((string)$p['id']) . '?$select=id,name,lastModifiedDateTime&$expand=assignments', 'beta');
+            try { $r = itops_graph_get('deviceManagement/configurationPolicies/' . rawurlencode((string)$p['id']) . '?$select=id,name,lastModifiedDateTime&$expand=assignments', 'beta');
                 $mod = strtotime((string)($r['lastModifiedDateTime'] ?? '')); $ours = strtotime((string)($p['at'] ?? ''));
                 $groups = []; foreach ((array)($r['assignments'] ?? []) as $a) if (!empty($a['target']['groupId'])) $groups[] = (string)$a['target']['groupId'];
                 $o[$w] = ['exists' => true, 'changed_in_intune' => $mod && $ours && $mod > $ours + 300, 'modified' => $r['lastModifiedDateTime'] ?? null, 'assigned' => in_array((string)$cfg['group_id'], $groups, true)];
@@ -388,11 +388,11 @@ if (!function_exists('opsh_pc_table')) {
      * The computers of the people in the program as Defender sees them (advanced hunting, read only), matched by the
      * computer name their check reported. Only those computers are asked about.
      */
-    function opsh_pc_defender_devices(array $names): array {
+    function itops_pc_defender_devices(array $names): array {
         $names = array_values(array_unique(array_filter(array_map(fn($n) => strtolower((string)$n), $names), fn($n) => preg_match('/^[a-z0-9._-]{1,63}$/', $n))));
         if (!$names) return [];
         $list = implode(',', array_map(fn($n) => '"' . $n . '"', array_slice($names, 0, 300)));
-        $r = opsh_graph_send('POST', 'security/runHuntingQuery', ['Query' => 'DeviceInfo | where Timestamp > ago(30d)'
+        $r = itops_graph_send('POST', 'security/runHuntingQuery', ['Query' => 'DeviceInfo | where Timestamp > ago(30d)'
             . ' | extend Short = tolower(tostring(split(DeviceName, ".")[0])) | where Short in (' . $list . ')'
             . ' | summarize arg_max(Timestamp, DeviceName, OSPlatform, OnboardingStatus) by DeviceId, Short'
             . ' | join kind=leftouter (DeviceTvmSecureConfigurationAssessment | where ConfigurationId in ("scid-2010", "scid-2011", "scid-2012")'
@@ -411,7 +411,7 @@ if (!function_exists('opsh_pc_table')) {
     // ───────────────────────────── the check the person runs ─────────────────────────────
 
     /** The PowerShell check, for one person's link. Read only: it changes nothing on the computer. */
-    function opsh_pc_check_script(string $base, string $token): string {
+    function itops_pc_check_script(string $base, string $token): string {
         $u = rtrim($base, '/') . '/api/public_pc/report?t=' . $token;
         return <<<PS
 # Read-only check of this computer's protection. It changes nothing. It sends the result to your organization.

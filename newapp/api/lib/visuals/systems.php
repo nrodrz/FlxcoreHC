@@ -2,16 +2,16 @@
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /* BT51: the ONE list of systems both Help Center visuals show (the Integration map and Company systems: the whole
    process). Each page draws every system on this list, and the systems added under Settings → Company systems join it
-   (HelpVisuals.php, opsh_help_visual_systems()). To add a system to both pages, add it here once.
+   (HelpVisuals.php, itops_help_visual_systems()). To add a system to both pages, add it here once.
    Requested directly, this file prints nothing.
 
-   status   acts      OpsHub acts in it by itself
-            reads     connected, OpsHub reads it (changes stay in that system)
-            hand      tracked by hand: a person does the work there and answers in OpsHub; a connection is planned
+   status   acts      ITOps acts in it by itself
+            reads     connected, ITOps reads it (changes stay in that system)
+            hand      tracked by hand: a person does the work there and answers in ITOps; a connection is planned
             planned   planned: not in use yet
             indirect  no connection: it follows Microsoft 365 by itself
    role     people    a person has an account there, so it takes part in onboarding, offboarding and verification
-            source    it tells OpsHub who joins and who leaves
+            source    it tells ITOps who joins and who leaves
             follows   it reads Microsoft 365 by itself
             infra     servers and hosting: no personal accounts
    flows    the lines on the Integration map: [from, to, direction, text]; "hub parts" are lifecycle, accounts, links,
@@ -20,7 +20,7 @@
    No port numbers, addresses or keys belong here: this list is shown to everyone a page is given to. */
 return [
  ['id' => 'm365', 'name' => 'Microsoft 365', 'status' => 'acts', 'role' => 'people',
-  'what' => 'Accounts, licenses, groups, devices and security for the whole organization (Entra ID, Intune, Defender, Teams). The list of people in OpsHub comes from here.',
+  'what' => 'Accounts, licenses, groups, devices and security for the whole organization (Entra ID, Intune, Defender, Teams). The list of people in ITOps comes from here.',
   'connect' => 'Microsoft Graph · an Azure app registration (tenant ID, client ID, client secret) with application permissions and admin consent, entered under Settings → Company systems → Microsoft 365 (Set up…).',
   'who' => 'A Global Administrator, in Azure',
   'reads' => 'Accounts, licenses, groups, guests, devices, sign-ins, security alerts, service health, usage.',
@@ -44,11 +44,11 @@ return [
   'connect' => 'API key and secret, pasted once on JustCall’s set-up page (Settings → Company systems). In JustCall, as Account Owner or Admin: user icon → “APIs and Webhooks” → API Credentials.',
   'who' => 'Account Owner or Admin in JustCall',
   'reads' => 'Users with role, numbers and extension: on demand, at each step and every four hours. Calls for reports, and missed calls and voicemail as tickets.',
-  'writes' => 'Nothing. JustCall’s API cannot add or remove a user: a person does it in JustCall and OpsHub checks.',
+  'writes' => 'Nothing. JustCall’s API cannot add or remove a user: a person does it in JustCall and ITOps checks.',
   'limits' => 'One key pair per account, shared by every app that uses it: do not press “Reset Credentials”.',
   'mind' => 'One key pair per account, shared by every app that uses it: do not press “Reset Credentials”. Adding and removing users stays by hand.',
   'flows' => [['justcall', 'links', 'in', 'Users, roles and numbers, matched to people by email'],
-              ['lifecycle', 'justcall', 'manual', 'A person adds or removes the user there; OpsHub checks that JustCall lists them, or no longer does'],
+              ['lifecycle', 'justcall', 'manual', 'A person adds or removes the user there; ITOps checks that JustCall lists them, or no longer does'],
               ['justcall', 'phones', 'in', 'Users, numbers and extensions'],
               ['justcall', 'tickets', 'in', 'A missed call or a voicemail becomes a ticket']]],
  ['id' => 'hubspot', 'name' => 'HubSpot', 'status' => 'hand', 'role' => 'people', 'company' => 'hubspot',
@@ -56,7 +56,7 @@ return [
   'connect' => 'Planned: a service key. As Super Admin: Development → Keys → Service keys → “Create service key”, scopes settings.users.read and crm.objects.owners.read.',
   'who' => 'Super Admin, or “Developer tools access”',
   'reads' => 'Today nothing: the accounts are recorded by hand. Planned: users, roles and seats.',
-  'writes' => 'Nothing. A person creates and removes users in HubSpot and answers in OpsHub.',
+  'writes' => 'Nothing. A person creates and removes users in HubSpot and answers in ITOps.',
   'limits' => 'Removing a user cannot be undone and does not move their records: reassign them first.',
   'mind' => 'Use a service key: HubSpot stops the creation of new private apps on 26 October 2026 for existing accounts.'],
  ['id' => 'efax', 'name' => 'eFax (Documo)', 'status' => 'hand', 'role' => 'people', 'company' => 'efax',
@@ -64,7 +64,7 @@ return [
   'connect' => 'Planned: in Documo, Toolbox → API Keys → Create (shown once). Needs the Business plan or higher with the API Add-On.',
   'who' => 'A user on the Business plan or higher with the API Add-On',
   'reads' => 'Today nothing: the accounts are recorded by hand. Planned: users and their fax numbers.',
-  'writes' => 'Nothing. A person adds and deactivates users in Documo and answers in OpsHub.',
+  'writes' => 'Nothing. A person adds and deactivates users in Documo and answers in ITOps.',
   'limits' => 'A user that holds an API key cannot be deactivated.',
   'mind' => 'Create the key under a user that will not leave.'],
  ['id' => 'jotform', 'name' => 'Jotform', 'status' => 'hand', 'role' => 'people', 'company' => 'jotform',
@@ -72,17 +72,17 @@ return [
   'connect' => 'Planned: account settings → API → “Create New Key”, with “Read Access”.',
   'who' => 'The account that owns the company’s forms',
   'reads' => 'Today nothing: the members are recorded by hand. Planned: team members and the forms they own.',
-  'writes' => 'Nothing. A person moves the forms and removes the member in Jotform and answers in OpsHub.',
+  'writes' => 'Nothing. A person moves the forms and removes the member in Jotform and answers in ITOps.',
   'limits' => 'Daily call limits by plan; Healthcare-compliance and EU accounts use another address.',
   'mind' => 'A leaver’s forms have to be moved to a colleague before the member is removed.'],
  ['id' => 'pbx', 'name' => 'Phone system (Grandstream UCM)', 'status' => 'acts', 'role' => 'people', 'company' => 'pbx',
   'what' => 'The desk phones in the office: one extension per person, voicemail and call records.',
-  'connect' => 'The UCM’s HTTPS API (Integrations → API Configuration, port 8089) with an API user of its own: through RemoteConnect, or one port-forward allowed only from the OpsHub server. No VPN.',
+  'connect' => 'The UCM’s HTTPS API (Integrations → API Configuration, port 8089) with an API user of its own: through RemoteConnect, or one port-forward allowed only from the ITOps server. No VPN.',
   'who' => 'The administrator of the UCM, and whoever manages the office firewall',
   'reads' => 'Extensions and their status, the model, firmware and uptime, trunks and departments; every five minutes the call records, for reports.',
   'writes' => 'Create an extension at onboarding; name and email; a new voicemail PIN; out of service at offboarding; delete only after the waiting period.',
   'limits' => 'Wrong logins ban the caller’s address, so one sign-in per run and nothing retries after a refusal. The PBX’s certificate is remembered at the first test.',
-  'mind' => 'Add the OpsHub server’s public address to the PBX’s whitelist (and to the firewall rule when the port is forwarded).',
+  'mind' => 'Add the ITOps server’s public address to the PBX’s whitelist (and to the firewall rule when the port is forwarded).',
   'flows' => [['lifecycle', 'pbx', 'out', 'Create the extension · take it out of service · delete it after the waiting period'],
               ['pbx', 'links', 'in', 'Extensions matched to people by email'],
               ['pbx', 'tickets', 'in', 'A missed call on the lines chosen becomes a ticket']]],
@@ -97,16 +97,16 @@ return [
   'flows' => [['paylocity', 'lifecycle', 'in', 'Hire and termination events arrive and become drafts'],
               ['paylocity', 'links', 'in', 'Roster read every night: status, title, department, supervisor']]],
  ['id' => 'codetwo', 'name' => 'CodeTwo signatures', 'status' => 'indirect', 'role' => 'follows',
-  'what' => 'Adds the email signature to every message. It has no connection to OpsHub and needs none.',
+  'what' => 'Adds the email signature to every message. It has no connection to ITOps and needs none.',
   'connect' => 'None. It reads Microsoft 365 by itself.',
   'who' => 'Nobody: nothing to connect',
-  'reads' => 'Nothing comes to OpsHub.',
-  'writes' => 'Nothing directly. CodeTwo reads the account’s attributes, custom attributes 1 to 15 included, about every 20 minutes. Edit the account in OpsHub and the signature follows.',
+  'reads' => 'Nothing comes to ITOps.',
+  'writes' => 'Nothing directly. CodeTwo reads the account’s attributes, custom attributes 1 to 15 included, about every 20 minutes. Edit the account in ITOps and the signature follows.',
   'limits' => 'Values typed into CodeTwo’s own attribute manager stay in CodeTwo and never reach Microsoft 365.',
-  'mind' => 'Change a title or a phone number in OpsHub, not in CodeTwo.',
+  'mind' => 'Change a title or a phone number in ITOps, not in CodeTwo.',
   'flows' => [['m365', 'codetwo', 'ext', 'CodeTwo reads the account attributes about every 20 minutes']]],
  ['id' => 'whm', 'name' => 'WHM / cPanel', 'status' => 'reads', 'role' => 'infra',
-  'what' => 'The web server OpsHub runs on, and its cPanel accounts.',
+  'what' => 'The web server ITOps runs on, and its cPanel accounts.',
   'connect' => 'A WHM API token, read by Server Guardian.',
   'who' => 'The server administrator (root WHM)',
   'reads' => 'cPanel accounts, services, SSL certificates, bandwidth, disk, MySQL.',

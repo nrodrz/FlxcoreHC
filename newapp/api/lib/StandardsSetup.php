@@ -1,12 +1,12 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Standards & Audits tables and their starter list. BT91 (code audit Low): created by the database update
+ * ITOps — Standards & Audits tables and their starter list. BT91 (code audit Low): created by the database update
  * (Migrations: 2026_10_28_01_bt91_ops), no longer on a page request; the route only checks that they are there.
  */
-if (!function_exists('opsh_std_ensure')) {
-function opsh_std_ensure(PDO $db){
-    $db->exec("CREATE TABLE IF NOT EXISTS opsh_std_requirements (
+if (!function_exists('itops_std_ensure')) {
+function itops_std_ensure(PDO $db){
+    $db->exec("CREATE TABLE IF NOT EXISTS itops_std_requirements (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         code VARCHAR(40) NOT NULL DEFAULT '',
         area VARCHAR(120) NOT NULL DEFAULT '',
@@ -25,7 +25,7 @@ function opsh_std_ensure(PDO $db){
         KEY idx_area (area), KEY idx_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-    $db->exec("CREATE TABLE IF NOT EXISTS opsh_std_evidence (
+    $db->exec("CREATE TABLE IF NOT EXISTS itops_std_evidence (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         requirement_id INT UNSIGNED NOT NULL,
         file_path VARCHAR(255) NOT NULL,
@@ -38,22 +38,22 @@ function opsh_std_ensure(PDO $db){
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     try {
-        $hasCol = (int)$db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='opsh_std_requirements' AND COLUMN_NAME='updated_by'")->fetchColumn();
-        if (!$hasCol) $db->exec("ALTER TABLE opsh_std_requirements ADD COLUMN updated_by INT UNSIGNED NULL AFTER sort_order");
+        $hasCol = (int)$db->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='itops_std_requirements' AND COLUMN_NAME='updated_by'")->fetchColumn();
+        if (!$hasCol) $db->exec("ALTER TABLE itops_std_requirements ADD COLUMN updated_by INT UNSIGNED NULL AFTER sort_order");
     } catch (\Throwable $e) {}
-    $n = (int)$db->query("SELECT COUNT(*) FROM opsh_std_requirements")->fetchColumn();
-    if ($n === 0) opsh_std_seed($db);
+    $n = (int)$db->query("SELECT COUNT(*) FROM itops_std_requirements")->fetchColumn();
+    if ($n === 0) itops_std_seed($db);
     // Ensure a read-only External reviewer role scoped to Standards & Audits
     try {
-        $hr = $db->prepare("SELECT id FROM opsh_roles WHERE slug=?"); $hr->execute(['ext_reviewer']);
+        $hr = $db->prepare("SELECT id FROM itops_roles WHERE slug=?"); $hr->execute(['ext_reviewer']);
         if (!$hr->fetchColumn()) {
-            $db->prepare("INSERT INTO opsh_roles (name,slug,description,permissions) VALUES (?,?,?,?)")
+            $db->prepare("INSERT INTO itops_roles (name,slug,description,permissions) VALUES (?,?,?,?)")
                ->execute(['External reviewer','ext_reviewer','Read-only access to the Standards & Audits area only (for an outside reviewer or auditor).', json_encode(['standards'=>['view']])]);
         }
     } catch (\Throwable $e) {}
 }
 
-function opsh_std_seed(PDO $db){
+function itops_std_seed(PDO $db){
     // Generic IT/technology requirement areas (not any standard's text). Edit to match your standards.
     $items = [
         ['IT-01','Technology Planning','Technology & System Plan','Maintain a current written technology plan covering hardware, software, networks, telecommunications, and a replacement/refresh schedule, reviewed and approved by leadership.'],
@@ -71,7 +71,7 @@ function opsh_std_seed(PDO $db){
         ['IT-13','Vendors','Vendor, Third-Party & Cloud Management','Track IT vendors and cloud/hosted services, including agreements, data-handling and security responsibilities, and periodic review.'],
         ['IT-14','Accessibility','Technology Accessibility','Ensure technology supports accessibility for people served and staff (e.g., assistive technology and recognized accessibility guidelines where applicable).'],
     ];
-    $stmt = $db->prepare("INSERT INTO opsh_std_requirements (code,area,title,description,status,sort_order) VALUES (?,?,?,?, 'in_progress', ?)");
+    $stmt = $db->prepare("INSERT INTO itops_std_requirements (code,area,title,description,status,sort_order) VALUES (?,?,?,?, 'in_progress', ?)");
     $i = 0;
     foreach ($items as $it) { $stmt->execute([$it[0], $it[1], $it[2], $it[3], $i++]); }
 }

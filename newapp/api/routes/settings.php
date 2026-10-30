@@ -6,12 +6,12 @@
 //   sla_cfg   → SLA alerts, digest, business hours                     (Settings → SLA & Hours)
 //   settings  → everything else: connection, security, redirects…     (Settings → General)
 // Anyone with View on at least one area may open the page; GET returns only the keys of the areas they can see,
-// and PUT checks Edit on the area of EVERY key sent. Super Admin bypasses all of this (opsh_can).
+// and PUT checks Edit on the area of EVERY key sent. Super Admin bypasses all of this (itops_can).
 require_once __DIR__ . '/../lib/SettingsAreas.php';
 $db = getDB();
 $isSuperS = (($currentUser['role_slug'] ?? '') === 'super_admin');
 $areas = ['settings', 'branding', 'email_cfg', 'sla_cfg'];
-$canAny = false; foreach ($areas as $a) { if (opsh_can($currentUser, $a, $method === 'GET' ? 'view' : 'edit')) { $canAny = true; break; } }
+$canAny = false; foreach ($areas as $a) { if (itops_can($currentUser, $a, $method === 'GET' ? 'view' : 'edit')) { $canAny = true; break; } }
 if (!$canAny) error_response('Insufficient permissions', 403);
 // Keys that hold credentials / connection config. Only a Super Admin may change them through this
 // generic endpoint (their own screens use dedicated routes); they are never returned in clear text.
@@ -29,30 +29,30 @@ $INTERNAL = '/(^lm_|^app_timezone$|^license_trial_from$|_seq_\d{4}$|^rl_|^rem_|^
 // installation holds records, because times written as clock values are not rewritten)
 if (($segments[1] ?? '') === 'timezone') {
     require_once __DIR__ . '/../lib/TimeZone.php';
-    $tzNow = opsh_tz_get($db); $fixed = defined('OPSH_TIMEZONE');
-    $since = (string)$db->query("SELECT sval FROM opsh_settings WHERE skey='installed_at'")->fetchColumn();
-    $records = (int)$db->query("SELECT COUNT(*) FROM opsh_tickets")->fetchColumn() + (int)$db->query("SELECT COUNT(*) FROM opsh_audit_log WHERE action NOT IN ('system_installed')")->fetchColumn();
+    $tzNow = itops_tz_get($db); $fixed = defined('ITOPS_TIMEZONE');
+    $since = (string)$db->query("SELECT sval FROM itops_settings WHERE skey='installed_at'")->fetchColumn();
+    $records = (int)$db->query("SELECT COUNT(*) FROM itops_tickets")->fetchColumn() + (int)$db->query("SELECT COUNT(*) FROM itops_audit_log WHERE action NOT IN ('system_installed')")->fetchColumn();
     if ($method === 'GET') {
-        $common = []; foreach (opsh_tz_common() as $k => $v) $common[] = ['id' => $k, 'label' => $v];
-        json_response(['timezone' => $tzNow, 'label' => opsh_tz_label($tzNow), 'fixed_in_config' => $fixed, 'common' => $common, 'all' => DateTimeZone::listIdentifiers(),
+        $common = []; foreach (itops_tz_common() as $k => $v) $common[] = ['id' => $k, 'label' => $v];
+        json_response(['timezone' => $tzNow, 'label' => itops_tz_label($tzNow), 'fixed_in_config' => $fixed, 'common' => $common, 'all' => DateTimeZone::listIdentifiers(),
                        'now' => date('Y-m-d H:i:s'), 'offset' => date('P'), 'has_records' => $records > 0, 'installed_at' => $since]);
     }
     if ($method !== 'POST') error_response('Not found', 404);
     if (!$isSuperS) { audit_log('settings_refused', 'settings', null, 'Time zone', null, ['Why' => 'Super Admin only']); error_response('Only a Super Admin changes the time zone.', 403); }
-    if ($fixed) error_response('The time zone is set in config.php (OPSH_TIMEZONE) on this server; change it there.', 409);
+    if ($fixed) error_response('The time zone is set in config.php (ITOPS_TIMEZONE) on this server; change it there.', 409);
     $b = json_decode(file_get_contents('php://input') ?: '', true) ?: [];
     $tz = trim((string)($b['timezone'] ?? ''));
-    if (!opsh_tz_valid($tz)) error_response('Choose a time zone from the list (an IANA name such as America/Chicago).', 400);
+    if (!itops_tz_valid($tz)) error_response('Choose a time zone from the list (an IANA name such as America/Chicago).', 400);
     if ($tz === $tzNow) error_response('That is already the time zone.', 400);
     if ($records > 0 && ($b['confirm'] ?? '') !== 'CHANGE') error_response('This installation already holds records. Times the app wrote as clock values (due times, schedules, many logs) keep them and can look shifted by the difference. Type CHANGE to switch the zone anyway.', 409);
-    $db->prepare("INSERT INTO opsh_settings (skey,sval) VALUES ('app_timezone',?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([$tz]);
+    $db->prepare("INSERT INTO itops_settings (skey,sval) VALUES ('app_timezone',?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([$tz]);
     audit_log('timezone_changed', 'settings', null, 'Time zone', ['Time zone' => $tzNow], ['Time zone' => $tz]);
-    json_response(['ok' => true, 'timezone' => $tz, 'label' => opsh_tz_label($tz)]);
+    json_response(['ok' => true, 'timezone' => $tz, 'label' => itops_tz_label($tz)]);
 }
 
 switch($method){
   case 'GET':
-    $stmt = $db->query('SELECT skey, sval FROM opsh_settings');
+    $stmt = $db->query('SELECT skey, sval FROM itops_settings');
     $settings = [];
     while ($row = $stmt->fetch()) $settings[$row['skey']] = $row['sval'];
     // Never send stored secrets to the browser — mask them (PUT ignores the mask).
@@ -63,7 +63,7 @@ switch($method){
     }
     unset($v);
     // BT18: only the areas this role may view
-    foreach (array_keys($settings) as $k) { if (!opsh_can($currentUser, opsh_setting_area($k), 'view')) unset($settings[$k]); }
+    foreach (array_keys($settings) as $k) { if (!itops_can($currentUser, itops_setting_area($k), 'view')) unset($settings[$k]); }
     // BT124 (code review CORE-1): settings that belong to a module with its own permission (security posture and its emergency
     // accounts, Microsoft 365, IT Budget, routing, people of cases, Teams, devices, uptime, jobs) and the app's own bookkeeping
     // (rate limits, timestamps, counters) are served by their own pages, not here — except to a Super Admin
@@ -71,7 +71,7 @@ switch($method){
         if (preg_match('/^(sa_|m365_|budget_|ca_|ms_billing$|cases_people$|ticket_routing$|teams_app$|device_inventory|uptime_|cron_|outlook_|guardian_|ia_|risk_)/', $k) || preg_match($INTERNAL, $k)) unset($settings[$k]);
     json_response($settings); break;
   case 'POST':
-    opsh_require($currentUser, 'branding', 'edit');   // BT18
+    itops_require($currentUser, 'branding', 'edit');   // BT18
     $target = $id; // 'logo', 'favicon' or 'doclogo' (BT60: the logo printed on PDF and Word documents)
     if (!in_array($target, ['logo','favicon','doclogo'])) error_response('Unknown upload target', 400);
     if (empty($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) error_response('No file uploaded', 400);
@@ -87,8 +87,8 @@ switch($method){
     if (!move_uploaded_file($file['tmp_name'], $dir . $stored)) error_response('Could not save file', 500);
     $url = rtrim(APP_URL, '/') . '/public/uploads/logos/' . $stored;
     $skey = $target === 'logo' ? 'app_logo_url' : ($target === 'doclogo' ? 'doc_logo_url' : 'app_favicon_url');
-    $old = (string)($db->query("SELECT sval FROM opsh_settings WHERE skey=" . $db->quote($skey))->fetchColumn() ?: '');
-    $db->prepare('INSERT INTO opsh_settings (skey,sval,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval),updated_by=VALUES(updated_by)')
+    $old = (string)($db->query("SELECT sval FROM itops_settings WHERE skey=" . $db->quote($skey))->fetchColumn() ?: '');
+    $db->prepare('INSERT INTO itops_settings (skey,sval,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval),updated_by=VALUES(updated_by)')
        ->execute([$skey, $url, $currentUser['id']]);
     if (function_exists('audit_log')) audit_log('branding_uploaded', 'settings', null, $target, ['File' => $old !== '' ? basename($old) : '(none)'], ['File' => $stored]);
     json_response(['ok'=>true, 'url'=>$url]);
@@ -110,13 +110,13 @@ switch($method){
       if ($k === 'app_theme_color' && (string)$body[$k] !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', (string)$body[$k])) error_response('The theme color is a hex color such as #1D4D7A.', 400);
       if (in_array($k, ['app_logo_url', 'app_favicon_url'], true) && (string)$body[$k] !== '') error_response('Upload the logo and the icon with the Upload buttons; they can only be removed here.', 400);   // BT86 (audit H-12)
       if (!$isSuperS && (preg_match($SENSITIVE, $k) || !in_array($k, $OPEN_KEYS, true))) {
-        $sq = $db->prepare('SELECT sval FROM opsh_settings WHERE skey=?'); $sq->execute([$k]); $cv = $sq->fetchColumn();
+        $sq = $db->prepare('SELECT sval FROM itops_settings WHERE skey=?'); $sq->execute([$k]); $cv = $sq->fetchColumn();
         $nv = is_array($body[$k]) || is_object($body[$k]) ? json_encode($body[$k]) : (string)$body[$k];
         if ($cv !== false && (string)$cv === $nv || ($cv === false && $nv === '') || $nv === '********') { unset($body[$k]); continue; }   // sent unchanged
         audit_log('settings_refused', 'settings', null, $k, null, ['reason' => 'Super Admin only', 'asked_by' => (string)($currentUser['email'] ?? '')]);
         error_response('Only a Super Admin can change "' . $k . '"', 403);
       }
-      if (!opsh_can($currentUser, opsh_setting_area($k), 'edit')) error_response('Your role cannot change "' . $k . '" (' . opsh_setting_area_label(opsh_setting_area($k)) . ')', 403);
+      if (!itops_can($currentUser, itops_setting_area($k), 'edit')) error_response('Your role cannot change "' . $k . '" (' . itops_setting_area_label(itops_setting_area($k)) . ')', 403);
       if (in_array($k, ['vtiger_provision', 'vtiger_db'], true)) error_response('Use the vTiger provisioning screen for this setting', 400);
       if ($k === 'sla_priority_targets') {   // BT52: [response h, resolution h] per priority; resolution never shorter than response
         $tv = $body[$k]; if (is_string($tv)) $tv = json_decode($tv, true);
@@ -130,7 +130,7 @@ switch($method){
       }
       if ($k === 'sla_priority_defs') {   // BT94: what each priority means, with examples (shown on the ticket form and in Help)
         require_once __DIR__ . '/../lib/ScorecardDetail.php';
-        try { $body[$k] = json_encode(opsh_prio_defs_clean($body[$k]), JSON_UNESCAPED_UNICODE); } catch (InvalidArgumentException $e) { error_response($e->getMessage(), 400); }
+        try { $body[$k] = json_encode(itops_prio_defs_clean($body[$k]), JSON_UNESCAPED_UNICODE); } catch (InvalidArgumentException $e) { error_response($e->getMessage(), 400); }
       }
       if ($k === 'sla_incident_targets') {   // BT81: incidents' own targets; empty = the same as service requests
         $tv = $body[$k]; if (is_string($tv)) $tv = $tv === '' ? [] : json_decode($tv, true);
@@ -162,16 +162,16 @@ switch($method){
       if ($k === 'doc_logo_url' && $v !== '') error_response('Upload the document logo with the Upload button; it can only be removed here.', 400);
       if (mb_strlen($v) > ($k === 'doc_footer' ? 160 : 120)) error_response('That text is too long.', 400);
       $body[$k] = $v;
-      $st = $db->prepare('SELECT sval FROM opsh_settings WHERE skey=?'); $st->execute([$k]); $ov = (string)($st->fetchColumn() ?: '');
+      $st = $db->prepare('SELECT sval FROM itops_settings WHERE skey=?'); $st->execute([$k]); $ov = (string)($st->fetchColumn() ?: '');
       $lab = ['doc_org_name' => 'Organization name', 'doc_footer' => 'Footer', 'doc_accent' => 'Colour', 'doc_logo_url' => 'Document logo'][$k];
       if ($ov !== $v) { $docOld[$lab] = $k === 'doc_logo_url' ? basename($ov) : $ov; $docNew[$lab] = $k === 'doc_logo_url' ? '(removed)' : $v; }
     }
     require_once __DIR__ . '/../lib/Secrets.php';
     // Review CORE-25: the Audit Log gets what changed (before and after); secret values are never written, only "changed".
-    $__isSecret = fn($k) => in_array($k, opsh_secret_setting_keys(), true) || preg_match('/secret|password|passwd|token|_key$|api_key|_enc$/i', (string)$k);
-    $__old = []; foreach (array_keys($body) as $__k) { $st = $db->prepare('SELECT sval FROM opsh_settings WHERE skey=?'); $st->execute([$__k]); $__old[$__k] = $st->fetchColumn(); }
+    $__isSecret = fn($k) => in_array($k, itops_secret_setting_keys(), true) || preg_match('/secret|password|passwd|token|_key$|api_key|_enc$/i', (string)$k);
+    $__old = []; foreach (array_keys($body) as $__k) { $st = $db->prepare('SELECT sval FROM itops_settings WHERE skey=?'); $st->execute([$__k]); $__old[$__k] = $st->fetchColumn(); }
     $put = function ($k, $v) use ($db, $currentUser) {
-      $db->prepare('INSERT INTO opsh_settings (skey,sval,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval),updated_by=VALUES(updated_by)')
+      $db->prepare('INSERT INTO itops_settings (skey,sval,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval),updated_by=VALUES(updated_by)')
          ->execute([$k,$v,$currentUser['id']]);
     };
     foreach($body as $k=>$v){
@@ -182,11 +182,11 @@ switch($method){
       if ($k === 'o365_client_secret') {
         if ((string)$v === '') continue;
         $put('o365_client_secret_enc', vault_encrypt((string)$v));
-        $db->prepare("DELETE FROM opsh_settings WHERE skey IN ('o365_client_secret','o365_graph_secret_enc')")->execute();
+        $db->prepare("DELETE FROM itops_settings WHERE skey IN ('o365_client_secret','o365_graph_secret_enc')")->execute();
         continue;
       }
       if ($k === 'o365_tenant_id' || $k === 'o365_tenant') { $put('o365_tenant_id', (string)$v); $put('o365_tenant', (string)$v); continue; }
-      if (in_array($k, opsh_secret_setting_keys(), true) && (string)$v !== '') $v = opsh_secret_wrap((string)$v);   // encrypted at rest
+      if (in_array($k, itops_secret_setting_keys(), true) && (string)$v !== '') $v = itops_secret_wrap((string)$v);   // encrypted at rest
       $put($k, $v);
     }
     $__b = []; $__a = [];

@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — /api/integrations
+ * ITOps — /api/integrations
  *
  * GET    /integrations/keys              — list API keys (never returns the secret)
  * POST   /integrations/keys              — create a key (returns the plaintext ONCE)
@@ -21,7 +21,7 @@ require_once __DIR__ . '/../lib/Integrations.php';
 
 // Never let an API key administer the integration system itself.
 if (!empty($currentUser['is_api_key'])) error_response('API keys cannot manage integrations', 403);
-opsh_require($currentUser, 'integrations', 'view');
+itops_require($currentUser, 'integrations', 'view');
 
 $db  = getDB();
 $sub = $segments[1] ?? '';
@@ -42,14 +42,14 @@ switch ($method . ':' . $sub) {
     case 'GET:keys':
         try {
             $rows = $db->query("SELECT id, name, key_prefix, scopes, status, last_used_at, expires_at, created_at
-                                FROM opsh_api_keys ORDER BY id DESC")->fetchAll();
+                                FROM itops_api_keys ORDER BY id DESC")->fetchAll();
         } catch (\Throwable $e) { $needsMigration($e); }
         foreach ($rows as &$r) { $r['scopes'] = json_decode($r['scopes'] ?? '{}', true); }
         json_response(['data' => $rows]);
         break;
 
     case 'POST:keys':
-        opsh_require($currentUser, 'integrations', 'edit');
+        itops_require($currentUser, 'integrations', 'edit');
         $body   = json_decode(file_get_contents('php://input'), true) ?: [];
         $name   = trim($body['name'] ?? '');
         $scopes = $body['scopes'] ?? [];
@@ -70,7 +70,7 @@ switch ($method . ':' . $sub) {
                   : (['view' => ['view'], 'read' => ['view'], 'create_edit' => ['view', 'create', 'edit'], 'crud' => ['view', 'create', 'edit', 'delete']][(string)$acts] ?? null);
             if ($need === null) error_response('Invalid access level for "' . $mod . '"', 400);
             foreach ($need as $act) {
-                if (!opsh_can($currentUser, (string)$mod, $act)) error_response('You can\'t give an API key "' . $mod . ':' . $act . '" — you don\'t have it yourself', 403);
+                if (!itops_can($currentUser, (string)$mod, $act)) error_response('You can\'t give an API key "' . $mod . ':' . $act . '" — you don\'t have it yourself', 403);
             }
             $scopesNorm[(string)$mod] = array_values(array_unique($need));   // BT14: stored as explicit action arrays (a legacy "crud" string would also imply tickets "all")
         }
@@ -78,15 +78,15 @@ switch ($method . ':' . $sub) {
 
         $expires = null;   // review OPS-23: an expiry that is not a date in the future is refused (it used to make a key that was already expired)
         if (!empty($body['expires_at'])) { $et = strtotime((string)$body['expires_at']); if ($et === false || $et <= time()) error_response('The expiry must be a date in the future.', 400); $expires = date('Y-m-d H:i:s', $et); }
-        $plain   = opsh_api_key_generate();
+        $plain   = itops_api_key_generate();
 
         try {
-            $db->prepare('INSERT INTO opsh_api_keys (name, key_prefix, key_hash, scopes, status, expires_at, created_by, created_at)
+            $db->prepare('INSERT INTO itops_api_keys (name, key_prefix, key_hash, scopes, status, expires_at, created_by, created_at)
                           VALUES (?,?,?,?,?,?,?,NOW())')
                ->execute([
                    $name,
-                   opsh_api_key_prefix($plain),
-                   opsh_api_key_hash($plain),
+                   itops_api_key_prefix($plain),
+                   itops_api_key_hash($plain),
                    json_encode($scopes),
                    'active',
                    $expires,
@@ -101,11 +101,11 @@ switch ($method . ':' . $sub) {
         break;
 
     case 'DELETE:keys':
-        opsh_require($currentUser, 'integrations', 'edit');
+        itops_require($currentUser, 'integrations', 'edit');
         if (!$id) error_response('ID required');
-        $kq = $db->prepare('SELECT name, status FROM opsh_api_keys WHERE id=?'); $kq->execute([(int)$id]); $kr = $kq->fetch(PDO::FETCH_ASSOC);
+        $kq = $db->prepare('SELECT name, status FROM itops_api_keys WHERE id=?'); $kq->execute([(int)$id]); $kr = $kq->fetch(PDO::FETCH_ASSOC);
         if (!$kr) error_response('API key not found', 404);
-        $db->prepare("UPDATE opsh_api_keys SET status='revoked' WHERE id=?")->execute([$id]);
+        $db->prepare("UPDATE itops_api_keys SET status='revoked' WHERE id=?")->execute([$id]);
         audit_log('api_key_revoked', 'integration', $id, (string)$kr['name'], ['status' => $kr['status']], ['status' => 'revoked']);
         json_response(['ok' => true]);
         break;
@@ -114,7 +114,7 @@ switch ($method . ':' . $sub) {
     case 'GET:webhooks':
         try {
             $rows = $db->query("SELECT id, name, url, events, status, secret, created_at
-                                FROM opsh_webhooks ORDER BY id DESC")->fetchAll();
+                                FROM itops_webhooks ORDER BY id DESC")->fetchAll();
         } catch (\Throwable $e) { $needsMigration($e); }
         // BT124 (review OPS-2, UI1-3): a signing secret is shown once, when it is made (or made again); never in the list
         foreach ($rows as &$r) { $r['events'] = json_decode($r['events'] ?? '[]', true); $r['secret'] = ''; $r['secret_hidden'] = true; }
@@ -123,7 +123,7 @@ switch ($method . ':' . $sub) {
         break;
 
     case 'POST:webhooks':
-        opsh_require($currentUser, 'integrations', 'edit');
+        itops_require($currentUser, 'integrations', 'edit');
         // BT124 (review OPS-2): a webhook sends records of every module it listens to out of the app, whatever the role of
         // the person who made it can see: only a Super Admin makes one, changes where it goes or what it listens to, or
         // makes a new signing secret
@@ -134,18 +134,18 @@ switch ($method . ':' . $sub) {
         };
         if ($id && $act === 'secret') {
             $whSuper('make a new signing secret');
-            $h = $db->prepare('SELECT id, name FROM opsh_webhooks WHERE id=?'); $h->execute([$id]); $h = $h->fetch();
+            $h = $db->prepare('SELECT id, name FROM itops_webhooks WHERE id=?'); $h->execute([$id]); $h = $h->fetch();
             if (!$h) error_response('Webhook not found', 404);
             require_once __DIR__ . '/../lib/Secrets.php';
             $secret = bin2hex(random_bytes(24));
-            $db->prepare('UPDATE opsh_webhooks SET secret=? WHERE id=?')->execute([opsh_secret_wrap($secret), (int)$id]);
+            $db->prepare('UPDATE itops_webhooks SET secret=? WHERE id=?')->execute([itops_secret_wrap($secret), (int)$id]);
             audit_log('webhook_secret_renewed', 'integration', (int)$id, (string)$h['name']);
             json_response(['ok' => true, 'secret' => $secret]);
         }
         if ($id && $act === 'test') {
-            $h = $db->prepare('SELECT * FROM opsh_webhooks WHERE id=?'); $h->execute([$id]); $h = $h->fetch();
+            $h = $db->prepare('SELECT * FROM itops_webhooks WHERE id=?'); $h->execute([$id]); $h = $h->fetch();
             if (!$h) error_response('Webhook not found', 404);
-            [$ok, $status, $err] = opsh_webhook_send($h, 'ping', ['message' => 'Test event from ' . opsh_app_name(), 'at' => gmdate('c')]);
+            [$ok, $status, $err] = itops_webhook_send($h, 'ping', ['message' => 'Test event from ' . itops_app_name(), 'at' => gmdate('c')]);
             json_response(['ok' => $ok, 'response_status' => $status, 'error' => $err]);
             break;
         }
@@ -159,14 +159,14 @@ switch ($method . ':' . $sub) {
             error_response('A valid https:// URL is required');
         }
         require_once __DIR__ . '/../lib/NetGuard.php';   // BT88 (code audit M-30)
-        $nc = opsh_net_check($url); if (!$nc['ok']) { audit_log('webhook_refused', 'integration', null, mb_substr($url, 0, 200), null, ['reason' => $nc['error']]); error_response($nc['error'], 400); }
+        $nc = itops_net_check($url); if (!$nc['ok']) { audit_log('webhook_refused', 'integration', null, mb_substr($url, 0, 200), null, ['reason' => $nc['error']]); error_response($nc['error'], 400); }
         if (!is_array($events) || !$events) error_response('Select at least one event');
 
         $secret = bin2hex(random_bytes(24));
         try {
-            $db->prepare('INSERT INTO opsh_webhooks (name, url, secret, events, status, created_by, created_at)
+            $db->prepare('INSERT INTO itops_webhooks (name, url, secret, events, status, created_by, created_at)
                           VALUES (?,?,?,?,?,?,NOW())')
-               ->execute([$name, $url, (function ($s) { require_once __DIR__ . '/../lib/Secrets.php'; return opsh_secret_wrap($s); })($secret), json_encode(array_values($events)), 'active', (int)($currentUser['id'] ?? 0)]);
+               ->execute([$name, $url, (function ($s) { require_once __DIR__ . '/../lib/Secrets.php'; return itops_secret_wrap($s); })($secret), json_encode(array_values($events)), 'active', (int)($currentUser['id'] ?? 0)]);
             $__newId = (int)$db->lastInsertId();   // capture now — audit_log() inserts a row too
         } catch (\Throwable $e) { $needsMigration($e); }
 
@@ -175,11 +175,11 @@ switch ($method . ':' . $sub) {
         break;
 
     case 'PUT:webhooks':
-        opsh_require($currentUser, 'integrations', 'edit');
+        itops_require($currentUser, 'integrations', 'edit');
         if (!$id) error_response('ID required');
         $body = json_decode(file_get_contents('php://input'), true) ?: [];
         $sets = []; $bind = [];
-        $wq = $db->prepare('SELECT name, url, events, status FROM opsh_webhooks WHERE id=?'); $wq->execute([(int)$id]); $wOld = $wq->fetch(PDO::FETCH_ASSOC);
+        $wq = $db->prepare('SELECT name, url, events, status FROM itops_webhooks WHERE id=?'); $wq->execute([(int)$id]); $wOld = $wq->fetch(PDO::FETCH_ASSOC);
         if (!$wOld) error_response('Webhook not found', 404);
         if ((isset($body['url']) || isset($body['events'])) && ($currentUser['role_slug'] ?? '') !== 'super_admin') {   // BT124 (review OPS-2)
             audit_log('webhook_refused', 'integration', (int)$id, 'Webhook', null, ['Wanted' => 'change where it goes or what it listens to', 'Needs' => 'Super Admin']);
@@ -190,14 +190,14 @@ switch ($method . ':' . $sub) {
             $u = trim($body['url']);
             if (!filter_var($u, FILTER_VALIDATE_URL) || stripos($u, 'https://') !== 0) error_response('A valid https:// URL is required');
             require_once __DIR__ . '/../lib/NetGuard.php';   // BT124: the same address check as when it is made
-            $nc = opsh_net_check($u); if (!$nc['ok']) { audit_log('webhook_refused', 'integration', (int)$id, mb_substr($u, 0, 200), null, ['reason' => $nc['error']]); error_response($nc['error'], 400); }
+            $nc = itops_net_check($u); if (!$nc['ok']) { audit_log('webhook_refused', 'integration', (int)$id, mb_substr($u, 0, 200), null, ['reason' => $nc['error']]); error_response($nc['error'], 400); }
             $sets[] = 'url = ?'; $bind[] = $u;
         }
         if (isset($body['events'])) { $sets[] = 'events = ?'; $bind[] = json_encode(array_values((array)$body['events'])); }
         if (isset($body['status'])) { $sets[] = 'status = ?'; $bind[] = ($body['status'] === 'paused' ? 'paused' : 'active'); }
         if (!$sets) error_response('Nothing to update');
         $bind[] = $id;
-        $db->prepare('UPDATE opsh_webhooks SET ' . implode(',', $sets) . ' WHERE id = ?')->execute($bind);
+        $db->prepare('UPDATE itops_webhooks SET ' . implode(',', $sets) . ' WHERE id = ?')->execute($bind);
         $wq->execute([(int)$id]); $wNew = $wq->fetch(PDO::FETCH_ASSOC) ?: [];
         $wb = []; $wa = []; foreach ($wNew as $k => $v) if ((string)($wOld[$k] ?? '') !== (string)$v) { $wb[$k] = mb_substr((string)($wOld[$k] ?? ''), 0, 300); $wa[$k] = mb_substr((string)$v, 0, 300); }
         audit_log('webhook_updated', 'integration', $id, (string)($wNew['name'] ?? ''), $wb ?: null, $wa ?: null);   // review OPS-23
@@ -205,9 +205,9 @@ switch ($method . ':' . $sub) {
         break;
 
     case 'DELETE:webhooks':
-        opsh_require($currentUser, 'integrations', 'edit');
+        itops_require($currentUser, 'integrations', 'edit');
         if (!$id) error_response('ID required');
-        $db->prepare('DELETE FROM opsh_webhooks WHERE id=?')->execute([$id]);
+        $db->prepare('DELETE FROM itops_webhooks WHERE id=?')->execute([$id]);
         audit_log('webhook_deleted', 'integration', $id, '');
         json_response(['ok' => true]);
         break;
@@ -217,16 +217,16 @@ switch ($method . ':' . $sub) {
         try {
             $rows = $db->query("SELECT d.id, d.delivery_id, d.event, d.response_status, d.error,
                                        d.attempts, d.status, d.created_at, w.name AS webhook_name
-                                FROM opsh_webhook_deliveries d
-                                LEFT JOIN opsh_webhooks w ON w.id = d.webhook_id
+                                FROM itops_webhook_deliveries d
+                                LEFT JOIN itops_webhooks w ON w.id = d.webhook_id
                                 ORDER BY d.id DESC LIMIT 100")->fetchAll();
         } catch (\Throwable $e) { $needsMigration($e); }
         json_response(['data' => $rows]);
         break;
 
     case 'POST:retry':
-        opsh_require($currentUser, 'integrations', 'edit');
-        $n = opsh_webhook_retry_failed($db, 25);
+        itops_require($currentUser, 'integrations', 'edit');
+        $n = itops_webhook_retry_failed($db, 25);
         json_response(['retried' => $n]);
         break;
 

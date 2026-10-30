@@ -1,18 +1,18 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Microsoft Graph client with a stable GraphClient interface (BT21).
+ * ITOps — Microsoft Graph client with a stable GraphClient interface (BT21).
  *
- * The Microsoft 365 area uses a domain service (OpshM365, the lib/M365.php
- * design) unchanged. This adapter lets that code run on OpsHub's
+ * The Microsoft 365 area uses a domain service (ItopsM365, the lib/M365.php
+ * design) unchanged. This adapter lets that code run on ITOps's
  * own Graph connection: the Azure app saved under Settings → Sign-in & AI, the shared token cache
- * and the self-healing 401/403 retry in opsh_graph_http(). Errors are thrown as
- * OpshGraphException(code, message, status), the GraphException shape.
+ * and the self-healing 401/403 retry in itops_graph_http(). Errors are thrown as
+ * ItopsGraphException(code, message, status), the GraphException shape.
  */
 require_once __DIR__ . '/Graph.php';
 
-if (!class_exists('OpshGraphException')) {
-    final class OpshGraphException extends RuntimeException
+if (!class_exists('ItopsGraphException')) {
+    final class ItopsGraphException extends RuntimeException
     {
         private string $graphCode;
         private int $status;
@@ -26,7 +26,7 @@ if (!class_exists('OpshGraphException')) {
         public function getStatus(): int { return $this->status; }
     }
 
-    final class OpshGraphClient
+    final class ItopsGraphClient
     {
         private const GRAPH = 'https://graph.microsoft.com/v1.0';
         private const BETA  = 'https://graph.microsoft.com/beta';
@@ -49,8 +49,8 @@ if (!class_exists('OpshGraphException')) {
                 if ($onPage) $onPage($pages);   // BT29.1: lets a long read keep the database connection awake between pages
             }
             if ($url !== null) {   // BT88: a list cut by the page limit is said, not hidden
-                $GLOBALS['OPSH_GRAPH_TRUNCATED'] = true;
-                if (function_exists('opsh_log')) { try { opsh_log('warning', 'm365', 'A Microsoft 365 list was longer than ' . count($out) . ' rows; only those were read.', ['path' => strtok($path, '?')]); } catch (\Throwable $e) {} }
+                $GLOBALS['ITOPS_GRAPH_TRUNCATED'] = true;
+                if (function_exists('itops_log')) { try { itops_log('warning', 'm365', 'A Microsoft 365 list was longer than ' . count($out) . ' rows; only those were read.', ['path' => strtok($path, '?')]); } catch (\Throwable $e) {} }
             }
             return $out;
         }
@@ -86,11 +86,11 @@ if (!class_exists('OpshGraphException')) {
         {
             $url = self::GRAPH . '/' . ltrim($path, '/');
             if ($query) $url .= '?' . http_build_query($query);
-            try { [$status, $data, $raw] = opsh_graph_http('GET', $url, null, $headers); }
-            catch (Throwable $e) { throw new OpshGraphException('NETWORK_ERROR', $e->getMessage(), 0); }
+            try { [$status, $data, $raw] = itops_graph_http('GET', $url, null, $headers); }
+            catch (Throwable $e) { throw new ItopsGraphException('NETWORK_ERROR', $e->getMessage(), 0); }
             if ($status >= 200 && $status < 300) return is_array($data) ? $data : ['_raw' => trim((string)$raw)];
             $err = is_array($data) ? ($data['error'] ?? []) : [];
-            throw new OpshGraphException((string)($err['code'] ?? ('HTTP_' . $status)), (string)($err['message'] ?? ('Graph returned ' . $status)), (int)$status);
+            throw new ItopsGraphException((string)($err['code'] ?? ('HTTP_' . $status)), (string)($err['message'] ?? ('Graph returned ' . $status)), (int)$status);
         }
 
         /**
@@ -113,7 +113,7 @@ if (!class_exists('OpshGraphException')) {
             return $out;
         }
 
-        public function token(): string { return opsh_graph_token(); }
+        public function token(): string { return itops_graph_token(); }
 
         /**
          * BT41 — for the rest of this request: at most $seconds per call to Microsoft and, with $authRetry = false, no
@@ -122,15 +122,15 @@ if (!class_exists('OpshGraphException')) {
          */
         public static function setRequestTimeout(int $seconds, bool $authRetry = true): void
         {
-            $GLOBALS['OPSH_GRAPH_REQ'] = ['timeout' => max(3, min(30, $seconds)), 'auth_retry' => $authRetry];
+            $GLOBALS['ITOPS_GRAPH_REQ'] = ['timeout' => max(3, min(30, $seconds)), 'auth_retry' => $authRetry];
         }
 
         private function request(string $method, string $path, ?array $body, array $query = []): array
         {
             // BT88: an id never brings its own query or fragment into the address (the query goes in $query)
-            if (strpbrk($path, "?#\\") !== false) throw new OpshGraphException('BAD_ID', 'That id is not valid: it cannot be part of a Microsoft 365 address.', 400);
+            if (strpbrk($path, "?#\\") !== false) throw new ItopsGraphException('BAD_ID', 'That id is not valid: it cannot be part of a Microsoft 365 address.', 400);
             // Review M365A-12: no step out of the address (../), no encoded slash or dot, no spaces or control characters
-            if (preg_match('#(^|/)\.\.?(/|$)|%2e|%2f|%5c|[\s\x00-\x1f]#i', $path)) throw new OpshGraphException('BAD_ID', 'That id is not valid: it cannot be part of a Microsoft 365 address.', 400);
+            if (preg_match('#(^|/)\.\.?(/|$)|%2e|%2f|%5c|[\s\x00-\x1f]#i', $path)) throw new ItopsGraphException('BAD_ID', 'That id is not valid: it cannot be part of a Microsoft 365 address.', 400);
             $url = self::GRAPH . '/' . ltrim($path, '/');
             if ($query) $url .= '?' . http_build_query($query);
             return $this->call($method, $url, $body);
@@ -141,13 +141,13 @@ if (!class_exists('OpshGraphException')) {
         private function call(string $method, string $url, ?array $body): array
         {
             try {
-                [$status, $data, $raw] = opsh_graph_http($method, $url, $body);
+                [$status, $data, $raw] = itops_graph_http($method, $url, $body);
             } catch (Throwable $e) {
-                throw new OpshGraphException('NETWORK_ERROR', $e->getMessage(), 0);
+                throw new ItopsGraphException('NETWORK_ERROR', $e->getMessage(), 0);
             }
             if ($status >= 200 && $status < 300) return is_array($data) ? $data : [];
             $err = is_array($data) ? ($data['error'] ?? []) : [];
-            throw new OpshGraphException(
+            throw new ItopsGraphException(
                 (string)($err['code'] ?? ('HTTP_' . $status)),
                 (string)($err['message'] ?? ('Graph returned ' . $status)),
                 (int)$status

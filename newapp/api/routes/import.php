@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Bulk import (CSV → records)
+ * ITOps — Bulk import (CSV → records)
  * POST /api/import   body: { type: 'users'|'vendors'|'contracts'|'credentials', rows: [ {col:val,...}, ... ] }
  * Returns { type, total, created, skipped, errors:[{row, reason}] }
  */
@@ -12,11 +12,11 @@ $rows = $body['rows'] ?? [];
 
 // ---- authorization ----
 $permMap = ['vendors' => 'vendors', 'contracts' => 'contracts', 'credentials' => 'creds'];
-opsh_require($currentUser, 'import', 'view');
+itops_require($currentUser, 'import', 'view');
 if ($type === 'users') {
-    opsh_require($currentUser, 'users', 'create');
+    itops_require($currentUser, 'users', 'create');
 } elseif (isset($permMap[$type])) {
-    opsh_require($currentUser, $permMap[$type], 'create');
+    itops_require($currentUser, $permMap[$type], 'create');
 } else {
     error_response('Unknown import type', 400);
 }
@@ -44,13 +44,13 @@ function imp_date($v) {
 }
 
 // ---- shared lookups ----
-$roles = []; foreach ($db->query("SELECT id,slug,LOWER(name) nm FROM opsh_roles") as $r) { $roles['s_'.$r['slug']] = (int)$r['id']; $roles['n_'.$r['nm']] = (int)$r['id']; }
-$depts = []; foreach ($db->query("SELECT id,LOWER(name) nm FROM opsh_departments") as $r) { $depts[$r['nm']] = (int)$r['id']; }
-$usersByEmail = []; foreach ($db->query("SELECT id,LOWER(email) em FROM opsh_users") as $r) { $usersByEmail[$r['em']] = (int)$r['id']; }
+$roles = []; foreach ($db->query("SELECT id,slug,LOWER(name) nm FROM itops_roles") as $r) { $roles['s_'.$r['slug']] = (int)$r['id']; $roles['n_'.$r['nm']] = (int)$r['id']; }
+$depts = []; foreach ($db->query("SELECT id,LOWER(name) nm FROM itops_departments") as $r) { $depts[$r['nm']] = (int)$r['id']; }
+$usersByEmail = []; foreach ($db->query("SELECT id,LOWER(email) em FROM itops_users") as $r) { $usersByEmail[$r['em']] = (int)$r['id']; }
 
 $created = 0; $skipped = 0; $errors = [];
 $made = [];   // BT91: every record created, for the Audit Log (one row each, with what was set; never a secret)
-$allDepts = ($currentUser['role_slug'] ?? '') === 'super_admin' || opsh_can($currentUser, 'users', 'all');
+$allDepts = ($currentUser['role_slug'] ?? '') === 'super_admin' || itops_can($currentUser, 'users', 'all');
 $n = 0; $auditN = 0;
 
 foreach ($rows as $raw) {
@@ -68,7 +68,7 @@ foreach ($rows as $raw) {
             $roleId = $roles['s_'.$roleRaw] ?? $roles['n_'.$roleRaw] ?? ($roles['s_viewer'] ?? null);
             if (!$roleId) { $errors[]=['row'=>$n,'reason'=>'no matching role and no default "viewer" role']; continue; }
             if ($roleId === ($roles['s_super_admin'] ?? -1) && ($currentUser['role_slug'] ?? '') !== 'super_admin') { $errors[]=['row'=>$n,'reason'=>'only a Super Admin can grant the Super Admin role']; continue; }
-            if (($currentUser['role_slug'] ?? '') !== 'super_admin' && !opsh_role_within($currentUser, (int)$roleId)) { $errors[]=['row'=>$n,'reason'=>'you can only assign roles whose permissions you hold yourself']; continue; }   // BT14
+            if (($currentUser['role_slug'] ?? '') !== 'super_admin' && !itops_role_within($currentUser, (int)$roleId)) { $errors[]=['row'=>$n,'reason'=>'you can only assign roles whose permissions you hold yourself']; continue; }   // BT14
             $deptId = $depts[strtolower(imp_get($r,['department','dept','department_name']))] ?? null;
             if (!$allDepts) {   // BT90 rule: without Users · All records, people are added to your own department only
                 $own = (int)($currentUser['department_id'] ?? 0);
@@ -79,26 +79,26 @@ foreach ($rows as $raw) {
             $pw = imp_get($r,['password','temp_password']);
             if ($pw !== '') {   // review WORK-7: a password from the file follows the same rule as any other
                 require_once __DIR__ . '/../lib/AuthGuard.php';
-                $pp = opsh_password_problem($pw, $email, $name); if ($pp !== '') { $errors[] = ['row'=>$n,'reason'=>'password: ' . $pp]; continue; }
+                $pp = itops_password_problem($pw, $email, $name); if ($pp !== '') { $errors[] = ['row'=>$n,'reason'=>'password: ' . $pp]; continue; }
             }
             $hash = hash_password($pw !== '' ? $pw : bin2hex(random_bytes(16)));
             $fn = imp_get($r,['first_name','firstname']); $ln = imp_get($r,['last_name','lastname','surname']);
-            $db->prepare("INSERT INTO opsh_users (email,password_hash,display_name,first_name,last_name,role_id,department_id,status) VALUES (?,?,?,?,?,?,?,?)")
+            $db->prepare("INSERT INTO itops_users (email,password_hash,display_name,first_name,last_name,role_id,department_id,status) VALUES (?,?,?,?,?,?,?,?)")
                ->execute([$email,$hash,$name,$fn,$ln,$roleId,$deptId,$status]);
             $usersByEmail[$email] = (int)$db->lastInsertId();
             $made[] = ['user', $usersByEmail[$email], $email, ['display_name' => $name, 'role_id' => (int)$roleId, 'department_id' => $deptId, 'status' => $status, 'password' => $pw !== '' ? 'set from the file' : 'random']];
-            if (!function_exists('opsh_claim_tickets')) require_once __DIR__ . '/../lib/Requesters.php';
-            opsh_claim_tickets($db, $usersByEmail[$email], $email);
+            if (!function_exists('itops_claim_tickets')) require_once __DIR__ . '/../lib/Requesters.php';
+            itops_claim_tickets($db, $usersByEmail[$email], $email);
             $created++;
         }
         elseif ($type === 'vendors') {
             $name = imp_get($r,['name','vendor','vendor_name']);
             if ($name === '') { $errors[]=['row'=>$n,'reason'=>'name is required']; continue; }
-            $dup = $db->prepare("SELECT id FROM opsh_vendors WHERE name=? LIMIT 1"); $dup->execute([$name]);
+            $dup = $db->prepare("SELECT id FROM itops_vendors WHERE name=? LIMIT 1"); $dup->execute([$name]);
             if ($dup->fetchColumn()) { $skipped++; continue; }
             $risk = strtolower(imp_get($r,['risk_tier','risk'],'medium')); if (!in_array($risk,['low','medium','high','critical'])) $risk='medium';
             $status = strtolower(imp_get($r,['status'],'active')); if (!in_array($status,['active','inactive','under_review'])) $status='active';
-            $db->prepare("INSERT INTO opsh_vendors (name,website,primary_contact_name,primary_contact_email,primary_contact_phone,category,risk_tier,notes,status) VALUES (?,?,?,?,?,?,?,?,?)")
+            $db->prepare("INSERT INTO itops_vendors (name,website,primary_contact_name,primary_contact_email,primary_contact_phone,category,risk_tier,notes,status) VALUES (?,?,?,?,?,?,?,?,?)")
                ->execute([$name, imp_get($r,['website','url']), imp_get($r,['contact_name','primary_contact_name','contact']), imp_get($r,['contact_email','primary_contact_email','email']), imp_get($r,['contact_phone','primary_contact_phone','phone']), imp_get($r,['category','type']), $risk, imp_get($r,['notes','description']), $status]);
             $made[] = ['vendor', (int)$db->lastInsertId(), $name, ['risk_tier' => $risk, 'status' => $status]];
             $created++;
@@ -109,12 +109,12 @@ foreach ($rows as $raw) {
             $sd = imp_date(imp_get($r,['start_date','start','begins'])); $ed = imp_date(imp_get($r,['end_date','end','expires','expiry']));
             if (!$sd || !$ed) { $errors[]=['row'=>$n,'reason'=>'valid start_date and end_date are required']; continue; }
             $vname = imp_get($r,['vendor','vendor_name','supplier']); $vid = null;
-            if ($vname !== '') { $vq=$db->prepare("SELECT id FROM opsh_vendors WHERE name=? LIMIT 1"); $vq->execute([$vname]); $vid=$vq->fetchColumn() ?: null; }
+            if ($vname !== '') { $vq=$db->prepare("SELECT id FROM itops_vendors WHERE name=? LIMIT 1"); $vq->execute([$vname]); $vid=$vq->fetchColumn() ?: null; }
             $ownerEmail = strtolower(imp_get($r,['owner','owner_email'])); $oid = $ownerEmail!=='' ? ($usersByEmail[$ownerEmail] ?? null) : null;
             $status = strtolower(imp_get($r,['status'],'active'));
             if (!in_array($status,['active','expiring','expired','renewed','terminated','draft'])) $status='active';
             $val = (float)preg_replace('/[^0-9.\-]/','', (string)imp_get($r,['total_value','value','amount'],'0'));
-            $db->prepare("INSERT INTO opsh_contracts (title,vendor_id,contract_number,department_id,status,start_date,end_date,total_value,owner_id,notes) VALUES (?,?,?,?,?,?,?,?,?,?)")
+            $db->prepare("INSERT INTO itops_contracts (title,vendor_id,contract_number,department_id,status,start_date,end_date,total_value,owner_id,notes) VALUES (?,?,?,?,?,?,?,?,?,?)")
                ->execute([$title, $vid, imp_get($r,['contract_number','number','ref']), $depts[strtolower(imp_get($r,['department','dept']))] ?? null, $status, $sd, $ed, $val, $oid, imp_get($r,['notes','description'])]);
             $made[] = ['contract', (int)$db->lastInsertId(), $title, ['vendor_id' => $vid, 'status' => $status, 'start_date' => $sd, 'end_date' => $ed, 'total_value' => $val, 'owner_id' => $oid]];
             $created++;
@@ -129,7 +129,7 @@ foreach ($rows as $raw) {
             $pEnc = ($v=imp_get($r,['password','pass','secret']))!=='' ? vault_encrypt($v) : null;
             $kEnc = ($v=imp_get($r,['api_key','apikey','key','token']))!=='' ? vault_encrypt($v) : null;
             $nEnc = ($v=imp_get($r,['notes','note']))!=='' ? vault_encrypt($v) : null;
-            $db->prepare("INSERT INTO opsh_credentials (name,description,system_url,username_enc,password_enc,api_key_enc,notes_enc,environment,owner_id,rotation_days) VALUES (?,?,?,?,?,?,?,?,?,?)")
+            $db->prepare("INSERT INTO itops_credentials (name,description,system_url,username_enc,password_enc,api_key_enc,notes_enc,environment,owner_id,rotation_days) VALUES (?,?,?,?,?,?,?,?,?,?)")
                ->execute([$name, imp_get($r,['description','desc']), imp_get($r,['system_url','url','website']), $uEnc, $pEnc, $kEnc, $nEnc, $env, $oid, $rot]);
             $made[] = ['credential', (int)$db->lastInsertId(), $name, ['environment' => $env, 'owner_id' => (int)$oid, 'rotation_days' => $rot,
                        'fields' => implode(', ', array_keys(array_filter(['username' => $uEnc, 'password' => $pEnc, 'api_key' => $kEnc, 'notes' => $nEnc])))]];

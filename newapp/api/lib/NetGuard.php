@@ -1,18 +1,18 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — BT88 (code audit M-30 and the Microsoft 365 Lows): calls the app makes to addresses people type (webhooks, the
+ * ITOps — BT88 (code audit M-30 and the Microsoft 365 Lows): calls the app makes to addresses people type (webhooks, the
  * Knowledge Base assistant's trusted sources) only reach the public internet. Every address the name resolves to — IPv4
  * and IPv6, IPv4-mapped IPv6 included — must be public, and the call is pinned to the address checked, so the name cannot
  * point somewhere else between the check and the call (DNS rebinding).
  */
-if (!function_exists('opsh_net_ip_public')) {
-    function opsh_net_ip_public(string $ip): bool {
+if (!function_exists('itops_net_ip_public')) {
+    function itops_net_ip_public(string $ip): bool {
         $ip = trim($ip, '[] ');
         if (!filter_var($ip, FILTER_VALIDATE_IP)) return false;
         if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
             $bin = @inet_pton($ip); if ($bin === false) return false;
-            if (substr($bin, 0, 12) === str_repeat("\0", 10) . "\xff\xff") return opsh_net_ip_public(inet_ntop(substr($bin, 12)));   // ::ffff:a.b.c.d
+            if (substr($bin, 0, 12) === str_repeat("\0", 10) . "\xff\xff") return itops_net_ip_public(inet_ntop(substr($bin, 12)));   // ::ffff:a.b.c.d
             if (substr($bin, 0, 12) === str_repeat("\0", 12)) return false;                                                           // ::a.b.c.d, ::1, ::
             $b0 = ord($bin[0]); $b1 = ord($bin[1]);
             if (($b0 & 0xfe) === 0xfc) return false;                  // fc00::/7 unique local
@@ -30,7 +30,7 @@ if (!function_exists('opsh_net_ip_public')) {
         return (bool)filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
     }
     /** Every address a host name resolves to (A and AAAA), or the host itself when it is an address. */
-    function opsh_net_resolve(string $host): array {
+    function itops_net_resolve(string $host): array {
         $host = trim($host, '[]');
         if (filter_var($host, FILTER_VALIDATE_IP)) return [$host];
         $ips = [];
@@ -43,19 +43,19 @@ if (!function_exists('opsh_net_ip_public')) {
      * Is this https address safe to call? Returns ['ok' => true, 'host', 'port', 'ip'] (the address to pin) or
      * ['ok' => false, 'error' => sentence].
      */
-    function opsh_net_check(string $url, bool $httpsOnly = true): array {
+    function itops_net_check(string $url, bool $httpsOnly = true): array {
         $p = parse_url($url);
         if (!$p || empty($p['host']) || !in_array(strtolower($p['scheme'] ?? ''), $httpsOnly ? ['https'] : ['https', 'http'], true)) return ['ok' => false, 'error' => 'The address must start with https://.'];
         if (isset($p['user']) || isset($p['pass'])) return ['ok' => false, 'error' => 'The address cannot carry a user name or password.'];
         $host = strtolower($p['host']); $port = (int)($p['port'] ?? (strtolower($p['scheme']) === 'http' ? 80 : 443));
         if (in_array($host, ['localhost', 'localhost.localdomain'], true) || preg_match('/\.(local|internal|localhost|lan|home|corp)$/', $host)) return ['ok' => false, 'error' => 'That address is inside your network: only public addresses can be called.'];
-        $ips = opsh_net_resolve($host);
+        $ips = itops_net_resolve($host);
         if (!$ips) return ['ok' => false, 'error' => 'That address cannot be found (no DNS record).'];
-        foreach ($ips as $ip) if (!opsh_net_ip_public($ip)) return ['ok' => false, 'error' => 'That address leads inside your network (' . $ip . '): only public addresses can be called.'];
+        foreach ($ips as $ip) if (!itops_net_ip_public($ip)) return ['ok' => false, 'error' => 'That address leads inside your network (' . $ip . '): only public addresses can be called.'];
         return ['ok' => true, 'host' => trim($host, '[]'), 'port' => $port, 'ip' => $ips[0]];
     }
     /** Pin a cURL handle to the address checked (no second lookup), and never follow redirects. */
-    function opsh_net_pin($ch, array $chk): void {
+    function itops_net_pin($ch, array $chk): void {
         $ip = strpos($chk['ip'], ':') !== false ? '[' . $chk['ip'] . ']' : $chk['ip'];
         curl_setopt($ch, CURLOPT_RESOLVE, [$chk['host'] . ':' . $chk['port'] . ':' . $ip]);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);

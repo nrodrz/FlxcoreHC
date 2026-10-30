@@ -1,30 +1,30 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — client app name (BT20).
- * "OpsHub" is the commercial product name; each client can rename the app for its people under
+ * ITOps — client app name (BT20).
+ * "ITOps" is the commercial product name; each client can rename the app for its people under
  * Settings → Branding → App name (setting `app_name`). Everything a person SEES — screens, emails,
- * the Help Center, the authenticator-app label, messages — uses opsh_app_name().
- * Technical identifiers keep the product name on purpose: HTTP headers (X-OpsHub-*), log tags,
- * the installer, and the names of objects OpsHub creates in Microsoft 365 (they are how it finds
+ * the Help Center, the authenticator-app label, messages — uses itops_app_name().
+ * Technical identifiers keep the product name on purpose: HTTP headers (X-ITOps-*), log tags,
+ * the installer, and the names of objects ITOps creates in Microsoft 365 (they are how it finds
  * them again — see the BT20 notes).
  */
-if (!function_exists('opsh_app_name')) {
-    function opsh_app_name(bool $fresh = false): string {
+if (!function_exists('itops_app_name')) {
+    function itops_app_name(bool $fresh = false): string {
         static $n = null;
         if ($n !== null && !$fresh) return $n;
-        $n = 'OpsHub';
+        $n = 'ITOps';
         try {
-            $v = getDB()->query("SELECT sval FROM opsh_settings WHERE skey='app_name'")->fetchColumn();
+            $v = getDB()->query("SELECT sval FROM itops_settings WHERE skey='app_name'")->fetchColumn();
             if (is_string($v) && trim($v) !== '') $n = trim($v);
         } catch (Throwable $e) { /* not installed yet → product name */ }
         return $n;
     }
-    /** Replace the product name in text shown to people (not inside header names such as X-OpsHub-Token). */
-    function opsh_brand(?string $s): string {
-        $s = (string)$s; $n = opsh_app_name();
-        if ($n === 'OpsHub' || strpos($s, 'OpsHub') === false) return $s;
-        return preg_replace_callback('/(?<![-\w])OpsHub(?![-\w])/', fn() => $n, $s);
+    /** Replace the product name in text shown to people (not inside header names such as X-ITOps-Token). */
+    function itops_brand(?string $s): string {
+        $s = (string)$s; $n = itops_app_name();
+        if ($n === 'ITOps' || strpos($s, 'ITOps') === false) return $s;
+        return preg_replace_callback('/(?<![-\w])ITOps(?![-\w])/', fn() => $n, $s);
     }
 }
 
@@ -32,23 +32,23 @@ if (!function_exists('opsh_app_name')) {
  * BT96 — ownership of the product. Fixed in the code on purpose: no setting, screen or role can change it. A licensee
  * renames the app for its people (app_name above); the product, its owner and the notices below stay as they are.
  */
-if (!defined('OPSH_PRODUCT')) {
-    define('OPSH_PRODUCT', 'NewApp');
-    define('OPSH_PRODUCT_LINE', 'Microsoft 365 Administration');
-    define('OPSH_OWNER', 'Indisse-BTS');   // BT100: the owner is named as the business, never as a person
-    define('OPSH_COPYRIGHT_YEARS', '2026');
+if (!defined('ITOPS_PRODUCT')) {
+    define('ITOPS_PRODUCT', 'ITOps');
+    define('ITOPS_PRODUCT_LINE', 'Microsoft 365 Administration');
+    define('ITOPS_OWNER', 'Indisse-BTS');   // BT100: the owner is named as the business, never as a person
+    define('ITOPS_COPYRIGHT_YEARS', '2026');
 }
-if (!function_exists('opsh_about')) {
+if (!function_exists('itops_about')) {
     /** The organization's name: the setting org_name, else the name used on exported documents (Settings → Branding → Documents). */
-    function opsh_org_name(PDO $db): string {
-        try { $q = $db->query("SELECT skey, sval FROM opsh_settings WHERE skey IN ('org_name','doc_org_name')")->fetchAll(PDO::FETCH_KEY_PAIR); }
+    function itops_org_name(PDO $db): string {
+        try { $q = $db->query("SELECT skey, sval FROM itops_settings WHERE skey IN ('org_name','doc_org_name')")->fetchAll(PDO::FETCH_KEY_PAIR); }
         catch (Throwable $e) { return ''; }
         return trim((string)($q['org_name'] ?? '')) !== '' ? trim((string)$q['org_name']) : trim((string)($q['doc_org_name'] ?? ''));
     }
-    function opsh_copyright(): string { return '© ' . OPSH_COPYRIGHT_YEARS . ' ' . OPSH_OWNER . '. All rights reserved.'; }
+    function itops_copyright(): string { return '© ' . ITOPS_COPYRIGHT_YEARS . ' ' . ITOPS_OWNER . '. All rights reserved.'; }
 
     /** The third-party components shipped with the product (full texts: vendor/LICENSES.txt, public/teams/TEAMS-JS-LICENSE.txt, THIRD-PARTY-NOTICES.txt). */
-    function opsh_third_party(): array {
+    function itops_third_party(): array {
         return [
             ['name' => 'React', 'version' => '18.3.1', 'license' => 'MIT'],
             ['name' => 'ReactDOM', 'version' => '18.3.1', 'license' => 'MIT'],
@@ -64,34 +64,34 @@ if (!function_exists('opsh_about')) {
     }
 
     /** This installation's identifier: made once (random); it names the installation on a license, and is sent only to the License Hub it is linked to (BT127). */
-    function opsh_install_id(PDO $db): string {
+    function itops_install_id(PDO $db): string {
         try {
-            $v = (string)$db->query("SELECT sval FROM opsh_settings WHERE skey='install_id'")->fetchColumn();
+            $v = (string)$db->query("SELECT sval FROM itops_settings WHERE skey='install_id'")->fetchColumn();
             if (preg_match('/^[A-F0-9]{4}(-[A-F0-9]{4}){3}$/', $v)) return $v;
             $v = implode('-', str_split(strtoupper(bin2hex(random_bytes(8))), 4));
-            $db->prepare("INSERT IGNORE INTO opsh_settings (skey, sval) VALUES ('install_id', ?)")->execute([$v]);
-            return (string)$db->query("SELECT sval FROM opsh_settings WHERE skey='install_id'")->fetchColumn();
+            $db->prepare("INSERT IGNORE INTO itops_settings (skey, sval) VALUES ('install_id', ?)")->execute([$v]);
+            return (string)$db->query("SELECT sval FROM itops_settings WHERE skey='install_id'")->fetchColumn();
         } catch (Throwable $e) { return ''; }
     }
 
     /** BT97: the independent-developer statement (every signed-in person sees it). Draft wording, pending legal review. */
-    function opsh_independent(): string {
-        return OPSH_PRODUCT . ' is an independent product. It was conceived, designed and developed by ' . OPSH_OWNER . ' as an independent software developer, and not as an employee, contractor or consultant of any company or organization. It was not commissioned by, and is not a work made for hire for, any organization that uses it. Licensing, using, testing or requesting features of ' . OPSH_PRODUCT . ' gives no organization any ownership interest in it, in its updates, or in improvements made at its request.';
+    function itops_independent(): string {
+        return ITOPS_PRODUCT . ' is an independent product. It was conceived, designed and developed by ' . ITOPS_OWNER . ' as an independent software developer, and not as an employee, contractor or consultant of any company or organization. It was not commissioned by, and is not a work made for hire for, any organization that uses it. Licensing, using, testing or requesting features of ' . ITOPS_PRODUCT . ' gives no organization any ownership interest in it, in its updates, or in improvements made at its request.';
     }
 
     /**
-     * BT97: this installation's license record. The owner delivers it with the installation as opsh-license.php in the
+     * BT97: this installation's license record. The owner delivers it with the installation as itops-license.php in the
      * installation folder (it is never part of an update package, so an update never replaces it). The file returns an
      * array; nothing in the app can write it. A PHP file, not JSON, so the web server never serves its contents.
-     *   <?php return ['agreement' => 'OPSH-2026-001', 'licensee' => 'Organization legal name', 'install_id' => 'XXXX-XXXX-XXXX-XXXX',
+     *   <?php return ['agreement' => 'ITOPS-2026-001', 'licensee' => 'Organization legal name', 'install_id' => 'XXXX-XXXX-XXXX-XXXX',
      *                 'term_start' => '2026-11-01', 'term_end' => '' (empty = perpetual), 'users' => 50 (0 = no limit),
      *                 'plan' => 'complete' | 'service_desk' | 'm365_admin' | 'it_operations' (BT101; empty = every module),
      *                 'modules' => [module keys added on top of the plan, e.g. 'budget'] (BT101; names that are not module keys
      *                 are only shown), 'kind' => 'Free' | 'Paid' | ..., 'notes' => ''];
      * Returns null when there is no record, or ['error' => …] when the file is there but unreadable.
      */
-    function opsh_license_record(PDO $db): ?array {
-        $f = dirname(__DIR__, 2) . '/opsh-license.php';
+    function itops_license_record(PDO $db): ?array {
+        $f = dirname(__DIR__, 2) . '/itops-license.php';
         if (!is_file($f)) return null;
         try { $r = (static function (string $f) { return include $f; })($f); } catch (Throwable $e) { return ['error' => 'The license record could not be read.']; }
         if (!is_array($r)) return ['error' => 'The license record could not be read.'];
@@ -107,16 +107,16 @@ if (!function_exists('opsh_about')) {
         // BT105: is the file genuine and unchanged (signed by the owner)?
         require_once __DIR__ . '/License.php';
         $out['serial'] = $txt('serial', 40); $out['issued_at'] = $txt('issued_at', 30);
-        $out['signed'] = opsh_license_check($r);
-        $here = opsh_install_id($db);
+        $out['signed'] = itops_license_check($r);
+        $here = itops_install_id($db);
         $out['other_installation'] = $out['install_id'] !== '' && $here !== '' && $out['install_id'] !== $here;
         $out['expired'] = $out['term_end'] !== '' && $out['term_end'] < date('Y-m-d');
         return $out;
     }
 
     /** BT97: active accounts, against the user limit of the license record. */
-    function opsh_users_active(PDO $db): ?int {
-        try { return (int)$db->query("SELECT COUNT(*) FROM opsh_users WHERE status='active'")->fetchColumn(); } catch (Throwable $e) { return null; }
+    function itops_users_active(PDO $db): ?int {
+        try { return (int)$db->query("SELECT COUNT(*) FROM itops_users WHERE status='active'")->fetchColumn(); } catch (Throwable $e) { return null; }
     }
 
     /**
@@ -125,39 +125,39 @@ if (!function_exists('opsh_about')) {
      * license record, the installation ID, LICENSE.txt and the third-party components — is for roles with the permission
      * "License details" (module `license`, view); Super Admin always. The short answer carries none of the full fields.
      */
-    function opsh_about(PDO $db, bool $full = true): array {
+    function itops_about(PDO $db, bool $full = true): array {
         $s = [];
-        try { foreach ($db->query("SELECT skey, sval FROM opsh_settings WHERE skey IN ('installed_at')") as $r) $s[$r['skey']] = (string)$r['sval']; } catch (Throwable $e) {}
+        try { foreach ($db->query("SELECT skey, sval FROM itops_settings WHERE skey IN ('installed_at')") as $r) $s[$r['skey']] = (string)$r['sval']; } catch (Throwable $e) {}
         $short = [
             'full' => false,
-            'product' => OPSH_PRODUCT, 'product_line' => OPSH_PRODUCT_LINE, 'app_name' => opsh_app_name(),
-            'owner' => OPSH_OWNER, 'copyright' => opsh_copyright(),
-            'developed_by' => OPSH_PRODUCT . ' is designed, developed and owned by ' . OPSH_OWNER . ', drawing on 30 years managing IT operations for multiple companies in Puerto Rico and Florida.',
-            'independent' => opsh_independent(),
-            'licensed' => OPSH_PRODUCT . ' is proprietary software. It is licensed, not sold.',
-            'licensee' => opsh_org_name($db),
+            'product' => ITOPS_PRODUCT, 'product_line' => ITOPS_PRODUCT_LINE, 'app_name' => itops_app_name(),
+            'owner' => ITOPS_OWNER, 'copyright' => itops_copyright(),
+            'developed_by' => ITOPS_PRODUCT . ' is designed, developed and owned by ' . ITOPS_OWNER . ', drawing on 30 years managing IT operations for multiple companies in Puerto Rico and Florida.',
+            'independent' => itops_independent(),
+            'licensed' => ITOPS_PRODUCT . ' is proprietary software. It is licensed, not sold.',
+            'licensee' => itops_org_name($db),
         ];
         if (!$full) return $short;
         $lic = @file_get_contents(dirname(__DIR__, 2) . '/LICENSE.txt');
         return array_merge($short, [
             'full' => true,
             'license' => [
-                OPSH_PRODUCT . ' is proprietary software. It is licensed, not sold.',
-                'Each organization uses ' . OPSH_PRODUCT . ' under its own written license agreement with the owner. That agreement sets the term, the installation, the number of users and the modules.',
+                ITOPS_PRODUCT . ' is proprietary software. It is licensed, not sold.',
+                'Each organization uses ' . ITOPS_PRODUCT . ' under its own written license agreement with the owner. That agreement sets the term, the installation, the number of users and the modules.',
                 'A license does not transfer ownership of the software, its source code, design, database structure, documentation, or any change or improvement made to it.',
                 'Unless the license agreement allows it in writing: no copying beyond the licensed installation and its backups, no redistribution, sublicensing, resale or hosting for others, no reverse engineering, and no removal of these notices.',
-                'The licensed organization owns its own data. The owner of ' . OPSH_PRODUCT . ' claims no right to it.',
-                'Names of other products (for example Microsoft 365 or vTiger) only identify the services ' . OPSH_PRODUCT . ' connects to. They belong to their owners and imply no affiliation or endorsement.',
-                'Ideas, requests, feedback or testing by an organization do not make it an owner or co-author of ' . OPSH_PRODUCT . ' or of any feature made from them. Every update, module and customization belongs to the owner and is licensed under the organization\'s agreement.',
-                'The owner is an independent software vendor, not an employee or agent of any licensed organization. Any other work the owner does for an organization is separate from the license and transfers no right in ' . OPSH_PRODUCT . '.',
+                'The licensed organization owns its own data. The owner of ' . ITOPS_PRODUCT . ' claims no right to it.',
+                'Names of other products (for example Microsoft 365 or vTiger) only identify the services ' . ITOPS_PRODUCT . ' connects to. They belong to their owners and imply no affiliation or endorsement.',
+                'Ideas, requests, feedback or testing by an organization do not make it an owner or co-author of ' . ITOPS_PRODUCT . ' or of any feature made from them. Every update, module and customization belongs to the owner and is licensed under the organization\'s agreement.',
+                'The owner is an independent software vendor, not an employee or agent of any licensed organization. Any other work the owner does for an organization is separate from the license and transfers no right in ' . ITOPS_PRODUCT . '.',
             ],
-            'install_id' => opsh_install_id($db),
+            'install_id' => itops_install_id($db),
             'installed_at' => $s['installed_at'] ?? '',
-            'license_record' => opsh_license_record($db),
-            'license_notice' => (function () use ($db) { require_once __DIR__ . '/License.php'; return opsh_license_notice(opsh_license_status($db, opsh_license_record($db))); })(),   // BT105
-            'users_active' => opsh_users_active($db),
+            'license_record' => itops_license_record($db),
+            'license_notice' => (function () use ($db) { require_once __DIR__ . '/License.php'; return itops_license_notice(itops_license_status($db, itops_license_record($db))); })(),   // BT105
+            'users_active' => itops_users_active($db),
             'license_text' => is_string($lic) ? mb_substr($lic, 0, 60000) : '',
-            'third_party' => opsh_third_party(),
+            'third_party' => itops_third_party(),
         ]);
     }
 }

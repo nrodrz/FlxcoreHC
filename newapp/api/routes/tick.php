@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — in-app scheduler ("no-cron mode").
+ * ITOps — in-app scheduler ("no-cron mode").
  *
  * POST /api/tick   (any signed-in user; the open app calls it every few minutes)
  *
@@ -21,11 +21,11 @@
 if ($method !== 'POST') error_response('Method not allowed', 405);
 require_once __DIR__ . '/../lib/MailIntake.php';
 
-const OPSH_TICK_INTERVAL = 180;   // seconds between runs
+const ITOPS_TICK_INTERVAL = 180;   // seconds between runs
 
 $db = getDB();
 $get = function (string $k, $d = null) use ($db) {
-    $s = $db->prepare('SELECT sval FROM opsh_settings WHERE skey=?'); $s->execute([$k]);
+    $s = $db->prepare('SELECT sval FROM itops_settings WHERE skey=?'); $s->execute([$k]);
     $v = $s->fetchColumn(); return $v === false ? $d : $v;
 };
 
@@ -33,9 +33,9 @@ if ($get('mail_auto_tick', '1') !== '1') json_response(['ok' => true, 'ran' => f
 
 // Atomic claim so only one request per interval does the work.
 $now = time();
-$db->prepare("INSERT IGNORE INTO opsh_settings (skey, sval) VALUES ('auto_tick_at', '0')")->execute();
-$claim = $db->prepare("UPDATE opsh_settings SET sval=? WHERE skey='auto_tick_at' AND CAST(sval AS UNSIGNED) < ?");
-$claim->execute([(string)$now, $now - OPSH_TICK_INTERVAL]);
+$db->prepare("INSERT IGNORE INTO itops_settings (skey, sval) VALUES ('auto_tick_at', '0')")->execute();
+$claim = $db->prepare("UPDATE itops_settings SET sval=? WHERE skey='auto_tick_at' AND CAST(sval AS UNSIGNED) < ?");
+$claim->execute([(string)$now, $now - ITOPS_TICK_INTERVAL]);
 if ($claim->rowCount() !== 1) json_response(['ok' => true, 'ran' => false, 'reason' => 'throttled']);
 
 // ---- Reply immediately, then keep working in the background ----
@@ -55,8 +55,8 @@ else { while (ob_get_level() > 0) @ob_end_flush(); @flush(); }
 $summary = [];
 // BT60: this run is recorded (Logs → Scheduled jobs); the email intake is recorded as a "mail" run too
 require_once __DIR__ . '/../lib/CronMonitor.php';
-opsh_cron_begin($db, 'tick', 'tick');
-opsh_cron_step('Email intake');
+itops_cron_begin($db, 'tick', 'tick');
+itops_cron_step('Email intake');
 $mailT0 = microtime(true);
 
 // 1) Email-to-ticket intake
@@ -64,8 +64,8 @@ try {
     if ($get('mail_enabled', '0') === '1') {
         $r = mail_intake_poll();
         $mailMs = (int)round((microtime(true) - $mailT0) * 1000);
-        if (!empty($r['ok'])) opsh_cron_record($db, 'mail', 'tick', 'ok', (int)($r['created'] ?? 0) . ' ticket(s) created, ' . (int)($r['appended'] ?? 0) . ' reply(ies) added.', $mailMs, [['name' => 'Read the help desk mailbox', 'status' => 'ok', 'ms' => $mailMs, 'msg' => '']]);
-        else { opsh_cron_fail((string)($r['error'] ?? 'unknown')); opsh_cron_record($db, 'mail', 'tick', 'failed', 'Mailbox not read: ' . ($r['error'] ?? 'unknown'), $mailMs, [['name' => 'Read the help desk mailbox', 'status' => 'failed', 'ms' => $mailMs, 'msg' => (string)($r['error'] ?? '')]]); }
+        if (!empty($r['ok'])) itops_cron_record($db, 'mail', 'tick', 'ok', (int)($r['created'] ?? 0) . ' ticket(s) created, ' . (int)($r['appended'] ?? 0) . ' reply(ies) added.', $mailMs, [['name' => 'Read the help desk mailbox', 'status' => 'ok', 'ms' => $mailMs, 'msg' => '']]);
+        else { itops_cron_fail((string)($r['error'] ?? 'unknown')); itops_cron_record($db, 'mail', 'tick', 'failed', 'Mailbox not read: ' . ($r['error'] ?? 'unknown'), $mailMs, [['name' => 'Read the help desk mailbox', 'status' => 'failed', 'ms' => $mailMs, 'msg' => (string)($r['error'] ?? '')]]); }
         $summary['mail'] = !empty($r['ok'])
             ? ('ok: ' . (int)($r['created'] ?? 0) . ' created, ' . (int)($r['appended'] ?? 0) . ' threaded')
             : ('error: ' . ($r['error'] ?? 'unknown'));
@@ -73,13 +73,13 @@ try {
         $summary['mail'] = 'intake disabled';
     }
 } catch (Throwable $e) {
-    opsh_cron_fail($e);
+    itops_cron_fail($e);
     $summary['mail'] = 'error: ' . $e->getMessage();
-    error_log('[OpsHub tick] mail: ' . $e->getMessage());
+    error_log('[ITOps tick] mail: ' . $e->getMessage());
 }
 
 // 2) SLA scan — reuse cron-sla.php (single source of truth) via a loopback call with its token.
-opsh_cron_step('Main scheduler (cron-sla.php over loopback)');
+itops_cron_step('Main scheduler (cron-sla.php over loopback)');
 try {
     $tok = $get('mail_cron_token', '');
     if ($tok && function_exists('curl_init')) {
@@ -88,41 +88,41 @@ try {
         $dir   = rtrim(str_replace('\\', '/', dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/api/index.php'))), '/');  // /itops
         $base  = (defined('APP_URL') && APP_URL !== '' && strpos((string)APP_URL, '%%') === false) ? rtrim((string)APP_URL, '/')   // BT87 (code audit M-17): the token goes to the app's own address, never to the Host header
                : '';   // review CORE-18: without the app's address set, the token is never sent to the Host header
-        if ($base === '') { $summary['sla'] = 'skipped: set the app address (APP_URL) so the scheduler can run here'; opsh_cron_fail('The app address (APP_URL) is not set, so the main scheduler could not be started from here.'); }
+        if ($base === '') { $summary['sla'] = 'skipped: set the app address (APP_URL) so the scheduler can run here'; itops_cron_fail('The app address (APP_URL) is not set, so the main scheduler could not be started from here.'); }
         if ($base) {
             $ch = curl_init($base . '/cron-sla.php');   // BT14: token in a header, never in the URL (keeps it out of access logs)
             curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 90, CURLOPT_CONNECTTIMEOUT => 10,
-                CURLOPT_HTTPHEADER => ['X-OpsHub-Cron-Token: ' . $tok, 'X-OpsHub-Run: tick']]);
+                CURLOPT_HTTPHEADER => ['X-ITOps-Cron-Token: ' . $tok, 'X-ITOps-Run: tick']]);
             $out  = curl_exec($ch);
             $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
             $summary['sla'] = $code === 200 ? 'ok' : ('HTTP ' . $code);
-            if ($code !== 200) opsh_cron_fail('cron-sla.php answered HTTP ' . $code);
+            if ($code !== 200) itops_cron_fail('cron-sla.php answered HTTP ' . $code);
         }
     } else {
         $summary['sla'] = 'skipped (no cron token yet — save the Email settings once)';
     }
 } catch (Throwable $e) {
-    opsh_cron_fail($e);
+    itops_cron_fail($e);
     $summary['sla'] = 'error: ' . $e->getMessage();
-    error_log('[OpsHub tick] sla: ' . $e->getMessage());
+    error_log('[ITOps tick] sla: ' . $e->getMessage());
 }
 
 // BT61: uptime checks that are due
-opsh_cron_step('Uptime checks');
-try { require_once __DIR__ . '/../lib/Brand.php'; require_once __DIR__ . '/../lib/EmailTemplates.php'; require_once __DIR__ . '/../lib/Uptime.php'; $upR = opsh_uptime_run($db); $summary['uptime'] = $upR['checked'] . ' checked'; } catch (Throwable $e) { opsh_cron_fail($e); }
+itops_cron_step('Uptime checks');
+try { require_once __DIR__ . '/../lib/Brand.php'; require_once __DIR__ . '/../lib/EmailTemplates.php'; require_once __DIR__ . '/../lib/Uptime.php'; $upR = itops_uptime_run($db); $summary['uptime'] = $upR['checked'] . ' checked'; } catch (Throwable $e) { itops_cron_fail($e); }
 // BT62: backup checks (WHM hourly, late backups)
-opsh_cron_step('Backup checks');
-try { require_once __DIR__ . '/../lib/Backups.php'; $bkR = opsh_bk_run($db); $summary['backups'] = $bkR['jobs'] . ' backup(s), ' . $bkR['late'] . ' late'; } catch (Throwable $e) { opsh_cron_fail($e); }
+itops_cron_step('Backup checks');
+try { require_once __DIR__ . '/../lib/Backups.php'; $bkR = itops_bk_run($db); $summary['backups'] = $bkR['jobs'] . ' backup(s), ' . $bkR['late'] . ' late'; } catch (Throwable $e) { itops_cron_fail($e); }
 // BT66: Outlook / Teams calendar sync (spaced to ~3 minutes inside; off until an admin turns it on)
-opsh_cron_step('Outlook calendar sync');
-try { require_once __DIR__ . '/../lib/OutlookSync.php'; $osR = opsh_os_run($db); if (!empty($osR['ran'])) $summary['outlook'] = $osR['created'] . ' added, ' . $osR['updated'] . ' updated, ' . $osR['removed'] . ' removed, ' . $osR['from_outlook'] . ' from Outlook'; } catch (Throwable $e) { opsh_cron_fail($e, 'warning'); }
-opsh_cron_step('Check the scheduled jobs');
-try { opsh_cron_watch($db); } catch (Throwable $e) {}
-opsh_cron_end(null, 'Email: ' . ($summary['mail'] ?? '—') . ' · Main scheduler: ' . ($summary['sla'] ?? '—'));
+itops_cron_step('Outlook calendar sync');
+try { require_once __DIR__ . '/../lib/OutlookSync.php'; $osR = itops_os_run($db); if (!empty($osR['ran'])) $summary['outlook'] = $osR['created'] . ' added, ' . $osR['updated'] . ' updated, ' . $osR['removed'] . ' removed, ' . $osR['from_outlook'] . ' from Outlook'; } catch (Throwable $e) { itops_cron_fail($e, 'warning'); }
+itops_cron_step('Check the scheduled jobs');
+try { itops_cron_watch($db); } catch (Throwable $e) {}
+itops_cron_end(null, 'Email: ' . ($summary['mail'] ?? '—') . ' · Main scheduler: ' . ($summary['sla'] ?? '—'));
 // Record the outcome so admins can see the scheduler is alive.
 try {
-    $db->prepare("INSERT INTO opsh_settings (skey, sval) VALUES ('auto_tick_last', ?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")
+    $db->prepare("INSERT INTO itops_settings (skey, sval) VALUES ('auto_tick_last', ?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")
        ->execute([json_encode(['at' => date('c'), 'result' => $summary])]);
 } catch (Throwable $e) {}
 exit;

@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Onboarding helpers (Phase B): multi-license / multi-group task config, Graph retry for
+ * ITOps — Onboarding helpers (Phase B): multi-license / multi-group task config, Graph retry for
  * a freshly created account, and the PRE-FLIGHT check that runs before anything is created.
  *
  * Pre-flight never changes anything. For every pending automated step it reports
@@ -11,10 +11,10 @@
  */
 require_once __DIR__ . '/Offboarding.php';
 
-if (!function_exists('opsh_ob_skus')) {
+if (!function_exists('itops_ob_skus')) {
 
     /** Licenses configured on a task: new multi format {skus:[{skuId,label}]} or legacy {skuId,skuLabel}. */
-    function opsh_ob_skus(array $cfg): array {
+    function itops_ob_skus(array $cfg): array {
         $out = [];
         foreach (($cfg['skus'] ?? []) as $s) if (!empty($s['skuId'])) $out[$s['skuId']] = (string)($s['label'] ?? $s['skuId']);
         if (!empty($cfg['skuId']) && !isset($out[$cfg['skuId']])) $out[$cfg['skuId']] = (string)($cfg['skuLabel'] ?? $cfg['skuId']);
@@ -22,7 +22,7 @@ if (!function_exists('opsh_ob_skus')) {
     }
 
     /** Groups configured on a task: {groups:[{id,name}]} or legacy {groupId,groupLabel}. */
-    function opsh_ob_groups(array $cfg): array {
+    function itops_ob_groups(array $cfg): array {
         $out = [];
         foreach (($cfg['groups'] ?? []) as $g) if (!empty($g['id'])) $out[$g['id']] = (string)($g['name'] ?? $g['id']);
         if (!empty($cfg['groupId']) && !isset($out[$cfg['groupId']])) $out[$cfg['groupId']] = (string)($cfg['groupLabel'] ?? $cfg['groupId']);
@@ -33,7 +33,7 @@ if (!function_exists('opsh_ob_skus')) {
      * Run a Graph call, retrying while a just-created account is still replicating
      * (Graph answers 404 "does not exist" for a few seconds after POST /users).
      */
-    function opsh_graph_retry(callable $fn, int $tries = 4) {
+    function itops_graph_retry(callable $fn, int $tries = 4) {
         $wait = [3, 6, 10];
         for ($i = 0; ; $i++) {
             try { return $fn(); }
@@ -47,10 +47,10 @@ if (!function_exists('opsh_ob_skus')) {
     }
 
     /** subscribedSkus → [skuId => ['name','available']] (cached per request). */
-    function opsh_ob_seats(): array {
+    function itops_ob_seats(): array {
         static $c = null; if ($c !== null) return $c;
         $c = [];
-        $r = opsh_graph_get('subscribedSkus');
+        $r = itops_graph_get('subscribedSkus');
         foreach (($r['value'] ?? []) as $s) {
             $c[$s['skuId'] ?? ''] = ['name' => $s['skuPartNumber'] ?? '', 'available' => (int)($s['prepaidUnits']['enabled'] ?? 0) - (int)($s['consumedUnits'] ?? 0)];
         }
@@ -58,7 +58,7 @@ if (!function_exists('opsh_ob_skus')) {
     }
 
     /** Application permissions the Azure app needs per step (any one of the list is enough). */
-    function opsh_ob_needed_perms(string $type): array {
+    function itops_ob_needed_perms(string $type): array {
         $M = [
             'm365_create'             => ['User.ReadWrite.All', 'Directory.ReadWrite.All'],
             'm365_license'            => ['User.ReadWrite.All', 'Directory.ReadWrite.All'],
@@ -76,7 +76,7 @@ if (!function_exists('opsh_ob_skus')) {
     }
 
     /** Pre-flight for a run. Returns ['ok'=>bool (no errors), 'checks'=>[{task_id,task,level,message}], 'counts'=>[]]. */
-    function opsh_ob_preflight(PDO $db, array $run, array $tasks): array {
+    function itops_ob_preflight(PDO $db, array $run, array $tasks): array {
         $checks = [];
         $add = function ($t, $level, $msg) use (&$checks) { $checks[] = ['task_id' => $t ? (int)$t['id'] : null, 'task' => $t ? $t['title'] : 'General', 'level' => $level, 'message' => $msg]; };
         $pending = array_values(array_filter($tasks, fn($t) => in_array($t['status'], ['pending', 'failed'], true) && !in_array($t['task_type'], ['manual', 'm365_exchange_manual', 'equipment_return', 'assign_equipment'], true)));
@@ -90,13 +90,13 @@ if (!function_exists('opsh_ob_skus')) {
         $graphOk = false; $roles = null; $userState = null;   // null = unknown, false = not found, array = found
         if ($needsM365) {
             require_once __DIR__ . '/Graph.php';
-            if (!opsh_graph_configured()) $add(null, 'error', 'Microsoft 365 is not connected (Microsoft 365 → settings). Every M365 step would fail.');
+            if (!itops_graph_configured()) $add(null, 'error', 'Microsoft 365 is not connected (Microsoft 365 → settings). Every M365 step would fail.');
             elseif ($upn === '') $add(null, 'error', 'This process has no email / user principal name.');
             else {
                 try {
-                    $claims = function_exists('opsh_graph_jwt_claims') ? opsh_graph_jwt_claims(opsh_graph_token()) : [];
+                    $claims = function_exists('itops_graph_jwt_claims') ? itops_graph_jwt_claims(itops_graph_token()) : [];
                     $roles = isset($claims['roles']) && is_array($claims['roles']) ? $claims['roles'] : null;
-                    [$code, $u] = opsh_graph_http('GET', 'https://graph.microsoft.com/v1.0/users/' . rawurlencode($upn) . '?$select=id,userPrincipalName,accountEnabled,usageLocation,assignedLicenses');
+                    [$code, $u] = itops_graph_http('GET', 'https://graph.microsoft.com/v1.0/users/' . rawurlencode($upn) . '?$select=id,userPrincipalName,accountEnabled,usageLocation,assignedLicenses');
                     if ($code === 200) $userState = $u; elseif ($code === 404) $userState = false;
                     else $add(null, 'error', 'Could not read Microsoft 365 (HTTP ' . $code . '): ' . ($u['error']['message'] ?? 'unknown'));
                     $graphOk = true;
@@ -104,7 +104,7 @@ if (!function_exists('opsh_ob_skus')) {
             }
             if ($graphOk && $roles !== null) {
                 $missing = [];
-                foreach ($types as $ty) { $need = opsh_ob_needed_perms($ty); if ($need && !array_intersect($need, $roles)) $missing[$need[0]][] = $ty; }
+                foreach ($types as $ty) { $need = itops_ob_needed_perms($ty); if ($need && !array_intersect($need, $roles)) $missing[$need[0]][] = $ty; }
                 $TL = ['m365_create' => 'create account', 'm365_license' => 'assign license', 'm365_license_remove' => 'remove license', 'm365_license_remove_all' => 'remove all licenses',
                        'm365_disable' => 'disable account', 'm365_revoke_sessions' => 'revoke sessions', 'm365_group' => 'add to group', 'm365_autoreply' => 'auto-reply',
                        'm365_forward' => 'forward mail', 'm365_delegate_onedrive' => 'delegate OneDrive', 'm365_groups_remove_all' => 'remove from all groups'];
@@ -117,14 +117,14 @@ if (!function_exists('opsh_ob_skus')) {
         // ── vTiger ──
         $vtUser = null; $vtRoles = null; $vtOk = false;
         if ($needsVt) {
-            $ping = opsh_vt_call($db, 'ping');
+            $ping = itops_vt_call($db, 'ping');
             if (empty($ping['ok'])) $add(null, 'error', 'vTiger bridge: ' . ($ping['error'] ?? 'not reachable'));
             else {
                 $vtOk = true;
-                if (!in_array('find_user', $ping['actions'] ?? [], true)) { $add(null, 'error', 'The vTiger bridge is build ' . ($ping['build'] ?? '?') . ' — upload opsh-bridge.php build o5.'); $vtOk = false; }
+                if (!in_array('find_user', $ping['actions'] ?? [], true)) { $add(null, 'error', 'The vTiger bridge is build ' . ($ping['build'] ?? '?') . ' — upload itops-bridge.php build o5.'); $vtOk = false; }
             }
             if ($vtOk && !empty($run['subject_email'])) {
-                $f = opsh_vt_call($db, 'find_user', ['email' => (string)$run['subject_email']]);
+                $f = itops_vt_call($db, 'find_user', ['email' => (string)$run['subject_email']]);
                 $vtUser = !empty($f['ok']) ? ($f['user'] ?? false) : null;
             }
         }
@@ -139,18 +139,18 @@ if (!function_exists('opsh_ob_skus')) {
                     $hasLic = (bool)array_filter($pending, fn($x) => $x['task_type'] === 'm365_license');
                     if ($hasLic && empty($cfg['usageLocation'])) $add($t, 'error', 'A license step follows but this step has no usage location (e.g. US). Microsoft refuses to license an account without one — set it in the template.');
                     if (!empty($run['manager_upn'])) {
-                        [$mc] = opsh_graph_http('GET', 'https://graph.microsoft.com/v1.0/users/' . rawurlencode((string)$run['manager_upn']) . '?$select=id');
+                        [$mc] = itops_graph_http('GET', 'https://graph.microsoft.com/v1.0/users/' . rawurlencode((string)$run['manager_upn']) . '?$select=id');
                         $add($t, $mc === 200 ? 'ok' : 'warn', $mc === 200 ? 'Manager ' . $run['manager_upn'] . ' found.' : 'Manager ' . $run['manager_upn'] . ' was not found in Microsoft 365 — the account will be created without a manager.');
                     }
                     break;
                 case 'm365_license':
                     if (!$graphOk) break;
-                    $skus = opsh_ob_skus($cfg);
+                    $skus = itops_ob_skus($cfg);
                     if (!$skus) { $add($t, 'error', 'No license chosen in the template.'); break; }
                     if (!$willExist) $add($t, 'error', $upn . ' does not exist in Microsoft 365 and no create step is pending.');
                     if (is_array($userState) && empty($userState['usageLocation']) && !$createInRun) $add($t, 'error', 'The account has no usage location — licenses cannot be assigned. Set it in the Microsoft 365 admin center.');
                     try {
-                        $seats = opsh_ob_seats();
+                        $seats = itops_ob_seats();
                         $have = is_array($userState) ? array_column($userState['assignedLicenses'] ?? [], 'skuId') : [];
                         foreach ($skus as $id => $label) {
                             if (in_array($id, $have, true)) { $add($t, 'ok', $label . ' — already assigned.'); continue; }
@@ -162,10 +162,10 @@ if (!function_exists('opsh_ob_skus')) {
                     break;
                 case 'm365_group':
                     if (!$graphOk) break;
-                    $gs = opsh_ob_groups($cfg);
+                    $gs = itops_ob_groups($cfg);
                     if (!$gs) { $add($t, 'error', 'No group chosen in the template.'); break; }
                     foreach ($gs as $gid => $gn) {
-                        [$gc] = opsh_graph_http('GET', 'https://graph.microsoft.com/v1.0/groups/' . rawurlencode($gid) . '?$select=id');
+                        [$gc] = itops_graph_http('GET', 'https://graph.microsoft.com/v1.0/groups/' . rawurlencode($gid) . '?$select=id');
                         $add($t, $gc === 200 ? 'ok' : 'error', $gn . ($gc === 200 ? ' — found.' : ' — group not found (deleted or renamed?). Update the template.'));
                     }
                     if (!$willExist) $add($t, 'error', $upn . ' does not exist in Microsoft 365 and no create step is pending.');
@@ -185,18 +185,18 @@ if (!function_exists('opsh_ob_skus')) {
                     if (is_array($vtUser)) $add($t, 'warn', 'A vTiger user with ' . $run['subject_email'] . ' already exists (' . ($vtUser['status'] ?? '') . ') — it will be linked, no new password.');
                     else $add($t, 'ok', 'No vTiger user with ' . $run['subject_email'] . ' yet.');
                     $rid = (string)($cfg['roleid'] ?? '');
-                    if ($rid === '') $rid = (string)(opsh_vtiger_cfg($db)['prov']['default_roleid'] ?? '');
+                    if ($rid === '') $rid = (string)(itops_vtiger_cfg($db)['prov']['default_roleid'] ?? '');
                     if ($rid === '') { $add($t, 'error', 'No vTiger role in the template and no default role configured.'); break; }
-                    if ($vtRoles === null) { $lr = opsh_vt_call($db, 'list_roles'); $vtRoles = array_column($lr['roles'] ?? [], 'rolename', 'roleid'); }
+                    if ($vtRoles === null) { $lr = itops_vt_call($db, 'list_roles'); $vtRoles = array_column($lr['roles'] ?? [], 'rolename', 'roleid'); }
                     if ($vtRoles) $add($t, isset($vtRoles[$rid]) ? 'ok' : 'error', isset($vtRoles[$rid]) ? 'Role ' . $vtRoles[$rid] . ' (' . $rid . ').' : 'Role ' . $rid . ' does not exist in vTiger — pick another in the template.');
                     break;
                 case 'vtiger_reassign': case 'vtiger_deactivate':
                     if (!$vtOk) break;
                     if ($vtUser === false) { $add($t, 'warn', 'No vTiger user with ' . $run['subject_email'] . ' — nothing to do.'); break; }
                     if (!is_array($vtUser)) break;
-                    $pv = opsh_vt_call($db, 'reassign_preview', ['from' => (string)$vtUser['id']]);
+                    $pv = itops_vt_call($db, 'reassign_preview', ['from' => (string)$vtUser['id']]);
                     $n = (int)($pv['total'] ?? 0);
-                    if ($t['task_type'] === 'vtiger_reassign') $add($t, 'ok', $n . ' record(s) to reassign' . ($n ? ' (' . opsh_vt_mods_text($pv['modules'] ?? []) . ')' : '') . (!empty($cfg['to_email']) ? ' → ' . $cfg['to_email'] : ' — you will choose the new owner'));
+                    if ($t['task_type'] === 'vtiger_reassign') $add($t, 'ok', $n . ' record(s) to reassign' . ($n ? ' (' . itops_vt_mods_text($pv['modules'] ?? []) . ')' : '') . (!empty($cfg['to_email']) ? ' → ' . $cfg['to_email'] : ' — you will choose the new owner'));
                     else $add($t, $n && !array_filter($pending, fn($x) => $x['task_type'] === 'vtiger_reassign') ? 'warn' : 'ok', $n ? $n . ' record(s) still owned — reassign first or deactivation will ask for an override reason.' : 'Nothing owned — safe to deactivate.');
                     break;
                 case 'assign_reading':

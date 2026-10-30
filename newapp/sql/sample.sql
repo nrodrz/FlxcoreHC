@@ -4,10 +4,10 @@
 
 -- ── SAMPLE CREDENTIALS (inserted via PHP with encryption) ─────
 -- These are template records; actual encrypted values set by installer
--- Category IDs reference opsh_cred_categories auto-increment order
+-- Category IDs reference itops_cred_categories auto-increment order
 
 -- cat 1 = SaaS Platforms
-INSERT INTO `opsh_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
+INSERT INTO `itops_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
 ('CRM Admin','Primary admin account for the CRM',1,1,'https://crm.example.com','production',90,'2026-05-01','2026-08-01','current',1),
 ('Cloud Phone Admin','Admin for the cloud phone system',1,1,'https://phone.example.com','production',90,'2026-04-15','2026-07-15','current',1),
 ('Online Forms Admin','Enterprise account admin',1,1,'https://forms.example.com','production',90,'2026-03-10','2026-06-10','due_soon',1),
@@ -16,20 +16,20 @@ INSERT INTO `opsh_credentials` (`name`,`description`,`category_id`,`department_i
 ('eFax Admin','Cloud eFax admin',1,1,'https://fax.example.com','production',90,'2026-04-01','2026-07-01','current',1);
 
 -- cat 2 = Cloud Admin
-INSERT INTO `opsh_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
+INSERT INTO `itops_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
 ('Microsoft 365 Global Admin','Azure AD Global Admin — MFA enforced via Authenticator',2,1,'https://admin.microsoft.com','production',30,'2026-05-15','2026-06-15','due_soon',1),
 ('Azure Portal Admin','Azure subscription admin for cloud resources',2,1,'https://portal.azure.com','production',90,'2026-04-20','2026-07-20','current',1),
 ('Legacy Mail Admin','Admin for legacy mailboxes',2,1,'https://mail-legacy.example.com','production',90,'2026-03-01','2026-06-01','due_soon',1);
 
 -- cat 3 = Infrastructure
-INSERT INTO `opsh_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
+INSERT INTO `itops_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
 ('cPanel / WHM Root','Primary cPanel/WHM root access — hosting VPS',3,1,'https://server.example.com:2087','production',90,'2026-01-05','2026-04-05','overdue',1),
 ('Hosting Client Portal','Hosting provider billing and server management portal',3,1,'https://portal.example.com','production',180,'2026-02-15','2026-08-15','current',1),
 ('DNS Provider Admin','DNS management for all company domains',3,1,'https://dns.example.com','production',90,'2026-04-10','2026-07-10','current',1),
 ('SSL Certificate Manager','cPanel AutoSSL management',3,1,'https://server.example.com:2087','production',365,'2026-01-01','2026-12-31','current',1);
 
 -- cat 4 = Network Equipment
-INSERT INTO `opsh_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
+INSERT INTO `itops_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
 ('Firewall — Main Office','Firewall admin — main office',4,1,'https://10.0.1.1','production',90,'2026-03-22','2026-06-22','due_soon',1),
 ('Firewall — Branch Office','Firewall admin — branch office',4,1,'https://10.0.2.1','production',90,'2026-03-22','2026-06-22','due_soon',1),
 ('Wireless Controller','Wireless controller — all access points and switches',4,1,'https://10.0.1.5:8443','production',90,'2026-04-15','2026-07-15','current',1),
@@ -37,20 +37,20 @@ INSERT INTO `opsh_credentials` (`name`,`description`,`category_id`,`department_i
 ('ISP Admin — Backup Internet','Backup internet provider portal — branch offices',4,1,'https://isp2.example.com','production',180,'2026-01-15','2026-07-15','current',1);
 
 -- cat 5 = Database
-INSERT INTO `opsh_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
+INSERT INTO `itops_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
 ('MySQL Production — Operations App','Operations app production database',5,1,'mysql://db.example.com:3306','production',90,'2026-04-20','2026-07-20','current',1),
 ('MySQL Production — CRM Backend','CRM backend database',5,1,'mysql://db.example.com:3306','production',90,'2026-04-20','2026-07-20','current',1),
 ('MySQL Staging','Staging/test database for all applications',5,1,'mysql://db.example.com:3306','staging',180,'2026-03-01','2026-09-01','current',1);
 
 -- cat 7 = API Keys
-INSERT INTO `opsh_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
+INSERT INTO `itops_credentials` (`name`,`description`,`category_id`,`department_id`,`system_url`,`environment`,`rotation_days`,`last_rotated_at`,`next_rotation_date`,`status`,`owner_id`) VALUES
 ('AI Provider API','API key for the AI features',7,1,'https://ai.example.com','production',180,'2026-03-01','2026-09-01','current',1),
 ('Maps API','Maps API key for location services',7,1,'https://maps.example.com','production',365,'2026-01-01','2026-12-31','current',1),
 ('SMTP Relay','Email delivery API key',7,1,'https://smtp.example.com','production',180,'2026-02-15','2026-08-15','current',1),
 ('Payments API (Live)','Live API keys for payment processing',7,1,'https://payments.example.com','production',365,'2026-01-01','2026-12-31','current',1);
 
 -- ── SAMPLE CONTRACTS ──────────────────────────────────────────
-INSERT INTO `opsh_contracts` (`title`,`vendor_id`,`contract_type`,`department_id`,`status`,`start_date`,`end_date`,`auto_renew`,`renewal_notice_days`,`total_value`,`payment_frequency`,`payment_amount`,`owner_id`) VALUES
+INSERT INTO `itops_contracts` (`title`,`vendor_id`,`contract_type`,`department_id`,`status`,`start_date`,`end_date`,`auto_renew`,`renewal_notice_days`,`total_value`,`payment_frequency`,`payment_amount`,`owner_id`) VALUES
 ('Cloud Phone — Annual','1','subscription',1,'active','2026-01-01','2026-12-31',1,90,4800.00,'annual',4800.00,1),
 ('Online Forms — Annual','2','subscription',1,'active','2026-03-01','2027-02-28',1,60,1188.00,'annual',1188.00,1),
 ('E-signature — Business Plan','3','subscription',1,'expiring','2025-09-01','2026-08-31',0,90,2400.00,'annual',2400.00,1),
@@ -64,7 +64,7 @@ INSERT INTO `opsh_contracts` (`title`,`vendor_id`,`contract_type`,`department_id
 ('Backup Internet — Branch Offices',11,'service',1,'active','2026-01-01','2027-12-31',1,90,14400.00,'monthly',1200.00,1);
 
 -- ── SAMPLE KB ARTICLES ────────────────────────────────────────
-INSERT INTO `opsh_kb_articles` (`title`,`slug`,`content`,`category_id`,`department_id`,`author_id`,`status`,`views_count`,`helpful_yes`,`helpful_no`,`tags`) VALUES
+INSERT INTO `itops_kb_articles` (`title`,`slug`,`content`,`category_id`,`department_id`,`author_id`,`status`,`views_count`,`helpful_yes`,`helpful_no`,`tags`) VALUES
 ('How to Reset MFA for a User','reset-mfa-user','<h2>Steps to Reset MFA</h2><p>1. Go to Microsoft 365 Admin Center → Active Users</p><p>2. Select the user → Manage multifactor authentication</p><p>3. Select the user → Click "Enable" to re-enroll them</p><p>4. User will be prompted to set up MFA on next login</p><p><strong>Note:</strong> User must have a backup method configured.</p>',1,1,1,'published',234,92,8,'["mfa","microsoft 365","reset","authentication"]'),
 ('Troubleshooting Cloud Phone Audio Issues','phone-audio-issues','<h2>Common Causes</h2><p>One-way audio, echo, or no sound on cloud phone calls usually stems from:</p><ul><li>Browser permissions not granting microphone access</li><li>Network QoS not prioritizing VoIP traffic</li><li>ISP bandwidth insufficient (need minimum 100kbps per call)</li></ul><h2>Resolution Steps</h2><p>1. Check browser microphone permissions</p><p>2. Test with the phone system''s built-in audio test</p><p>3. Check network bandwidth at the affected location</p><p>4. Verify QoS settings on the firewall</p>',2,1,1,'published',187,85,15,'["phone","audio","voip","troubleshooting"]'),
 ('New Office Internet Setup Checklist','new-office-internet-checklist','<h2>Pre-Setup (T-30 days)</h2><p>1. Evaluate available ISPs at location</p><p>2. Obtain minimum 2 competitive quotes</p><p>3. Submit quote comparison to Executive Director for approval</p><h2>Installation (T-5 days)</h2><p>4. Coordinate circuit installation with ISP</p><p>5. Pre-configure router, switch, firewall, and APs</p><p>6. Ship pre-configured equipment to site</p><h2>Go-Live (Day 0)</h2><p>7. Install and cable all equipment</p><p>8. Configure VPN tunnel to HQ</p><p>9. Test all services (internet, VoIP, VPN, printing)</p><p>10. Document network topology and credentials in the vault</p>',4,1,1,'published',56,49,1,'["network","new office","checklist","ISP"]'),
@@ -74,7 +74,7 @@ INSERT INTO `opsh_kb_articles` (`title`,`slug`,`content`,`category_id`,`departme
 ('Accounts Payable Quick Reference','ap-quick-reference','<h2>Invoice Submission Process</h2><p>All vendor invoices must be submitted through the Finance ticket system.</p><p>1. Create a ticket under Finance → Invoice Processing</p><p>2. Attach the invoice PDF</p><p>3. Include: vendor name, amount, PO number (if applicable), and department code</p><p>4. Finance processes within 5 business days for net-30 terms</p>',8,3,1,'published',89,91,9,'["finance","accounts payable","invoice","process"]');
 
 -- ── SAMPLE TICKETS ────────────────────────────────────────────
-INSERT INTO `opsh_tickets` (`ticket_number`,`subject`,`description`,`category_id`,`department_id`,`priority`,`status`,`requester_id`,`assignee_id`,`created_at`) VALUES
+INSERT INTO `itops_tickets` (`ticket_number`,`subject`,`description`,`category_id`,`department_id`,`priority`,`status`,`requester_id`,`assignee_id`,`created_at`) VALUES
 ('TK-2026-0001','New laptop for marketing hire starting 6/15','Marketing is hiring a new Marketing Coordinator starting June 15. Need a standard-tier laptop configured and ready by June 13.',2,1,'p3_medium','open',1,1,'2026-05-25 09:00:00'),
 ('TK-2026-0002','Cannot connect to VPN from home','I''m getting "connection timed out" error when trying to connect to the VPN from my home office. Was working fine yesterday. I''ve restarted my laptop and router.',15,1,'p2_high','in_progress',1,1,'2026-05-27 14:30:00'),
 ('TK-2026-0003','Online intake form not sending to CRM','The client intake form on the website stopped syncing submissions to the CRM about 3 days ago. We have 15+ submissions that didn''t create contacts.',23,1,'p2_high','in_progress',1,1,'2026-05-28 10:15:00'),
@@ -84,7 +84,7 @@ INSERT INTO `opsh_tickets` (`ticket_number`,`subject`,`description`,`category_id
 ('TK-2026-0007','Vendor invoice — firewall support renewal','Firewall support renewal invoice attached. Amount: $3,200. PO#: IT-2026-044. Net-30 terms.',48,3,'p3_medium','open',1,NULL,'2026-05-29 10:00:00');
 
 -- ── SAMPLE CALENDAR EVENTS ────────────────────────────────────
-INSERT INTO `opsh_calendar_events` (`title`,`description`,`event_type`,`entity_type`,`entity_id`,`start_date`,`color`,`department_id`,`created_by`) VALUES
+INSERT INTO `itops_calendar_events` (`title`,`description`,`event_type`,`entity_type`,`entity_id`,`start_date`,`color`,`department_id`,`created_by`) VALUES
 ('Hosting Contract Expires','Hosting VPS annual service contract expires. Decision: renew or migrate.','contract_expiry','contract',7,'2026-06-30','#C44545',1,1),
 ('E-signature Contract Expires','E-signature Business plan expires. No auto-renew.','contract_expiry','contract',3,'2026-08-31','#C08A30',1,1),
 ('Online Forms Credential Rotation Due','Online forms admin password rotation due.','credential_rotation','credential',3,'2026-06-10','#C08A30',1,1),

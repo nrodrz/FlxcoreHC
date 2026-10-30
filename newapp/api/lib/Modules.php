@@ -1,10 +1,10 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — the module catalog (BT101).
+ * ITOps — the module catalog (BT101).
  *
- * Every part of OpsHub that can be sold or left out is a module. Which modules an installation has:
- *   1. licensed  — what the license record (opsh-license.php) grants: a plan ('plan' => 'service_desk' …) plus any extra
+ * Every part of ITOps that can be sold or left out is a module. Which modules an installation has:
+ *   1. licensed  — what the license record (itops-license.php) grants: a plan ('plan' => 'service_desk' …) plus any extra
  *                  modules listed by key ('modules' => ['budget', …]). No license record, or one that names no plan and no
  *                  module key, licenses everything (free installations and records written before BT101 keep working).
  *   2. switched off — a Super Admin may switch licensed modules off (setting `modules_off`), never on beyond the license.
@@ -12,15 +12,15 @@
  * The core (sign-in, users, roles, settings, Audit Log, Event Log, scheduled jobs, Help, About & ownership, Terms of Use,
  * integrations and API keys) is always on.
  *
- * A module that is off: its permissions are refused for everyone, Super Admin included (opsh_can), its API routes answer
+ * A module that is off: its permissions are refused for everyone, Super Admin included (itops_can), its API routes answer
  * 404 (api/index.php), and the menu, the role editor and the Help Center leave it out. Its data is kept: switching it on
  * again brings everything back.
  */
 require_once __DIR__ . '/Brand.php';   // the license record
-if (!function_exists('opsh_modules_catalog')) {
+if (!function_exists('itops_modules_catalog')) {
 
     /** key => [label, description, depends on, permission keys, API routes, menu pages] — in the order the screens show them. */
-    function opsh_modules_catalog(): array {
+    function itops_modules_catalog(): array {
         return [
             'service_desk' => ['Service Desk', 'Tickets, ticket categories, forms, the help-desk mailbox, SLAs, reports and the improvement register.', [],
                 ['tickets', 'categories', 'forms', 'reports', 'sla_cfg'], ['tickets', 'ticket_categories', 'forms', 'public_ticket', 'public_form', 'public_upload', 'public_csat', 'reports', 'improvements'], ['tickets', 'categories', 'forms', 'reports', 'improvements']],
@@ -67,29 +67,29 @@ if (!function_exists('opsh_modules_catalog')) {
 
     /** NEW APP: the modules this product has. Every other module of the catalog is always off here (its permissions refused,
      *  its routes 404, its pages hidden, its scheduled steps skipped); the screens do not list it. */
-    function opsh_product_modules(): array { return ['m365', 'onboarding', 'security_assessment', 'teams_app']; }
+    function itops_product_modules(): array { return ['m365', 'onboarding', 'security_assessment', 'teams_app']; }
 
     /** The plans that can be sold. A license names one; it may add modules by key on top. */
-    function opsh_plans(): array {
-        $all = opsh_product_modules();
+    function itops_plans(): array {
+        $all = itops_product_modules();
         return [
             'complete' => ['Complete', 'Every module of this product.', $all],
             'essentials' => ['Essentials', 'The Microsoft 365 administration without the security assessment.', array_values(array_intersect(['m365', 'onboarding', 'teams_app'], $all))],
         ];
     }
 
-    /** The state of this installation, computed once per request (opsh_modules_reset() after a change). */
-    function opsh_modules_state(?PDO $db = null, bool $fresh = false): array {
+    /** The state of this installation, computed once per request (itops_modules_reset() after a change). */
+    function itops_modules_state(?PDO $db = null, bool $fresh = false): array {
         static $st = null;
         if ($st !== null && !$fresh) return $st;
-        $cat = opsh_modules_catalog(); $plans = opsh_plans(); $keys = array_keys($cat);
+        $cat = itops_modules_catalog(); $plans = itops_plans(); $keys = array_keys($cat);
         $db = $db ?: (function_exists('getDB') ? getDB() : null);
         // 1. licensed
         $rec = null;
-        if ($db && function_exists('opsh_license_record')) { try { $rec = opsh_license_record($db); } catch (Throwable $e) { $rec = null; } }
+        if ($db && function_exists('itops_license_record')) { try { $rec = itops_license_record($db); } catch (Throwable $e) { $rec = null; } }
         // BT105: with a build that enforces licenses, only a genuine file decides; otherwise a trial, then the core only
         require_once __DIR__ . '/License.php';
-        $lic = $db ? opsh_license_status($db, $rec) : ['mode' => 'off', 'why' => ''];
+        $lic = $db ? itops_license_status($db, $rec) : ['mode' => 'off', 'why' => ''];
         $use = ($lic['mode'] === 'off' || $lic['mode'] === 'licensed') && $rec && empty($rec['error']);
         $plan = $use ? (string)($rec['plan'] ?? '') : '';
         $extra = $use ? array_values(array_intersect((array)($rec['module_keys'] ?? []), $keys)) : [];
@@ -98,10 +98,10 @@ if (!function_exists('opsh_modules_catalog')) {
         elseif ($lic['mode'] === 'unlicensed') { $licensed = []; $source = 'unlicensed'; }
         elseif ($plan === '' && !$extra) { $licensed = $keys; $source = $use ? 'license_all' : 'none'; }
         else { $licensed = array_values(array_unique(array_merge($plan !== '' ? $plans[$plan][2] : [], $extra))); $source = 'license'; }
-        $licensed = array_values(array_intersect($licensed, opsh_product_modules()));   // NEW APP: only this product's modules
+        $licensed = array_values(array_intersect($licensed, itops_product_modules()));   // NEW APP: only this product's modules
         // 2. switched off by a Super Admin
         $off = [];
-        if ($db) { try { $v = $db->query("SELECT sval FROM opsh_settings WHERE skey='modules_off'")->fetchColumn(); $j = json_decode((string)$v, true); if (is_array($j)) $off = array_values(array_intersect($j, $keys)); } catch (Throwable $e) {} }
+        if ($db) { try { $v = $db->query("SELECT sval FROM itops_settings WHERE skey='modules_off'")->fetchColumn(); $j = json_decode((string)$v, true); if (is_array($j)) $off = array_values(array_intersect($j, $keys)); } catch (Throwable $e) {} }
         // 3. dependencies
         $on = array_values(array_diff(array_intersect($keys, $licensed), $off));
         $needs = [];
@@ -109,32 +109,32 @@ if (!function_exists('opsh_modules_catalog')) {
             foreach ($on as $i => $k) foreach ($cat[$k][2] as $d) if (!in_array($d, $on, true)) { $needs[$k] = $d; unset($on[$i]); $changed = true; break; }
             $on = array_values($on);
         } while ($changed);
-        $st = ['license' => $lic + ['notice' => opsh_license_notice($lic)], 'source' => $source, 'plan' => $plan, 'plan_label' => $plan !== '' ? $plans[$plan][0] : '', 'licensed' => array_values(array_intersect($keys, $licensed)),
+        $st = ['license' => $lic + ['notice' => itops_license_notice($lic)], 'source' => $source, 'plan' => $plan, 'plan_label' => $plan !== '' ? $plans[$plan][0] : '', 'licensed' => array_values(array_intersect($keys, $licensed)),
                'off' => $off, 'on' => $on, 'needs' => $needs];
         return $st;
     }
-    function opsh_modules_reset(): void { opsh_modules_state(null, true); }
-    function opsh_module_on(string $key): bool {
-        $cat = opsh_modules_catalog();
+    function itops_modules_reset(): void { itops_modules_state(null, true); }
+    function itops_module_on(string $key): bool {
+        $cat = itops_modules_catalog();
         if (!isset($cat[$key])) return true;   // core
-        return in_array($key, opsh_modules_state()['on'], true);
+        return in_array($key, itops_modules_state()['on'], true);
     }
     /** The module a permission key belongs to (null = core). */
-    function opsh_perm_module(string $perm): ?string {
+    function itops_perm_module(string $perm): ?string {
         static $map = null;
-        if ($map === null) { $map = []; foreach (opsh_modules_catalog() as $k => $m) foreach ($m[3] as $p) $map[$p] = $k; }
+        if ($map === null) { $map = []; foreach (itops_modules_catalog() as $k => $m) foreach ($m[3] as $p) $map[$p] = $k; }
         return $map[$perm] ?? null;
     }
     /** The module an API route belongs to (null = core). */
-    function opsh_route_module(string $resource): ?string {
+    function itops_route_module(string $resource): ?string {
         static $map = null;
-        if ($map === null) { $map = []; foreach (opsh_modules_catalog() as $k => $m) foreach ($m[4] as $r) $map[$r] = $k; }
+        if ($map === null) { $map = []; foreach (itops_modules_catalog() as $k => $m) foreach ($m[4] as $r) $map[$r] = $k; }
         return $map[$resource] ?? null;
     }
-    function opsh_perm_enabled(string $perm): bool { $m = opsh_perm_module($perm); return $m === null || opsh_module_on($m); }
+    function itops_perm_enabled(string $perm): bool { $m = itops_perm_module($perm); return $m === null || itops_module_on($m); }
 
     /** BT101: the module an email template belongs to (null = core: digests of the whole system, job alerts, admin messages). */
-    function opsh_tpl_module(string $key): ?string {
+    function itops_tpl_module(string $key): ?string {
         if (strpos($key, 'ticket_') === 0 || in_array($key, ['sla_breach', 'sla_warning', 'digest_sla_weekly'], true)) return 'service_desk';
         if (strpos($key, 'case_') === 0) return 'cases';
         if (strpos($key, 'announcement_') === 0) return 'announcements';
@@ -152,10 +152,10 @@ if (!function_exists('opsh_modules_catalog')) {
         return null;
     }
     /** BT101: the module a bell notification's link opens (null = core). Links look like "tickets", "#assets", "#cases/12". */
-    function opsh_link_module(?string $link): ?string {
+    function itops_link_module(?string $link): ?string {
         static $map = null;
         if ($map === null) {
-            $map = []; foreach (opsh_modules_catalog() as $k => $m) foreach ($m[5] as $pg) $map[$pg] = $k;
+            $map = []; foreach (itops_modules_catalog() as $k => $m) foreach ($m[5] as $pg) $map[$pg] = $k;
             $map += ['tickets' => 'service_desk', 'signatures' => 'documents', 'onboarding' => 'onboarding', 'onboarding_runs' => 'onboarding', 'access' => 'company_systems',
                      'guardian' => 'servers', 'budget' => 'budget', 'standards_dashboard' => 'standards', 'm365' => 'm365', 'improvements' => 'service_desk'];
         }
@@ -165,7 +165,7 @@ if (!function_exists('opsh_modules_catalog')) {
         return strpos($pg, 'm365') === 0 ? 'm365' : null;
     }
     /** BT101: the module a Scorecard measurable's automatic source reads from (null = core). */
-    function opsh_sc_source_module(string $src): ?string {
+    function itops_sc_source_module(string $src): ?string {
         if (in_array($src, ['p1_incidents', 'ticket_volume', 'frt_minutes', 'sla_closure_pct'], true)) return 'service_desk';
         if ($src === 'onboarding_ontime') return 'onboarding';
         if (strpos($src, 'sa_') === 0) return 'security_assessment';   // BT123
@@ -173,24 +173,24 @@ if (!function_exists('opsh_modules_catalog')) {
         if (in_array($src, ['ssl_days_min', 'uptime_pct', 'backup_success'], true) || strpos($src, 'uptime_') === 0 || strpos($src, 'bkp_') === 0) return 'servers';
         return null;
     }
-    function opsh_link_enabled(?string $link): bool { $m = opsh_link_module($link); return $m === null || opsh_module_on($m); }
+    function itops_link_enabled(?string $link): bool { $m = itops_link_module($link); return $m === null || itops_module_on($m); }
     /** BT101: a scheduled-job step of a module that is off is skipped, and says so in Scheduled jobs. */
-    function opsh_cron_off(string ...$mods): bool {
-        foreach ($mods as $m) if (opsh_module_on($m)) return false;
-        if (function_exists('opsh_cron_note')) { $c = opsh_modules_catalog(); opsh_cron_note('Skipped: ' . implode(', ', array_map(fn($m) => $c[$m][0] ?? $m, $mods)) . ' is not part of this installation.'); }
+    function itops_cron_off(string ...$mods): bool {
+        foreach ($mods as $m) if (itops_module_on($m)) return false;
+        if (function_exists('itops_cron_note')) { $c = itops_modules_catalog(); itops_cron_note('Skipped: ' . implode(', ', array_map(fn($m) => $c[$m][0] ?? $m, $mods)) . ' is not part of this installation.'); }
         return true;
     }
 
     /** For the screens: the catalog, the plans and this installation's state. */
-    function opsh_modules_public(): array {
-        $st = opsh_modules_state(); $out = [];
-        foreach (opsh_modules_catalog() as $k => $m) {
-            if (!in_array($k, opsh_product_modules(), true)) continue;   // NEW APP: not part of this product
+    function itops_modules_public(): array {
+        $st = itops_modules_state(); $out = [];
+        foreach (itops_modules_catalog() as $k => $m) {
+            if (!in_array($k, itops_product_modules(), true)) continue;   // NEW APP: not part of this product
             $out[] = ['key' => $k, 'label' => $m[0], 'description' => $m[1], 'depends' => $m[2], 'perms' => $m[3], 'pages' => $m[5],
                       'licensed' => in_array($k, $st['licensed'], true), 'switched_off' => in_array($k, $st['off'], true),
                       'on' => in_array($k, $st['on'], true), 'needs' => $st['needs'][$k] ?? null];
         }
-        $plans = []; foreach (opsh_plans() as $k => $p) $plans[] = ['key' => $k, 'label' => $p[0], 'description' => $p[1], 'modules' => $p[2]];
+        $plans = []; foreach (itops_plans() as $k => $p) $plans[] = ['key' => $k, 'label' => $p[0], 'description' => $p[1], 'modules' => $p[2]];
         return ['source' => $st['source'], 'plan' => $st['plan'], 'plan_label' => $st['plan_label'], 'modules' => $out, 'plans' => $plans, 'license' => $st['license']];
     }
 }

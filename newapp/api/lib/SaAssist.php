@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — BT121: security baselines, build 4d. The AI planning assistant on Posture → Plan.
+ * ITOps — BT121: security baselines, build 4d. The AI planning assistant on Posture → Plan.
  *
  *  - Suggest decisions: for the undecided items of a draft plan, the AI proposes do it / make it a task / accept the
  *    risk / not for us / later, with one sentence why, from the tenant profile and the findings. A suggestion is only
@@ -13,17 +13,17 @@
  *    effect on people, license, what it depends on, what was found as counts, and the decision. Never people's names,
  *    addresses or device names (the found text of a rule can list them, so it is not sent).
  *  - Every request goes in the Audit Log with what was asked and how many answers were kept (never the AI's text).
- * Table: opsh_sa_ai_suggestions.
+ * Table: itops_sa_ai_suggestions.
  */
-if (!function_exists('opsh_sx_ready')) {
+if (!function_exists('itops_sx_ready')) {
     require_once __DIR__ . '/AiCall.php';
 
-    function opsh_sx_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM opsh_sa_ai_suggestions LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
-    function opsh_sx_decisions(): array { return ['do' => 'Do it', 'task' => 'Make it a task', 'accept' => 'Accept the risk', 'na' => 'Not for us', 'later' => 'Later']; }
+    function itops_sx_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM itops_sa_ai_suggestions LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
+    function itops_sx_decisions(): array { return ['do' => 'Do it', 'task' => 'Make it a task', 'accept' => 'Accept the risk', 'na' => 'Not for us', 'later' => 'Later']; }
 
     /** What the AI may know about the tenant and one item (no names). */
-    function opsh_sx_profile(PDO $db): array {
-        $p = function_exists('opsh_sa_setting_json') ? opsh_sa_setting_json($db, 'sa_profile', []) : [];
+    function itops_sx_profile(PDO $db): array {
+        $p = function_exists('itops_sa_setting_json') ? itops_sa_setting_json($db, 'sa_profile', []) : [];
         $W = ['office' => 'mostly in the office', 'hybrid' => 'hybrid', 'remote' => 'mostly remote']; $X = ['none' => 'none', 'customers' => 'customers ask for it', 'insurance' => 'cyber insurance asks for it', 'regulated' => 'regulated'];
         $out = [];
         if (isset($p['staff'])) $out[] = 'Staff: about ' . (int)$p['staff'];
@@ -35,32 +35,32 @@ if (!function_exists('opsh_sx_ready')) {
         if (!empty($p['notes'])) $out[] = 'Notes from the administrator: ' . $p['notes'];
         return $out;
     }
-    function opsh_sx_item_line(array $i): string {
+    function itops_sx_item_line(array $i): string {
         return $i['rule_id'] . ' | ' . $i['title'] . ' | area ' . $i['area'] . ' | severity ' . $i['severity'] . ' | stage ' . $i['stage'] . ' ' . $i['stage_label']
              . ' | ' . ($i['found_status'] === 'fail' ? 'failed' : 'warning') . ($i['affected_count'] ? ', ' . $i['affected_count'] . ' affected' : '')
              . ' | effort ' . $i['effort'] . ' | effect on people ' . $i['impact'] . ' | license ' . $i['lic_label']
              . ($i['deps'] ? ' | do first: ' . implode(', ', array_column($i['deps'], 0)) : '') . ' | decision now: ' . $i['decision'];
     }
-    function opsh_sx_head(PDO $db, array $view): string {
-        $B = function_exists('opsh_sa_baselines') ? opsh_sa_baselines() : [];
-        $prof = opsh_sx_profile($db);
+    function itops_sx_head(PDO $db, array $view): string {
+        $B = function_exists('itops_sa_baselines') ? itops_sa_baselines() : [];
+        $prof = itops_sx_profile($db);
         return 'Baseline: ' . ($B[$view['plan']['baseline']][0] ?? $view['plan']['baseline']) . "\nTenant profile:\n" . ($prof ? '- ' . implode("\n- ", $prof) : '- (not filled in)');
     }
 
     /** Ask for suggestions on the undecided items. Returns [kept, dropped, asked]. */
-    function opsh_sx_suggest(PDO $db, array $view, int $by): array {
+    function itops_sx_suggest(PDO $db, array $view, int $by): array {
         if ($view['plan']['status'] !== 'draft') throw new InvalidArgumentException('Suggestions are for a draft plan. Start a new version to change decisions.');
         $und = array_values(array_filter($view['items'], fn($i) => $i['decision'] === 'undecided' && !$i['fixed']));
         if (!$und) throw new InvalidArgumentException('Every item is decided (or fixed since): nothing to suggest.');
         $und = array_slice($und, 0, 60);
-        $ids = array_column($und, 'rule_id'); $D = opsh_sx_decisions();
+        $ids = array_column($und, 'rule_id'); $D = itops_sx_decisions();
         $sys = 'You help an IT administrator decide, item by item, a security plan for a small organization\'s Microsoft 365 tenant. '
              . 'For each item, choose one decision: "do" (do it now), "task" (do it, but it needs work: make it a task), "accept" (accept the risk for now: only when the effort or the effect on people is high and the risk for this organization is low), '
              . '"na" (does not apply to this organization, from its profile), "later" (worth doing after the earlier stages). Prefer "do" for high severity with low effort. Respect the stages and "do first". '
              . 'Use only the facts given; never invent facts about the organization. Reply with ONLY a JSON object: {"suggestions":[{"rule_id":"...","decision":"do|task|accept|na|later","why":"one sentence, at most 30 words"}]}. '
              . 'Use only the rule ids listed.';
-        $user = opsh_sx_head($db, $view) . "\n\nItems (rule id | title | facts):\n" . implode("\n", array_map('opsh_sx_item_line', $und));
-        $j = opsh_ai_json(opsh_ai_ask($db, $sys, $user, 3000));
+        $user = itops_sx_head($db, $view) . "\n\nItems (rule id | title | facts):\n" . implode("\n", array_map('itops_sx_item_line', $und));
+        $j = itops_ai_json(itops_ai_ask($db, $sys, $user, 3000));
         if (!$j || !is_array($j['suggestions'] ?? null)) throw new RuntimeException('The AI answer could not be read. Try again.');
         $kept = []; $dropped = 0;
         foreach ($j['suggestions'] as $s) {
@@ -72,22 +72,22 @@ if (!function_exists('opsh_sx_ready')) {
         $pid = (int)$view['plan']['id'];
         $db->beginTransaction();
         try {
-            $db->prepare('DELETE FROM opsh_sa_ai_suggestions WHERE plan_id=?')->execute([$pid]);
-            $ins = $db->prepare('INSERT INTO opsh_sa_ai_suggestions (plan_id, rule_id, decision, why, created_by, created_at) VALUES (?,?,?,?,?,NOW())');
+            $db->prepare('DELETE FROM itops_sa_ai_suggestions WHERE plan_id=?')->execute([$pid]);
+            $ins = $db->prepare('INSERT INTO itops_sa_ai_suggestions (plan_id, rule_id, decision, why, created_by, created_at) VALUES (?,?,?,?,?,NOW())');
             foreach ($kept as $rid => $k) $ins->execute([$pid, $rid, $k['decision'], $k['why'], $by]);
             $db->commit();
         } catch (Throwable $e) { $db->rollBack(); throw $e; }
         return [count($kept), $dropped, count($und)];
     }
-    function opsh_sx_suggestions(PDO $db, int $planId): array {
+    function itops_sx_suggestions(PDO $db, int $planId): array {
         $out = [];
-        foreach ($db->query('SELECT s.rule_id, s.decision, s.why, s.created_at, u.display_name FROM opsh_sa_ai_suggestions s LEFT JOIN opsh_users u ON u.id=s.created_by WHERE s.plan_id=' . (int)$planId)->fetchAll(PDO::FETCH_ASSOC) as $r)
-            $out[$r['rule_id']] = ['decision' => $r['decision'], 'label' => opsh_sx_decisions()[$r['decision']] ?? $r['decision'], 'why' => $r['why'], 'at' => $r['created_at'], 'by' => $r['display_name']];
+        foreach ($db->query('SELECT s.rule_id, s.decision, s.why, s.created_at, u.display_name FROM itops_sa_ai_suggestions s LEFT JOIN itops_users u ON u.id=s.created_by WHERE s.plan_id=' . (int)$planId)->fetchAll(PDO::FETCH_ASSOC) as $r)
+            $out[$r['rule_id']] = ['decision' => $r['decision'], 'label' => itops_sx_decisions()[$r['decision']] ?? $r['decision'], 'why' => $r['why'], 'at' => $r['created_at'], 'by' => $r['display_name']];
         return $out;
     }
 
     /** Explain, staff notice or KB article for one item. Returns ['title' => …, 'body' => …] (plain text). */
-    function opsh_sx_write(PDO $db, array $view, array $item, string $kind): array {
+    function itops_sx_write(PDO $db, array $view, array $item, string $kind): array {
         $what = ['explain' => 'Explain this item in plain words for the organization\'s manager, who is not technical: what the risk is, what the change does, what people will notice, and what it costs in effort. 120 to 200 words. Title: a short question or statement.',
                  'notice' => 'Write a notice to all staff announcing this change before it is made: what changes, why, when (write [date] where the date goes), what each person must do (step by step if they must set something up), and who to ask (write [IT contact]). Friendly, plain, at most 220 words. Title: a short subject line.',
                  'kb' => 'Write a knowledge-base article for staff about this change: what it is, why, and step-by-step instructions for what they must do, plus "If something goes wrong". Plain words, short numbered steps, at most 400 words. Title: a how-to title.'][$kind] ?? null;
@@ -95,14 +95,14 @@ if (!function_exists('opsh_sx_ready')) {
         $sys = 'You write for a small organization\'s IT team about a Microsoft 365 security change. Use only the facts given; never invent names, dates, numbers or products the organization has. '
              . 'Do not mention rule ids. Reply with ONLY a JSON object: {"title":"...","body":"..."} where body is plain text with blank lines between paragraphs and "1." style numbered steps.';
         $fix = $item['fix'] ? "\nHow to fix it (for the IT team):\n" . implode("\n", array_map(fn($s, $n) => ($n + 1) . '. ' . $s, $item['fix'], array_keys($item['fix']))) : '';
-        $user = $what . "\n\n" . opsh_sx_head($db, $view) . "\n\nItem: " . $item['title'] . "\nWhy it matters: " . $item['why_it_matters'] . "\nFacts: " . opsh_sx_item_line($item) . $fix;
-        $j = opsh_ai_json(opsh_ai_ask($db, $sys, $user, 1600));
+        $user = $what . "\n\n" . itops_sx_head($db, $view) . "\n\nItem: " . $item['title'] . "\nWhy it matters: " . $item['why_it_matters'] . "\nFacts: " . itops_sx_item_line($item) . $fix;
+        $j = itops_ai_json(itops_ai_ask($db, $sys, $user, 1600));
         $title = trim(strip_tags((string)($j['title'] ?? ''))); $body = trim(strip_tags((string)($j['body'] ?? '')));
         if ($body === '') throw new RuntimeException('The AI answer could not be read. Try again.');
         return ['title' => mb_substr($title !== '' ? $title : $item['title'], 0, 190), 'body' => mb_substr($body, 0, 6000)];
     }
     /** Plain text to the simple HTML the KB and announcements keep. */
-    function opsh_sx_html(string $text): string {
+    function itops_sx_html(string $text): string {
         $out = [];
         foreach (preg_split('/\n\s*\n/', trim(str_replace("\r", '', $text))) as $para) {
             $lines = array_values(array_filter(array_map('trim', explode("\n", $para)), 'strlen'));
@@ -115,19 +115,19 @@ if (!function_exists('opsh_sx_ready')) {
         return implode("\n", $out);
     }
     /** Save edited text as a KB article draft or an announcement draft. Returns the new id. */
-    function opsh_sx_save(PDO $db, string $as, string $title, string $body, int $by): int {
+    function itops_sx_save(PDO $db, string $as, string $title, string $body, int $by): int {
         $title = trim($title); $body = trim($body);
         if (mb_strlen($title) < 3) throw new InvalidArgumentException('Give it a title.');
         if (mb_strlen($body) < 20) throw new InvalidArgumentException('The text is too short to save.');
-        $html = opsh_sx_html($body);
+        $html = itops_sx_html($body);
         if ($as === 'kb') {
             $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($title)), '-') ?: 'article';
-            $q = $db->prepare('SELECT COUNT(*) FROM opsh_kb_articles WHERE slug=?'); $q->execute([$slug]); if ((int)$q->fetchColumn()) $slug .= '-' . substr(md5(uniqid('', true)), 0, 6);
-            $db->prepare("INSERT INTO opsh_kb_articles (title, slug, content, author_id, status) VALUES (?,?,?,?,'draft')")->execute([mb_substr($title, 0, 255), mb_substr($slug, 0, 255), $html, $by]);
+            $q = $db->prepare('SELECT COUNT(*) FROM itops_kb_articles WHERE slug=?'); $q->execute([$slug]); if ((int)$q->fetchColumn()) $slug .= '-' . substr(md5(uniqid('', true)), 0, 6);
+            $db->prepare("INSERT INTO itops_kb_articles (title, slug, content, author_id, status) VALUES (?,?,?,?,'draft')")->execute([mb_substr($title, 0, 255), mb_substr($slug, 0, 255), $html, $by]);
             return (int)$db->lastInsertId();
         }
         if ($as === 'announcement') {
-            $db->prepare("INSERT INTO opsh_announcements (title, body, level, audience, requires_ack, ch_email, status, created_by) VALUES (?,?,'info','all',0,0,'draft',?)")->execute([mb_substr($title, 0, 200), $html, $by]);
+            $db->prepare("INSERT INTO itops_announcements (title, body, level, audience, requires_ack, ch_email, status, created_by) VALUES (?,?,'info','all',0,0,'draft',?)")->execute([mb_substr($title, 0, 200), $html, $by]);
             return (int)$db->lastInsertId();
         }
         throw new InvalidArgumentException('Save as a KB article or an announcement.');

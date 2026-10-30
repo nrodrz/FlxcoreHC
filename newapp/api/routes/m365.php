@@ -1,37 +1,37 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Microsoft 365 (read-only) surface.
+ * ITOps — Microsoft 365 (read-only) surface.
  * Routes: /api/m365/{sub}. Everything here is view-only; nothing is written to
  * the tenant. Gated by the 'm365' permission module.
  *
- * Provided by the OpsHub M365 + Guardian package. Requires api/lib/Graph.php.
+ * Provided by the ITOps M365 + Guardian package. Requires api/lib/Graph.php.
  */
 require_once __DIR__ . '/../lib/Graph.php';
-opsh_require($currentUser, 'm365', 'view');
+itops_require($currentUser, 'm365', 'view');
 // BT72: every read here is kept on the server and served at once (an older copy too, while a new read is made).
-// Not kept: Diagnose, what OpsHub keeps itself, and the scans a person starts with a button (they always read now).
+// Not kept: Diagnose, what ITOps keeps itself, and the scans a person starts with a button (they always read now).
 require_once __DIR__ . '/../lib/ReadStore.php';
-opsh_rs_drop_on_change();
-if ($method === 'GET' && !in_array((string)$id, ['diagnose', 'permissions', 'mailsec-evidence', 'policy-backups', 'mailbox-rules', 'copilot-adoption', 'coverage', 'license-report'], true)) opsh_rs_begin('m365', (string)$id);
+itops_rs_drop_on_change();
+if ($method === 'GET' && !in_array((string)$id, ['diagnose', 'permissions', 'mailsec-evidence', 'policy-backups', 'mailbox-rules', 'copilot-adoption', 'coverage', 'license-report'], true)) itops_rs_begin('m365', (string)$id);
 
 // BT125: the permissions the app registration needs, with what the tenant granted (read from the app's token).
 // Any Microsoft 365 viewer may read the list; it holds no secret.
 // BT145: side by side with what Microsoft 365 has for this app registration (consented, only added, not added; extras)
 if ($id === 'permissions' && $method === 'GET' && (string)($segments[2] ?? '') === 'compare') {
     require_once __DIR__ . '/../lib/M365Permissions.php'; require_once __DIR__ . '/../lib/M365Hub.php';
-    if (!opsh_graph_configured()) json_response(['configured' => false]);
-    $roles = null; try { $cl = opsh_graph_jwt_claims(opsh_graph_token()); $roles = is_array($cl['roles'] ?? null) ? array_values($cl['roles']) : []; } catch (Throwable $e) {}
-    $cfg = opsh_graph_cfg();
-    json_response(['configured' => true, 'read_at' => date('Y-m-d H:i:s')] + opsh_m365_permission_compare($roles, (string)($cfg['client'] ?? '')));
+    if (!itops_graph_configured()) json_response(['configured' => false]);
+    $roles = null; try { $cl = itops_graph_jwt_claims(itops_graph_token()); $roles = is_array($cl['roles'] ?? null) ? array_values($cl['roles']) : []; } catch (Throwable $e) {}
+    $cfg = itops_graph_cfg();
+    json_response(['configured' => true, 'read_at' => date('Y-m-d H:i:s')] + itops_m365_permission_compare($roles, (string)($cfg['client'] ?? '')));
 }
 if ($id === 'permissions' && $method === 'GET') {
     require_once __DIR__ . '/../lib/M365Permissions.php';
     $roles = null; $err = '';
-    if (opsh_graph_configured()) { try { $cl = opsh_graph_jwt_claims(opsh_graph_token()); $roles = is_array($cl['roles'] ?? null) ? array_values($cl['roles']) : []; } catch (Throwable $e) { $err = 'The app\'s token could not be read: ' . $e->getMessage(); } }
-    json_response(['configured' => opsh_graph_configured(), 'read' => $roles !== null, 'error' => $err, 'permissions' => opsh_m365_permission_status($roles)]);
+    if (itops_graph_configured()) { try { $cl = itops_graph_jwt_claims(itops_graph_token()); $roles = is_array($cl['roles'] ?? null) ? array_values($cl['roles']) : []; } catch (Throwable $e) { $err = 'The app\'s token could not be read: ' . $e->getMessage(); } }
+    json_response(['configured' => itops_graph_configured(), 'read' => $roles !== null, 'error' => $err, 'permissions' => itops_m365_permission_status($roles)]);
 }
-if (!opsh_graph_configured() && $id !== 'diagnose') {
+if (!itops_graph_configured() && $id !== 'diagnose') {
     json_response(['configured' => false,
         'note' => 'Microsoft 365 is not configured. Confirm the O365 tenant/client/secret under '
                  .'Connection settings, and grant the app-only Graph permissions (see INSTALL.md).']);
@@ -40,13 +40,13 @@ if (!opsh_graph_configured() && $id !== 'diagnose') {
 $sub = $id; // /api/m365/{sub}
 // BT124 (code review M365A-6): an answer built from a list Microsoft cut at the page limit says so ("truncated"), and the
 // screens warn that what is missing may only be missing from the read
-$GLOBALS['OPSH_GRAPH_TRUNCATED'] = false;
-$m365J = function ($a) { if (!empty($GLOBALS['OPSH_GRAPH_TRUNCATED'])) { header('X-OpsHub-Truncated: 1'); if (is_array($a) && array_keys($a) !== range(0, count($a) - 1)) $a['truncated'] = true; } json_response($a); };
+$GLOBALS['ITOPS_GRAPH_TRUNCATED'] = false;
+$m365J = function ($a) { if (!empty($GLOBALS['ITOPS_GRAPH_TRUNCATED'])) { header('X-ITOps-Truncated: 1'); if (is_array($a) && array_keys($a) !== range(0, count($a) - 1)) $a['truncated'] = true; } json_response($a); };
 
 /** Escape a value for an OData string literal. */
-function opsh_odata_str(string $v): string { return str_replace("'", "''", $v); }
+function itops_odata_str(string $v): string { return str_replace("'", "''", $v); }
 
-/* opsh_graph_paged() lives in lib/Graph.php (shared with m365_admin). */
+/* itops_graph_paged() lives in lib/Graph.php (shared with m365_admin). */
 
 try {
     switch ($sub) {
@@ -58,11 +58,11 @@ try {
             $fresh = false;
             if ($method === 'POST') {
                 $b = json_decode(file_get_contents('php://input'), true) ?: [];
-                if (($b['action'] ?? '') === 'clear_token') { opsh_graph_token_clear(); $fresh = true; }
+                if (($b['action'] ?? '') === 'clear_token') { itops_graph_token_clear(); $fresh = true; }
                 if (function_exists('audit_log')) audit_log('m365_diagnose', 'integrations', null, $fresh ? 'token cleared + re-tested' : 'tested');
             }
             require_once __DIR__ . '/../lib/M365Hub.php';   // BT34: Diagnose lists the change permissions found in the token
-            json_response(opsh_graph_diagnose($fresh));
+            json_response(itops_graph_diagnose($fresh));
             break;
         }
 
@@ -73,10 +73,10 @@ try {
             $q = trim((string)($_GET['q'] ?? ''));
             $path = 'users?$top=' . $top . '&' . $sel;
             if ($q !== '') {
-                $e = opsh_odata_str($q);
+                $e = itops_odata_str($q);
                 $path .= '&$filter=' . rawurlencode("startswith(displayName,'$e') or startswith(userPrincipalName,'$e') or startswith(mail,'$e')");
             }
-            $r = opsh_graph_get($path);
+            $r = itops_graph_get($path);
             $m365J(['configured' => true, 'value' => $r['value'] ?? []]);
             break;
         }
@@ -87,16 +87,16 @@ try {
             $sel = 'id,displayName,userPrincipalName,mail,accountEnabled,jobTitle,department,officeLocation,mobilePhone,createdDateTime';
             $u = null;
             try {   // sign-in activity needs AuditLog.Read.All + Entra ID P1 — fall back without it
-                $u = opsh_graph_get('users/'.rawurlencode($upn).'?$select='.$sel.',signInActivity');
-            } catch (Throwable $e) { $u = opsh_graph_get('users/'.rawurlencode($upn).'?$select='.$sel); }
-            $lic = opsh_graph_get('users/'.rawurlencode($upn).'/licenseDetails');
+                $u = itops_graph_get('users/'.rawurlencode($upn).'?$select='.$sel.',signInActivity');
+            } catch (Throwable $e) { $u = itops_graph_get('users/'.rawurlencode($upn).'?$select='.$sel); }
+            $lic = itops_graph_get('users/'.rawurlencode($upn).'/licenseDetails');
             $m365J(['configured' => true, 'user' => $u, 'licenses' => $lic['value'] ?? [],
                 'last_signin' => $u['signInActivity']['lastSignInDateTime'] ?? null]);
             break;
         }
 
         case 'skus': {
-            $r = opsh_graph_get('subscribedSkus');
+            $r = itops_graph_get('subscribedSkus');
             $out = [];
             foreach (($r['value'] ?? []) as $s) {
                 $enabled  = (int)($s['prepaidUnits']['enabled'] ?? 0);
@@ -118,9 +118,9 @@ try {
             // SERVER-SIDE (startswith) — big tenants must not be pulled whole and filtered here.
             $q = trim((string)($_GET['q'] ?? ''));
             $path = "groups?\$select=id,displayName,securityEnabled,mailEnabled,groupTypes&\$top=200";
-            if ($q !== '') $path .= '&$filter=' . rawurlencode("startswith(displayName,'" . opsh_odata_str($q) . "')");
+            if ($q !== '') $path .= '&$filter=' . rawurlencode("startswith(displayName,'" . itops_odata_str($q) . "')");
             else $path .= '&$orderby=displayName';   // Graph dislikes $orderby combined with this $filter
-            $r = opsh_graph_get($path);
+            $r = itops_graph_get($path);
             $out = [];
             foreach (($r['value'] ?? []) as $g) {
                 $out[] = [
@@ -138,7 +138,7 @@ try {
         case 'user-fields': {
             // Catalog of Entra properties an onboarding template may set (drives the template editor).
             $out = [];
-            foreach (opsh_graph_settable_fields() as $k => $label) $out[] = ['key' => $k, 'label' => $label];
+            foreach (itops_graph_settable_fields() as $k => $label) $out[] = ['key' => $k, 'label' => $label];
             $m365J(['configured' => true, 'value' => $out]);
             break;
         }
@@ -147,7 +147,7 @@ try {
             // Who holds a given license (SKU)?
             $sku = trim((string)($_GET['skuId'] ?? ''));
             if ($sku === '' || !preg_match('/^[0-9a-fA-F-]{36}$/', $sku)) error_response('A license (skuId) is required', 400);
-            $rows = opsh_graph_paged('users?$top=500&$select=id,displayName,userPrincipalName,accountEnabled,jobTitle'
+            $rows = itops_graph_paged('users?$top=500&$select=id,displayName,userPrincipalName,accountEnabled,jobTitle'
                 . '&$filter=' . rawurlencode("assignedLicenses/any(x:x/skuId eq $sku)"), 4);
             usort($rows, fn($a2, $b2) => strcasecmp($a2['displayName'] ?? '', $b2['displayName'] ?? ''));
             $m365J(['configured' => true, 'value' => $rows]);
@@ -166,10 +166,10 @@ try {
             $days = min(365, max(7, (int)($_GET['days'] ?? 45)));
             $sel = 'id,displayName,userPrincipalName,accountEnabled,assignedLicenses';
             $signins = true; $rows = [];
-            try { $rows = opsh_graph_paged('users?$top=500&$select=' . $sel . ',signInActivity', 4); }
-            catch (Throwable $e) { $signins = false; $rows = opsh_graph_paged('users?$top=500&$select=' . $sel, 4); }
+            try { $rows = itops_graph_paged('users?$top=500&$select=' . $sel . ',signInActivity', 4); }
+            catch (Throwable $e) { $signins = false; $rows = itops_graph_paged('users?$top=500&$select=' . $sel, 4); }
             $skuName = [];
-            try { foreach ((opsh_graph_get('subscribedSkus')['value'] ?? []) as $k2) $skuName[$k2['skuId'] ?? ''] = $k2['skuPartNumber'] ?? ''; } catch (Throwable $e) {}
+            try { foreach ((itops_graph_get('subscribedSkus')['value'] ?? []) as $k2) $skuName[$k2['skuId'] ?? ''] = $k2['skuPartNumber'] ?? ''; } catch (Throwable $e) {}
             $cut = time() - $days * 86400; $out = []; $seats = 0;
             foreach ($rows as $u) {
                 $lics = array_values(array_filter(array_column($u['assignedLicenses'] ?? [], 'skuId')));
@@ -195,7 +195,7 @@ try {
         case 'mfa-report': {
             // Tenant MFA registration (reports/authenticationMethods/userRegistrationDetails).
             try {
-                $rows = opsh_graph_paged('reports/authenticationMethods/userRegistrationDetails?$top=500', 4);
+                $rows = itops_graph_paged('reports/authenticationMethods/userRegistrationDetails?$top=500', 4);
             } catch (Throwable $e) {
                 $m365J(['configured' => true, 'value' => [], 'needs_permission' => true,
                     'error' => 'Microsoft returned: ' . $e->getMessage()]);
@@ -222,7 +222,7 @@ try {
             // App-registration secret / certificate expiry — the classic "everything broke because
             // a client secret silently expired" early warning.
             try {
-                $apps = opsh_graph_paged('applications?$top=100&$select=id,appId,displayName,passwordCredentials,keyCredentials', 3);
+                $apps = itops_graph_paged('applications?$top=100&$select=id,appId,displayName,passwordCredentials,keyCredentials', 3);
             } catch (Throwable $e) {
                 $m365J(['configured' => true, 'value' => [], 'needs_permission' => true,
                     'error' => 'Microsoft returned: ' . $e->getMessage()]);
@@ -248,13 +248,13 @@ try {
 
         case 'admin-roles': {
             // Who holds privileged directory roles (read-only inventory; assignment stays in Azure).
-            $roles = opsh_graph_get('directoryRoles?$select=id,displayName,description');
+            $roles = itops_graph_get('directoryRoles?$select=id,displayName,description');
             $out = [];
             foreach (($roles['value'] ?? []) as $r2) {
                 $rid = $r2['id'] ?? ''; if ($rid === '') continue;
                 $members = [];
                 try {
-                    $m2 = opsh_graph_get('directoryRoles/' . rawurlencode($rid) . '/members?$select=id,displayName,userPrincipalName,accountEnabled');
+                    $m2 = itops_graph_get('directoryRoles/' . rawurlencode($rid) . '/members?$select=id,displayName,userPrincipalName,accountEnabled');
                     foreach (($m2['value'] ?? []) as $mm) $members[] = ['displayName' => $mm['displayName'] ?? '', 'userPrincipalName' => $mm['userPrincipalName'] ?? '', 'enabled' => !empty($mm['accountEnabled'])];
                 } catch (Throwable $e) {}
                 if ($members) $out[] = ['role' => $r2['displayName'] ?? '', 'description' => $r2['description'] ?? '', 'members' => $members];
@@ -267,14 +267,14 @@ try {
         case 'email-dns': {
             // SPF / DKIM / DMARC per verified domain — pure DNS, no Graph permission needed.
             require_once __DIR__ . '/../lib/EmailSecurity.php';
-            $r = opsh_graph_get('domains?$select=id,isDefault,isVerified,supportedServices');
+            $r = itops_graph_get('domains?$select=id,isDefault,isVerified,supportedServices');
             $out = [];
             foreach (($r['value'] ?? []) as $d2) {
                 $name = strtolower((string)($d2['id'] ?? ''));
                 if ($name === '' || empty($d2['isVerified'])) continue;
-                $skip = opsh_mailsec_skip_reason($name, isset($d2['supportedServices']) ? (array)$d2['supportedServices'] : null);
+                $skip = itops_mailsec_skip_reason($name, isset($d2['supportedServices']) ? (array)$d2['supportedServices'] : null);
                 if ($skip !== '') { $out[] = ['domain' => $name, 'managed' => true, 'note' => $skip, 'level' => 'ok']; continue; }
-                $row = opsh_mailsec_domain($name); $row['default'] = !empty($d2['isDefault']);
+                $row = itops_mailsec_domain($name); $row['default'] = !empty($d2['isDefault']);
                 $out[] = $row;
             }
             $m365J(['configured' => true, 'value' => $out]);
@@ -285,18 +285,18 @@ try {
             // Compromised-mailbox audit: inbox rules that forward/redirect OUTSIDE your domains,
             // or silently delete mail. Needs MailboxSettings.Read (Application). Bounded scan.
             // Review M365A-19: reading every mailbox's rules is a security task (Microsoft 365 · Tenant configuration), with a time budget
-            if (!opsh_can($currentUser, 'm365_admin', 'view') && ($currentUser['role_slug'] ?? '') !== 'super_admin') { opsh_refusal_log($currentUser, 'm365_admin', 'view', 'mailbox rule scan'); error_response('The mailbox rule scan needs Microsoft 365 · Tenant configuration.', 403); }
+            if (!itops_can($currentUser, 'm365_admin', 'view') && ($currentUser['role_slug'] ?? '') !== 'super_admin') { itops_refusal_log($currentUser, 'm365_admin', 'view', 'mailbox rule scan'); error_response('The mailbox rule scan needs Microsoft 365 · Tenant configuration.', 403); }
             @set_time_limit(180); $mrT0 = time();
             $max = min(500, max(10, (int)($_GET['max'] ?? 150)));
             $doms = [];
-            try { foreach ((opsh_graph_get('domains?$select=id,isVerified')['value'] ?? []) as $d2) if (!empty($d2['isVerified'])) $doms[] = strtolower((string)$d2['id']); } catch (Throwable $e) {}
-            $users = opsh_graph_paged('users?$top=500&$select=id,displayName,userPrincipalName,accountEnabled,assignedLicenses', 4);
+            try { foreach ((itops_graph_get('domains?$select=id,isVerified')['value'] ?? []) as $d2) if (!empty($d2['isVerified'])) $doms[] = strtolower((string)$d2['id']); } catch (Throwable $e) {}
+            $users = itops_graph_paged('users?$top=500&$select=id,displayName,userPrincipalName,accountEnabled,assignedLicenses', 4);
             $users = array_values(array_filter($users, fn($u) => !empty($u['accountEnabled']) && !empty($u['assignedLicenses'])));
             $scanned = 0; $skipped = 0; $rows = []; $permErr = '';
             foreach (array_slice($users, 0, $max) as $u) {
                 if (time() - $mrT0 > 150) { $skipped++; continue; }   // out of time: the rest is counted as skipped
                 try {
-                    $rr = opsh_graph_get('users/' . rawurlencode((string)$u['id']) . '/mailFolders/inbox/messageRules');
+                    $rr = itops_graph_get('users/' . rawurlencode((string)$u['id']) . '/mailFolders/inbox/messageRules');
                     $scanned++;
                 } catch (Throwable $e) {
                     $m2 = $e->getMessage(); $skipped++;
@@ -329,7 +329,7 @@ try {
 
         case 'ca-policies': {
             // Conditional Access inventory + the two checks that matter most.
-            try { $r = opsh_graph_get('identity/conditionalAccess/policies'); }
+            try { $r = itops_graph_get('identity/conditionalAccess/policies'); }
             catch (Throwable $e) { $m365J(['configured' => true, 'value' => [], 'needs_permission' => true, 'error' => 'Microsoft returned: ' . $e->getMessage()]); break; }
             $out = []; $mfaAll = false; $legacyBlocked = false;
             foreach (($r['value'] ?? []) as $p2) {
@@ -345,7 +345,7 @@ try {
                     'controls' => $ctrl, 'client_apps' => $capps, 'all_users' => in_array('All', $usersInc, true)];
             }
             $secDefaults = null;
-            try { $sd = opsh_graph_get('policies/identitySecurityDefaultsEnforcementPolicy'); $secDefaults = !empty($sd['isEnabled']); } catch (Throwable $e) {}
+            try { $sd = itops_graph_get('policies/identitySecurityDefaultsEnforcementPolicy'); $secDefaults = !empty($sd['isEnabled']); } catch (Throwable $e) {}
             $m365J(['configured' => true, 'value' => $out,
                 'checks' => ['mfa_all_users' => $mfaAll, 'legacy_auth_blocked' => $legacyBlocked, 'security_defaults' => $secDefaults]]);
             break;
@@ -357,9 +357,9 @@ try {
             require_once __DIR__ . '/../lib/M365Hub.php';
             $pid = (string)($_GET['id'] ?? '');
             if (!preg_match('/^[A-Za-z0-9-]{1,64}$/', $pid)) error_response('That policy id is not valid.', 400);
-            try { $p2 = opsh_graph_get('identity/conditionalAccess/policies/' . $pid); }
+            try { $p2 = itops_graph_get('identity/conditionalAccess/policies/' . $pid); }
             catch (Throwable $e) { $m365J(['configured' => true, 'needs_permission' => true, 'error' => 'Microsoft returned: ' . $e->getMessage()]); break; }
-            $ids = opsh_ca_ids($p2);
+            $ids = itops_ca_ids($p2);
             $names = ['users' => [], 'groups' => [], 'roles' => [], 'apps' => [], 'locations' => []];
             $safe = fn($x) => (bool)preg_match('/^[A-Za-z0-9-]{1,64}$/', (string)$x);
             $reqs = [];
@@ -368,7 +368,7 @@ try {
             foreach (array_filter($ids['apps'], $safe) as $x) $reqs['apps|' . $x] = ['url' => "servicePrincipals(appId='{$x}')?\$select=displayName"];
             if ($reqs) {
                 try {
-                    foreach ((new OpshGraphClient())->batch($reqs) as $k => $r2) {
+                    foreach ((new ItopsGraphClient())->batch($reqs) as $k => $r2) {
                         if ($r2['status'] !== 200 || !is_array($r2['body'])) continue;
                         [$kind, $oid] = explode('|', (string)$k, 2);
                         $dn = (string)($r2['body']['displayName'] ?? '');
@@ -377,15 +377,15 @@ try {
                     }
                 } catch (Throwable $e) { /* names stay unresolved: the description says so */ }
             }
-            if ($ids['roles']) { try { foreach (OpshM365::fromConfig()->listRoleDefinitions() as $rd) $names['roles'][$rd['id']] = $rd['name']; } catch (Throwable $e) {} }
-            if ($ids['locations']) { try { foreach ((opsh_graph_get('identity/conditionalAccess/namedLocations')['value'] ?? []) as $nl) $names['locations'][(string)($nl['id'] ?? '')] = (string)($nl['displayName'] ?? ''); } catch (Throwable $e) {} }
-            $m365J(['configured' => true, 'policy' => opsh_ca_describe($p2, $names)]);
+            if ($ids['roles']) { try { foreach (ItopsM365::fromConfig()->listRoleDefinitions() as $rd) $names['roles'][$rd['id']] = $rd['name']; } catch (Throwable $e) {} }
+            if ($ids['locations']) { try { foreach ((itops_graph_get('identity/conditionalAccess/namedLocations')['value'] ?? []) as $nl) $names['locations'][(string)($nl['id'] ?? '')] = (string)($nl['displayName'] ?? ''); } catch (Throwable $e) {} }
+            $m365J(['configured' => true, 'policy' => itops_ca_describe($p2, $names)]);
             break;
         }
 
         case 'secure-actions': {
             // Microsoft's own ranked "do these next" list, from the latest Secure Score snapshot.
-            try { $sc = opsh_graph_get('security/secureScores?$top=1'); }
+            try { $sc = itops_graph_get('security/secureScores?$top=1'); }
             catch (Throwable $e) { $m365J(['configured' => true, 'value' => [], 'needs_permission' => true, 'error' => 'Microsoft returned: ' . $e->getMessage()]); break; }
             $row = $sc['value'][0] ?? [];
             $ctl = [];
@@ -401,8 +401,8 @@ try {
         case 'app-protection': {
             // MAM policies (app protection without enrolment) — the BYOD layer for personal phones.
             try {
-                $ios = opsh_graph_get('deviceAppManagement/iosManagedAppProtections')['value'] ?? [];
-                $and = opsh_graph_get('deviceAppManagement/androidManagedAppProtections')['value'] ?? [];
+                $ios = itops_graph_get('deviceAppManagement/iosManagedAppProtections')['value'] ?? [];
+                $and = itops_graph_get('deviceAppManagement/androidManagedAppProtections')['value'] ?? [];
             } catch (Throwable $e) {
                 $m365J(['configured' => true, 'value' => [], 'needs_permission' => true, 'error' => 'Microsoft returned: ' . $e->getMessage()]);
                 break;
@@ -422,7 +422,7 @@ try {
         case 'policies-all': {
             // Every Intune policy of every type, with assignments and device status (BT12).
             require_once __DIR__ . '/../lib/IntunePolicies.php';
-            $inv = opsh_ipol_inventory();
+            $inv = itops_ipol_inventory();
             $m365J(['configured' => true, 'value' => $inv['value'], 'errors' => $inv['errors']]);
             break;
         }
@@ -431,7 +431,7 @@ try {
             // Stored backups (newest first), without the payloads.
             try {
                 $rows = getDB()->query("SELECT b.id,b.batch,b.kind,b.policy_id,b.name,b.platform,b.created_at,u.display_name AS by_name
-                    FROM opsh_m365_policy_backups b LEFT JOIN opsh_users u ON u.id=b.created_by ORDER BY b.id DESC LIMIT 500")->fetchAll();
+                    FROM itops_m365_policy_backups b LEFT JOIN itops_users u ON u.id=b.created_by ORDER BY b.id DESC LIMIT 500")->fetchAll();
             } catch (Throwable $e) { $m365J(['configured' => true, 'value' => [], 'needs_migration' => true]); break; }
             $m365J(['configured' => true, 'value' => $rows]);
             break;
@@ -440,30 +440,30 @@ try {
         case 'rollout': {
             // Business Premium rollout: checklist state + per-person readiness (MFA / company device / phone apps).
             $st = [];
-            try { $v = getDB()->query("SELECT sval FROM opsh_settings WHERE skey='m365_rollout'")->fetchColumn(); $st = $v ? (json_decode($v, true) ?: []) : []; } catch (Throwable $e) {}
+            try { $v = getDB()->query("SELECT sval FROM itops_settings WHERE skey='m365_rollout'")->fetchColumn(); $st = $v ? (json_decode($v, true) ?: []) : []; } catch (Throwable $e) {}
             $bg = [];
-            try { $v = getDB()->query("SELECT sval FROM opsh_settings WHERE skey='sa_emergency'")->fetchColumn(); $bg = $v ? (json_decode($v, true) ?: []) : []; } catch (Throwable $e) {}
+            try { $v = getDB()->query("SELECT sval FROM itops_settings WHERE skey='sa_emergency'")->fetchColumn(); $bg = $v ? (json_decode($v, true) ?: []) : []; } catch (Throwable $e) {}
             $out = ['configured' => true, 'steps' => $st['steps'] ?? new stdClass(), 'breakglass' => $bg, 'readiness' => null];
             if (!empty($_GET['readiness'])) {
-                $users = opsh_graph_paged('users?$top=500&$select=id,displayName,userPrincipalName,accountEnabled,assignedLicenses,department', 4);
+                $users = itops_graph_paged('users?$top=500&$select=id,displayName,userPrincipalName,accountEnabled,assignedLicenses,department', 4);
                 $users = array_values(array_filter($users, fn($u) => !empty($u['accountEnabled']) && !empty($u['assignedLicenses'])));
                 $mfa = null; $dev = null; $mam = null; $notes = [];
                 $how = [];   // strongest registered method per person: key > app > text/call
-                try { $mfa = []; foreach (opsh_graph_paged('reports/authenticationMethods/userRegistrationDetails?$top=500', 4) as $r2) {
+                try { $mfa = []; foreach (itops_graph_paged('reports/authenticationMethods/userRegistrationDetails?$top=500', 4) as $r2) {
                         $k2 = strtolower((string)($r2['userPrincipalName'] ?? '')); $mfa[$k2] = !empty($r2['isMfaRegistered']);
                         $ms = array_map('strtolower', (array)($r2['methodsRegistered'] ?? []));
                         $how[$k2] = array_intersect($ms, ['fido2', 'passkeydevicebound', 'passkeydeviceboundauthenticator', 'windowshelloforbusiness']) ? 'key'
                             : (array_intersect($ms, ['microsoftauthenticatorpush', 'microsoftauthenticatorpasswordless', 'softwareonetimepasscode']) ? 'app'
                             : (array_intersect($ms, ['mobilephone', 'alternatemobilephone', 'officephone']) ? 'phone' : '')); } }
                 catch (Throwable $e) { $mfa = null; $notes[] = 'MFA status needs AuditLog.Read.All.'; }
-                try { $dev = []; foreach (opsh_graph_paged('deviceManagement/managedDevices?$top=200&$select=userPrincipalName,operatingSystem,managedDeviceOwnerType,complianceState', 3) as $d2) {
+                try { $dev = []; foreach (itops_graph_paged('deviceManagement/managedDevices?$top=200&$select=userPrincipalName,operatingSystem,managedDeviceOwnerType,complianceState', 3) as $d2) {
                         $u2 = strtolower((string)($d2['userPrincipalName'] ?? '')); if ($u2 === '') continue;
                         $os = strtolower((string)($d2['operatingSystem'] ?? ''));
                         $isPc = strpos($os, 'windows') !== false || strpos($os, 'mac') !== false;
                         if ($isPc) { $dev[$u2]['pc'] = ($dev[$u2]['pc'] ?? 0) + 1; if (strtolower((string)($d2['complianceState'] ?? '')) !== 'compliant') $dev[$u2]['bad'] = true; }
                     } }
                 catch (Throwable $e) { $dev = null; $notes[] = 'Company devices need DeviceManagementManagedDevices.Read.All.'; }
-                try { $mam = []; foreach (opsh_graph_paged('deviceAppManagement/managedAppRegistrations?$top=500&$select=userId', 3) as $m2) if (!empty($m2['userId'])) $mam[$m2['userId']] = true; }
+                try { $mam = []; foreach (itops_graph_paged('deviceAppManagement/managedAppRegistrations?$top=500&$select=userId', 3) as $m2) if (!empty($m2['userId'])) $mam[$m2['userId']] = true; }
                 catch (Throwable $e) { $mam = null; $notes[] = 'Phone app status needs DeviceManagementApps.Read.All.'; }
                 $rows = []; $sum = ['people' => 0, 'mfa' => 0, 'pc' => 0, 'phone' => 0, 'key' => 0, 'app' => 0, 'text' => 0];
                 foreach ($users as $u) {
@@ -487,20 +487,20 @@ try {
             // BT14: Email Security controls that only Exchange Online PowerShell can see — the admin records the
             // assessment result here (who / when / what was found). History lives in the audit log.
             $v = null;
-            try { $v = getDB()->query("SELECT sval FROM opsh_settings WHERE skey='mailsec_evidence'")->fetchColumn(); } catch (Throwable $e) {}
+            try { $v = getDB()->query("SELECT sval FROM itops_settings WHERE skey='mailsec_evidence'")->fetchColumn(); } catch (Throwable $e) {}
             $m365J(['configured' => true, 'value' => $v ? (json_decode($v, true) ?: new stdClass()) : new stdClass()]);
             break;
         }
 
         case 'auth-methods': {
             // Tenant sign-in methods policy (which MFA methods people may use). BT13.
-            $META = opsh_auth_method_meta();
-            try { $pol = opsh_graph_get('policies/authenticationMethodsPolicy'); }
+            $META = itops_auth_method_meta();
+            try { $pol = itops_graph_get('policies/authenticationMethodsPolicy'); }
             catch (Throwable $e) { $m365J(['configured' => true, 'value' => [], 'needs_permission' => true, 'error' => 'Microsoft returned: ' . $e->getMessage()]); break; }
             $cfgs = $pol['authenticationMethodConfigurations'] ?? null;
             if (!is_array($cfgs) || !$cfgs) {
                 $cfgs = [];
-                foreach (array_keys($META) as $mid) { try { $cfgs[] = opsh_graph_get('policies/authenticationMethodsPolicy/authenticationMethodConfigurations/' . $mid); } catch (Throwable $e) {} }
+                foreach (array_keys($META) as $mid) { try { $cfgs[] = itops_graph_get('policies/authenticationMethodsPolicy/authenticationMethodConfigurations/' . $mid); } catch (Throwable $e) {} }
             }
             $out = [];
             foreach ($cfgs as $c) {
@@ -518,7 +518,7 @@ try {
         }
 
         case 'domains': {
-            $r = opsh_graph_get('domains?$select=id,isDefault,isVerified');
+            $r = itops_graph_get('domains?$select=id,isDefault,isVerified');
             $out = [];
             foreach (($r['value'] ?? []) as $d) {
                 $out[] = ['id' => $d['id'] ?? '', 'default' => !empty($d['isDefault']), 'verified' => !empty($d['isVerified'])];
@@ -528,42 +528,42 @@ try {
         }
 
         case 'service-health': {
-            $r = opsh_graph_get('admin/serviceAnnouncement/healthOverviews');
+            $r = itops_graph_get('admin/serviceAnnouncement/healthOverviews');
             $m365J(['configured' => true, 'value' => $r['value'] ?? []]);
             break;
         }
 
         case 'service-issues': {
-            $r = opsh_graph_get('admin/serviceAnnouncement/issues?$top=25');
+            $r = itops_graph_get('admin/serviceAnnouncement/issues?$top=25');
             $m365J(['configured' => true, 'value' => $r['value'] ?? []]);
             break;
         }
 
         case 'exchange': {
-            json_response(opsh_graph_report_safe('getMailboxUsageDetail', $_GET['period'] ?? 'D7'));
+            json_response(itops_graph_report_safe('getMailboxUsageDetail', $_GET['period'] ?? 'D7'));
             break;
         }
 
         case 'teams': {
-            json_response(opsh_graph_report_safe('getTeamsUserActivityUserDetail', $_GET['period'] ?? 'D7'));
+            json_response(itops_graph_report_safe('getTeamsUserActivityUserDetail', $_GET['period'] ?? 'D7'));
             break;
         }
 
         case 'storage': {
-            json_response(opsh_graph_report_safe('getOneDriveUsageAccountDetail', $_GET['period'] ?? 'D7'));
+            json_response(itops_graph_report_safe('getOneDriveUsageAccountDetail', $_GET['period'] ?? 'D7'));
             break;
         }
 
         case 'copilot': {
             // Copilot adoption. If your tenant returns HTTP 404 for this report
             // name, see INSTALL.md — Microsoft has revised it over time.
-            json_response(opsh_graph_report_safe('getMicrosoft365CopilotUsageUserDetail', $_GET['period'] ?? 'D7'));
+            json_response(itops_graph_report_safe('getMicrosoft365CopilotUsageUserDetail', $_GET['period'] ?? 'D7'));
             break;
         }
 
         case 'intune-devices': {
             try {
-                $rows = opsh_graph_paged('deviceManagement/managedDevices?$top=200'
+                $rows = itops_graph_paged('deviceManagement/managedDevices?$top=200'
                     .'&$select=id,deviceName,userPrincipalName,userDisplayName,operatingSystem,osVersion,complianceState,lastSyncDateTime,model,manufacturer,isEncrypted,enrolledDateTime,managedDeviceOwnerType', 3);
             } catch (Throwable $e) {
                 $m365J(['configured' => true, 'value' => [], 'needs_permission' => true, 'error' => 'Microsoft returned: ' . $e->getMessage()]);
@@ -584,7 +584,7 @@ try {
             // Compliance policies (read-only): what the tenant requires of a device before it
             // counts as compliant. Editing policies stays in the Intune admin center.
             try {
-                $r = opsh_graph_get('deviceManagement/deviceCompliancePolicies?$expand=assignments,scheduledActionsForRule($expand=scheduledActionConfigurations)');
+                $r = itops_graph_get('deviceManagement/deviceCompliancePolicies?$expand=assignments,scheduledActionsForRule($expand=scheduledActionConfigurations)');
             } catch (Throwable $e) {
                 $m365J(['configured' => true, 'value' => [], 'needs_permission' => true, 'error' => 'Microsoft returned: ' . $e->getMessage()]);
                 break;
@@ -618,29 +618,29 @@ try {
         }
 
         case 'device-security': {
-            // BT15 — status of the OpsHub device-security profiles + the enrolment guard-rail + Defender connector.
+            // BT15 — status of the ITOps device-security profiles + the enrolment guard-rail + Defender connector.
             require_once __DIR__ . '/../lib/DeviceSecurity.php';
             $out = ['configured' => true, 'items' => [], 'asr_mode' => null, 'defender_connected' => null, 'enrollment' => null, 'errors' => []];
             $have = [];
-            try { $have = opsh_devsec_existing(); } catch (Throwable $e) { $out['needs_permission'] = true; $out['errors'][] = 'Needs DeviceManagementConfiguration.Read.All — ' . mb_substr($e->getMessage(), 0, 160); }
+            try { $have = itops_devsec_existing(); } catch (Throwable $e) { $out['needs_permission'] = true; $out['errors'][] = 'Needs DeviceManagementConfiguration.Read.All — ' . mb_substr($e->getMessage(), 0, 160); }
             $gids = [];
             foreach ($have as $h) foreach ($h['assigned'] as $g) if (preg_match('/^[0-9a-f-]{36}$/i', $g)) $gids[$g] = true;
             $gn = [];
-            foreach (array_slice(array_keys($gids), 0, 10) as $g) { try { $gn[$g] = (string)(opsh_graph_get('groups/' . rawurlencode($g) . '?$select=displayName')['displayName'] ?? ''); } catch (Throwable $e) {} }
-            foreach (opsh_devsec_catalog() as $k => [$label, $kind, $what]) {
+            foreach (array_slice(array_keys($gids), 0, 10) as $g) { try { $gn[$g] = (string)(itops_graph_get('groups/' . rawurlencode($g) . '?$select=displayName')['displayName'] ?? ''); } catch (Throwable $e) {} }
+            foreach (itops_devsec_catalog() as $k => [$label, $kind, $what]) {
                 $h = $have[$k] ?? null; $row = ['key' => $k, 'label' => $label, 'what' => $what, 'exists' => (bool)$h, 'id' => $h['id'] ?? '',
                     'groups' => $h ? array_map(fn($g) => $gn[$g] ?? ($g === 'all_devices' ? 'All devices' : ($g === 'all_users' ? 'All users' : $g)), $h['assigned']) : [], 'status' => null];
                 if ($h && $h['kind'] === 'configuration') {
-                    try { $o = opsh_graph_get('deviceManagement/deviceConfigurations/' . rawurlencode($h['id']) . '/deviceStatusOverview');
+                    try { $o = itops_graph_get('deviceManagement/deviceConfigurations/' . rawurlencode($h['id']) . '/deviceStatusOverview');
                           $row['status'] = ['success' => (int)($o['successCount'] ?? 0), 'error' => (int)($o['errorCount'] ?? 0) + (int)($o['failedCount'] ?? 0),
                                             'pending' => (int)($o['pendingCount'] ?? 0), 'conflict' => (int)($o['conflictCount'] ?? 0)]; } catch (Throwable $e) {}
                 }
                 if ($k === 'asr' && $h) $out['asr_mode'] = $h['asr_mode'] ?? 'audit';
                 $out['items'][] = $row;
             }
-            $out['asr_rules'] = array_map(fn($r) => ['label' => $r[1], 'enforce' => $r[3] === false ? 'audit' : ($r[3] === 'warn' ? 'warn' : 'block')], opsh_devsec_asr_rules());
-            $out['defender_connected'] = opsh_devsec_defender_connected();
-            $out['enrollment'] = opsh_devsec_enrollment();
+            $out['asr_rules'] = array_map(fn($r) => ['label' => $r[1], 'enforce' => $r[3] === false ? 'audit' : ($r[3] === 'warn' ? 'warn' : 'block')], itops_devsec_asr_rules());
+            $out['defender_connected'] = itops_devsec_defender_connected();
+            $out['enrollment'] = itops_devsec_enrollment();
             $m365J($out);
             break;
         }
@@ -650,7 +650,7 @@ try {
             // Each section degrades on its own — one missing permission never blanks the panel.
             $out = ['configured' => true, 'score' => null, 'incidents' => null, 'alerts' => null];
             try {
-                $sc = opsh_graph_get('security/secureScores?$top=1');
+                $sc = itops_graph_get('security/secureScores?$top=1');
                 $row = $sc['value'][0] ?? null;
                 if ($row) {
                     $cur = (float)($row['currentScore'] ?? 0); $max = (float)($row['maxScore'] ?? 0);
@@ -659,7 +659,7 @@ try {
                 }
             } catch (Throwable $e) { $out['score_error'] = $e->getMessage(); }
             try {
-                $inc = opsh_graph_get("security/incidents?\$top=25&\$filter=" . rawurlencode("status eq 'active' or status eq 'inProgress'"));   // BT119: and those being worked on
+                $inc = itops_graph_get("security/incidents?\$top=25&\$filter=" . rawurlencode("status eq 'active' or status eq 'inProgress'"));   // BT119: and those being worked on
                 // BT112: the incident list on Security → Alerts & actions (who has it, when it last changed, its page in Defender)
                 $out['incidents'] = array_map(fn($i2) => ['id' => $i2['id'] ?? '', 'name' => $i2['displayName'] ?? '',
                     'severity' => strtolower((string)($i2['severity'] ?? '')), 'created' => $i2['createdDateTime'] ?? '',
@@ -667,7 +667,7 @@ try {
                     'classification' => $i2['classification'] ?? '', 'url' => $i2['incidentWebUrl'] ?? ''], $inc['value'] ?? []);
             } catch (Throwable $e) { $out['incidents_error'] = $e->getMessage(); }
             try {
-                $al = opsh_graph_get('security/alerts_v2?$top=50&$orderby=createdDateTime desc');
+                $al = itops_graph_get('security/alerts_v2?$top=50&$orderby=createdDateTime desc');
                 $open = [];
                 foreach (($al['value'] ?? []) as $a2) {
                     if (strtolower((string)($a2['status'] ?? '')) === 'resolved') continue;
@@ -690,25 +690,25 @@ try {
             $alerts = null; $aErr = ''; $incs = null; $iErr = '';
             try {
                 $byId = [];
-                foreach (opsh_graph_paged('security/alerts_v2?$top=500&$filter=' . rawurlencode('createdDateTime ge ' . $since . ' or lastUpdateDateTime ge ' . $since), 6) as $a) $byId[(string)($a['id'] ?? '')] = $a;
-                foreach (opsh_graph_paged('security/alerts_v2?$top=500&$filter=' . rawurlencode("status eq 'new' or status eq 'inProgress'"), 4) as $a) $byId[(string)($a['id'] ?? '')] = $a;
+                foreach (itops_graph_paged('security/alerts_v2?$top=500&$filter=' . rawurlencode('createdDateTime ge ' . $since . ' or lastUpdateDateTime ge ' . $since), 6) as $a) $byId[(string)($a['id'] ?? '')] = $a;
+                foreach (itops_graph_paged('security/alerts_v2?$top=500&$filter=' . rawurlencode("status eq 'new' or status eq 'inProgress'"), 4) as $a) $byId[(string)($a['id'] ?? '')] = $a;
                 $alerts = array_values($byId);
             } catch (Throwable $e) { $aErr = preg_match('/403|denied|authoriz|forbidden/i', $e->getMessage()) ? 'Alerts need the Microsoft Graph permission SecurityAlert.Read.All.' : 'Alerts could not be read: ' . mb_substr($e->getMessage(), 0, 200); }
             try {
                 $byId = [];
-                foreach (opsh_graph_paged('security/incidents?$top=50&$filter=' . rawurlencode('createdDateTime ge ' . $since), 6) as $i) $byId[(string)($i['id'] ?? '')] = $i;
-                foreach (opsh_graph_paged('security/incidents?$top=50&$filter=' . rawurlencode("status eq 'active' or status eq 'inProgress'"), 4) as $i) $byId[(string)($i['id'] ?? '')] = $i;
+                foreach (itops_graph_paged('security/incidents?$top=50&$filter=' . rawurlencode('createdDateTime ge ' . $since), 6) as $i) $byId[(string)($i['id'] ?? '')] = $i;
+                foreach (itops_graph_paged('security/incidents?$top=50&$filter=' . rawurlencode("status eq 'active' or status eq 'inProgress'"), 4) as $i) $byId[(string)($i['id'] ?? '')] = $i;
                 $incs = array_values($byId);
             } catch (Throwable $e) { $iErr = preg_match('/403|denied|authoriz|forbidden/i', $e->getMessage()) ? 'Incidents need the Microsoft Graph permission SecurityIncident.Read.All (and Defender for Business, E5 or Defender XDR).' : 'Incidents could not be read: ' . mb_substr($e->getMessage(), 0, 200); }
-            $m365J(['configured' => true, 'read_at' => date('Y-m-d H:i:s'), 'alerts_error' => $aErr, 'incidents_error' => $iErr] + opsh_sd_build($alerts, $incs, $days));
+            $m365J(['configured' => true, 'read_at' => date('Y-m-d H:i:s'), 'alerts_error' => $aErr, 'incidents_error' => $iErr] + itops_sd_build($alerts, $incs, $days));
             break;
         }
 
         case 'coverage': {
             // Business Premium coverage: enabled people with NO license, and people whose license
             // includes Intune but who have no enrolled device — the paid-for-but-not-used report.
-            $users = opsh_graph_paged('users?$top=500&$select=id,displayName,userPrincipalName,accountEnabled,assignedLicenses', 4);
-            $skus = opsh_graph_get('subscribedSkus')['value'] ?? [];
+            $users = itops_graph_paged('users?$top=500&$select=id,displayName,userPrincipalName,accountEnabled,assignedLicenses', 4);
+            $skus = itops_graph_get('subscribedSkus')['value'] ?? [];
             $skuName = []; $intuneSkus = [];
             foreach ($skus as $k2) {
                 $skuName[$k2['skuId'] ?? ''] = $k2['skuPartNumber'] ?? '';
@@ -718,7 +718,7 @@ try {
             }
             $enrolled = []; $devErr = '';
             try {
-                foreach (opsh_graph_paged('deviceManagement/managedDevices?$top=200&$select=userPrincipalName', 3) as $d2)
+                foreach (itops_graph_paged('deviceManagement/managedDevices?$top=200&$select=userPrincipalName', 3) as $d2)
                     if (!empty($d2['userPrincipalName'])) $enrolled[strtolower($d2['userPrincipalName'])] = true;
             } catch (Throwable $e) { $devErr = $e->getMessage(); }
             $unlicensed = []; $notEnrolled = [];
@@ -739,14 +739,14 @@ try {
         case 'copilot-adoption': {
             // Who holds a Copilot license, and who actually uses it (last activity from the usage
             // report, 90 days). "Licensed, no recent activity" = a reclaim / training candidate.
-            $skus = opsh_graph_get('subscribedSkus')['value'] ?? [];
+            $skus = itops_graph_get('subscribedSkus')['value'] ?? [];
             $cop = null;
             foreach ($skus as $k2) if (stripos((string)($k2['skuPartNumber'] ?? ''), 'COPILOT') !== false) { $cop = $k2; break; }
             if (!$cop) { $m365J(['configured' => true, 'no_sku' => true,
                 'note' => 'No Copilot license (SKU) found in your subscriptions.']); break; }
-            $holders = opsh_graph_paged('users?$top=500&$select=id,displayName,userPrincipalName,accountEnabled'
+            $holders = itops_graph_paged('users?$top=500&$select=id,displayName,userPrincipalName,accountEnabled'
                 . '&$filter=' . rawurlencode('assignedLicenses/any(x:x/skuId eq ' . $cop['skuId'] . ')'), 4);
-            $usage = opsh_graph_report_safe('getMicrosoft365CopilotUsageUserDetail', 'D90');
+            $usage = itops_graph_report_safe('getMicrosoft365CopilotUsageUserDetail', 'D90');
             $last = [];
             foreach (($usage['value'] ?? []) as $r2) {
                 $upn = strtolower((string)($r2['User Principal Name'] ?? $r2['userPrincipalName'] ?? ''));

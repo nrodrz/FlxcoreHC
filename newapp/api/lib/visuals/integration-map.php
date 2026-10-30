@@ -1,10 +1,10 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
-/* BT50: a Help Center visual. BT51: the systems come from the shared list (visuals/systems.php, window.OPSH_SYSTEMS),
+/* BT50: a Help Center visual. BT51: the systems come from the shared list (visuals/systems.php, window.ITOPS_SYSTEMS),
    the same list as "Company systems: the whole process"; light and dark theme. Served only through api/routes/help.php to the people it is given to; requested
    directly, this file prints nothing. */
-return <<<'OPSH_VISUAL'
-<title>OpsHub Integration Map</title>
+return <<<'ITOPS_VISUAL'
+<title>ITOps Integration Map</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: a wide 3D stage with a reading panel beside it; under it, the same facts as tables so nothing depends on the 3D view. */
@@ -94,16 +94,16 @@ td code,.panel code{font-family:var(--f-mono);font-size:12px;overflow-wrap:anywh
 
 <div class="wrap">
   <header class="head">
-    <div class="eyebrow">OpsHub · integrations · build 0621-BT51 · 8 October 2026</div>
+    <div class="eyebrow">ITOps · integrations · build 0621-BT51 · 8 October 2026</div>
     <h1>One person, every account</h1>
-    <p class="lede">OpsHub sits in the middle. Each system around it either tells OpsHub something, takes a change from it, or both. These are the same systems as on the page “Company systems: the whole process”. Each system stands on a round stand; its ring shows how OpsHub works with it.</p>
+    <p class="lede">ITOps sits in the middle. Each system around it either tells ITOps something, takes a change from it, or both. These are the same systems as on the page “Company systems: the whole process”. Each system stands on a round stand; its ring shows how ITOps works with it.</p>
     <div class="legend" aria-label="Legend">
-      <span><i class="sw" style="background:var(--in)"></i>into OpsHub (it reads or receives)</span>
-      <span><i class="sw" style="background:var(--out)"></i>out of OpsHub (it changes something)</span>
+      <span><i class="sw" style="background:var(--in)"></i>into ITOps (it reads or receives)</span>
+      <span><i class="sw" style="background:var(--out)"></i>out of ITOps (it changes something)</span>
       <span><i class="sw" style="background:var(--accent)"></i>both ways</span>
       <span><i class="sw dash"></i>planned, or done by hand</span>
-      <span><i class="ring" style="border-color:var(--live)"></i>OpsHub acts by itself</span>
-      <span><i class="ring" style="border-color:var(--in)"></i>connected, OpsHub reads it</span>
+      <span><i class="ring" style="border-color:var(--live)"></i>ITOps acts by itself</span>
+      <span><i class="ring" style="border-color:var(--in)"></i>connected, ITOps reads it</span>
       <span><i class="ring" style="border-color:var(--plan)"></i>tracked by hand, connection planned</span>
       <span><i class="ring" style="border-color:var(--soon)"></i>planned, not in use yet</span>
       <span><i class="ring" style="border-color:var(--manual)"></i>no connection, follows Microsoft 365</span>
@@ -122,7 +122,7 @@ td code,.panel code{font-family:var(--f-mono);font-size:12px;overflow-wrap:anywh
 
   <div class="board">
     <div class="stage" id="stage">
-      <canvas id="gl" tabindex="0" aria-label="3D map of OpsHub and the systems it connects to. Drag to turn it. The same information is in the tables below."></canvas>
+      <canvas id="gl" tabindex="0" aria-label="3D map of ITOps and the systems it connects to. Drag to turn it. The same information is in the tables below."></canvas>
       <div class="tags" id="tags"></div>
       <div class="hint">drag to turn · click a system</div>
       <div class="fallback" id="fallback" hidden>This browser could not draw the 3D view. Everything it shows is in the tables below.</div>
@@ -145,16 +145,16 @@ td code,.panel code{font-family:var(--f-mono);font-size:12px;overflow-wrap:anywh
     <div class="rules">
       <p><b>Read first, write second</b>Each service ships read-only. Anything that changes the other system comes later, behind its own permission and a confirmation that names what will change.</p>
       <p><b>Nothing runs by itself</b>An event from Paylocity creates a draft that a person reviews. It never disables an account on its own.</p>
-      <p><b>By hand until connected</b>A system without a connection is still on every onboarding and offboarding: a person does the work there and answers in OpsHub, and the answer is on the record.</p>
+      <p><b>By hand until connected</b>A system without a connection is still on every onboarding and offboarding: a person does the work there and answers in ITOps, and the answer is on the record.</p>
       <p><b>Minimum data</b>Pay, bank details, SSN, home address and date of birth are never requested, and are dropped on receipt if a sender includes them.</p>
       <p><b>Everything is logged</b>Every change goes to the Audit Log with who, when and the old and new value. Every failed call goes to the Event Log.</p>
     </div>
   </section>
 
-  <p class="foot">Microsoft 365 and vTiger are run by OpsHub. JustCall and WHM are read. HubSpot, eFax, Jotform and the phone system are tracked by hand until their connections are built. Paylocity and the hosting provider are planned. A system added under Settings → Company systems appears here and on the Company systems page by itself: both pages show the same list. The plan is the project document OpsHub/INTEGRATIONS-ROADMAP.md.</p>
+  <p class="foot">Microsoft 365 and vTiger are run by ITOps. JustCall and WHM are read. HubSpot, eFax, Jotform and the phone system are tracked by hand until their connections are built. Paylocity and the hosting provider are planned. A system added under Settings → Company systems appears here and on the Company systems page by itself: both pages show the same list. The plan is the project document ITOps/INTEGRATIONS-ROADMAP.md.</p>
 </div>
 
 <script src="vendor/three.min.js?v=r128"></script>
 <script src="api/help_script/integration-map"></script>
 
-OPSH_VISUAL;
+ITOPS_VISUAL;

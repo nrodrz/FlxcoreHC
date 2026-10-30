@@ -1,28 +1,28 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — BT121: one way to ask the AI integration (Settings → Sign-in & AI) from a library: the setting, the key
+ * ITOps — BT121: one way to ask the AI integration (Settings → Sign-in & AI) from a library: the setting, the key
  * (kept wrapped, read here only), the provider call and a JSON reader. The key is never returned or logged.
- * A test installation may define opsh_ai_http_stub(bool $openai, array $payload): string (the provider's raw answer).
+ * A test installation may define itops_ai_http_stub(bool $openai, array $payload): string (the provider's raw answer).
  */
-if (!function_exists('opsh_ai_ask')) {
-    function opsh_ai_set(PDO $db, string $k): string { try { $s = $db->prepare('SELECT sval FROM opsh_settings WHERE skey=?'); $s->execute([$k]); return (string)$s->fetchColumn(); } catch (Throwable $e) { return ''; } }
+if (!function_exists('itops_ai_ask')) {
+    function itops_ai_set(PDO $db, string $k): string { try { $s = $db->prepare('SELECT sval FROM itops_settings WHERE skey=?'); $s->execute([$k]); return (string)$s->fetchColumn(); } catch (Throwable $e) { return ''; } }
     /** null when the AI integration can be used, otherwise why not (in plain words). */
-    function opsh_ai_off(PDO $db): ?string {
-        if (opsh_ai_set($db, 'ai_enabled') !== '1') return 'The AI integration is off (Settings → Sign-in & AI).';
-        if (opsh_ai_set($db, 'ai_api_key_enc') === '') return 'No AI key is set (Settings → Sign-in & AI).';
+    function itops_ai_off(PDO $db): ?string {
+        if (itops_ai_set($db, 'ai_enabled') !== '1') return 'The AI integration is off (Settings → Sign-in & AI).';
+        if (itops_ai_set($db, 'ai_api_key_enc') === '') return 'No AI key is set (Settings → Sign-in & AI).';
         return null;
     }
     /** The model's text answer. Throws InvalidArgumentException (not set up) or RuntimeException (the provider failed). */
-    function opsh_ai_ask(PDO $db, string $sys, string $user, int $max = 1500): string {
-        if ($why = opsh_ai_off($db)) throw new InvalidArgumentException($why);
-        $key = function_exists('vault_decrypt') ? vault_decrypt(opsh_ai_set($db, 'ai_api_key_enc')) : '';
+    function itops_ai_ask(PDO $db, string $sys, string $user, int $max = 1500): string {
+        if ($why = itops_ai_off($db)) throw new InvalidArgumentException($why);
+        $key = function_exists('vault_decrypt') ? vault_decrypt(itops_ai_set($db, 'ai_api_key_enc')) : '';
         if (!$key) throw new RuntimeException('The stored AI key could not be read.');
-        $prov = opsh_ai_set($db, 'ai_provider') ?: 'anthropic'; $isO = $prov === 'openai';
-        $model = opsh_ai_set($db, 'ai_model') ?: ($isO ? 'gpt-4o-mini' : 'claude-haiku-4-5-20251001');
+        $prov = itops_ai_set($db, 'ai_provider') ?: 'anthropic'; $isO = $prov === 'openai';
+        $model = itops_ai_set($db, 'ai_model') ?: ($isO ? 'gpt-4o-mini' : 'claude-haiku-4-5-20251001');
         $payload = $isO ? ['model' => $model, 'max_tokens' => $max, 'messages' => [['role' => 'system', 'content' => $sys], ['role' => 'user', 'content' => $user]]]
                         : ['model' => $model, 'max_tokens' => $max, 'system' => $sys, 'messages' => [['role' => 'user', 'content' => $user]]];
-        if (function_exists('opsh_ai_http_stub')) $raw = opsh_ai_http_stub($isO, $payload);
+        if (function_exists('itops_ai_http_stub')) $raw = itops_ai_http_stub($isO, $payload);
         else {
             if (!function_exists('curl_init')) throw new RuntimeException('The server cannot call the AI service (no curl).');
             $hdr = $isO ? ['Content-Type: application/json', 'Authorization: Bearer ' . $key] : ['Content-Type: application/json', 'x-api-key: ' . $key, 'anthropic-version: 2023-06-01'];
@@ -37,7 +37,7 @@ if (!function_exists('opsh_ai_ask')) {
         return $t;
     }
     /** The JSON object in a model's answer (fences and prose around it are ignored), or null. */
-    function opsh_ai_json(string $t): ?array {
+    function itops_ai_json(string $t): ?array {
         $t = trim(preg_replace('/^```[a-z]*\s*|\s*```$/i', '', trim($t)));
         $j = json_decode($t, true);
         if (!is_array($j)) { $a = strpos($t, '{'); $b = strrpos($t, '}'); if ($a !== false && $b > $a) $j = json_decode(substr($t, $a, $b - $a + 1), true); }

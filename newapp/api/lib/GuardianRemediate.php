@@ -1,20 +1,20 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Server Guardian remediate actions (write tier).
+ * ITOps — Server Guardian remediate actions (write tier).
  *
  * Confirm-first, owner-only, audited server actions. A safe/reversible catalog only:
  *   - whm.restart-service   restart a cPanel/WHM service (dovecot, exim, httpd, mysql)
  *   - whm.unblock-ip        remove an IP from cPHulk brute-force blocking
  * Both call WHM using the existing guardian_whm_* settings and refuse if WHM isn't configured.
- * Requires Guardian.php (opsh_guardian_settings).
+ * Requires Guardian.php (itops_guardian_settings).
  */
 
 require_once __DIR__ . '/Guardian.php';
 
-if (!function_exists('opsh_guardian_actions')) {
+if (!function_exists('itops_guardian_actions')) {
 
-    function opsh_guardian_actions(): array {
+    function itops_guardian_actions(): array {
         return [
             'whm.restart-service' => [
                 'label'       => 'Restart a service',
@@ -34,28 +34,28 @@ if (!function_exists('opsh_guardian_actions')) {
     /** WHM API call. Returns decoded JSON; throws on transport failure. */
     /**
      * WHM API call. Returns the decoded answer; throws when WHM cannot be reached OR refuses (BT91: its "result 0"
-     * is a failure, not a success). The certificate rules of opsh_whm_call apply (BT91, M-24).
+     * is a failure, not a success). The certificate rules of itops_whm_call apply (BT91, M-24).
      */
-    function opsh_guardian_whm_call(array $s, string $fn, array $params = []): array {
-        $c = opsh_whm_conn($s);
+    function itops_guardian_whm_call(array $s, string $fn, array $params = []): array {
+        $c = itops_whm_conn($s);
         if (!$c) throw new RuntimeException('WHM is not configured (set guardian_whm_host and guardian_whm_token).');
-        $r = opsh_whm_call($c, $fn, $params, 30);
+        $r = itops_whm_call($c, $fn, $params, 30);
         if (!$r['ok']) throw new RuntimeException('WHM did not do it: ' . ($r['error'] ?: ('HTTP ' . $r['code'])));
         return ['data' => $r['data'], 'metadata' => $r['meta']];
     }
     /** BT91: the services a restart may name (WHM's own names). */
-    function opsh_guardian_restartable(): array { return ['dovecot', 'exim', 'httpd', 'mysql', 'named', 'ftpd', 'spamd', 'cpsrvd', 'nginx', 'crond', 'imap', 'pop']; }
+    function itops_guardian_restartable(): array { return ['dovecot', 'exim', 'httpd', 'mysql', 'named', 'ftpd', 'spamd', 'cpsrvd', 'nginx', 'crond', 'imap', 'pop']; }
 
     /**
      * Execute an action. Returns ['status','message','preview'].
      * When $confirmed is false, returns a PREVIEW and performs NO change.
      */
-    function opsh_guardian_execute(PDO $db, string $actionId, array $params, bool $confirmed): array {
-        $catalog  = opsh_guardian_actions();
+    function itops_guardian_execute(PDO $db, string $actionId, array $params, bool $confirmed): array {
+        $catalog  = itops_guardian_actions();
         $actionId = preg_replace('/[^a-z0-9._-]/', '', $actionId);
         if (!isset($catalog[$actionId])) throw new RuntimeException('Unknown action: ' . $actionId);
         $def = $catalog[$actionId];
-        $s   = opsh_guardian_settings($db);
+        $s   = itops_guardian_settings($db);
 
         foreach ($def['params'] as $p) {
             if (trim((string)($params[$p] ?? '')) === '') throw new RuntimeException('Missing required parameter: ' . $p);
@@ -72,14 +72,14 @@ if (!function_exists('opsh_guardian_actions')) {
         switch ($actionId) {
             case 'whm.restart-service': {
                 $svc = strtolower(trim((string)$params['service']));
-                if (!in_array($svc, opsh_guardian_restartable(), true)) throw new RuntimeException('That service cannot be restarted from here. Allowed: ' . implode(', ', opsh_guardian_restartable()) . '.');
-                opsh_guardian_whm_call($s, 'restartservice', ['service' => $svc]);
+                if (!in_array($svc, itops_guardian_restartable(), true)) throw new RuntimeException('That service cannot be restarted from here. Allowed: ' . implode(', ', itops_guardian_restartable()) . '.');
+                itops_guardian_whm_call($s, 'restartservice', ['service' => $svc]);
                 return ['status' => 'ok', 'message' => 'Restarted service: ' . $svc, 'preview' => null];
             }
             case 'whm.unblock-ip': {
                 $ip = (string)$params['ip'];
                 if (!filter_var($ip, FILTER_VALIDATE_IP)) throw new RuntimeException('Not a valid IP address.');
-                opsh_guardian_whm_call($s, 'cphulk_unblock_records', ['ip' => $ip]);
+                itops_guardian_whm_call($s, 'cphulk_unblock_records', ['ip' => $ip]);
                 return ['status' => 'ok', 'message' => 'Unblocked IP: ' . $ip, 'preview' => null];
             }
         }

@@ -1,21 +1,21 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Help Center visuals (BT50).
+ * ITOps — Help Center visuals (BT50).
  *
  * Interactive pages (3D views) that explain how the company's systems fit together. They are not for everyone: a
  * Super Admin gives each one to roles and to individual people. Nobody else can list or open it; a Super Admin always
  * can. The pages live in api/lib/visuals/<id>.php (a PHP file that returns the HTML, so a direct request prints
  * nothing) and are sent only by api/routes/help.php after the check below.
  *
- * Who may open what is kept in opsh_settings, key "help_visual_access":
+ * Who may open what is kept in itops_settings, key "help_visual_access":
  *   { "<visual id>": { "roles": ["<role slug>", …], "users": [<user id>, …] }, … }
  */
 
-if (!function_exists('opsh_help_visuals')) {
+if (!function_exists('itops_help_visuals')) {
 
     /** The visuals this build carries: id => [title, description]. The id is also the file name. */
-    function opsh_help_visuals(): array {
+    function itops_help_visuals(): array {
         return [
             'systems-process' => ['Company systems: the whole process',
                 'How every company system goes through the same steps: switched on, connected or answered by hand, onboarding, offboarding and the check that the access is gone.'],
@@ -25,12 +25,12 @@ if (!function_exists('opsh_help_visuals')) {
     }
 
     /** The saved access, cleaned: only known visuals, role slugs as strings, user ids as positive whole numbers. */
-    function opsh_help_visual_access(PDO $db): array {
+    function itops_help_visual_access(PDO $db): array {
         $raw = null;
-        try { $s = $db->prepare('SELECT sval FROM opsh_settings WHERE skey=?'); $s->execute(['help_visual_access']); $raw = json_decode((string)$s->fetchColumn(), true); }
+        try { $s = $db->prepare('SELECT sval FROM itops_settings WHERE skey=?'); $s->execute(['help_visual_access']); $raw = json_decode((string)$s->fetchColumn(), true); }
         catch (Throwable $e) { $raw = null; }
         $out = [];
-        foreach (array_keys(opsh_help_visuals()) as $id) {
+        foreach (array_keys(itops_help_visuals()) as $id) {
             $a = is_array($raw[$id] ?? null) ? $raw[$id] : [];
             $roles = array_values(array_unique(array_filter(array_map('strval', is_array($a['roles'] ?? null) ? $a['roles'] : []), fn($r) => $r !== '')));
             $users = array_values(array_unique(array_filter(array_map('intval', is_array($a['users'] ?? null) ? $a['users'] : []), fn($u) => $u > 0)));
@@ -39,14 +39,14 @@ if (!function_exists('opsh_help_visuals')) {
         return $out;
     }
 
-    function opsh_help_visual_access_save(PDO $db, array $acc): void {
-        $db->prepare('INSERT INTO opsh_settings (skey,sval) VALUES (?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)')
+    function itops_help_visual_access_save(PDO $db, array $acc): void {
+        $db->prepare('INSERT INTO itops_settings (skey,sval) VALUES (?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)')
            ->execute(['help_visual_access', json_encode($acc, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
     }
 
     /** May this signed-in user open the visual? A Super Admin always; otherwise their role or they themselves must be on it. */
-    function opsh_help_visual_allowed(array $user, string $id, array $acc): bool {
-        if (!isset(opsh_help_visuals()[$id])) return false;
+    function itops_help_visual_allowed(array $user, string $id, array $acc): bool {
+        if (!isset(itops_help_visuals()[$id])) return false;
         if (($user['role_slug'] ?? '') === 'super_admin') return true;
         $a = $acc[$id] ?? ['roles' => [], 'users' => []];
         if (($user['role_slug'] ?? '') !== '' && in_array((string)$user['role_slug'], $a['roles'], true)) return true;
@@ -59,14 +59,14 @@ if (!function_exists('opsh_help_visuals')) {
      * (connected → read, tracked by hand → by hand, not used → marked so), and the company's own systems in use are
      * added as systems tracked by hand. Names and texts only: no address, key or account.
      */
-    function opsh_help_visual_systems(?PDO $db = null): array {
+    function itops_help_visual_systems(?PDO $db = null): array {
         $cat = require __DIR__ . '/visuals/systems.php';
         $live = [];
         if ($db && is_file(__DIR__ . '/Systems.php')) {
             try {
                 if (is_file(__DIR__ . '/SystemConnect.php')) require_once __DIR__ . '/SystemConnect.php';
                 require_once __DIR__ . '/Systems.php';
-                foreach (opsh_sys_all($db) as $s) $live[$s['key']] = $s;
+                foreach (itops_sys_all($db) as $s) $live[$s['key']] = $s;
             } catch (Throwable $e) { $live = []; }
         }
         $out = [];
@@ -95,7 +95,7 @@ if (!function_exists('opsh_help_visuals')) {
                         'status' => 'hand', 'role' => 'people', 'in_use' => true, 'custom' => true,
                         'what' => 'A system added by the company under Settings → Company systems.',
                         'connect' => 'None yet. It is tracked by hand.', 'who' => '—',
-                        'reads' => 'Nothing: the accounts are recorded by hand.', 'writes' => 'Nothing. A person does the work there and answers in OpsHub.',
+                        'reads' => 'Nothing: the accounts are recorded by hand.', 'writes' => 'Nothing. A person does the work there and answers in ITOps.',
                         'limits' => 'Tracked by hand until a connection is built for it.', 'mind' => 'The instructions people see on its steps are written on its set-up page.']);
                 }
             }
@@ -105,45 +105,45 @@ if (!function_exists('opsh_help_visuals')) {
 
     /**
      * The page itself, as a complete HTML document for an <iframe srcdoc>. The product name in the text follows the
-     * app name chosen under Settings → Branding (the pages are written with "OpsHub"). BT51: the page gets the shared
-     * list of systems (window.OPSH_SYSTEMS) and follows the light or dark theme the Help Center sends it.
+     * app name chosen under Settings → Branding (the pages are written with "ITOps"). BT51: the page gets the shared
+     * list of systems (window.ITOPS_SYSTEMS) and follows the light or dark theme the Help Center sends it.
      */
     /** BT90: the script of a visual (or the shared "objects" / "boot"), with the app name as in the page text. */
-    function opsh_help_visual_script(string $id): ?string {
+    function itops_help_visual_script(string $id): ?string {
         if (!preg_match('/^[a-z0-9-]{1,40}$/D', $id)) return null;
-        if (!in_array($id, ['boot', 'objects'], true) && !isset(opsh_help_visuals()[$id])) return null;
+        if (!in_array($id, ['boot', 'objects'], true) && !isset(itops_help_visuals()[$id])) return null;
         $f = __DIR__ . '/visuals/' . $id . '.js';
         if (!is_file($f)) return null;
         $js = (string)file_get_contents($f);
-        $name = function_exists('opsh_app_name') ? opsh_app_name() : 'OpsHub';
-        if ($name !== '' && $name !== 'OpsHub' && !in_array($id, ['boot', 'objects'], true)) {
+        $name = function_exists('itops_app_name') ? itops_app_name() : 'ITOps';
+        if ($name !== '' && $name !== 'ITOps' && !in_array($id, ['boot', 'objects'], true)) {
             $nameHtml = str_replace(['\\', "'", '"', "\n", "\r", '`', '${'], '', htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
-            $js = preg_replace('/(?<![-\w])OpsHub(?![-\w])/u', str_replace(['\\', '$'], ['\\\\', '\\$'], $nameHtml), $js);
+            $js = preg_replace('/(?<![-\w])ITOps(?![-\w])/u', str_replace(['\\', '$'], ['\\\\', '\\$'], $nameHtml), $js);
         }
         return $js;
     }
 
-    function opsh_help_visual_html(string $id, ?PDO $db = null): ?string {
-        if (!isset(opsh_help_visuals()[$id]) || !preg_match('/^[a-z0-9-]{1,40}$/D', $id)) return null;
+    function itops_help_visual_html(string $id, ?PDO $db = null): ?string {
+        if (!isset(itops_help_visuals()[$id]) || !preg_match('/^[a-z0-9-]{1,40}$/D', $id)) return null;
         $f = __DIR__ . '/visuals/' . $id . '.php';
         if (!is_file($f)) return null;
         $html = require $f;
         if (!is_string($html) || $html === '') return null;
-        $systems = opsh_help_visual_systems($db);
-        $name = function_exists('opsh_app_name') ? opsh_app_name() : 'OpsHub';
-        if ($name !== '' && $name !== 'OpsHub') {
-            $rep = function ($t) use ($name) { return is_string($t) ? preg_replace('/(?<![-\w])OpsHub(?![-\w])/u', str_replace(['\\', '$'], ['\\\\', '\\$'], $name), $t) : $t; };
+        $systems = itops_help_visual_systems($db);
+        $name = function_exists('itops_app_name') ? itops_app_name() : 'ITOps';
+        if ($name !== '' && $name !== 'ITOps') {
+            $rep = function ($t) use ($name) { return is_string($t) ? preg_replace('/(?<![-\w])ITOps(?![-\w])/u', str_replace(['\\', '$'], ['\\\\', '\\$'], $name), $t) : $t; };
             array_walk_recursive($systems, function (&$v) use ($rep) { $v = $rep($v); });   // goes out as JSON, encoded below
             // In the page itself the name is HTML text: escaped, so a name with < " ' cannot change the page (BT51).
             $nameHtml = htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $html = preg_replace('/(?<![-\w])OpsHub(?![-\w])/u', str_replace(['\\', '$'], ['\\\\', '\\$'], $nameHtml), $html);
+            $html = preg_replace('/(?<![-\w])ITOps(?![-\w])/u', str_replace(['\\', '$'], ['\\\\', '\\$'], $nameHtml), $html);
         }
         $data = json_encode($systems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         if ($data === false) $data = '[]';
         // The theme: the Help Center tells the page (postMessage from its parent only; "light" or "dark", nothing else).
         // BT90 (code audit M-40): no inline scripts. The shared 3D objects (BT51) and the start-up come from api/help_script,
         // the list of systems is data in a JSON block (encoded with JSON_HEX_TAG, so it cannot end the block).
-        $boot = '<script type="application/json" id="opsh-systems">' . $data . '</script><script src="api/help_script/boot"></script><script src="api/help_script/objects"></script>';
+        $boot = '<script type="application/json" id="itops-systems">' . $data . '</script><script src="api/help_script/boot"></script><script src="api/help_script/objects"></script>';
         return "<!doctype html>\n<html lang=\"en\" data-theme=\"light\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
              . "<style>html,body{margin:0}[hidden]{display:none!important}</style>" . $boot . "</head><body>\n" . $html . "\n</body></html>";
     }

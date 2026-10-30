@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — BT119: security baselines, build 4c (part 2). Defender incidents handled from the app, and admin roles.
+ * ITOps — BT119: security baselines, build 4c (part 2). Defender incidents handled from the app, and admin roles.
  *
  *  - Incidents: read one with its alerts; assign it, set it in progress, resolve it (a classification and a
  *    determination are required, as Microsoft asks), add a comment, make a ticket of it (once).
@@ -15,12 +15,12 @@
  * (eligible roles), User.Read.All, AuditLog.Read.All (last sign-in, multifactor registration).
  */
 
-if (!function_exists('opsh_so_classes')) {
+if (!function_exists('itops_so_classes')) {
 
     /* ─────────── incidents ─────────── */
 
     /** classification => [label, [determination => label]] (Microsoft's pairs). */
-    function opsh_so_classes(): array {
+    function itops_so_classes(): array {
         return [
             'truePositive' => ['True positive (a real threat)', ['multiStagedAttack' => 'Multi-staged attack', 'maliciousUserActivity' => 'Malicious user activity', 'compromisedAccount' => 'Compromised account',
                                'malware' => 'Malware', 'phishing' => 'Phishing', 'unwantedSoftware' => 'Unwanted software', 'other' => 'Other']],
@@ -28,13 +28,13 @@ if (!function_exists('opsh_so_classes')) {
             'falsePositive' => ['False positive (not a threat)', ['notMalicious' => 'Not malicious', 'notEnoughDataToValidate' => 'Not enough data to validate', 'other' => 'Other']],
         ];
     }
-    function opsh_so_inc_id(string $id): string {
+    function itops_so_inc_id(string $id): string {
         if (!preg_match('/^[0-9]{1,20}$/', $id)) throw new InvalidArgumentException('Not an incident id.');
         return $id;
     }
     /** One incident with its alerts and comments. */
-    function opsh_so_incident(string $id): array {
-        $i = opsh_graph_get('security/incidents/' . opsh_so_inc_id($id) . '?$expand=alerts');
+    function itops_so_incident(string $id): array {
+        $i = itops_graph_get('security/incidents/' . itops_so_inc_id($id) . '?$expand=alerts');
         $alerts = [];
         foreach ((array)($i['alerts'] ?? []) as $a) {
             $who = []; $dev = [];
@@ -58,7 +58,7 @@ if (!function_exists('opsh_so_classes')) {
      * classification, determination, comment (resolving comment). Returns [patch, plain-words summary]. Throws
      * InvalidArgumentException when it does not hold together.
      */
-    function opsh_so_inc_patch(array $cur, array $want): array {
+    function itops_so_inc_patch(array $cur, array $want): array {
         $p = []; $say = [];
         if (array_key_exists('assign', $want)) {
             $to = strtolower(trim((string)$want['assign']));
@@ -69,7 +69,7 @@ if (!function_exists('opsh_so_classes')) {
         if ($st !== null) {
             if (!in_array($st, ['active', 'inProgress', 'resolved'], true)) throw new InvalidArgumentException('Unknown status.');
             if ($st === 'resolved') {
-                $C = opsh_so_classes(); $cl = (string)($want['classification'] ?? ''); $de = (string)($want['determination'] ?? '');
+                $C = itops_so_classes(); $cl = (string)($want['classification'] ?? ''); $de = (string)($want['determination'] ?? '');
                 if (!isset($C[$cl])) throw new InvalidArgumentException('Say what it was (classification) before resolving.');
                 if (!isset($C[$cl][1][$de])) throw new InvalidArgumentException('Choose a determination that goes with "' . $C[$cl][0] . '".');
                 $why = trim((string)($want['comment'] ?? ''));
@@ -81,18 +81,18 @@ if (!function_exists('opsh_so_classes')) {
         if (!$p) throw new InvalidArgumentException('Nothing to change.');
         return [$p, implode('; ', $say)];
     }
-    function opsh_so_inc_send(string $id, array $patch): void { opsh_graph_send('PATCH', 'security/incidents/' . opsh_so_inc_id($id), $patch); }
-    function opsh_so_inc_comment(string $id, string $text): void {
+    function itops_so_inc_send(string $id, array $patch): void { itops_graph_send('PATCH', 'security/incidents/' . itops_so_inc_id($id), $patch); }
+    function itops_so_inc_comment(string $id, string $text): void {
         $text = trim($text); if (mb_strlen($text) < 2) throw new InvalidArgumentException('Write the comment.');
-        opsh_graph_send('POST', 'security/incidents/' . opsh_so_inc_id($id) . '/comments', ['@odata.type' => 'microsoft.graph.security.alertComment', 'comment' => mb_substr($text, 0, 1000)]);
+        itops_graph_send('POST', 'security/incidents/' . itops_so_inc_id($id) . '/comments', ['@odata.type' => 'microsoft.graph.security.alertComment', 'comment' => mb_substr($text, 0, 1000)]);
     }
     /** A ticket for the incident (once per incident). Returns [ticket number, ticket id, made now]. */
-    function opsh_so_inc_ticket(PDO $db, array $inc, int $catId, ?int $owner, array $user): array {
-        $q = $db->prepare('SELECT l.ticket_id, t.ticket_number FROM opsh_m365_incident_tickets l LEFT JOIN opsh_tickets t ON t.id=l.ticket_id WHERE l.incident_id=?'); $q->execute([$inc['id']]);
+    function itops_so_inc_ticket(PDO $db, array $inc, int $catId, ?int $owner, array $user): array {
+        $q = $db->prepare('SELECT l.ticket_id, t.ticket_number FROM itops_m365_incident_tickets l LEFT JOIN itops_tickets t ON t.id=l.ticket_id WHERE l.incident_id=?'); $q->execute([$inc['id']]);
         if ($r = $q->fetch(PDO::FETCH_ASSOC)) return [(string)$r['ticket_number'], (int)$r['ticket_id'], false];
         if (!$catId) throw new InvalidArgumentException('Choose the ticket category.');
         // Review M365B-19: claim the incident first (ticket 0 = being made), so two clicks at once make one ticket
-        $cl = $db->prepare('INSERT IGNORE INTO opsh_m365_incident_tickets (incident_id, ticket_id, created_by, created_at) VALUES (?,0,?,NOW())'); $cl->execute([$inc['id'], (int)$user['id']]);
+        $cl = $db->prepare('INSERT IGNORE INTO itops_m365_incident_tickets (incident_id, ticket_id, created_by, created_at) VALUES (?,0,?,NOW())'); $cl->execute([$inc['id'], (int)$user['id']]);
         if ($cl->rowCount() === 0) { $q->execute([$inc['id']]); $r = $q->fetch(PDO::FETCH_ASSOC); if ($r && (int)$r['ticket_id'] > 0) return [(string)$r['ticket_number'], (int)$r['ticket_id'], false]; throw new InvalidArgumentException('A ticket for this incident is being made right now. Reload in a moment.'); }
         try {
             require_once __DIR__ . '/TicketNumbers.php';
@@ -100,35 +100,35 @@ if (!function_exists('opsh_so_classes')) {
             $desc = 'Microsoft Defender incident ' . $inc['id'] . ': ' . $inc['name'] . "\nSeverity: " . $inc['severity'] . "\nStatus: " . $inc['status'] . ($inc['assigned'] ? "\nAssigned in Defender to: " . $inc['assigned'] : '')
                   . ($lines ? "\n\nAlerts:\n" . implode("\n", $lines) : '') . ($inc['url'] ? "\n\nIn Defender: " . $inc['url'] : '');
             $subj = mb_substr('Security incident: ' . $inc['name'], 0, 250); $pri = ['high' => 'p2_high', 'medium' => 'p3_medium'][$inc['severity']] ?? 'p4_low'; $req = (int)$user['id'];
-            [$tn, $tid] = opsh_ticket_create_numbered($db, function (string $tn) use ($db, $subj, $desc, $catId, $pri, $req) {
-                $db->prepare("INSERT INTO opsh_tickets (ticket_number,subject,description,category_id,priority,status,ticket_type,requester_id) VALUES (?,?,?,?,?,'open','incident',?)")
+            [$tn, $tid] = itops_ticket_create_numbered($db, function (string $tn) use ($db, $subj, $desc, $catId, $pri, $req) {
+                $db->prepare("INSERT INTO itops_tickets (ticket_number,subject,description,category_id,priority,status,ticket_type,requester_id) VALUES (?,?,?,?,?,'open','incident',?)")
                    ->execute([$tn, $subj, $desc, $catId, $pri, $req]);
                 return [$tn, (int)$db->lastInsertId()];
             });
-            if (!function_exists('opsh_ticket_sla_fill')) require_once __DIR__ . '/BusinessHours.php';
-            try { opsh_ticket_sla_fill($db, $tid); } catch (Throwable $e) {}
-            try { require_once __DIR__ . '/TicketRouting.php'; opsh_tr_on_created($db, $tid, null, 'security_incident'); } catch (Throwable $e) {}
-            if ($owner) $db->prepare('UPDATE opsh_tickets SET assignee_id=? WHERE id=?')->execute([$owner, $tid]);
-        } catch (Throwable $e) { $db->prepare('DELETE FROM opsh_m365_incident_tickets WHERE incident_id=? AND ticket_id=0')->execute([$inc['id']]); throw $e; }
-        $db->prepare('UPDATE opsh_m365_incident_tickets SET ticket_id=? WHERE incident_id=?')->execute([$tid, $inc['id']]);
+            if (!function_exists('itops_ticket_sla_fill')) require_once __DIR__ . '/BusinessHours.php';
+            try { itops_ticket_sla_fill($db, $tid); } catch (Throwable $e) {}
+            try { require_once __DIR__ . '/TicketRouting.php'; itops_tr_on_created($db, $tid, null, 'security_incident'); } catch (Throwable $e) {}
+            if ($owner) $db->prepare('UPDATE itops_tickets SET assignee_id=? WHERE id=?')->execute([$owner, $tid]);
+        } catch (Throwable $e) { $db->prepare('DELETE FROM itops_m365_incident_tickets WHERE incident_id=? AND ticket_id=0')->execute([$inc['id']]); throw $e; }
+        $db->prepare('UPDATE itops_m365_incident_tickets SET ticket_id=? WHERE incident_id=?')->execute([$tid, $inc['id']]);
         if (function_exists('audit_log')) audit_log('ticket_created', 'ticket', $tid, $tn, null, ['from' => 'Microsoft Defender incident ' . $inc['id']]);
         return [$tn, $tid, true];
     }
 
     /* ─────────── admin roles ─────────── */
 
-    if (!defined('OPSH_SO_GA')) define('OPSH_SO_GA', '62e90394-69f5-4237-9190-012177145e10');
-    function opsh_so_guid(string $s, string $what): string {
+    if (!defined('ITOPS_SO_GA')) define('ITOPS_SO_GA', '62e90394-69f5-4237-9190-012177145e10');
+    function itops_so_guid(string $s, string $what): string {
         if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $s)) throw new InvalidArgumentException('Not a ' . $what . '.');
         return strtolower($s);
     }
     /** role definition id => [name, high] (built-in and custom). */
-    function opsh_so_role_defs(): array {
+    function itops_so_role_defs(): array {
         require_once __DIR__ . '/M365Guard.php';
         $out = [];
-        foreach (opsh_graph_paged('roleManagement/directory/roleDefinitions?$select=id,displayName,templateId', 3) as $d) {
+        foreach (itops_graph_paged('roleManagement/directory/roleDefinitions?$select=id,displayName,templateId', 3) as $d) {
             $id = strtolower((string)($d['id'] ?? '')); $tpl = strtolower((string)($d['templateId'] ?? $id));
-            $out[$id] = [(string)($d['displayName'] ?? $id), opsh_m365_role_is_high($tpl, (string)($d['displayName'] ?? ''))];
+            $out[$id] = [(string)($d['displayName'] ?? $id), itops_m365_role_is_high($tpl, (string)($d['displayName'] ?? ''))];
         }
         return $out;
     }
@@ -136,11 +136,11 @@ if (!function_exists('opsh_so_classes')) {
      * Every account and group that holds a directory role, permanent or eligible, with what makes it risky.
      * $em: emergency account addresses. Never throws for the optional parts: they say why they are missing.
      */
-    function opsh_so_admins(array $em): array {
-        $defs = opsh_so_role_defs(); $em = array_map('strtolower', $em);
-        $asg = opsh_graph_paged('roleManagement/directory/roleAssignments?$expand=principal&$top=999', 5);
+    function itops_so_admins(array $em): array {
+        $defs = itops_so_role_defs(); $em = array_map('strtolower', $em);
+        $asg = itops_graph_paged('roleManagement/directory/roleAssignments?$expand=principal&$top=999', 5);
         $elig = []; $eligErr = null;
-        try { $elig = opsh_graph_paged('roleManagement/directory/roleEligibilityScheduleInstances?$expand=principal&$top=999', 5); }
+        try { $elig = itops_graph_paged('roleManagement/directory/roleEligibilityScheduleInstances?$expand=principal&$top=999', 5); }
         catch (Throwable $e) { $eligErr = $e->getMessage(); }
         $people = [];
         $add = function (array $a, string $kind) use (&$people, $defs) {
@@ -149,7 +149,7 @@ if (!function_exists('opsh_so_classes')) {
             $type = strtolower(str_replace('#microsoft.graph.', '', (string)($pr['@odata.type'] ?? '#microsoft.graph.user')));
             if (!isset($people[$pid])) $people[$pid] = ['id' => $pid, 'type' => $type, 'name' => (string)($pr['displayName'] ?? ''), 'upn' => strtolower((string)($pr['userPrincipalName'] ?? '')), 'roles' => []];
             $people[$pid]['roles'][] = ['role_id' => $rid, 'name' => $rn, 'high' => $high, 'kind' => $kind, 'assignment_id' => $kind === 'permanent' ? (string)($a['id'] ?? '') : null,
-                                         'scope' => (string)($a['directoryScopeId'] ?? '/'), 'ga' => $rid === OPSH_SO_GA || strcasecmp($rn, 'Global Administrator') === 0];
+                                         'scope' => (string)($a['directoryScopeId'] ?? '/'), 'ga' => $rid === ITOPS_SO_GA || strcasecmp($rn, 'Global Administrator') === 0];
         };
         foreach ($asg as $a) $add($a, 'permanent');
         foreach ($elig as $a) $add($a, 'eligible');
@@ -158,10 +158,10 @@ if (!function_exists('opsh_so_classes')) {
             $p['emergency'] = $p['upn'] !== '' && in_array($p['upn'], $em, true);
             if ($p['type'] !== 'user') { $p['flags'] = []; continue; }
             $u = null;
-            try { $u = opsh_graph_get('users/' . $pid . '?$select=id,displayName,userPrincipalName,accountEnabled,userType,onPremisesSyncEnabled,assignedLicenses,signInActivity'); }
-            catch (Throwable $e) { $signErr = $signErr ?? $e->getMessage(); try { $u = opsh_graph_get('users/' . $pid . '?$select=id,displayName,userPrincipalName,accountEnabled,userType,onPremisesSyncEnabled,assignedLicenses'); } catch (Throwable $e2) { $u = null; } }
+            try { $u = itops_graph_get('users/' . $pid . '?$select=id,displayName,userPrincipalName,accountEnabled,userType,onPremisesSyncEnabled,assignedLicenses,signInActivity'); }
+            catch (Throwable $e) { $signErr = $signErr ?? $e->getMessage(); try { $u = itops_graph_get('users/' . $pid . '?$select=id,displayName,userPrincipalName,accountEnabled,userType,onPremisesSyncEnabled,assignedLicenses'); } catch (Throwable $e2) { $u = null; } }
             $mfa = null;
-            try { $r = opsh_graph_get('reports/authenticationMethods/userRegistrationDetails/' . $pid); $mfa = !empty($r['isMfaRegistered']); } catch (Throwable $e) { $mfaErr = $mfaErr ?? $e->getMessage(); }
+            try { $r = itops_graph_get('reports/authenticationMethods/userRegistrationDetails/' . $pid); $mfa = !empty($r['isMfaRegistered']); } catch (Throwable $e) { $mfaErr = $mfaErr ?? $e->getMessage(); }
             $last = $u['signInActivity']['lastSignInDateTime'] ?? null; $days = $last ? (int)floor((time() - strtotime((string)$last)) / 86400) : null;
             if ($u) { $p['name'] = (string)($u['displayName'] ?? $p['name']); $p['upn'] = strtolower((string)($u['userPrincipalName'] ?? $p['upn'])); $p['emergency'] = in_array($p['upn'], $em, true); }
             $p += ['enabled' => $u ? !empty($u['accountEnabled']) : null, 'guest' => $u ? (($u['userType'] ?? 'Member') === 'Guest') : null, 'synced' => $u ? !empty($u['onPremisesSyncEnabled']) : null,
@@ -183,25 +183,25 @@ if (!function_exists('opsh_so_classes')) {
         return ['people' => $people, 'ga_permanent' => $gaPerm, 'ga_eligible' => $gaElig, 'eligible_error' => $eligErr, 'signin_error' => $signErr, 'mfa_error' => $mfaErr];
     }
     /** One permanent assignment, read again from Microsoft. */
-    function opsh_so_assignment(string $id): array {
+    function itops_so_assignment(string $id): array {
         if (!preg_match('/^[A-Za-z0-9_\-]{8,200}$/', $id)) throw new InvalidArgumentException('Not a role assignment id.');
-        try { $a = opsh_graph_get('roleManagement/directory/roleAssignments/' . $id . '?$expand=principal'); }
+        try { $a = itops_graph_get('roleManagement/directory/roleAssignments/' . $id . '?$expand=principal'); }
         catch (RuntimeException $e) { if (str_contains($e->getMessage(), '404')) throw new InvalidArgumentException('That role assignment no longer exists (refresh the page).'); throw $e; }
         return $a;
     }
     /** How many users hold Global Administrator permanently. BT124 (review SEC-10): accounts that can sign in only. */
-    function opsh_so_ga_permanent(): int {
+    function itops_so_ga_permanent(): int {
         $n = 0;
-        foreach (opsh_graph_paged("roleManagement/directory/roleAssignments?\$filter=" . rawurlencode("roleDefinitionId eq '" . OPSH_SO_GA . "'") . '&$expand=principal', 3) as $a) {
+        foreach (itops_graph_paged("roleManagement/directory/roleAssignments?\$filter=" . rawurlencode("roleDefinitionId eq '" . ITOPS_SO_GA . "'") . '&$expand=principal', 3) as $a) {
             if (strtolower(str_replace('#microsoft.graph.', '', (string)($a['principal']['@odata.type'] ?? '#microsoft.graph.user'))) !== 'user') continue;
             $on = $a['principal']['accountEnabled'] ?? null;
-            if ($on === null) { try { $on = !empty(opsh_graph_get('users/' . rawurlencode((string)($a['principalId'] ?? '')) . '?$select=accountEnabled')['accountEnabled']); } catch (Throwable $e) { $on = false; } }
+            if ($on === null) { try { $on = !empty(itops_graph_get('users/' . rawurlencode((string)($a['principalId'] ?? '')) . '?$select=accountEnabled')['accountEnabled']); } catch (Throwable $e) { $on = false; } }
             if ($on) $n++;
         }
         return $n;
     }
-    function opsh_so_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM opsh_m365_role_changes LIMIT 1'); $db->query('SELECT 1 FROM opsh_m365_incident_tickets LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
-    function opsh_so_role_label(string $kind, array $p): string {
+    function itops_so_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM itops_m365_role_changes LIMIT 1'); $db->query('SELECT 1 FROM itops_m365_incident_tickets LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
+    function itops_so_role_label(string $kind, array $p): string {
         $who = ($p['who'] ?? '') ?: '?'; $role = ($p['role'] ?? '') ?: '?';
         if ($kind === 'role_remove') return 'Remove "' . $role . '" from ' . $who;
         if ($kind === 'role_eligible') return 'Make "' . $role . '" eligible (asked for when needed) for ' . $who;
@@ -209,68 +209,68 @@ if (!function_exists('opsh_so_classes')) {
         return $kind;
     }
     /** Fill who / role from Microsoft (never from the browser) for a request. Throws InvalidArgumentException. */
-    function opsh_so_role_describe(PDO $db, string $kind, array $p): array {
+    function itops_so_role_describe(PDO $db, string $kind, array $p): array {
         if ($kind === 'role_restore') {
-            $q = $db->prepare('SELECT * FROM opsh_m365_role_changes WHERE id=?'); $q->execute([(int)($p['change_id'] ?? 0)]); $c = $q->fetch(PDO::FETCH_ASSOC);
+            $q = $db->prepare('SELECT * FROM itops_m365_role_changes WHERE id=?'); $q->execute([(int)($p['change_id'] ?? 0)]); $c = $q->fetch(PDO::FETCH_ASSOC);
             if (!$c) throw new InvalidArgumentException('No such change.');
             if ($c['undone_at']) throw new InvalidArgumentException('That change was already put back.');
             return ['change_id' => (int)$c['id'], 'who' => $c['principal_name'], 'role' => $c['role_name'], 'role_id' => strtolower((string)$c['role_id']), 'principal_id' => strtolower((string)$c['principal_id'])];
         }
-        $a = opsh_so_assignment((string)($p['assignment_id'] ?? ''));
-        $defs = opsh_so_role_defs(); $rid = strtolower((string)($a['roleDefinitionId'] ?? ''));
+        $a = itops_so_assignment((string)($p['assignment_id'] ?? ''));
+        $defs = itops_so_role_defs(); $rid = strtolower((string)($a['roleDefinitionId'] ?? ''));
         $pr = (array)($a['principal'] ?? []); $type = strtolower(str_replace('#microsoft.graph.', '', (string)($pr['@odata.type'] ?? '#microsoft.graph.user')));
         if ($type !== 'user') throw new InvalidArgumentException('This role is held by a ' . $type . ', not a person: change it in the Entra admin center.');
         return ['assignment_id' => (string)$a['id'], 'who' => (string)($pr['userPrincipalName'] ?? ($pr['displayName'] ?? '')), 'role' => $defs[$rid][0] ?? $rid, 'role_id' => $rid, 'principal_id' => strtolower((string)($a['principalId'] ?? ''))];
     }
     /** Carry out a role change. Throws InvalidArgumentException (refused, nothing changed) or RuntimeException (Microsoft refused). */
-    function opsh_so_role_exec(PDO $db, string $kind, array $p, int $by, array $em, ?int $req = null): array {
-        $em = array_map('strtolower', $em); $app = function_exists('opsh_app_name') ? opsh_app_name() : 'OpsHub';
+    function itops_so_role_exec(PDO $db, string $kind, array $p, int $by, array $em, ?int $req = null): array {
+        $em = array_map('strtolower', $em); $app = function_exists('itops_app_name') ? itops_app_name() : 'ITOps';
         $rec = function (string $action, array $a, ?string $elig, int $reqv = 0) use ($db, $by, $req): int {
-            $db->prepare('INSERT INTO opsh_m365_role_changes (action, principal_id, principal_name, role_id, role_name, scope, assignment_id, eligibility, by_user, at, request_id) VALUES (?,?,?,?,?,?,?,?,?,NOW(),?)')
+            $db->prepare('INSERT INTO itops_m365_role_changes (action, principal_id, principal_name, role_id, role_name, scope, assignment_id, eligibility, by_user, at, request_id) VALUES (?,?,?,?,?,?,?,?,?,NOW(),?)')
                ->execute([$action, $a['principal_id'], mb_substr($a['who'], 0, 255), $a['role_id'], mb_substr($a['role'], 0, 255), $a['scope'], $a['assignment_id'] ?? null, $elig, $by, $req]);
             return (int)$db->lastInsertId();
         };
         if ($kind === 'role_remove' || $kind === 'role_eligible') {
-            $a = opsh_so_assignment((string)($p['assignment_id'] ?? ''));
+            $a = itops_so_assignment((string)($p['assignment_id'] ?? ''));
             $pr = (array)($a['principal'] ?? []); $type = strtolower(str_replace('#microsoft.graph.', '', (string)($pr['@odata.type'] ?? '#microsoft.graph.user')));
             if ($type !== 'user') throw new InvalidArgumentException('This role is held by a ' . $type . ', not a person: change it in the Entra admin center.');
-            $rid = strtolower((string)$a['roleDefinitionId']); $defs = opsh_so_role_defs();
+            $rid = strtolower((string)$a['roleDefinitionId']); $defs = itops_so_role_defs();
             $info = ['principal_id' => strtolower((string)$a['principalId']), 'who' => strtolower((string)($pr['userPrincipalName'] ?? '')), 'role_id' => $rid, 'role' => $defs[$rid][0] ?? $rid,
                      'scope' => (string)($a['directoryScopeId'] ?? '/'), 'assignment_id' => (string)$a['id']];
-            $ga = $rid === OPSH_SO_GA;
+            $ga = $rid === ITOPS_SO_GA;
             if ($ga && in_array($info['who'], $em, true)) throw new InvalidArgumentException($info['who'] . ' is an emergency access account: it keeps Global Administrator, permanently.');
             // BT124 (review SEC-10): one Global Administrator change at a time, so two at once cannot both pass the count
-            if ($ga && (int)$db->query("SELECT GET_LOCK('opsh_ga_change', 30)")->fetchColumn() !== 1) throw new RuntimeException('Another Global Administrator change is running. Try again in a minute.');
-            if ($ga && opsh_so_ga_permanent() <= 2) { $db->query("SELECT RELEASE_LOCK('opsh_ga_change')"); throw new InvalidArgumentException('At least two people who can sign in must stay Global Administrator permanently (the emergency access accounts count). Add another first.'); }
-            if ($ga) register_shutdown_function(function () use ($db) { try { $db->query("SELECT RELEASE_LOCK('opsh_ga_change')"); } catch (Throwable $e) {} });
+            if ($ga && (int)$db->query("SELECT GET_LOCK('itops_ga_change', 30)")->fetchColumn() !== 1) throw new RuntimeException('Another Global Administrator change is running. Try again in a minute.');
+            if ($ga && itops_so_ga_permanent() <= 2) { $db->query("SELECT RELEASE_LOCK('itops_ga_change')"); throw new InvalidArgumentException('At least two people who can sign in must stay Global Administrator permanently (the emergency access accounts count). Add another first.'); }
+            if ($ga) register_shutdown_function(function () use ($db) { try { $db->query("SELECT RELEASE_LOCK('itops_ga_change')"); } catch (Throwable $e) {} });
             if ($kind === 'role_remove') {
-                opsh_graph_send('DELETE', 'roleManagement/directory/roleAssignments/' . $info['assignment_id']);
+                itops_graph_send('DELETE', 'roleManagement/directory/roleAssignments/' . $info['assignment_id']);
                 $cid = $rec('role_remove', $info, null);
                 return ['change_id' => $cid, 'name' => $info['who'] . ' · ' . $info['role'], 'summary' => 'Removed "' . $info['role'] . '" from ' . $info['who']];
             }
-            $r = opsh_graph_send('POST', 'roleManagement/directory/roleEligibilityScheduleRequests', ['action' => 'adminAssign', 'justification' => 'Made eligible instead of permanent, from ' . $app,
+            $r = itops_graph_send('POST', 'roleManagement/directory/roleEligibilityScheduleRequests', ['action' => 'adminAssign', 'justification' => 'Made eligible instead of permanent, from ' . $app,
                 'roleDefinitionId' => $rid, 'directoryScopeId' => $info['scope'], 'principalId' => $info['principal_id'],
                 'scheduleInfo' => ['startDateTime' => gmdate('Y-m-d\TH:i:s\Z'), 'expiration' => ['type' => 'noExpiration']]]);
-            try { opsh_graph_send('DELETE', 'roleManagement/directory/roleAssignments/' . $info['assignment_id']); }
+            try { itops_graph_send('DELETE', 'roleManagement/directory/roleAssignments/' . $info['assignment_id']); }
             catch (Throwable $e) {   // keep it as it was: the eligible copy goes again
-                try { opsh_graph_send('POST', 'roleManagement/directory/roleEligibilityScheduleRequests', ['action' => 'adminRemove', 'justification' => 'Undo: the permanent role could not be removed', 'roleDefinitionId' => $rid, 'directoryScopeId' => $info['scope'], 'principalId' => $info['principal_id']]); } catch (Throwable $z) {}
+                try { itops_graph_send('POST', 'roleManagement/directory/roleEligibilityScheduleRequests', ['action' => 'adminRemove', 'justification' => 'Undo: the permanent role could not be removed', 'roleDefinitionId' => $rid, 'directoryScopeId' => $info['scope'], 'principalId' => $info['principal_id']]); } catch (Throwable $z) {}
                 throw new RuntimeException('the permanent role could not be removed, so the eligible one was taken back and nothing changed (' . $e->getMessage() . ')');
             }
             $cid = $rec('role_eligible', $info, (string)($r['id'] ?? ''));
             return ['change_id' => $cid, 'name' => $info['who'] . ' · ' . $info['role'], 'summary' => '"' . $info['role'] . '" is now eligible for ' . $info['who'] . ' (activated in Entra when needed)'];
         }
         if ($kind === 'role_restore') {
-            $q = $db->prepare('SELECT * FROM opsh_m365_role_changes WHERE id=?'); $q->execute([(int)($p['change_id'] ?? 0)]); $c = $q->fetch(PDO::FETCH_ASSOC);
+            $q = $db->prepare('SELECT * FROM itops_m365_role_changes WHERE id=?'); $q->execute([(int)($p['change_id'] ?? 0)]); $c = $q->fetch(PDO::FETCH_ASSOC);
             if (!$c) throw new InvalidArgumentException('No such change.');
             if ($c['undone_at']) throw new InvalidArgumentException('That change was already put back.');
             if (!in_array($c['action'], ['role_remove', 'role_eligible'], true)) throw new InvalidArgumentException('That change cannot be put back.');
-            $j = opsh_graph_send('POST', 'roleManagement/directory/roleAssignments', ['principalId' => $c['principal_id'], 'roleDefinitionId' => $c['role_id'], 'directoryScopeId' => $c['scope'] ?: '/']);
+            $j = itops_graph_send('POST', 'roleManagement/directory/roleAssignments', ['principalId' => $c['principal_id'], 'roleDefinitionId' => $c['role_id'], 'directoryScopeId' => $c['scope'] ?: '/']);
             $note = 'the role is permanent again';
             if ($c['action'] === 'role_eligible') {
-                try { opsh_graph_send('POST', 'roleManagement/directory/roleEligibilityScheduleRequests', ['action' => 'adminRemove', 'justification' => 'Put back from ' . $app, 'roleDefinitionId' => $c['role_id'], 'directoryScopeId' => $c['scope'] ?: '/', 'principalId' => $c['principal_id']]); $note .= ' and no longer eligible'; }
+                try { itops_graph_send('POST', 'roleManagement/directory/roleEligibilityScheduleRequests', ['action' => 'adminRemove', 'justification' => 'Put back from ' . $app, 'roleDefinitionId' => $c['role_id'], 'directoryScopeId' => $c['scope'] ?: '/', 'principalId' => $c['principal_id']]); $note .= ' and no longer eligible'; }
                 catch (Throwable $e) { $note .= '; the eligible copy could not be removed (' . $e->getMessage() . '): remove it in Entra'; }
             }
-            $db->prepare('UPDATE opsh_m365_role_changes SET undone_at=NOW(), undone_by=? WHERE id=?')->execute([$by, (int)$c['id']]);
+            $db->prepare('UPDATE itops_m365_role_changes SET undone_at=NOW(), undone_by=? WHERE id=?')->execute([$by, (int)$c['id']]);
             $cid = $rec('role_restore', ['principal_id' => $c['principal_id'], 'who' => $c['principal_name'], 'role_id' => $c['role_id'], 'role' => $c['role_name'], 'scope' => $c['scope'], 'assignment_id' => (string)($j['id'] ?? '')], null);
             return ['change_id' => $cid, 'name' => $c['principal_name'] . ' · ' . $c['role_name'], 'summary' => 'Put back: "' . $c['role_name'] . '" for ' . $c['principal_name'] . ' (' . $note . ')'];
         }

@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — /api/jobs   (BT60: Scheduled jobs — are the cron jobs running, and working?)
+ * ITOps — /api/jobs   (BT60: Scheduled jobs — are the cron jobs running, and working?)
  *
  * GET    /jobs                          every job: state, last run, last success, next due, success rate, the cron
  *                                       lines to set up, server facts (PHP of the web server, time zone)      (Scheduled jobs · View)
@@ -26,20 +26,20 @@ $arg  = (string)($segments[2] ?? '');
 
 // ── public: the outside monitor ──
 if ($what === 'monitor' && $method === 'GET') {
-    $key = (string)($_GET['key'] ?? ($_SERVER['HTTP_X_OPSHUB_MONITOR_KEY'] ?? ''));
-    $hash = (string)($db->query("SELECT sval FROM opsh_settings WHERE skey='cron_monitor_key'")->fetchColumn() ?: '');
+    $key = (string)($_GET['key'] ?? ($_SERVER['HTTP_X_ITOPS_MONITOR_KEY'] ?? ''));
+    $hash = (string)($db->query("SELECT sval FROM itops_settings WHERE skey='cron_monitor_key'")->fetchColumn() ?: '');
     if ($hash === '' || $key === '' || !hash_equals($hash, hash('sha256', $key))) error_response('Not found', 404);
-    $H = opsh_cron_health($db); $jobs = []; $ok = true;
-    foreach ($H as $k => $h) { if (!$h['needed'] || !$h['alert']) continue; $jobs[$k] = $h['state']; if (opsh_cron_bad($h['state'])) $ok = false; }
+    $H = itops_cron_health($db); $jobs = []; $ok = true;
+    foreach ($H as $k => $h) { if (!$h['needed'] || !$h['alert']) continue; $jobs[$k] = $h['state']; if (itops_cron_bad($h['state'])) $ok = false; }
     http_response_code($ok ? 200 : 503); header('Cache-Control: no-store');
     json_response(['ok' => $ok, 'jobs' => $jobs, 'checked_at' => date('c')], $ok ? 200 : 503);
 }
 
-if (!opsh_cron_ready($db)) error_response('Run db-update.php once to install the scheduled jobs history, then reload.', 409);
+if (!itops_cron_ready($db)) error_response('Run db-update.php once to install the scheduled jobs history, then reload.', 409);
 $body = [];
 if (in_array($method, ['POST', 'PUT', 'DELETE'], true)) { $raw = file_get_contents('php://input') ?: ''; if ($raw !== '') { $body = json_decode($raw, true); if (!is_array($body)) error_response('The request is not in the expected form. Nothing was changed.', 400); } }
 $need = function (string $act, string $what) use ($currentUser) {
-    if (opsh_can($currentUser, 'jobs', $act)) return;
+    if (itops_can($currentUser, 'jobs', $act)) return;
     if ($act !== 'view') audit_log('cron_refused', 'settings', null, $what, null, ['Wanted' => $what, 'Needs' => 'Scheduled jobs · ' . ucfirst($act)]);
     error_response('Your role cannot ' . ($act === 'view' ? 'see the scheduled jobs' : 'change the scheduled jobs') . ' (it needs Scheduled jobs · ' . ucfirst($act) . ').', 403);
 };
@@ -57,12 +57,12 @@ $runView = function (array $r, bool $full = false): array {
 
 if ($what === '' && $method === 'GET') {
     $need('view', 'Scheduled jobs');
-    try { opsh_cron_watch($db); } catch (Throwable $e) {}
-    $H = opsh_cron_health($db); $cfg = opsh_cron_cfg($db);
-    $root = opsh_install_root();
-    $bin = opsh_cron_php_bin(); $eaGuess = '/opt/cpanel/ea-php' . PHP_MAJOR_VERSION . PHP_MINOR_VERSION . '/root/usr/bin/php';
-    $tick = json_decode((string)($db->query("SELECT sval FROM opsh_settings WHERE skey='auto_tick_last'")->fetchColumn() ?: ''), true);
-    $cronPhp = (string)($db->query("SELECT php FROM opsh_cron_runs WHERE via='cli' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: '');
+    try { itops_cron_watch($db); } catch (Throwable $e) {}
+    $H = itops_cron_health($db); $cfg = itops_cron_cfg($db);
+    $root = itops_install_root();
+    $bin = itops_cron_php_bin(); $eaGuess = '/opt/cpanel/ea-php' . PHP_MAJOR_VERSION . PHP_MINOR_VERSION . '/root/usr/bin/php';
+    $tick = json_decode((string)($db->query("SELECT sval FROM itops_settings WHERE skey='auto_tick_last'")->fetchColumn() ?: ''), true);
+    $cronPhp = (string)($db->query("SELECT php FROM itops_cron_runs WHERE via='cli' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: '');
     $lines = [
         ['job' => 'sla', 'when' => '*/15 * * * *', 'cmd' => $bin . ' ' . $root . '/cron-sla.php >/dev/null 2>&1', 'note' => 'Every 15 minutes'],
         ['job' => 'uptime', 'when' => '* * * * *', 'cmd' => $bin . ' ' . $root . '/cron-uptime.php >/dev/null 2>&1', 'note' => 'Every minute (each monitor and backup keeps its own schedule)'],
@@ -70,58 +70,58 @@ if ($what === '' && $method === 'GET') {
         ['job' => 'digest', 'when' => '0 8 * * 1', 'cmd' => $bin . ' ' . $root . '/cron-sla.php digest >/dev/null 2>&1', 'note' => 'Mondays at 8:00 AM'],
         ['job' => 'audit', 'when' => '* * * * *', 'cmd' => $bin . ' ' . $root . '/cron-audit.php >/dev/null 2>&1', 'note' => 'Every minute, only after an Integration Audit collector is approved'],
     ];
-    $mon = (string)($db->query("SELECT sval FROM opsh_settings WHERE skey='cron_monitor_key'")->fetchColumn() ?: '');
-    $monAt = (string)($db->query("SELECT sval FROM opsh_settings WHERE skey='cron_monitor_key_at'")->fetchColumn() ?: '');
-    $bad = array_values(array_filter($H, fn($h) => $h['needed'] && $h['alert'] && opsh_cron_bad($h['state'])));
+    $mon = (string)($db->query("SELECT sval FROM itops_settings WHERE skey='cron_monitor_key'")->fetchColumn() ?: '');
+    $monAt = (string)($db->query("SELECT sval FROM itops_settings WHERE skey='cron_monitor_key_at'")->fetchColumn() ?: '');
+    $bad = array_values(array_filter($H, fn($h) => $h['needed'] && $h['alert'] && itops_cron_bad($h['state'])));
     json_response(['jobs' => array_values($H), 'cfg' => $cfg, 'overall' => $bad ? 'attention' : 'ok', 'attention' => array_map(fn($h) => $h['key'], $bad),
         'server' => ['time' => date('Y-m-d H:i:s'), 'timezone' => date_default_timezone_get(), 'php_web' => PHP_VERSION, 'php_cron' => $cronPhp, 'php_bin' => $bin, 'php_bin_match' => $eaGuess, 'root' => $root],
-        'cron_lines' => $lines, 'tick' => ['enabled' => (string)($db->query("SELECT sval FROM opsh_settings WHERE skey='mail_auto_tick'")->fetchColumn() ?: '1') === '1', 'last' => $tick],
-        'monitor' => ['set' => $mon !== '', 'since' => $monAt], 'url_base' => $base(), 'can_edit' => opsh_can($currentUser, 'jobs', 'edit')]);
+        'cron_lines' => $lines, 'tick' => ['enabled' => (string)($db->query("SELECT sval FROM itops_settings WHERE skey='mail_auto_tick'")->fetchColumn() ?: '1') === '1', 'last' => $tick],
+        'monitor' => ['set' => $mon !== '', 'since' => $monAt], 'url_base' => $base(), 'can_edit' => itops_can($currentUser, 'jobs', 'edit')]);
 }
 
 if ($what === 'months' && $method === 'GET') {
     // BT62: the monthly report — one line per job and month (the runs of earlier months are summed here, then deleted)
     $need('view', 'The monthly report of the scheduled jobs');
-    $job = (string)($_GET['job'] ?? ''); if ($job !== '' && !isset(opsh_cron_jobs()[$job])) error_response('Unknown job.', 400);
-    $labels = array_map(fn($J) => $J['label'], opsh_cron_jobs());
-    json_response(['months' => array_map(fn($r) => $r + ['label' => $labels[$r['job']] ?? $r['job']], opsh_cron_months($db, $job !== '' ? $job : null, 12))]);
+    $job = (string)($_GET['job'] ?? ''); if ($job !== '' && !isset(itops_cron_jobs()[$job])) error_response('Unknown job.', 400);
+    $labels = array_map(fn($J) => $J['label'], itops_cron_jobs());
+    json_response(['months' => array_map(fn($r) => $r + ['label' => $labels[$r['job']] ?? $r['job']], itops_cron_months($db, $job !== '' ? $job : null, 12))]);
 }
 if ($what === 'runs' && $method === 'GET') {
     $need('view', 'Scheduled jobs');
     if ($arg !== '') {
-        $s = $db->prepare('SELECT * FROM opsh_cron_runs WHERE id=?'); $s->execute([(int)$arg]); $r = $s->fetch(PDO::FETCH_ASSOC);
+        $s = $db->prepare('SELECT * FROM itops_cron_runs WHERE id=?'); $s->execute([(int)$arg]); $r = $s->fetch(PDO::FETCH_ASSOC);
         if (!$r) error_response('That run is not in the history any more.', 404);
         json_response(['run' => $runView($r, true)]);
     }
     $w = []; $a = [];
-    if (!empty($_GET['job'])) { if (!isset(opsh_cron_jobs()[$_GET['job']])) error_response('Unknown job.', 400); $w[] = 'job=?'; $a[] = $_GET['job']; }
+    if (!empty($_GET['job'])) { if (!isset(itops_cron_jobs()[$_GET['job']])) error_response('Unknown job.', 400); $w[] = 'job=?'; $a[] = $_GET['job']; }
     if (!empty($_GET['status'])) { if (!in_array($_GET['status'], ['ok', 'warning', 'failed', 'running', 'problem'], true)) error_response('Unknown status.', 400);
         if ($_GET['status'] === 'problem') $w[] = "status IN ('warning','failed')"; else { $w[] = 'status=?'; $a[] = $_GET['status']; } }
     if (!empty($_GET['before']) && ctype_digit((string)$_GET['before'])) { $w[] = 'id < ?'; $a[] = (int)$_GET['before']; }
     $lim = max(10, min(200, (int)($_GET['limit'] ?? 50)));
-    $s = $db->prepare('SELECT * FROM opsh_cron_runs' . ($w ? ' WHERE ' . implode(' AND ', $w) : '') . ' ORDER BY id DESC LIMIT ' . $lim); $s->execute($a);
+    $s = $db->prepare('SELECT * FROM itops_cron_runs' . ($w ? ' WHERE ' . implode(' AND ', $w) : '') . ' ORDER BY id DESC LIMIT ' . $lim); $s->execute($a);
     $rows = array_map(fn($r) => $runView($r), $s->fetchAll(PDO::FETCH_ASSOC));
     json_response(['runs' => $rows, 'more' => count($rows) === $lim]);
 }
 
 if ($what === 'settings' && $method === 'PUT') {
     $need('edit', 'Scheduled jobs settings');
-    $cur = opsh_cron_cfg($db); $new = $cur;
+    $cur = itops_cron_cfg($db); $new = $cur;
     if (array_key_exists('notify', $body)) { if (!is_bool($body['notify'])) error_response('"Tell administrators" is on or off.', 400); $new['notify'] = $body['notify']; }
     if (array_key_exists('email', $body)) { if (!is_bool($body['email'])) error_response('"By email too" is on or off.', 400); $new['email'] = $body['email']; }
     if (array_key_exists('jobs', $body)) {
         if (!is_array($body['jobs'])) error_response('The jobs are not in the expected form.', 400);
         foreach ($body['jobs'] as $k => $j) {
-            if (!isset(opsh_cron_jobs()[$k]) || !is_array($j)) error_response('Unknown job "' . $k . '".', 400);
+            if (!isset(itops_cron_jobs()[$k]) || !is_array($j)) error_response('Unknown job "' . $k . '".', 400);
             if (array_key_exists('every', $j)) { if (!is_numeric($j['every']) || (int)$j['every'] < 1 || (int)$j['every'] > 20160 || (float)$j['every'] != (int)$j['every']) error_response('A job runs every 1 minute to 2 weeks (in whole minutes).', 400); $new['jobs'][$k]['every'] = (int)$j['every']; }
             if (array_key_exists('alert', $j)) { if (!is_bool($j['alert'])) error_response('"Alert" is on or off.', 400); $new['jobs'][$k]['alert'] = $j['alert']; }
         }
     }
     $view = function (array $c): array { $o = ['Tell administrators' => $c['notify'] ? 'yes' : 'no', 'By email too' => $c['email'] ? 'yes' : 'no'];
-        foreach (opsh_cron_jobs() as $k => $J) $o[$J['label']] = 'every ' . opsh_cron_every_text((int)$c['jobs'][$k]['every']) . ($c['jobs'][$k]['alert'] ? ', alerts on' : ', alerts off'); return $o; };
+        foreach (itops_cron_jobs() as $k => $J) $o[$J['label']] = 'every ' . itops_cron_every_text((int)$c['jobs'][$k]['every']) . ($c['jobs'][$k]['alert'] ? ', alerts on' : ', alerts off'); return $o; };
     $o = []; $n = []; foreach ($view($new) as $k => $v) if (($view($cur)[$k] ?? null) !== $v) { $o[$k] = $view($cur)[$k] ?? ''; $n[$k] = $v; }
     if (!$n) json_response(['ok' => true, 'changed' => 0]);
-    $db->prepare("INSERT INTO opsh_settings (skey, sval) VALUES ('cron_cfg', ?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([json_encode(['notify' => $new['notify'], 'email' => $new['email'], 'jobs' => $new['jobs']])]);
+    $db->prepare("INSERT INTO itops_settings (skey, sval) VALUES ('cron_cfg', ?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([json_encode(['notify' => $new['notify'], 'email' => $new['email'], 'jobs' => $new['jobs']])]);
     audit_log('cron_settings_save', 'settings', null, 'Scheduled jobs', $o, $n);
     json_response(['ok' => true, 'changed' => count($n)]);
 }
@@ -131,27 +131,27 @@ if ($what === 'run' && $method === 'POST') {
     $need('edit', 'Run a scheduled job now');
     $script = ['sla' => 'cron-sla.php', 'mail' => 'cron-mail.php'][$job] ?? null;
     if ($script === null) error_response('Only the main scheduler and the email intake can be run from here.', 400);
-    $tok = (string)($db->query("SELECT sval FROM opsh_settings WHERE skey='mail_cron_token'")->fetchColumn() ?: '');
+    $tok = (string)($db->query("SELECT sval FROM itops_settings WHERE skey='mail_cron_token'")->fetchColumn() ?: '');
     if ($tok === '') error_response('There is no cron token yet: save the Email settings once (Settings → Connection → Email), then try again.', 409);
     if (!function_exists('curl_init')) error_response('This server cannot call itself (PHP curl is missing). Run the job from cron instead.', 501);
     $b = $base(); if ($b === '') error_response('The address of the app is not known (APP_URL).', 500);
-    $before = (int)$db->query('SELECT COALESCE(MAX(id),0) FROM opsh_cron_runs')->fetchColumn();
+    $before = (int)$db->query('SELECT COALESCE(MAX(id),0) FROM itops_cron_runs')->fetchColumn();
     $ch = curl_init($b . '/' . $script);
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 3, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_NOSIGNAL => true,
-        CURLOPT_HTTPHEADER => ['X-OpsHub-Cron-Token: ' . $tok, 'X-OpsHub-Run: manual']]);
+        CURLOPT_HTTPHEADER => ['X-ITOps-Cron-Token: ' . $tok, 'X-ITOps-Run: manual']]);
     curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $errno = curl_errno($ch); curl_close($ch);
     if ($code === 403) error_response('The job refused the cron token. Rotate the token in the Email settings and update the cron jobs.', 502);
-    audit_log('cron_run_now', 'settings', null, opsh_cron_jobs()[$job]['label'], null, ['Job' => opsh_cron_jobs()[$job]['label'], 'Started by' => (string)($currentUser['display_name'] ?? '')]);
+    audit_log('cron_run_now', 'settings', null, itops_cron_jobs()[$job]['label'], null, ['Job' => itops_cron_jobs()[$job]['label'], 'Started by' => (string)($currentUser['display_name'] ?? '')]);
     json_response(['ok' => true, 'started' => true, 'after_id' => $before, 'answered' => $code ?: null, 'still_running' => $errno === 28]);
 }
 
 if ($what === 'test-alert' && $method === 'POST') {
     $need('edit', 'Send a test scheduled-job alert');
     $u = $currentUser; $h = ['key' => 'test', 'label' => 'Test alert', 'every' => 15, 'script' => 'cron-sla.php', 'state' => 'late', 'last' => null];
-    $db->prepare('INSERT INTO opsh_notifications (user_id, title, body, type, link) VALUES (?,?,?,?,?)')->execute([(int)$u['id'], 'Scheduled job alert (test)', 'This is how an alert about a scheduled job arrives. Nothing is wrong.', 'info', 'jobs']);
+    $db->prepare('INSERT INTO itops_notifications (user_id, title, body, type, link) VALUES (?,?,?,?,?)')->execute([(int)$u['id'], 'Scheduled job alert (test)', 'This is how an alert about a scheduled job arrives. Nothing is wrong.', 'info', 'jobs']);
     $mail = null;
-    if (!empty($u['email']) && function_exists('opsh_email')) {
-        try { $r = opsh_email('cron_job_alert', (string)$u['email'], ['job' => 'Test alert', 'state' => 'a test — nothing is wrong', 'detail' => 'Sent from the Scheduled jobs page to check that alerts arrive.', 'recipient_name' => (string)$u['display_name'],
+    if (!empty($u['email']) && function_exists('itops_email')) {
+        try { $r = itops_email('cron_job_alert', (string)$u['email'], ['job' => 'Test alert', 'state' => 'a test — nothing is wrong', 'detail' => 'Sent from the Scheduled jobs page to check that alerts arrive.', 'recipient_name' => (string)$u['display_name'],
             'link' => defined('APP_URL') ? rtrim(APP_URL, '/') . '/#jobs' : ''], ['user_id' => (int)$u['id']]); $mail = !empty($r['ok']); } catch (Throwable $e) { $mail = false; }
     }
     audit_log('cron_test_alert', 'settings', null, 'Scheduled jobs: test alert', null, ['Sent to' => (string)$u['display_name'], 'Email' => $mail === null ? 'no address' : ($mail ? 'sent' : 'not sent')]);
@@ -162,14 +162,14 @@ if ($what === 'monitor-key') {
     $need('edit', 'Outside monitor URL');
     if ($method === 'POST') {
         $key = bin2hex(random_bytes(20));
-        $db->prepare("INSERT INTO opsh_settings (skey, sval) VALUES ('cron_monitor_key', ?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([hash('sha256', $key)]);
-        $db->prepare("INSERT INTO opsh_settings (skey, sval) VALUES ('cron_monitor_key_at', ?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([date('Y-m-d H:i:s')]);
+        $db->prepare("INSERT INTO itops_settings (skey, sval) VALUES ('cron_monitor_key', ?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([hash('sha256', $key)]);
+        $db->prepare("INSERT INTO itops_settings (skey, sval) VALUES ('cron_monitor_key_at', ?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([date('Y-m-d H:i:s')]);
         audit_log('cron_monitor_key', 'settings', null, 'Scheduled jobs: outside monitor URL', null, ['Monitor URL' => 'new key issued (shown once; stored as a hash)']);
         if ($base() === '') error_response('Set the app address (APP_URL) first: the monitor address is built from it.', 409);
         json_response(['ok' => true, 'url' => $base() . '/api/jobs/monitor?key=' . $key]);
     }
     if ($method === 'DELETE') {
-        $db->prepare("DELETE FROM opsh_settings WHERE skey IN ('cron_monitor_key','cron_monitor_key_at')")->execute();
+        $db->prepare("DELETE FROM itops_settings WHERE skey IN ('cron_monitor_key','cron_monitor_key_at')")->execute();
         audit_log('cron_monitor_key', 'settings', null, 'Scheduled jobs: outside monitor URL', ['Monitor URL' => 'on'], ['Monitor URL' => 'stopped']);
         json_response(['ok' => true]);
     }

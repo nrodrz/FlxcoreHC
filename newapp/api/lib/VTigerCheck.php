@@ -12,12 +12,12 @@
  *      the log, the folders, the bridge's secret file or a file left in the web root can be downloaded (only the status
  *      code is kept, never what came back).
  * Each finding: area, setting, file, ours, recommended, level (risk | warn | ok | info), why, how.
- * The last result is kept in opsh_settings 'vtiger_config_check' (nothing secret is in it).
+ * The last result is kept in itops_settings 'vtiger_config_check' (nothing secret is in it).
  */
-if (!function_exists('opsh_vtc_run')) {
+if (!function_exists('itops_vtc_run')) {
 
     /** The important vTiger 7.x files: what each does and what to keep in mind (shown in the app and the guide). */
-    function opsh_vtc_files_doc(): array {
+    function itops_vtc_files_doc(): array {
         return [
             ['config.inc.php', 'Main settings: the database connection, the site address (site_URL), folders, upload size and blocked file types, who may export, time zone, the application key.', 'Holds the database password. Permissions 640 (or 644); never world-writable; keep a copy outside the web root before editing.'],
             ['config.performance.php', 'Performance and debugging switches ($PERFORMANCE_CONFIG): debug logging, SQL logging, list view page counts, record navigation.', 'Debug and SQL logging off in production: they fill logs/ and write queries to disk.'],
@@ -31,70 +31,70 @@ if (!function_exists('opsh_vtc_run')) {
             ['cache/, test/templates_c/', 'Temporary files, imports and the compiled page templates.', 'Writable by PHP (755 under PHP-FPM as the account); never 777.'],
             ['logs/', 'vTiger\'s own logs (vtigercrm.log and others) when logging is on.', 'Must not be downloadable from the web (add logs/.htaccess with "Require all denied"); watch its size.'],
             ['vtigercron.php', 'The scheduler: workflows, scheduled reports, mail scanner, reminders, recurring invoices. Run by a cron job every 15 minutes.', 'Run from cron with PHP on the command line, not from the web.'],
-            ['opsh-bridge.php / opsh-bridge.secret', 'This app\'s bridge to vTiger and, if used, the file holding its secret.', 'The secret preferably in .htaccess (SetEnv OPSH_BRIDGE_SECRET); a secret file must be 600 and denied from the web.'],
+            ['itops-bridge.php / itops-bridge.secret', 'This app\'s bridge to vTiger and, if used, the file holding its secret.', 'The secret preferably in .htaccess (SetEnv ITOPS_BRIDGE_SECRET); a secret file must be 600 and denied from the web.'],
         ];
     }
 
-    function opsh_vtc_bool($v): ?bool { if ($v === null) return null; if (is_bool($v)) return $v; $s = strtolower(trim((string)$v)); return in_array($s, ['1', 'on', 'yes', 'true', 'stdout', 'stderr'], true) ? true : ($s === '' || in_array($s, ['0', 'off', 'no', 'false', 'none'], true) ? false : true); }
-    function opsh_vtc_bytes($v): int { $s = strtolower(trim((string)$v)); if ($s === '' || $s === '-1') return -1; $n = (float)$s; $u = substr($s, -1);
+    function itops_vtc_bool($v): ?bool { if ($v === null) return null; if (is_bool($v)) return $v; $s = strtolower(trim((string)$v)); return in_array($s, ['1', 'on', 'yes', 'true', 'stdout', 'stderr'], true) ? true : ($s === '' || in_array($s, ['0', 'off', 'no', 'false', 'none'], true) ? false : true); }
+    function itops_vtc_bytes($v): int { $s = strtolower(trim((string)$v)); if ($s === '' || $s === '-1') return -1; $n = (float)$s; $u = substr($s, -1);
         return (int)($u === 'g' ? $n * 1073741824 : ($u === 'm' ? $n * 1048576 : ($u === 'k' ? $n * 1024 : $n))); }
-    function opsh_vtc_size(int $b): string { return $b < 0 ? 'no limit' : ($b >= 1073741824 ? round($b / 1073741824, 1) . ' GB' : ($b >= 1048576 ? round($b / 1048576, 1) . ' MB' : ($b >= 1024 ? round($b / 1024) . ' KB' : $b . ' bytes'))); }
+    function itops_vtc_size(int $b): string { return $b < 0 ? 'no limit' : ($b >= 1073741824 ? round($b / 1073741824, 1) . ' GB' : ($b >= 1048576 ? round($b / 1048576, 1) . ' MB' : ($b >= 1024 ? round($b / 1024) . ' KB' : $b . ' bytes'))); }
 
     /** One GET from outside (no redirects followed unless asked); keeps only the status, the headers and up to 2 KB. */
-    function opsh_vtc_fetch(string $url, bool $follow = false): array {
+    function itops_vtc_fetch(string $url, bool $follow = false): array {
         $hdr = []; $body = '';
         $ch = curl_init($url);
         curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => false, CURLOPT_FOLLOWLOCATION => $follow, CURLOPT_MAXREDIRS => 3, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_USERAGENT => 'OpsHub-config-check', CURLOPT_HEADERFUNCTION => function ($c, $h) use (&$hdr) { $p = strpos($h, ':'); if ($p !== false) { $hdr[] = [strtolower(trim(substr($h, 0, $p))), trim(substr($h, $p + 1))]; } elseif (stripos($h, 'HTTP/') === 0) { $hdr = []; } return strlen($h); },
+            CURLOPT_USERAGENT => 'ITOps-config-check', CURLOPT_HEADERFUNCTION => function ($c, $h) use (&$hdr) { $p = strpos($h, ':'); if ($p !== false) { $hdr[] = [strtolower(trim(substr($h, 0, $p))), trim(substr($h, $p + 1))]; } elseif (stripos($h, 'HTTP/') === 0) { $hdr = []; } return strlen($h); },
             CURLOPT_WRITEFUNCTION => function ($c, $d) use (&$body) { $body .= $d; return strlen($body) > 2048 ? 0 : strlen($d); }]);
         curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $err = curl_errno($ch) && strlen($body) <= 2048 ? curl_error($ch) : ''; $type = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE); $eff = (string)curl_getinfo($ch, CURLINFO_EFFECTIVE_URL); curl_close($ch);
         return ['code' => $code, 'headers' => $hdr, 'body' => substr($body, 0, 2048), 'type' => $type, 'url' => $eff, 'error' => $err];
     }
-    function opsh_vtc_h(array $r, string $name): array { $o = []; foreach ($r['headers'] as $h) if ($h[0] === $name) $o[] = $h[1]; return $o; }
+    function itops_vtc_h(array $r, string $name): array { $o = []; foreach ($r['headers'] as $h) if ($h[0] === $name) $o[] = $h[1]; return $o; }
 
     /** Run both readings, make the findings, keep them. */
-    function opsh_vtc_run(PDO $db): array {
+    function itops_vtc_run(PDO $db): array {
         require_once __DIR__ . '/VTigerProvision.php'; require_once __DIR__ . '/VTigerClient.php';
-        $prov = opsh_vtiger_cfg($db)['prov'] ?? [];
+        $prov = itops_vtiger_cfg($db)['prov'] ?? [];
         $out = ['at' => date('Y-m-d H:i:s'), 'bridge' => null, 'error' => null, 'web' => null, 'checks' => [], 'vtiger' => '', 'php' => ''];
-        if (!opsh_vtiger_bridge_ready($prov)) { $out['error'] = 'The vTiger bridge is not set up (Integrations » vTiger provisioning): the check reads vTiger through it.'; return opsh_vtc_keep($db, $out); }
-        $r = opsh_vtiger_bridge_call($prov, 'config_check');
+        if (!itops_vtiger_bridge_ready($prov)) { $out['error'] = 'The vTiger bridge is not set up (Integrations » vTiger provisioning): the check reads vTiger through it.'; return itops_vtc_keep($db, $out); }
+        $r = itops_vtiger_bridge_call($prov, 'config_check');
         if (empty($r['ok'])) {
             $e = (string)($r['error'] ?? 'no answer');
-            $out['error'] = stripos($e, 'Unknown action') !== false ? 'The bridge on the vTiger server is an older build: upload vtiger-bridge/opsh-bridge.php of this release (build o12) over the old one (same secret), then run the check again.' : 'The bridge answered: ' . mb_substr($e, 0, 200);
-            return opsh_vtc_keep($db, $out);
+            $out['error'] = stripos($e, 'Unknown action') !== false ? 'The bridge on the vTiger server is an older build: upload vtiger-bridge/itops-bridge.php of this release (build o12) over the old one (same secret), then run the check again.' : 'The bridge answered: ' . mb_substr($e, 0, 200);
+            return itops_vtc_keep($db, $out);
         }
         $out['bridge'] = (string)($r['build'] ?? ''); $out['vtiger'] = (string)($r['vtiger'] ?? ''); $out['php'] = (string)($r['php']['version'] ?? '');
         // from outside: the web root is where the bridge is
         $base = preg_replace('~/[^/]*$~', '/', (string)$prov['bridge_url']);
         $web = ['base' => $base, 'paths' => []];
-        $root = opsh_vtc_fetch($base . 'index.php', true); $web['root'] = ['code' => $root['code'], 'url' => $root['url'], 'error' => $root['error'],
-            'hsts' => opsh_vtc_h($root, 'strict-transport-security'), 'xfo' => opsh_vtc_h($root, 'x-frame-options'), 'csp' => opsh_vtc_h($root, 'content-security-policy'),
-            'xcto' => opsh_vtc_h($root, 'x-content-type-options'), 'server' => opsh_vtc_h($root, 'server'), 'powered' => opsh_vtc_h($root, 'x-powered-by'), 'referrer' => opsh_vtc_h($root, 'referrer-policy'),
-            'cookies' => array_map(fn($c) => ['name' => strtok($c, '='), 'secure' => (bool)preg_match('/;\s*secure/i', $c), 'httponly' => (bool)preg_match('/;\s*httponly/i', $c), 'samesite' => preg_match('/;\s*samesite=(\w+)/i', $c, $m) ? $m[1] : ''], opsh_vtc_h($root, 'set-cookie'))];
-        if (stripos($base, 'https://') === 0) { $h = opsh_vtc_fetch('http://' . substr($base, 8)); $loc = opsh_vtc_h($h, 'location'); $web['http'] = ['code' => $h['code'], 'to_https' => in_array($h['code'], [301, 302, 307, 308], true) && $loc && stripos($loc[0], 'https://') === 0, 'error' => $h['error']]; }
-        $probe = ['logs/vtigercrm.log' => 'file', 'logs/' => 'dir', 'storage/' => 'dir', 'cache/' => 'dir', 'user_privileges/' => 'dir', 'test/' => 'dir', 'opsh-bridge.secret' => 'file', '.git/HEAD' => 'git', 'config.inc.php.bak' => 'file', 'log4php.properties' => 'file'];
+        $root = itops_vtc_fetch($base . 'index.php', true); $web['root'] = ['code' => $root['code'], 'url' => $root['url'], 'error' => $root['error'],
+            'hsts' => itops_vtc_h($root, 'strict-transport-security'), 'xfo' => itops_vtc_h($root, 'x-frame-options'), 'csp' => itops_vtc_h($root, 'content-security-policy'),
+            'xcto' => itops_vtc_h($root, 'x-content-type-options'), 'server' => itops_vtc_h($root, 'server'), 'powered' => itops_vtc_h($root, 'x-powered-by'), 'referrer' => itops_vtc_h($root, 'referrer-policy'),
+            'cookies' => array_map(fn($c) => ['name' => strtok($c, '='), 'secure' => (bool)preg_match('/;\s*secure/i', $c), 'httponly' => (bool)preg_match('/;\s*httponly/i', $c), 'samesite' => preg_match('/;\s*samesite=(\w+)/i', $c, $m) ? $m[1] : ''], itops_vtc_h($root, 'set-cookie'))];
+        if (stripos($base, 'https://') === 0) { $h = itops_vtc_fetch('http://' . substr($base, 8)); $loc = itops_vtc_h($h, 'location'); $web['http'] = ['code' => $h['code'], 'to_https' => in_array($h['code'], [301, 302, 307, 308], true) && $loc && stripos($loc[0], 'https://') === 0, 'error' => $h['error']]; }
+        $probe = ['logs/vtigercrm.log' => 'file', 'logs/' => 'dir', 'storage/' => 'dir', 'cache/' => 'dir', 'user_privileges/' => 'dir', 'test/' => 'dir', 'itops-bridge.secret' => 'file', '.git/HEAD' => 'git', 'config.inc.php.bak' => 'file', 'log4php.properties' => 'file'];
         foreach ((array)($r['stray'] ?? []) as $s) { $n = (string)($s['name'] ?? ''); if ($n !== '' && preg_match('/^[\w.\-~]+$/', $n) && !preg_match('/^(error_log|core(\.\d+)?)$/i', $n) && count($probe) < 40) $probe[$n . (!empty($s['dir']) ? '/' : '')] = !empty($s['dir']) ? 'dir' : 'file'; }
         foreach ($probe as $p => $kind) {
-            $x = opsh_vtc_fetch($base . $p);
+            $x = itops_vtc_fetch($base . $p);
             $open = $x['code'] === 200 && ($kind === 'dir' ? stripos($x['body'], 'Index of') !== false : ($kind === 'git' ? strpos($x['body'], 'ref:') === 0 : ($x['body'] !== '' && stripos($x['type'], 'text/html') === false && stripos($x['body'], '<html') === false)));
             $web['paths'][$p] = ['code' => $x['code'], 'open' => $open, 'kind' => $kind];
         }
         $out['web'] = $web;
-        $out['checks'] = opsh_vtc_rules($r, $web);
-        return opsh_vtc_keep($db, $out);
+        $out['checks'] = itops_vtc_rules($r, $web);
+        return itops_vtc_keep($db, $out);
     }
 
-    function opsh_vtc_keep(PDO $db, array $out): array {
+    function itops_vtc_keep(PDO $db, array $out): array {
         $n = ['risk' => 0, 'warn' => 0, 'ok' => 0, 'info' => 0]; foreach ($out['checks'] as $c) $n[$c['level']]++; $out['counts'] = $n;
         $j = json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $db->prepare('INSERT INTO opsh_settings (skey, sval) VALUES (?, ?) ON DUPLICATE KEY UPDATE sval = VALUES(sval)')->execute(['vtiger_config_check', $j]);
+        $db->prepare('INSERT INTO itops_settings (skey, sval) VALUES (?, ?) ON DUPLICATE KEY UPDATE sval = VALUES(sval)')->execute(['vtiger_config_check', $j]);
         return $out;
     }
-    function opsh_vtc_last(PDO $db): ?array { $q = $db->prepare('SELECT sval FROM opsh_settings WHERE skey = ?'); $q->execute(['vtiger_config_check']); $v = json_decode((string)$q->fetchColumn(), true); return is_array($v) ? $v : null; }
+    function itops_vtc_last(PDO $db): ?array { $q = $db->prepare('SELECT sval FROM itops_settings WHERE skey = ?'); $q->execute(['vtiger_config_check']); $v = json_decode((string)$q->fetchColumn(), true); return is_array($v) ? $v : null; }
 
     /** The findings. */
-    function opsh_vtc_rules(array $r, array $web): array {
+    function itops_vtc_rules(array $r, array $web): array {
         $C = []; $add = function ($area, $item, $file, $ours, $rec, $level, $why, $how = '') use (&$C) { $C[] = ['area' => $area, 'item' => $item, 'file' => $file, 'ours' => (string)$ours, 'rec' => (string)$rec, 'level' => $level, 'why' => $why, 'how' => $how]; };
         $cfg = (array)($r['config'] ?? []); $php = (array)($r['php'] ?? []); $perf = $r['performance'] ?? null; $files = (array)($r['files'] ?? []);
         $yn = fn($b) => $b === null ? 'not set' : ($b ? 'On' : 'Off');
@@ -122,7 +122,7 @@ if (!function_exists('opsh_vtc_run')) {
                     'cache/' => ['cache/ folder listing', 'warn', 'Imports and temporary files could be listed.', 'Options -Indexes in the web root .htaccess'],
                     'user_privileges/' => ['user_privileges/ listing', 'warn', 'The permission files\' names (one per user id) could be listed.', 'Options -Indexes in the web root .htaccess'],
                     'test/' => ['test/ folder listing', 'warn', 'Compiled templates and test files could be listed.', 'Options -Indexes in the web root .htaccess'],
-                    'opsh-bridge.secret' => ['The bridge\'s secret file', 'risk', 'Whoever downloads it can sign requests to the bridge (create users, change passwords).', "Move the secret to .htaccess (SetEnv OPSH_BRIDGE_SECRET …) and delete the file, or deny it:\n<Files \"opsh-bridge.secret\">\n  Require all denied\n</Files>"],
+                    'itops-bridge.secret' => ['The bridge\'s secret file', 'risk', 'Whoever downloads it can sign requests to the bridge (create users, change passwords).', "Move the secret to .htaccess (SetEnv ITOPS_BRIDGE_SECRET …) and delete the file, or deny it:\n<Files \"itops-bridge.secret\">\n  Require all denied\n</Files>"],
                     '.git/HEAD' => ['.git folder', 'risk', 'The whole source history (and any password ever committed) can be downloaded.', "Move .git out of the web root, or deny it:\nRedirectMatch 404 /\\.git"],
                     'config.inc.php.bak' => ['config.inc.php.bak', 'risk', 'A copy of the settings with the database password, served as plain text.', 'Delete it, or keep copies outside the web root.'],
                     'log4php.properties' => ['log4php.properties', 'info', 'Shows how vTiger logs; not secret, but no reason to serve it.', "<Files \"log4php.properties\">\n  Require all denied\n</Files>"]];
@@ -130,7 +130,7 @@ if (!function_exists('opsh_vtc_run')) {
                 if ($x['code'] === 0) continue;
                 [$label, $lvl, $why, $how] = $lab[$p] ?? ['File left in the web root: ' . $p, 'risk', 'Backups, dumps, archives and test pages left in the web root can be downloaded or run by anyone.', 'Delete it from the web root (keep backups outside public_html).'];
                 if (!isset($lab[$p]) || $x['open']) $add($W, $label, $p, $x['open'] ? 'downloadable (HTTP 200)' : 'not served (HTTP ' . $x['code'] . ')', 'not served (403 / 404)', $x['open'] ? $lvl : 'ok', $why, $x['open'] ? $how : '');
-                elseif (in_array($p, ['logs/vtigercrm.log', 'storage/', 'opsh-bridge.secret', 'logs/'], true)) $add($W, $label, $p, 'not served (HTTP ' . $x['code'] . ')', 'not served (403 / 404)', 'ok', $why);
+                elseif (in_array($p, ['logs/vtigercrm.log', 'storage/', 'itops-bridge.secret', 'logs/'], true)) $add($W, $label, $p, 'not served (HTTP ' . $x['code'] . ')', 'not served (403 / 404)', 'ok', $why);
             }
         }
 
@@ -150,9 +150,9 @@ if (!function_exists('opsh_vtc_run')) {
             $add($F, '$upload_badext (file types refused)', $F, count($bad) . ' types' . ($miss ? '; missing: ' . implode(', ', $miss) : ''), 'every script type refused', $miss ? ($core ? 'risk' : 'warn') : 'ok', 'An uploaded .phtml, .phar or .htaccess file can turn an attachment into code the server runs.', $miss ? 'Add to the $upload_badext array: \'' . implode("', '", $miss) . '\'' : '');
         }
         if (isset($cfg['allow_exports'])) $add($F, '$allow_exports', $F, (string)$cfg['allow_exports'], "'admin' (or 'all' if every user needs it)", $cfg['allow_exports'] === 'all' ? 'warn' : 'ok', 'With \'all\', anyone with a vTiger account can export whole modules (every contact, every deal) to a file.', "\$allow_exports = 'admin';   // or 'none'; profiles can still limit Export per module");
-        $um = isset($cfg['upload_maxsize']) ? (int)$cfg['upload_maxsize'] : null; $pu = opsh_vtc_bytes($php['upload_max_filesize'] ?? ''); $pp = opsh_vtc_bytes($php['post_max_size'] ?? '');
+        $um = isset($cfg['upload_maxsize']) ? (int)$cfg['upload_maxsize'] : null; $pu = itops_vtc_bytes($php['upload_max_filesize'] ?? ''); $pp = itops_vtc_bytes($php['post_max_size'] ?? '');
         if ($um !== null) { $lim = min($pu < 0 ? PHP_INT_MAX : $pu, $pp < 0 ? PHP_INT_MAX : $pp);
-            $add($F, '$upload_maxsize vs PHP', $F . ' + PHP', opsh_vtc_size($um) . ' (PHP allows ' . opsh_vtc_size($lim === PHP_INT_MAX ? -1 : $lim) . ')', 'vTiger ≤ upload_max_filesize ≤ post_max_size', $um > $lim ? 'warn' : 'ok', 'When PHP allows less than vTiger, large attachments fail with a blank or confusing error.', 'Raise upload_max_filesize and post_max_size (MultiPHP INI Editor) to at least ' . opsh_vtc_size($um) . ', or lower $upload_maxsize.'); }
+            $add($F, '$upload_maxsize vs PHP', $F . ' + PHP', itops_vtc_size($um) . ' (PHP allows ' . itops_vtc_size($lim === PHP_INT_MAX ? -1 : $lim) . ')', 'vTiger ≤ upload_max_filesize ≤ post_max_size', $um > $lim ? 'warn' : 'ok', 'When PHP allows less than vTiger, large attachments fail with a blank or confusing error.', 'Raise upload_max_filesize and post_max_size (MultiPHP INI Editor) to at least ' . itops_vtc_size($um) . ', or lower $upload_maxsize.'); }
         if (isset($cfg['default_timezone'])) $add($F, '$default_timezone', $F, (string)$cfg['default_timezone'], 'your time zone (e.g. America/New_York)', (string)$cfg['default_timezone'] === '' ? 'warn' : 'info', 'The time zone vTiger stores and shows times in when a user has none; it should match PHP\'s date.timezone.');
         if (isset($cfg['list_max_entries_per_page'])) $add($F, '$list_max_entries_per_page', $F, (string)$cfg['list_max_entries_per_page'], '20–50', (int)$cfg['list_max_entries_per_page'] > 100 ? 'warn' : 'ok', 'Very long list pages load slowly and weigh on the database.');
         if (isset($cfg['php_max_execution_time'])) $add($F, '$php_max_execution_time', $F, (string)$cfg['php_max_execution_time'], '0 (PHP\'s own limit)', 'info', 'vTiger\'s own time limit for a page; 0 leaves it to PHP\'s max_execution_time.');
@@ -167,7 +167,7 @@ if (!function_exists('opsh_vtc_run')) {
             $rec = ['LOG4PHP_DEBUG' => [false, 'risk', 'Debug logging writes every query and much more to logs/.'], 'SQL_LOG_INCLUDE_CALLER' => [false, 'warn', 'Adds the calling code to every logged query: slow and large.'],
                     'DB_DEFAULT_CHARSET_UTF8' => [true, 'warn', 'Without it, accents and other languages can be stored wrong.'], 'LISTVIEW_COMPUTE_PAGE_COUNT' => [false, 'warn', 'Counting every page of a list on each view is slow on large modules.'],
                     'LISTVIEW_DEFAULT_SORTING' => [false, 'info', 'Sorting every list by default costs time on large modules.'], 'DETAILVIEW_RECORD_NAVIGATION' => [true, 'info', 'The previous / next record buttons on a record.']];
-            foreach ($perf as $k => $v) { if (isset($rec[$k])) { $b = opsh_vtc_bool($v); $okv = $b === $rec[$k][0];
+            foreach ($perf as $k => $v) { if (isset($rec[$k])) { $b = itops_vtc_bool($v); $okv = $b === $rec[$k][0];
                     $add($P, $k, $P, is_bool($v) || $v === null ? $yn($b) : (string)$v, $rec[$k][0] ? 'true' : 'false', $okv ? 'ok' : $rec[$k][1], $rec[$k][2], $okv ? '' : "'" . $k . "' => " . ($rec[$k][0] ? 'true' : 'false') . ',');
                 } else $add($P, $k, $P, is_bool($v) ? ($v ? 'true' : 'false') : (string)$v, '—', 'info', 'Kept as vTiger set it.'); }
         } else $add($P, 'config.performance.php', $P, 'not read', 'present', 'info', 'The file was not found or could not be read.');
@@ -178,7 +178,7 @@ if (!function_exists('opsh_vtc_run')) {
         $k2 = sprintf('%.1f', $mm);
         $add($H, 'PHP version', 'WHM » MultiPHP Manager', $pv . ' (' . (string)($php['sapi'] ?? '') . ')', '8.2 or later (check vTiger\'s support first)', isset($eol[$k2]) || $mm < 7.2 ? 'risk' : 'ok', isset($eol[$k2]) ? 'PHP ' . $k2 . ' stopped getting security fixes on ' . $eol[$k2] . '.' : 'Supported PHP versions get security fixes.', isset($eol[$k2]) ? 'Plan the move: test vTiger on a copy with the newer PHP first (vTiger 7.4 and its extensions must support it).' : '');
         if (preg_match('/cgi/i', (string)($php['sapi'] ?? '')) && !preg_match('/fpm/i', (string)$php['sapi'])) $add($H, 'PHP handler', 'WHM » MultiPHP Manager', (string)$php['sapi'], 'PHP-FPM', 'warn', 'CGI starts a new PHP process for every request: slower and heavier (see the guide, 9.4).', 'Turn on PHP-FPM for the vTiger domain (MultiPHP Manager » PHP-FPM).');
-        $set = function ($k, $want, $lvl, $why, $how = '') use ($add, $H, $php, $yn) { if (!array_key_exists($k, $php)) return; $b = opsh_vtc_bool($php[$k]); $okv = $b === $want;
+        $set = function ($k, $want, $lvl, $why, $how = '') use ($add, $H, $php, $yn) { if (!array_key_exists($k, $php)) return; $b = itops_vtc_bool($php[$k]); $okv = $b === $want;
             $add($H, $k, 'PHP ini', $yn($b), $want ? 'On' : 'Off', $okv ? 'ok' : $lvl, $why, $okv ? '' : ($how ?: $k . ' = ' . ($want ? 'On' : 'Off'))); };
         $set('display_errors', false, 'risk', 'Errors shown on the page reveal file paths, queries and sometimes data to whoever is looking.');
         $set('display_startup_errors', false, 'warn', 'Same as display_errors, for errors while PHP starts.');
@@ -190,7 +190,7 @@ if (!function_exists('opsh_vtc_run')) {
         $set('session.use_strict_mode', true, 'warn', 'PHP refuses session ids it did not create (session fixation).');
         $set('session.use_only_cookies', true, 'risk', 'Session ids never travel in addresses (where they end up in logs and referrers).');
         $min = function ($k, $want, $lvl, $why) use ($add, $H, $php) { if (!array_key_exists($k, $php)) return; $v = (string)$php[$k];
-            $isB = in_array($k, ['memory_limit', 'upload_max_filesize', 'post_max_size'], true); $n = $isB ? opsh_vtc_bytes($v) : (int)$v; $okv = $isB ? ($n < 0 || $n >= opsh_vtc_bytes($want)) : ((int)$v === 0 && $k === 'max_execution_time' ? true : (int)$v >= (int)$want);
+            $isB = in_array($k, ['memory_limit', 'upload_max_filesize', 'post_max_size'], true); $n = $isB ? itops_vtc_bytes($v) : (int)$v; $okv = $isB ? ($n < 0 || $n >= itops_vtc_bytes($want)) : ((int)$v === 0 && $k === 'max_execution_time' ? true : (int)$v >= (int)$want);
             $add($H, $k, 'PHP ini', $v, '≥ ' . $want, $okv ? 'ok' : $lvl, $why, $okv ? '' : $k . ' = ' . $want); };
         $min('max_execution_time', '600', 'warn', 'Imports, mass updates and reports stop half way when PHP cuts them off (vTiger\'s installer asks for 600).');
         $min('memory_limit', '256M', 'warn', 'Large lists, reports and PDFs need memory; below 256M they fail with a blank page.');
@@ -198,24 +198,24 @@ if (!function_exists('opsh_vtc_run')) {
         $min('post_max_size', '32M', 'info', 'The largest form or upload vTiger can receive.');
         if (array_key_exists('date.timezone', $php)) { $pt = (string)$php['date.timezone']; $vt = (string)($cfg['default_timezone'] ?? ''); $diff = $pt !== '' && $vt !== '' && $pt !== $vt;
             $add($H, 'date.timezone', 'PHP ini', $pt !== '' ? $pt : 'not set', $vt !== '' ? $vt . ' (as vTiger)' : 'your time zone', $pt === '' ? 'warn' : ($diff ? 'info' : 'ok'), $pt === '' ? 'Without it PHP guesses (UTC), and times in logs and scheduled jobs are off.' : ($diff ? 'PHP and vTiger use different time zones: times written by PHP (logs, the scheduler) differ from the ones vTiger shows.' : 'PHP and vTiger use the same time zone.'), $pt === '' || $diff ? 'date.timezone = ' . ($vt !== '' ? $vt : 'America/New_York') : ''); }
-        if (array_key_exists('opcache.enable', $php)) $add($H, 'opcache.enable', 'PHP ini', $yn(opsh_vtc_bool($php['opcache.enable'])), 'On', opsh_vtc_bool($php['opcache.enable']) ? 'ok' : 'warn', 'Keeps vTiger\'s compiled code in memory: pages load faster with less CPU (see the guide, 9.4).');
+        if (array_key_exists('opcache.enable', $php)) $add($H, 'opcache.enable', 'PHP ini', $yn(itops_vtc_bool($php['opcache.enable'])), 'On', itops_vtc_bool($php['opcache.enable']) ? 'ok' : 'warn', 'Keeps vTiger\'s compiled code in memory: pages load faster with less CPU (see the guide, 9.4).');
         if (array_key_exists('disable_functions', $php)) { $df = array_map('trim', explode(',', strtolower((string)$php['disable_functions']))); $risky = array_values(array_diff(['exec', 'passthru', 'shell_exec', 'system', 'proc_open', 'popen'], $df));
             $add($H, 'disable_functions', 'PHP ini', $risky ? 'allowed: ' . implode(', ', $risky) : 'shell functions disabled', 'exec, passthru, shell_exec, system, proc_open, popen disabled', $risky ? 'info' : 'ok', 'If someone ever gets code onto the server, these let it run commands. vTiger itself does not need them; test an extension (PDF, backup) after disabling.', $risky ? 'disable_functions = ' . implode(',', $risky) : ''); }
 
         // ---- files and folders
         $D = 'Files and folders';
-        foreach (['config.inc.php', 'config.csrf-secret.php', 'config.performance.php', 'opsh-bridge.secret'] as $f) if (isset($files[$f])) { $x = $files[$f];
+        foreach (['config.inc.php', 'config.csrf-secret.php', 'config.performance.php', 'itops-bridge.secret'] as $f) if (isset($files[$f])) { $x = $files[$f];
             $lvl = $x['world_w'] ? 'risk' : ($x['group_w'] ? 'warn' : (in_array(substr($x['mode'], -1), ['4', '5', '6', '7'], true) && $f !== 'config.performance.php' ? 'info' : 'ok'));
-            $add($D, $f, $f, $x['mode'], $f === 'opsh-bridge.secret' ? '0600' : '0640 (or 0644)', $lvl, $f === 'opsh-bridge.secret' ? 'Holds the bridge\'s secret.' : 'Holds settings or secrets; others on the server should not change it, and with PHP running as the account (PHP-FPM / suPHP) it need not be readable by them either.', 'chmod ' . ($f === 'opsh-bridge.secret' ? '600' : '640') . ' ' . $f . '   (WHM » Terminal or cPanel » File Manager » Permissions)'); }
+            $add($D, $f, $f, $x['mode'], $f === 'itops-bridge.secret' ? '0600' : '0640 (or 0644)', $lvl, $f === 'itops-bridge.secret' ? 'Holds the bridge\'s secret.' : 'Holds settings or secrets; others on the server should not change it, and with PHP running as the account (PHP-FPM / suPHP) it need not be readable by them either.', 'chmod ' . ($f === 'itops-bridge.secret' ? '600' : '640') . ' ' . $f . '   (WHM » Terminal or cPanel » File Manager » Permissions)'); }
         foreach (['storage', 'cache', 'logs', 'user_privileges', 'test', 'test/templates_c', 'layouts', 'modules'] as $f) if (isset($files[$f])) { $x = $files[$f];
             $add($D, $f . '/', $f, $x['mode'], '0755', $x['world_w'] ? 'risk' : 'ok', 'A world-writable (777) folder lets any other account or process on the server drop files into vTiger.', $x['world_w'] ? 'chmod 755 ' . $f . ' (and find ' . $f . ' -type d -perm -0002 -exec chmod 755 {} \\;)' : ''); }
         $add($D, 'storage/.htaccess', 'storage/.htaccess', isset($files['storage/.htaccess']) ? 'present' : 'missing', 'present (deny from all)', isset($files['storage/.htaccess']) ? 'ok' : 'risk', 'It is what stops attachments from being downloaded directly.', "Create storage/.htaccess with:\nRequire all denied");
         $add($D, '.htaccess (web root)', '.htaccess', isset($files['.htaccess']) ? 'present' : 'missing', 'present, with the recommended block', isset($files['.htaccess']) ? 'info' : 'warn', 'Where the security headers, the denied files and the bridge\'s secret go.', 'See "Recommended .htaccess block" below.');
-        if (isset($files['opsh-bridge.secret'])) $add($D, 'Bridge secret kept in a file', 'opsh-bridge.secret', 'file', 'SetEnv in .htaccess', 'info', 'A file next to the bridge is fine only if it is 600 and denied from the web; .htaccess is never served.', 'SetEnv OPSH_BRIDGE_SECRET <the same secret>   (then delete opsh-bridge.secret)');
+        if (isset($files['itops-bridge.secret'])) $add($D, 'Bridge secret kept in a file', 'itops-bridge.secret', 'file', 'SetEnv in .htaccess', 'info', 'A file next to the bridge is fine only if it is 600 and denied from the web; .htaccess is never served.', 'SetEnv ITOPS_BRIDGE_SECRET <the same secret>   (then delete itops-bridge.secret)');
         foreach (['install', 'migrate'] as $f) if (isset($files[$f])) $add($D, $f . '/', $f, 'present', 'removed after installing / upgrading', 'warn', 'Installer and migration pages left in place can be run again.', 'Move ' . $f . '/ out of the web root once vTiger works.');
-        if (isset($files['logs/vtigercrm.log']) && ($files['logs/vtigercrm.log']['size'] ?? 0) > 104857600) $add($D, 'logs/vtigercrm.log size', 'logs/vtigercrm.log', opsh_vtc_size((int)$files['logs/vtigercrm.log']['size']), 'under 100 MB', 'warn', 'A huge log fills the disk and usually means debug logging is on.', 'Turn debug logging off, then empty the file:  : > logs/vtigercrm.log');
+        if (isset($files['logs/vtigercrm.log']) && ($files['logs/vtigercrm.log']['size'] ?? 0) > 104857600) $add($D, 'logs/vtigercrm.log size', 'logs/vtigercrm.log', itops_vtc_size((int)$files['logs/vtigercrm.log']['size']), 'under 100 MB', 'warn', 'A huge log fills the disk and usually means debug logging is on.', 'Turn debug logging off, then empty the file:  : > logs/vtigercrm.log');
         foreach ((array)($r['stray'] ?? []) as $s) { $n = (string)$s['name']; if (isset($web['paths'][$n]) || isset($web['paths'][$n . '/'])) continue;
-            $low = preg_match('/^(error_log|core(\.\d+)?)$/i', $n); $add($D, 'Left in the web root: ' . $n, $n, ($s['dir'] ? 'folder' : opsh_vtc_size((int)($s['size'] ?? 0))) . ', ' . date('m/d/Y', strtotime((string)$s['mtime'])), 'not in the web root', $low ? 'info' : 'warn', $low ? 'PHP\'s error log or a crash dump in the web root; read it, then remove it.' : 'Backups, dumps, archives and test pages belong outside public_html.', 'Move it out of the web root or delete it.'); }
+            $low = preg_match('/^(error_log|core(\.\d+)?)$/i', $n); $add($D, 'Left in the web root: ' . $n, $n, ($s['dir'] ? 'folder' : itops_vtc_size((int)($s['size'] ?? 0))) . ', ' . date('m/d/Y', strtotime((string)$s['mtime'])), 'not in the web root', $low ? 'info' : 'warn', $low ? 'PHP\'s error log or a crash dump in the web root; read it, then remove it.' : 'Backups, dumps, archives and test pages belong outside public_html.', 'Move it out of the web root or delete it.'); }
 
         // ---- scheduler
         $S = 'Scheduler (cron)'; $cron = $r['cron'] ?? null;
@@ -248,7 +248,7 @@ if (!function_exists('opsh_vtc_run')) {
     }
 
     /** The block for the web root .htaccess the app recommends (Apache 2.4 / LiteSpeed). */
-    function opsh_vtc_htaccess(): string {
+    function itops_vtc_htaccess(): string {
         return "# --- added for security (keep vTiger's own lines above) ---\n"
              . "Options -Indexes\n"
              . "<FilesMatch \"\\.(log|sql|gz|zip|tar|tgz|bak|old|orig|swp|properties|secret)$\">\n  Require all denied\n</FilesMatch>\n"

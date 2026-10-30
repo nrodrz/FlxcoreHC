@@ -2,7 +2,7 @@
 /* BT51: the 3D objects of the systems, shared by both Help Center visuals (the Integration map and Company systems:
    the whole process), so the two pages draw each system the same way. Plain pictures of what each system is for,
    drawn from simple solids; not the vendors' logos. A system without a picture of its own gets "generic". */
-window.OPSH_OBJECTS=function(T){
+window.ITOPS_OBJECTS=function(T){
   function rrect(w,d,r){ var s=new T.Shape(), x=-w/2, y=-d/2; r=Math.min(r,w/2,d/2);
     s.moveTo(x+r,y); s.lineTo(x+w-r,y); s.quadraticCurveTo(x+w,y,x+w,y+r); s.lineTo(x+w,y+d-r); s.quadraticCurveTo(x+w,y+d,x+w-r,y+d);
     s.lineTo(x+r,y+d); s.quadraticCurveTo(x,y+d,x,y+d-r); s.lineTo(x,y+r); s.quadraticCurveTo(x,y,x+r,y); return s; }

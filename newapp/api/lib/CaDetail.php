@@ -1,10 +1,10 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub BT33 — a Conditional Access policy in plain words.
+ * ITOps BT33 — a Conditional Access policy in plain words.
  *
- *   opsh_ca_ids($policy)              the directory ids a policy refers to (users, groups, roles, apps, locations)
- *   opsh_ca_describe($policy, $names) who it applies to, to which apps, under which conditions, what it requires,
+ *   itops_ca_ids($policy)              the directory ids a policy refers to (users, groups, roles, apps, locations)
+ *   itops_ca_describe($policy, $names) who it applies to, to which apps, under which conditions, what it requires,
  *                                     session limits, and warnings — as lists of short sentences
  *
  * Pure functions: no Graph calls here. The route (api/routes/m365.php, case 'ca-policy') reads the policy and
@@ -13,7 +13,7 @@
  */
 
 /** Collect the ids to resolve, by kind. Special values such as "All" or "Office365" are not ids. */
-function opsh_ca_ids(array $p): array
+function itops_ca_ids(array $p): array
 {
     $c = $p['conditions'] ?? []; $u = $c['users'] ?? []; $a = $c['applications'] ?? []; $l = $c['locations'] ?? [];
     // Mock and legacy ids are not always GUIDs: anything that is not one of Microsoft's keywords counts as an id.
@@ -27,7 +27,7 @@ function opsh_ca_ids(array $p): array
     ];
 }
 
-function opsh_ca_describe(array $p, array $names): array
+function itops_ca_describe(array $p, array $names): array
 {
     $c = $p['conditions'] ?? []; $u = $c['users'] ?? []; $a = $c['applications'] ?? [];
     $unknown = 0;
@@ -137,7 +137,7 @@ function opsh_ca_describe(array $p, array $names): array
         $warn[] = [$blocks ? 'high' : 'warn', 'No account is excluded. Keep at least one emergency (break-glass) account out of every rule that applies to everyone, or a mistake or an outage of the MFA service can lock all administrators out.'];
     if ($allUsers && $allApps && $blocks && $cond === ['Always (no extra condition)'] && $state === 'enabled')
         $warn[] = ['high', 'This rule blocks everyone from everything, at all times.'];
-    if ($unknown > 0) $warn[] = ['warn', $unknown . ' ' . ($unknown === 1 ? 'entry refers' : 'entries refer') . ' to something that no longer exists (or that ' . (function_exists('opsh_app_name') ? opsh_app_name() : 'the app') . ' may not read). Tidy the rule in the Entra admin center.'];
+    if ($unknown > 0) $warn[] = ['warn', $unknown . ' ' . ($unknown === 1 ? 'entry refers' : 'entries refer') . ' to something that no longer exists (or that ' . (function_exists('itops_app_name') ? itops_app_name() : 'the app') . ' may not read). Tidy the rule in the Entra admin center.'];
 
     return [
         'id' => (string)($p['id'] ?? ''), 'name' => (string)($p['displayName'] ?? ''), 'state' => $state,

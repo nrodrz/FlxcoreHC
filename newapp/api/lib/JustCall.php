@@ -1,25 +1,25 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub BT45 — JustCall, read only.
+ * ITOps BT45 — JustCall, read only.
  *
  * The request, the header and the error text follow JustCall API v2.1 ( the Authorization header is
- * "{key}:{secret}", with a colon and not Basic). OpsHub reads the USERS:
+ * "{key}:{secret}", with a colon and not Basic). ITOps reads the USERS:
  * who has a seat, with which role and which numbers. Nothing is written to JustCall. JustCall's API has no call to
- * add or remove a user, so those stay by hand and OpsHub checks afterwards.
+ * add or remove a user, so those stay by hand and ITOps checks afterwards.
  *
  * A user as JustCall documents it: id, name, email, role, extension, groups, owned_numbers[], shared_numbers[],
  * created_at, last_login_timestamp, timezone, available, on_call. Fields the answer does not carry are read as empty.
  *
  * Not verified against the live account when this was written. "Test connection" shows what the first user looked like.
  */
-if (!class_exists('OpshJustCallException')) {
-    class OpshJustCallException extends RuntimeException {
+if (!class_exists('ItopsJustCallException')) {
+    class ItopsJustCallException extends RuntimeException {
         public int $status = 0;
         public function __construct(string $m, int $status = 0) { parent::__construct($m); $this->status = $status; }
     }
 
-    final class OpshJustCall
+    final class ItopsJustCall
     {
         const BASE = 'https://api.justcall.io/v2.1';
         const PER_PAGE = 50;
@@ -31,29 +31,29 @@ if (!class_exists('OpshJustCallException')) {
         public function __construct(string $apiKey, string $apiSecret, int $timeout = 12)
         {
             $apiKey = trim($apiKey); $apiSecret = trim($apiSecret);
-            if ($apiKey === '' || $apiSecret === '') throw new OpshJustCallException('The JustCall API key or secret is missing.');
-            if (preg_match('/[\r\n]/', $apiKey . $apiSecret)) throw new OpshJustCallException('The JustCall API key or secret holds a line break. Copy it again.');
+            if ($apiKey === '' || $apiSecret === '') throw new ItopsJustCallException('The JustCall API key or secret is missing.');
+            if (preg_match('/[\r\n]/', $apiKey . $apiSecret)) throw new ItopsJustCallException('The JustCall API key or secret holds a line break. Copy it again.');
             $this->auth = $apiKey . ':' . $apiSecret; $this->timeout = max(3, min(30, $timeout));
         }
 
-        /** Where the API is. A test installation can point somewhere else with the constant OPSH_JUSTCALL_BASE in config.php. */
+        /** Where the API is. A test installation can point somewhere else with the constant ITOPS_JUSTCALL_BASE in config.php. */
         public static function base(): string
         {
-            return defined('OPSH_JUSTCALL_BASE') && is_string(OPSH_JUSTCALL_BASE) && OPSH_JUSTCALL_BASE !== '' ? rtrim(OPSH_JUSTCALL_BASE, '/') : self::BASE;
+            return defined('ITOPS_JUSTCALL_BASE') && is_string(ITOPS_JUSTCALL_BASE) && ITOPS_JUSTCALL_BASE !== '' ? rtrim(ITOPS_JUSTCALL_BASE, '/') : self::BASE;
         }
 
         /** One cheap call that proves the key works and can read users. Returns ['users_seen' => n, 'fields' => [...]]. */
         public function test(): array
         {
             [$s, $d] = $this->req('/users', ['per_page' => 1]);
-            if ($s < 200 || $s >= 300) throw new OpshJustCallException($this->errMsg($s, $d), $s);
+            if ($s < 200 || $s >= 300) throw new ItopsJustCallException($this->errMsg($s, $d), $s);
             $rows = $this->rows($d);
-            if ($rows === null) throw new OpshJustCallException('JustCall answered, but not with a list of users. The key may belong to another kind of account.', $s);
+            if ($rows === null) throw new ItopsJustCallException('JustCall answered, but not with a list of users. The key may belong to another kind of account.', $s);
             return ['users_seen' => count($rows), 'fields' => $rows ? array_slice(array_keys((array)$rows[0]), 0, 30) : [], 'total' => isset($d['total_count']) && is_numeric($d['total_count']) ? (int)$d['total_count'] : null];
         }
 
         /**
-         * Every user of the account, in OpsHub's shape. Throws when any page cannot be read: a list that is not complete
+         * Every user of the account, in ITOps's shape. Throws when any page cannot be read: a list that is not complete
          * is not a list (an offboarding check must never read "could not read" as "no user").
          */
         public function users(): array
@@ -62,9 +62,9 @@ if (!class_exists('OpshJustCallException')) {
             for ($n = 0; $n < self::MAX_PAGES; $n++) {
                 $q = ['per_page' => self::PER_PAGE] + ($page !== null ? ['page' => $page] : []);
                 [$s, $d] = $this->req('/users', $q);
-                if ($s < 200 || $s >= 300) throw new OpshJustCallException($this->errMsg($s, $d), $s);
+                if ($s < 200 || $s >= 300) throw new ItopsJustCallException($this->errMsg($s, $d), $s);
                 $rows = $this->rows($d);
-                if ($rows === null) throw new OpshJustCallException('JustCall answered, but not with a list of users.', $s);
+                if ($rows === null) throw new ItopsJustCallException('JustCall answered, but not with a list of users.', $s);
                 foreach (['total_count', 'total', 'totalCount'] as $tk) if ($total === null && isset($d[$tk]) && is_numeric($d[$tk])) $total = (int)$d[$tk];
                 $new = 0;
                 foreach ($rows as $r) {
@@ -82,7 +82,7 @@ if (!class_exists('OpshJustCallException')) {
                 $page = $page === null ? 1 : $page + 1;
             }
             // JustCall said how many there are and fewer were read: the list is not complete, so it is not used.
-            if ($total !== null && count($out) < $total) throw new OpshJustCallException('JustCall has ' . $total . ' users but only ' . count($out) . ' could be read. Nothing was changed.', 0);
+            if ($total !== null && count($out) < $total) throw new ItopsJustCallException('JustCall has ' . $total . ' users but only ' . count($out) . ' could be read. Nothing was changed.', 0);
             return $out;
         }
 
@@ -92,9 +92,9 @@ if (!class_exists('OpshJustCallException')) {
             $out = []; $seen = [];
             for ($p = 0; $p < 20; $p++) {
                 [$s, $d] = $this->req('/phone-numbers', ['per_page' => 100, 'page' => $p]);
-                if ($s < 200 || $s >= 300) throw new OpshJustCallException($this->errMsg($s, $d), $s);
+                if ($s < 200 || $s >= 300) throw new ItopsJustCallException($this->errMsg($s, $d), $s);
                 $rows = $this->rows($d) ?? (isset($d['phone_numbers']) && is_array($d['phone_numbers']) ? $d['phone_numbers'] : null);
-                if ($rows === null) throw new OpshJustCallException('JustCall answered, but not with a list of numbers.', $s);
+                if ($rows === null) throw new ItopsJustCallException('JustCall answered, but not with a list of numbers.', $s);
                 $new = 0;
                 foreach ($rows as $r) { if (!is_array($r)) continue; $t = fn($v) => is_string($v) || is_int($v) ? trim((string)$v) : '';
                     $num = $t($r['justcall_number'] ?? ($r['number'] ?? ($r['phone_number'] ?? ''))); if ($num === '' || isset($seen[$num])) continue; $seen[$num] = 1; $new++;
@@ -114,9 +114,9 @@ if (!class_exists('OpshJustCallException')) {
             $out = []; $seen = []; $trunc = false; $reached = false; $guessed = false;
             for ($p = 0; $p < $maxPages + 1; $p++) {
                 [$s, $d] = $this->req('/calls', $q + ['per_page' => 100, 'page' => $p, 'sort' => 'id', 'order' => 'desc']);
-                if ($s < 200 || $s >= 300) throw new OpshJustCallException($this->errMsg($s, $d), $s);
+                if ($s < 200 || $s >= 300) throw new ItopsJustCallException($this->errMsg($s, $d), $s);
                 $rows = $this->rows($d) ?? (isset($d['calls']) && is_array($d['calls']) ? $d['calls'] : null);
-                if ($rows === null) throw new OpshJustCallException('JustCall answered, but not with a list of calls.', $s);
+                if ($rows === null) throw new ItopsJustCallException('JustCall answered, but not with a list of calls.', $s);
                 $new = 0;
                 foreach ($rows as $r) { if (!is_array($r)) continue; $c = self::call($r); if ($c['id'] === '' || isset($seen[$c['id']])) continue;
                     if ($stopId !== '' && self::cmpId($c['id'], $stopId) <= 0) { $reached = true; continue; }
@@ -132,7 +132,7 @@ if (!class_exists('OpshJustCallException')) {
         public function newestCallId(): string
         {
             [$s, $d] = $this->req('/calls', ['per_page' => 1, 'page' => 0, 'sort' => 'id', 'order' => 'desc']);
-            if ($s < 200 || $s >= 300) throw new OpshJustCallException($this->errMsg($s, $d), $s);
+            if ($s < 200 || $s >= 300) throw new ItopsJustCallException($this->errMsg($s, $d), $s);
             $rows = $this->rows($d) ?? [];
             return $rows && is_array($rows[0]) ? self::call($rows[0])['id'] : '';
         }
@@ -169,7 +169,7 @@ if (!class_exists('OpshJustCallException')) {
             ];
         }
 
-        /** A JustCall user as the rest of OpsHub uses it. */
+        /** A JustCall user as the rest of ITOps uses it. */
         public static function shape(array $r): array
         {
             $txt = fn($v) => is_string($v) || is_int($v) || is_float($v) ? trim((string)$v) : '';
@@ -214,17 +214,17 @@ if (!class_exists('OpshJustCallException')) {
 
         private function req(string $path, array $query = []): array
         {
-            if (!function_exists('curl_init')) throw new OpshJustCallException('This server cannot make web requests (the PHP curl extension is missing).');
+            if (!function_exists('curl_init')) throw new ItopsJustCallException('This server cannot make web requests (the PHP curl extension is missing).');
             $url = self::base() . $path . ($query ? '?' . http_build_query($query) : '');
             $ch = curl_init($url); $hdr = [];
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPGET => true, CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HTTPHEADER => ['Authorization: ' . $this->auth, 'Accept: application/json', 'User-Agent: OpsHub-JustCall/1.0'],
+                CURLOPT_HTTPHEADER => ['Authorization: ' . $this->auth, 'Accept: application/json', 'User-Agent: ITOps-JustCall/1.0'],
                 CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => $this->timeout,
                 CURLOPT_HEADERFUNCTION => function ($c, $line) use (&$hdr) { $p = explode(':', $line, 2); if (count($p) === 2) $hdr[strtolower(trim($p[0]))] = trim($p[1]); return strlen($line); },
             ]);
             $raw = curl_exec($ch);
-            if ($raw === false) { $err = curl_error($ch); curl_close($ch); throw new OpshJustCallException('No answer from JustCall (' . $err . ').', 0); }
+            if ($raw === false) { $err = curl_error($ch); curl_close($ch); throw new ItopsJustCallException('No answer from JustCall (' . $err . ').', 0); }
             $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
             foreach (['x-rate-limit-remaining', 'x-ratelimit-remaining', 'ratelimit-remaining'] as $h) if (isset($hdr[$h]) && is_numeric($hdr[$h])) $this->limitLeft = (int)$hdr[$h];
             $data = json_decode((string)$raw, true);

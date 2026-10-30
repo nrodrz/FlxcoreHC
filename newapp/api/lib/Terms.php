@@ -1,10 +1,10 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Terms & renewals for Contracts and Credentials.
+ * ITOps — Terms & renewals for Contracts and Credentials.
  *
  * MODEL
- *   Every row in opsh_contracts / opsh_credentials is ONE TERM (a period with a start and an end).
+ *   Every row in itops_contracts / itops_credentials is ONE TERM (a period with a start and an end).
  *   Terms that belong together form a SERIES:
  *     series_id        id of the original term (the first one) — shared by every renewal
  *     term_no          1 = original, 2 = first renewal, 3 = second renewal …
@@ -24,10 +24,10 @@
  *   - Credentials keep their own rotation status; the term (valid_from/valid_until) is separate.
  */
 
-if (!function_exists('opsh_term_cfg')) {
-    function opsh_term_cfg(string $kind): array {
+if (!function_exists('itops_term_cfg')) {
+    function itops_term_cfg(string $kind): array {
         if ($kind === 'contract') return [
-            'kind' => 'contract', 'table' => 'opsh_contracts', 'entity' => 'contract', 'prefix' => 'CT',
+            'kind' => 'contract', 'table' => 'itops_contracts', 'entity' => 'contract', 'prefix' => 'CT',
             'start' => 'start_date', 'end' => 'end_date', 'label' => 'title',
             'ended' => ['renewed', 'terminated', 'archived'], 'renewed_status' => 'renewed', 'new_status' => 'active',
             'end_status' => ['terminated' => 'terminated', 'expired' => 'expired', 'not_renewed' => 'expired'],
@@ -36,7 +36,7 @@ if (!function_exists('opsh_term_cfg')) {
             'overrides' => ['contract_number','total_value','payment_amount','payment_frequency','notes','owner_id','auto_renew'],
         ];
         return [
-            'kind' => 'credential', 'table' => 'opsh_credentials', 'entity' => 'credential', 'prefix' => 'CR',
+            'kind' => 'credential', 'table' => 'itops_credentials', 'entity' => 'credential', 'prefix' => 'CR',
             'start' => 'valid_from', 'end' => 'valid_until', 'label' => 'name',
             'ended' => ['retired', 'archived'], 'renewed_status' => 'retired', 'new_status' => 'current',
             'end_status' => ['terminated' => 'retired', 'expired' => 'retired', 'not_renewed' => 'retired'],
@@ -46,21 +46,21 @@ if (!function_exists('opsh_term_cfg')) {
         ];
     }
 
-    function opsh_term_ref(string $prefix, $seriesId, $termNo): string {
+    function itops_term_ref(string $prefix, $seriesId, $termNo): string {
         return sprintf('%s-%04d', $prefix, (int)$seriesId) . ((int)$termNo > 1 ? '-R' . ((int)$termNo - 1) : '');
     }
 
     /** Closed = renewed / ended by status, OR ended by hand ("not renewed", "expired" — these keep status
      *  'expired', so ended_at is what marks them closed). Closed terms are read-only history. */
-    function opsh_term_closed(array $r, array $c): bool {
+    function itops_term_closed(array $r, array $c): bool {
         return in_array($r['status'] ?? '', $c['ended'], true) || !empty($r['ended_at']);
     }
 
     /** Add ref, term_state, days_left and is_locked to a row. Never exposes secrets. */
-    function opsh_term_decorate(array $r, array $c): array {
+    function itops_term_decorate(array $r, array $c): array {
         $sid = (int)($r['series_id'] ?? 0) ?: (int)($r['id'] ?? 0);
-        $r['ref'] = opsh_term_ref($c['prefix'], $sid, $r['term_no'] ?? 1);
-        $r['is_locked'] = opsh_term_closed($r, $c) ? 1 : 0;
+        $r['ref'] = itops_term_ref($c['prefix'], $sid, $r['term_no'] ?? 1);
+        $r['is_locked'] = itops_term_closed($r, $c) ? 1 : 0;
         $end = $r[$c['end']] ?? null;
         $days = null;
         if ($end) { $days = (int)floor((strtotime($end . ' 00:00:00') - strtotime(date('Y-m-d') . ' 00:00:00')) / 86400); }
@@ -74,9 +74,9 @@ if (!function_exists('opsh_term_cfg')) {
     }
 
     /** Contracts: persist active → expiring → expired transitions (idempotent, audited). */
-    function opsh_term_sync_contracts(PDO $db): void {
+    function itops_term_sync_contracts(PDO $db): void {
         try {
-            $rows = $db->query("SELECT id, title, status, end_date, renewal_notice_days FROM opsh_contracts
+            $rows = $db->query("SELECT id, title, status, end_date, renewal_notice_days FROM itops_contracts
                                 WHERE status IN ('active','expiring') AND end_date IS NOT NULL")->fetchAll();
         } catch (Throwable $e) { return; }
         $today = date('Y-m-d');
@@ -85,14 +85,14 @@ if (!function_exists('opsh_term_cfg')) {
             if ($r['end_date'] < $today) $new = 'expired';
             elseif ($r['status'] === 'active' && $r['end_date'] <= date('Y-m-d', strtotime('+' . ((int)$r['renewal_notice_days'] ?: 90) . ' days'))) $new = 'expiring';
             if ($new && $new !== $r['status']) {
-                $db->prepare('UPDATE opsh_contracts SET status=? WHERE id=?')->execute([$new, (int)$r['id']]);
+                $db->prepare('UPDATE itops_contracts SET status=? WHERE id=?')->execute([$new, (int)$r['id']]);
                 audit_log('term_' . $new, 'contract', (int)$r['id'], $r['title'], ['status' => $r['status']], ['status' => $new]);
             }
         }
     }
 
     /** All terms of the series that $id belongs to, oldest first, decorated. */
-    function opsh_term_series(PDO $db, array $c, int $id): array {
+    function itops_term_series(PDO $db, array $c, int $id): array {
         $st = $db->prepare("SELECT COALESCE(series_id, id) FROM {$c['table']} WHERE id=?"); $st->execute([$id]);
         $sid = (int)$st->fetchColumn();
         if (!$sid) error_response('Record not found', 404);
@@ -105,20 +105,20 @@ if (!function_exists('opsh_term_cfg')) {
         $out = [];
         foreach ($st->fetchAll() as $r) {
             $r[$c['start']] = $r['term_start']; $r[$c['end']] = $r['term_end'];
-            $out[] = opsh_term_decorate($r, $c);
+            $out[] = itops_term_decorate($r, $c);
         }
         return $out;
     }
 
-    function opsh_term_valid_date($d): bool {
+    function itops_term_valid_date($d): bool {
         return is_string($d) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) && strtotime($d) !== false;
     }
 
     /** Validate a period; returns [errors[], warnings[]]. */
-    function opsh_term_check(?string $start, ?string $end, ?array $prev, array $c): array {
+    function itops_term_check(?string $start, ?string $end, ?array $prev, array $c): array {
         $err = []; $warn = [];
-        if (!opsh_term_valid_date($start)) $err[] = 'A valid start date is required.';
-        if (!opsh_term_valid_date($end))   $err[] = 'A valid end date is required.';
+        if (!itops_term_valid_date($start)) $err[] = 'A valid start date is required.';
+        if (!itops_term_valid_date($end))   $err[] = 'A valid end date is required.';
         if ($err) return [$err, $warn];
         if ($end <= $start) $err[] = 'The end date must be after the start date.';
         $days = (int)round((strtotime($end) - strtotime($start)) / 86400);
@@ -142,17 +142,17 @@ if (!function_exists('opsh_term_cfg')) {
      * Renew term $id. $in: start, end, note, plus optional overrides (and, for credentials,
      * plain-text username/password/api_key/mfa_details/notes — blank = carry the old value).
      */
-    function opsh_term_renew(PDO $db, array $c, int $id, array $in, array $user): array {
+    function itops_term_renew(PDO $db, array $c, int $id, array $in, array $user): array {
         $st = $db->prepare("SELECT * FROM {$c['table']} WHERE id=?"); $st->execute([$id]);
         $prev = $st->fetch();
         if (!$prev) error_response('Record not found', 404);
-        if (opsh_term_closed($prev, $c)) {
-            $to = !empty($prev['renewed_to_id']) ? ' → ' . opsh_term_ref($c['prefix'], $prev['series_id'] ?: $prev['id'], (int)($prev['term_no'] ?? 1) + 1) : '';
+        if (itops_term_closed($prev, $c)) {
+            $to = !empty($prev['renewed_to_id']) ? ' → ' . itops_term_ref($c['prefix'], $prev['series_id'] ?: $prev['id'], (int)($prev['term_no'] ?? 1) + 1) : '';
             error_response('This term is already closed' . $to . '. Renew the current term instead.', 409);
         }
         $note = trim((string)($in['note'] ?? ''));
         if (mb_strlen($note) < 3) error_response('Add a renewal note (what changed, who approved it, PO/quote number…).', 400);
-        [$errs, $warn] = opsh_term_check($in['start'] ?? null, $in['end'] ?? null, $prev, $c);
+        [$errs, $warn] = itops_term_check($in['start'] ?? null, $in['end'] ?? null, $prev, $c);
         if ($errs) error_response(implode(' ', $errs), 400);
         $start = $in['start']; $end = $in['end'];
 
@@ -190,30 +190,30 @@ if (!function_exists('opsh_term_cfg')) {
             $db->commit();
         } catch (Throwable $e) { $db->rollBack(); throw $e; }
 
-        $newRef = opsh_term_ref($c['prefix'], $sid, $new['term_no']);
-        $oldRef = opsh_term_ref($c['prefix'], $sid, $prev['term_no'] ?: 1);
+        $newRef = itops_term_ref($c['prefix'], $sid, $new['term_no']);
+        $oldRef = itops_term_ref($c['prefix'], $sid, $prev['term_no'] ?: 1);
         $safe = fn($a) => array_diff_key($a, array_flip(['username_enc','password_enc','api_key_enc','mfa_details_enc','notes_enc']));
         audit_log('renewed', $c['entity'], (int)$prev['id'], $prev[$c['label']] . " ($oldRef → $newRef)",
                   $safe(['status' => $prev['status'], $c['end'] => $prev[$c['end']] ?? null]), $safe($upd));
         audit_log('created', $c['entity'], $newId, $new[$c['label']] . " ($newRef, renewal of $oldRef)", null,
                   $safe(array_merge($new, ['renewal_note' => $note])));
-        if (function_exists('opsh_emit')) opsh_emit($c['entity'] . '.renewed', ['from_id' => (int)$prev['id'], 'to_id' => $newId, 'ref' => $newRef]);
+        if (function_exists('itops_emit')) itops_emit($c['entity'] . '.renewed', ['from_id' => (int)$prev['id'], 'to_id' => $newId, 'ref' => $newRef]);
         return ['ok' => true, 'id' => $newId, 'ref' => $newRef, 'previous_ref' => $oldRef, 'warnings' => $warn];
     }
 
     /** Close a term without renewing it. */
-    function opsh_term_end(PDO $db, array $c, int $id, array $in): array {
+    function itops_term_end(PDO $db, array $c, int $id, array $in): array {
         $st = $db->prepare("SELECT * FROM {$c['table']} WHERE id=?"); $st->execute([$id]);
         $row = $st->fetch();
         if (!$row) error_response('Record not found', 404);
-        if (opsh_term_closed($row, $c)) error_response('This term is already closed.', 409);
+        if (itops_term_closed($row, $c)) error_response('This term is already closed.', 409);
         $reason = (string)($in['reason'] ?? 'not_renewed');
         if (!isset($c['end_status'][$reason])) error_response('Unknown reason', 400);
         $note = trim((string)($in['note'] ?? ''));
         if (mb_strlen($note) < 3) error_response('Add a short note explaining why this term is ending.', 400);
         $upd = ['status' => $c['end_status'][$reason], 'ended_at' => date('Y-m-d H:i:s'), 'end_reason' => $reason,
                 'renewal_note' => mb_substr(trim(($row['renewal_note'] ? $row['renewal_note'] . "\n\n" : '') . 'Closed (' . str_replace('_', ' ', $reason) . '): ' . $note), 0, 4000)];
-        if (!empty($in['end_date']) && opsh_term_valid_date($in['end_date'])) $upd[$c['end']] = $in['end_date'];
+        if (!empty($in['end_date']) && itops_term_valid_date($in['end_date'])) $upd[$c['end']] = $in['end_date'];
         $sets = implode(',', array_map(fn($k) => "$k=?", array_keys($upd)));
         $db->prepare("UPDATE {$c['table']} SET $sets WHERE id=?")->execute(array_merge(array_values($upd), [$id]));
         audit_log('term_closed', $c['entity'], $id, $row[$c['label']] . ' — ' . $reason, ['status' => $row['status']], $upd);

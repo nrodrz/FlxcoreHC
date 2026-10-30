@@ -1,18 +1,32 @@
-OpsHub — Install / Update notes (short version — details in READ-ME-FIRST.txt)
-=================================================================================
+ITOps — Install / Update notes (short version — details in READ-ME-FIRST.txt)
+==============================================================================
+The package is built to sit at the ROOT of a web folder (for example public_html of a domain or a
+subdomain such as itops.example.com). It also works inside a subfolder; the steps are the same.
+
 FRESH INSTALL
-  1. Upload the zip into your app folder (e.g. /itops/) and Extract it there.
-  2. Open https://YOUR-SITE/path-to-opshub/install/ and complete the wizard. It writes config.php
-     from config.sample.php, creates the tables and runs all database updates.
-     Have the License Hub link code ready if you were given one (optional; it can be added later).
-     Only the main installation (License Hub, run by Indisse-BTS) uses install/hub.php instead.
-  3. Sign in with the admin account you created, then delete / deny the install/ folder.
+  1. Host panel (cPanel or similar): the domain/subdomain with SSL, PHP 8.1 or newer, and an EMPTY
+     MySQL / MariaDB database with its own user (all privileges on that database).
+  2. Upload the zip into the web root (public_html, or the subdomain's folder) and Extract it there.
+     The files must sit directly in that folder: index.html, api/, install/ … (not inside a sub-folder).
+  3. Open https://YOUR-SITE/install/ and complete the wizard (database → admin → optional
+     Microsoft 365 sign-in → branding → optional License Hub link code → finalize). It writes
+     config.php from config.sample.php, creates the tables and runs all database updates.
+     Only the main installation (this product's License Hub, run by Indisse-BTS) uses
+     https://YOUR-SITE/install/hub.php instead.
+  4. Sign in with the admin account you created, then delete (or deny) the install/ folder.
+  5. Check https://YOUR-SITE/api/health → {"status":"ok","database":true}
+     and that https://YOUR-SITE/config.php and https://YOUR-SITE/sql/ answer 403.
 
 UPDATE (same full zip)
   1. Upload + Extract over the existing folder. config.php and your uploads are never
      included in the package, so nothing of yours is overwritten.
-  2. If the CHANGELOG says "DB UPDATE REQUIRED", run https://YOUR-SITE/path-to-opshub/db-update.php once
-     (or Connection → Maintenance → Database update).
-  3. If it says a new vTiger bridge build is needed, upload vtiger-bridge/opsh-bridge.php to the
-     vTiger web root.
-  4. Hard-refresh; check the build stamp under Connection → General.
+  2. If the CHANGELOG says "DB UPDATE REQUIRED", run https://YOUR-SITE/db-update.php once
+     signed in as a Super Admin (or Settings → Maintenance → Database update).
+  3. Hard-refresh; check the build stamp under Settings → General → Version.
+
+SCHEDULED JOBS (host panel → Cron Jobs) — recommended
+  */5 * * * *  php /home/USER/public_html/cron-mail.php
+  */5 * * * *  php /home/USER/public_html/cron-sla.php
+  0 7 * * 1    php /home/USER/public_html/cron-sla.php digest
+  Without cron, the in-app scheduler does the same work while someone has ITOps open.
+  Scheduled offboarding at an exact time needs cron.

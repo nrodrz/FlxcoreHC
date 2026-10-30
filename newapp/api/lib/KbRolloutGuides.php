@@ -1,15 +1,15 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Business Premium rollout guides for staff and managers (English + Spanish), v2 (BT13).
+ * ITOps — Business Premium rollout guides for staff and managers (English + Spanish), v2 (BT13).
  * Personal devices are VOLUNTARY: the only required step is MFA (Authenticator app, a company security key or
  * text message). Seeded as DRAFT Knowledge Base articles from Microsoft 365 → Rollout.
  * Seeding rules: a new title is inserted as a draft. An existing article with the same title — or with the old
  * title it 'replaces' — is REFRESHED only while it is still a draft; published articles are never touched.
  * Review the [bracketed] placeholders (help-desk contacts) before publishing.
  */
-if (!function_exists('opsh_kb_rollout_articles')) {
-    function opsh_kb_rollout_articles(): array {
+if (!function_exists('itops_kb_rollout_articles')) {
+    function itops_kb_rollout_articles(): array {
         return [
         ['title' => 'Why we\'re improving security in Microsoft 365 (and what it means for you)', 'lang' => 'en', 'audience' => 'staff', 'replaces' => 'Why we\'re improving security in Microsoft 365 (and what it means for you)', 'content' => '<p><strong>TL;DR:</strong> Over about ten weeks, {{org}} is turning on the security tools included in our Microsoft 365 plan (Business Premium). The one step everyone must take is to set up a sign-in approval (MFA), and you choose how: the Microsoft Authenticator app, a USB security key that {{org}} gives you, or a text message. If you have a company computer, you will connect it once. Using your personal phone or computer for work is your choice, and IT never takes over your personal devices or sees your personal files, photos or messages.</p>
 <h3>Who this is for</h3>
@@ -45,7 +45,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 </table>
 <p>Nothing in this timeline requires you to install anything on a personal phone or computer. You will get an email with your own date before anything is required of you.</p>
 <h3>Questions or problems?</h3>
-<p>Ask your manager, reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[OpsHub request page link]">OpsHub request page</a>.</p>
+<p>Ask your manager, reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[ITOps request page link]">ITOps request page</a>.</p>
 <h3>Related articles</h3>
 <ul>
 <li>Set up your sign-in approval (MFA): app, security key or text message</li>
@@ -53,7 +53,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li>What IT can and cannot see on your devices</li>
 <li>Troubleshooting sign-in and security prompts</li>
 </ul>
-<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, OpsHub link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
+<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, ITOps link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
         ['title' => 'Por qué estamos mejorando la seguridad en Microsoft 365 (y qué significa para usted)', 'lang' => 'es', 'audience' => 'staff', 'replaces' => 'Por qué estamos mejorando la seguridad en Microsoft 365 (y qué significa para usted)', 'content' => '<p><strong>En resumen:</strong> Durante unas diez semanas, {{org}} activará las herramientas de seguridad que ya incluye nuestro plan de Microsoft 365 (Business Premium). Lo único que todos deben hacer es configurar una verificación de inicio de sesión (MFA), y usted elige cómo: la aplicación Microsoft Authenticator, una llave de seguridad USB que le entrega {{org}} o un mensaje de texto. Si tiene una computadora de la empresa, la conectará una sola vez. Usar su teléfono o computadora personal para el trabajo es decisión suya: TI nunca toma el control de sus dispositivos personales ni puede ver sus archivos, fotos o mensajes personales.</p>
 <h3>Para quién es</h3>
 <p>Para todas las personas de {{org}} que usan una cuenta de trabajo de Microsoft 365 (correo, Teams, OneDrive, SharePoint).</p>
@@ -88,7 +88,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 </table>
 <p>Nada de este calendario le exige instalar algo en su teléfono o computadora personal. Recibirá un correo con su fecha antes de que se le pida hacer algo.</p>
 <h3>¿Preguntas o problemas?</h3>
-<p>Consulte a su supervisor, o responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>.</p>
+<p>Consulte a su supervisor, o responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>.</p>
 <h3>Artículos relacionados</h3>
 <ul>
 <li>Configure su verificación de inicio de sesión (MFA): aplicación, llave de seguridad o mensaje de texto</li>
@@ -96,7 +96,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li>Qué puede y qué no puede ver TI en sus dispositivos</li>
 <li>Solución de problemas de inicio de sesión y avisos de seguridad</li>
 </ul>
-<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de OpsHub, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
+<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de ITOps, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
         ['title' => 'Set up your sign-in approval (MFA): app, security key or text message', 'lang' => 'en', 'audience' => 'staff', 'replaces' => 'Set up multi-factor authentication (MFA) with Microsoft Authenticator', 'content' => '<p><strong>TL;DR:</strong> Everyone needs a second sign-in check (MFA). Choose one: the <strong>Microsoft Authenticator</strong> app on your phone (quickest), a <strong>USB security key</strong> that {{org}} gives you (no phone needed), or a <strong>text message or call</strong> to any phone. You set it up at <a href="https://aka.ms/mysecurityinfo">aka.ms/mysecurityinfo</a>. It takes 5–10 minutes, once.</p>
 <h3>Who this is for</h3>
 <p>All staff, during Weeks 1–2 of the rollout (by [deadline] in your email). You need your work email and password and a computer. You do <strong>not</strong> need a smartphone.</p>
@@ -119,7 +119,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 </ol>
 <h3>Option 2: USB security key (no phone needed)</h3>
 <ol>
-<li>Ask IT for a key: [IT help desk email / phone] or the OpsHub request page. Say whether your computer has USB-A (rectangular) or USB-C (small oval) ports.</li>
+<li>Ask IT for a key: [IT help desk email / phone] or the ITOps request page. Say whether your computer has USB-A (rectangular) or USB-C (small oval) ports.</li>
 <li>Meet IT <strong>in person</strong>. They give you the key and a one-time <strong>Temporary Access Pass</strong>. IT never sends this pass by email. Don\'t share it.</li>
 <li>On a computer, go to <strong>aka.ms/mysecurityinfo</strong>, enter your work email, and type the Temporary Access Pass when asked.</li>
 <li>Click <strong>+ Add sign-in method</strong>, choose <strong>Security key</strong> (some screens call it <strong>Passkey</strong>), click <strong>Add</strong>, then choose <strong>USB device</strong> if asked.</li>
@@ -147,7 +147,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li><strong>No notification arrives:</strong> open Authenticator. The request often appears there.</li>
 <li><strong>QR code won\'t scan:</strong> click <em>Can\'t scan image?</em> and type the code and URL into the app.</li>
 <li><strong>New phone, lost phone or lost key:</strong> see “Troubleshooting sign-in and security prompts”.</li>
-<li>Still stuck? reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[OpsHub request page link]">OpsHub request page</a>.</li>
+<li>Still stuck? reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[ITOps request page link]">ITOps request page</a>.</li>
 </ul>
 <h3>Related articles</h3>
 <ul>
@@ -155,7 +155,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li>Troubleshooting sign-in and security prompts</li>
 <li>Why we\'re improving security in Microsoft 365 (and what it means for you)</li>
 </ul>
-<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, OpsHub link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
+<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, ITOps link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
         ['title' => 'Configure su verificación de inicio de sesión (MFA): aplicación, llave de seguridad o mensaje de texto', 'lang' => 'es', 'audience' => 'staff', 'replaces' => 'Configure la autenticación multifactor (MFA) con Microsoft Authenticator', 'content' => '<p><strong>En resumen:</strong> Todas las personas necesitan una segunda verificación al iniciar sesión (MFA). Elija una opción: la aplicación <strong>Microsoft Authenticator</strong> en su teléfono (la más rápida), una <strong>llave de seguridad USB</strong> que le entrega {{org}} (no necesita teléfono) o un <strong>mensaje de texto o llamada</strong> a cualquier teléfono. Se configura en <a href="https://aka.ms/mysecurityinfo">aka.ms/mysecurityinfo</a>. Toma de 5 a 10 minutos y se hace una sola vez.</p>
 <h3>Para quién es</h3>
 <p>Para todo el personal, durante las semanas 1–2 (antes del [deadline] indicado en su correo). Necesita su correo y contraseña de trabajo y una computadora. <strong>No</strong> necesita un teléfono inteligente.</p>
@@ -179,7 +179,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 </ol>
 <h3>Opción 2: llave de seguridad USB (sin teléfono)</h3>
 <ol>
-<li>Pida una llave a TI: [correo / teléfono de la mesa de ayuda de TI] o la página de solicitudes de OpsHub. Indique si su computadora tiene puertos USB-A (rectangulares) o USB-C (pequeños y ovalados).</li>
+<li>Pida una llave a TI: [correo / teléfono de la mesa de ayuda de TI] o la página de solicitudes de ITOps. Indique si su computadora tiene puertos USB-A (rectangulares) o USB-C (pequeños y ovalados).</li>
 <li>Reúnase con TI <strong>en persona</strong>. Le entregarán la llave y un <strong>Pase de acceso temporal</strong> (<em>Temporary Access Pass</em>) de un solo uso. TI nunca envía este pase por correo. No lo comparta.</li>
 <li>En una computadora, vaya a <strong>aka.ms/mysecurityinfo</strong>, escriba su correo de trabajo y, cuando se lo pida, el Pase de acceso temporal.</li>
 <li>Haga clic en <strong>+ Agregar método de inicio de sesión</strong>, elija <strong>Clave de seguridad</strong> (<em>Security key</em>; en algunas pantallas aparece como <em>Clave de acceso</em> o <em>Passkey</em>), haga clic en <strong>Agregar</strong> y, si se lo pregunta, elija <strong>Dispositivo USB</strong> (<em>USB device</em>).</li>
@@ -207,7 +207,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li><strong>No llega la notificación:</strong> abra Authenticator; muchas veces la solicitud está ahí.</li>
 <li><strong>No se escanea el código QR:</strong> haga clic en <em>¿No puede escanear la imagen?</em> y escriba el código y la dirección en la aplicación.</li>
 <li><strong>Teléfono nuevo, teléfono perdido o llave perdida:</strong> consulte “Solución de problemas de inicio de sesión y avisos de seguridad”.</li>
-<li>¿Sigue con problemas? Responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>.</li>
+<li>¿Sigue con problemas? Responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>.</li>
 </ul>
 <h3>Artículos relacionados</h3>
 <ul>
@@ -215,7 +215,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li>Solución de problemas de inicio de sesión y avisos de seguridad</li>
 <li>Por qué estamos mejorando la seguridad en Microsoft 365 (y qué significa para usted)</li>
 </ul>
-<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de OpsHub, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
+<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de ITOps, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
         ['title' => 'Connect your company Windows computer', 'lang' => 'en', 'audience' => 'staff', 'replaces' => 'Connect your company Windows computer', 'content' => '<p><strong>TL;DR:</strong> On your company Windows PC, go to <strong>Settings → Accounts → Access work or school → Connect</strong> and join it to {{org}}. It takes about 10 minutes, once. Afterwards the PC gets antivirus, encryption and updates automatically.</p>
 <h3>Who this is for</h3>
 <p>Staff with a <strong>company-owned</strong> Windows PC running Windows Pro (Tier A), when your group\'s email arrives. Do <strong>not</strong> do this on a personal computer. You need your sign-in approval (MFA) set up first, and the PC must be plugged in and online.</p>
@@ -250,14 +250,14 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li><strong>“It says my edition is not supported,”</strong> or the <em>Join this device to Microsoft Entra ID</em> link is missing: the PC is probably Windows Home. Don\'t try other workarounds. Contact IT. Until IT upgrades it, work in the browser as described in “Using a personal computer for work”.</li>
 <li><strong>My old files are missing:</strong> they are still in the old profile. Contact IT to move them.</li>
 <li><strong>A blue BitLocker recovery screen appears:</strong> contact IT for the recovery key.</li>
-<li>Anything else: reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[OpsHub request page link]">OpsHub request page</a>.</li>
+<li>Anything else: reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[ITOps request page link]">ITOps request page</a>.</li>
 </ul>
 <h3>Related articles</h3>
 <ul>
 <li>What IT can and cannot see on your devices</li>
 <li>Troubleshooting sign-in and security prompts</li>
 </ul>
-<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, OpsHub link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
+<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, ITOps link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
         ['title' => 'Conecte su computadora Windows de la empresa', 'lang' => 'es', 'audience' => 'staff', 'replaces' => 'Conecte su computadora Windows de la empresa', 'content' => '<p><strong>En resumen:</strong> En su computadora Windows de la empresa, vaya a <strong>Configuración → Cuentas → Acceso a trabajo o escuela → Conectar</strong> y únala a {{org}}. Toma unos 10 minutos y se hace una sola vez. Después, la computadora recibe antivirus, cifrado y actualizaciones de forma automática.</p>
 <h3>Para quién es</h3>
 <p>Para el personal que tiene una computadora Windows Pro <strong>propiedad de la empresa</strong> (Nivel A), cuando llegue el correo de su grupo. <strong>No</strong> lo haga en una computadora personal. Primero debe tener configurada su verificación de inicio de sesión (MFA), y la computadora debe estar conectada a la corriente y a internet.</p>
@@ -293,14 +293,14 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li><strong>“Dice que mi edición no es compatible”</strong>, o no aparece <em>Unir este dispositivo a Microsoft Entra ID</em>: probablemente la computadora tiene Windows Home. No intente otros métodos. Comuníquese con TI. Hasta que TI la actualice, trabaje en el navegador como se explica en “Cómo usar una computadora personal para trabajar”.</li>
 <li><strong>No encuentro mis archivos anteriores:</strong> siguen en el perfil anterior. Pida a TI que los mueva.</li>
 <li><strong>Aparece una pantalla azul de recuperación de BitLocker:</strong> comuníquese con TI para obtener la clave.</li>
-<li>Cualquier otro problema: responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>.</li>
+<li>Cualquier otro problema: responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>.</li>
 </ul>
 <h3>Artículos relacionados</h3>
 <ul>
 <li>Qué puede y qué no puede ver TI en sus dispositivos</li>
 <li>Solución de problemas de inicio de sesión y avisos de seguridad</li>
 </ul>
-<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de OpsHub, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
+<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de ITOps, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
         ['title' => 'Work on your personal phone: your choices', 'lang' => 'en', 'audience' => 'staff', 'replaces' => 'Work email and Teams on your personal phone', 'content' => '<p><strong>TL;DR:</strong> Using your personal phone for work is up to you. {{org}} does not provide phones and never requires you to use yours. You have three choices: don\'t use your phone for work, use the phone’s web browser (nothing to install), or use the Outlook, Teams and OneDrive apps with app protection. Your phone is never enrolled or managed by IT.</p>
 <h3>Who this is for</h3>
 <p>Staff deciding whether to use a personal phone or tablet for work (Tier D). Using Authenticator or text messages for sign-in approval does <strong>not</strong> mean you have to do any work on your phone.</p>
@@ -352,7 +352,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li><strong>“Restart the app”:</strong> fully close the app (swipe it away) and reopen it.</li>
 <li><strong>Forgot your app PIN:</strong> tap <strong>Forgot PIN?</strong>, sign in again, and set a new one.</li>
 <li><strong>Your phone’s built-in mail app doesn\'t connect:</strong> use Choice 2 or 3 instead.</li>
-<li>Other issues: reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[OpsHub request page link]">OpsHub request page</a>.</li>
+<li>Other issues: reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[ITOps request page link]">ITOps request page</a>.</li>
 </ul>
 <h3>Related articles</h3>
 <ul>
@@ -360,7 +360,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li>Set up your sign-in approval (MFA): app, security key or text message</li>
 <li>Troubleshooting sign-in and security prompts</li>
 </ul>
-<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, OpsHub link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
+<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, ITOps link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
         ['title' => 'Trabajar desde su teléfono personal: sus opciones', 'lang' => 'es', 'audience' => 'staff', 'replaces' => 'Correo de trabajo y Teams en su teléfono personal', 'content' => '<p><strong>En resumen:</strong> Usar su teléfono personal para trabajar es decisión suya. {{org}} no entrega teléfonos y nunca le exigirá usar el suyo. Tiene tres opciones: no usar el teléfono para el trabajo, usar el navegador del teléfono (sin instalar nada) o usar las aplicaciones Outlook, Teams y OneDrive con protección de aplicaciones. TI nunca inscribe ni administra su teléfono.</p>
 <h3>Para quién es</h3>
 <p>Para el personal que está decidiendo si usar su teléfono o tableta personal para trabajar (Nivel D). Usar Authenticator o mensajes de texto para verificar su inicio de sesión <strong>no</strong> significa que tenga que trabajar desde el teléfono.</p>
@@ -413,7 +413,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li><strong>“Reinicie la aplicación”:</strong> ciérrela por completo (deslícela fuera de la pantalla) y vuelva a abrirla.</li>
 <li><strong>Olvidó el PIN de la aplicación:</strong> toque <strong>¿Olvidó el PIN?</strong> (<em>Forgot PIN?</em>), vuelva a iniciar sesión y cree uno nuevo.</li>
 <li><strong>La aplicación de correo incluida en su teléfono no se conecta:</strong> use la opción 2 o la 3.</li>
-<li>Otros problemas: responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>.</li>
+<li>Otros problemas: responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>.</li>
 </ul>
 <h3>Artículos relacionados</h3>
 <ul>
@@ -421,7 +421,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li>Configure su verificación de inicio de sesión (MFA): aplicación, llave de seguridad o mensaje de texto</li>
 <li>Solución de problemas de inicio de sesión y avisos de seguridad</li>
 </ul>
-<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de OpsHub, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
+<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de ITOps, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
         ['title' => 'Using a personal computer for work', 'lang' => 'en', 'audience' => 'staff', 'replaces' => 'Using a personal computer for work', 'content' => '<p><strong>TL;DR:</strong> Using your own computer for work is optional. If you do, we recommend working in the web browser (<strong>microsoft365.com</strong>, Outlook on the web, Teams on the web) and not saving work files on the computer. Your computer is never enrolled. If we later turn on a “browser-only” rule for personal computers, you will get an email with the date in advance.</p>
 <h3>Who this is for</h3>
 <p>Staff who choose to use their own Windows PC or Mac for work (Tier C), and staff whose company PC runs Windows Home until IT upgrades it (Tier B). You need your sign-in approval (MFA) set up first.</p>
@@ -459,14 +459,14 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <ul>
 <li><strong>“You can\'t get there from here”:</strong> you are using something only allowed on a company device. Switch to the browser.</li>
 <li><strong>A download or print button is missing:</strong> expected if the browser-only rule is on. Work online, or ask your manager whether you need a company device.</li>
-<li>Other issues: reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[OpsHub request page link]">OpsHub request page</a>.</li>
+<li>Other issues: reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[ITOps request page link]">ITOps request page</a>.</li>
 </ul>
 <h3>Related articles</h3>
 <ul>
 <li>What IT can and cannot see on your devices</li>
 <li>Troubleshooting sign-in and security prompts</li>
 </ul>
-<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, OpsHub link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
+<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, ITOps link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
         ['title' => 'Cómo usar una computadora personal para trabajar', 'lang' => 'es', 'audience' => 'staff', 'replaces' => 'Cómo usar una computadora personal para trabajar', 'content' => '<p><strong>En resumen:</strong> Usar su propia computadora para trabajar es opcional. Si lo hace, le recomendamos trabajar en el navegador web (<strong>microsoft365.com</strong>, Outlook en la web, Teams en la web) y no guardar archivos de trabajo en la computadora. Su computadora nunca se inscribe. Si más adelante activamos una regla de “solo navegador” para computadoras personales, recibirá un correo con la fecha y con anticipación.</p>
 <h3>Para quién es</h3>
 <p>Para el personal que decida usar su propia computadora Windows o Mac para trabajar (Nivel C). También aplica a quienes tienen una computadora de la empresa con Windows Home, hasta que TI la actualice (Nivel B). Configure primero su verificación de inicio de sesión (MFA).</p>
@@ -505,14 +505,14 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <ul>
 <li><strong>“No puede llegar ahí desde aquí”</strong> (<em>You can\'t get there from here</em>): está usando algo que solo se permite en un dispositivo de la empresa. Cambie al navegador.</li>
 <li><strong>Falta el botón de descargar o imprimir:</strong> es lo esperado si la regla de solo navegador está activa. Trabaje en línea o pregunte a su supervisor si necesita un equipo de la empresa.</li>
-<li>Otros problemas: responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>.</li>
+<li>Otros problemas: responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>.</li>
 </ul>
 <h3>Artículos relacionados</h3>
 <ul>
 <li>Qué puede y qué no puede ver TI en sus dispositivos</li>
 <li>Solución de problemas de inicio de sesión y avisos de seguridad</li>
 </ul>
-<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de OpsHub, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
+<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de ITOps, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
         ['title' => 'What IT can and cannot see on your devices', 'lang' => 'en', 'audience' => 'staff', 'replaces' => 'What IT can and cannot see on your devices', 'content' => '<p><strong>TL;DR:</strong> Personal devices are never enrolled. On them, IT only sees your work sign-ins and, if you choose to use the work apps on a phone, the status of those apps. Your sign-in method (app, key or text) gives IT no access to your phone. Company computers are fully managed for security, but IT still does not browse your files or watch your screen.</p>
 <h3>Who this is for</h3>
 <p>Anyone who wants to know exactly what the new tools can see. Find your device type below.</p>
@@ -554,14 +554,14 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <h3>About your work account</h3>
 <p>Wherever you use it, your work email, Teams chats and files belong to {{org}}. IT does not routinely read them. They may be reviewed only as described in [acceptable use / records policy link].</p>
 <h3>Questions?</h3>
-<p>Reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[OpsHub request page link]">OpsHub request page</a>.</p>
+<p>Reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[ITOps request page link]">ITOps request page</a>.</p>
 <h3>Related articles</h3>
 <ul>
 <li>Work on your personal phone: your choices</li>
 <li>Using a personal computer for work</li>
 <li>Connect your company Windows computer</li>
 </ul>
-<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, OpsHub link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
+<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, ITOps link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
         ['title' => 'Qué puede y qué no puede ver TI en sus dispositivos', 'lang' => 'es', 'audience' => 'staff', 'replaces' => 'Qué puede y qué no puede ver TI en sus dispositivos', 'content' => '<p><strong>En resumen:</strong> Los dispositivos personales nunca se inscriben. En ellos, TI solo ve sus inicios de sesión de trabajo y, si decide usar las aplicaciones de trabajo en el teléfono, el estado de esas aplicaciones. Su método de verificación (aplicación, llave o mensaje de texto) no le da a TI acceso a su teléfono. Las computadoras de la empresa se administran por completo para su seguridad, pero TI tampoco revisa sus archivos ni mira su pantalla.</p>
 <h3>Para quién es</h3>
 <p>Para quien quiera saber exactamente qué pueden ver las nuevas herramientas. Busque abajo su tipo de dispositivo.</p>
@@ -603,14 +603,14 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <h3>Sobre su cuenta de trabajo</h3>
 <p>Donde sea que la use, su correo, chats de Teams y archivos de trabajo pertenecen a {{org}}. TI no los lee de forma rutinaria. Solo se pueden revisar según lo descrito en [enlace a la política de uso aceptable / registros].</p>
 <h3>¿Preguntas?</h3>
-<p>Responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>.</p>
+<p>Responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>.</p>
 <h3>Artículos relacionados</h3>
 <ul>
 <li>Trabajar desde su teléfono personal: sus opciones</li>
 <li>Cómo usar una computadora personal para trabajar</li>
 <li>Conecte su computadora Windows de la empresa</li>
 </ul>
-<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de OpsHub, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
+<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de ITOps, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
         ['title' => 'Manager guide: leading your team through the security rollout', 'lang' => 'en', 'audience' => 'manager', 'replaces' => 'Manager guide: leading your team through the security rollout', 'content' => '<p><strong>TL;DR:</strong> Over about ten weeks, everyone on your team sets up a sign-in approval (app, company security key or text message), and staff with company PCs connect them. Using personal phones or computers for work is voluntary. Your role is to explain why it matters, clear time for it, spot who needs help early, never pressure anyone to use a personal device, and repeat one message: <strong>never share codes, never approve prompts you didn\'t start.</strong></p>
 <h3>Who this is for</h3>
 <p>Anyone who supervises staff at {{org}}.</p>
@@ -655,7 +655,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li><strong>Escalate within a day:</strong> “edition not supported” on a company PC; someone still waiting for a security key; repeated “You can\'t get there from here”.</li>
 <li><strong>Watch for:</strong> staff forwarding work email to personal accounts, sharing a login or key, or saving work files on personal computers.</li>
 </ul>
-<p>To escalate, reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[OpsHub request page link]">OpsHub request page</a>. Include the person\'s name, the device and the exact message, or a photo of the screen.</p>
+<p>To escalate, reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[ITOps request page link]">ITOps request page</a>. Include the person\'s name, the device and the exact message, or a photo of the screen.</p>
 <h3>Related articles</h3>
 <ul>
 <li>Why we\'re improving security in Microsoft 365 (and what it means for you)</li>
@@ -663,7 +663,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li>What IT can and cannot see on your devices</li>
 <li>Troubleshooting sign-in and security prompts</li>
 </ul>
-<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, OpsHub link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
+<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, ITOps link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
         ['title' => 'Guía para supervisores: cómo acompañar a su equipo en el proyecto de seguridad', 'lang' => 'es', 'audience' => 'manager', 'replaces' => 'Guía para supervisores: cómo acompañar a su equipo en el proyecto de seguridad', 'content' => '<p><strong>En resumen:</strong> En unas diez semanas, todas las personas de su equipo configurarán una verificación de inicio de sesión (aplicación, llave de seguridad de la empresa o mensaje de texto), y quienes tienen computadora de la empresa la conectarán. Usar teléfonos o computadoras personales para el trabajo es voluntario. Su papel es explicar por qué importa, darles tiempo para hacerlo, detectar a tiempo quién necesita ayuda, nunca presionar a nadie para usar un dispositivo personal y repetir un mensaje: <strong>nunca comparta códigos y nunca apruebe avisos que usted no inició.</strong></p>
 <h3>Para quién es</h3>
 <p>Para todas las personas que supervisan personal en {{org}}.</p>
@@ -708,7 +708,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li><strong>Escale en el mismo día hábil:</strong> “edición no compatible” en una computadora de la empresa; alguien que sigue esperando su llave de seguridad; el mensaje “No puede llegar ahí desde aquí” repetidas veces.</li>
 <li><strong>Esté atento a:</strong> personas que reenvían el correo de trabajo a cuentas personales, comparten su usuario o su llave, o guardan archivos de trabajo en computadoras personales.</li>
 </ul>
-<p>Para escalar, responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>. Incluya el nombre de la persona, el dispositivo y el mensaje exacto, o una foto de la pantalla.</p>
+<p>Para escalar, responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>. Incluya el nombre de la persona, el dispositivo y el mensaje exacto, o una foto de la pantalla.</p>
 <h3>Artículos relacionados</h3>
 <ul>
 <li>Por qué estamos mejorando la seguridad en Microsoft 365 (y qué significa para usted)</li>
@@ -716,7 +716,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li>Qué puede y qué no puede ver TI en sus dispositivos</li>
 <li>Solución de problemas de inicio de sesión y avisos de seguridad</li>
 </ul>
-<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de OpsHub, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
+<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de ITOps, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
         ['title' => 'Troubleshooting sign-in and security prompts', 'lang' => 'en', 'audience' => 'staff', 'replaces' => 'Troubleshooting sign-in and security prompts', 'content' => '<p><strong>TL;DR:</strong> Most sign-in problems are fixed by updating your method at <a href="https://aka.ms/mysecurityinfo">aka.ms/mysecurityinfo</a>, getting a Temporary Access Pass from IT, switching to the browser, or resetting an app PIN. If you get an approval prompt or code you didn\'t ask for, deny it and tell IT <strong>immediately</strong>.</p>
 <h3>Who this is for</h3>
 <p>All staff, after sign-in approval (MFA) is turned on.</p>
@@ -769,14 +769,14 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li><strong>“More information required”:</strong> you haven\'t set up sign-in approval yet. Click <strong>Next</strong> and follow “Set up your sign-in approval (MFA): app, security key or text message”.</li>
 </ul>
 <h3>Still stuck?</h3>
-<p>Reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[OpsHub request page link]">OpsHub request page</a>. A photo of the message helps.</p>
+<p>Reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[ITOps request page link]">ITOps request page</a>. A photo of the message helps.</p>
 <h3>Related articles</h3>
 <ul>
 <li>Set up your sign-in approval (MFA): app, security key or text message</li>
 <li>Using your security key</li>
 <li>Using a personal computer for work</li>
 </ul>
-<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, OpsHub link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
+<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, ITOps link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
         ['title' => 'Solución de problemas de inicio de sesión y avisos de seguridad', 'lang' => 'es', 'audience' => 'staff', 'replaces' => 'Solución de problemas de inicio de sesión y avisos de seguridad', 'content' => '<p><strong>En resumen:</strong> La mayoría de los problemas de inicio de sesión se resuelven actualizando su método en <a href="https://aka.ms/mysecurityinfo">aka.ms/mysecurityinfo</a>, pidiendo a TI un Pase de acceso temporal, cambiando al navegador o restableciendo el PIN de una aplicación. Si recibe un aviso o un código que no pidió, rechácelo y avise a TI <strong>de inmediato</strong>.</p>
 <h3>Para quién es</h3>
 <p>Para todo el personal, una vez activada la verificación de inicio de sesión (MFA).</p>
@@ -830,14 +830,14 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li><strong>“Se requiere más información”:</strong> todavía no configura su verificación de inicio de sesión. Haga clic en <strong>Siguiente</strong> y siga “Configure su verificación de inicio de sesión (MFA): aplicación, llave de seguridad o mensaje de texto”.</li>
 </ul>
 <h3>¿Sigue con problemas?</h3>
-<p>Responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>. Una foto del mensaje ayuda.</p>
+<p>Responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>. Una foto del mensaje ayuda.</p>
 <h3>Artículos relacionados</h3>
 <ul>
 <li>Configure su verificación de inicio de sesión (MFA): aplicación, llave de seguridad o mensaje de texto</li>
 <li>Cómo usar su llave de seguridad</li>
 <li>Cómo usar una computadora personal para trabajar</li>
 </ul>
-<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de OpsHub, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
+<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de ITOps, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
         ['title' => 'Using your security key', 'lang' => 'en', 'audience' => 'staff', 'replaces' => null, 'content' => '<p><strong>TL;DR:</strong> A security key is a small USB device from {{org}} that proves it\'s you when you sign in, with no phone needed. You set it up once with IT, then plug it in, enter your key PIN and touch it. Keep it on your keyring and tell IT the same day if you lose it.</p>
 <h3>Who this is for</h3>
 <p>Staff who chose a security key for sign-in approval, or are thinking about it. Anyone can ask for one at no cost.</p>
@@ -849,7 +849,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 </ul>
 <h3>Getting one</h3>
 <ol>
-<li>Ask IT at [IT help desk email / phone] or on the <a href="[OpsHub request page link]">OpsHub request page</a>. Say whether your computer has USB-A (rectangular) or USB-C (small oval) ports.</li>
+<li>Ask IT at [IT help desk email / phone] or on the <a href="[ITOps request page link]">ITOps request page</a>. Say whether your computer has USB-A (rectangular) or USB-C (small oval) ports.</li>
 <li>IT books a short in-person visit. Bring your work computer if you have one.</li>
 </ol>
 <h3>Setting it up with IT</h3>
@@ -883,13 +883,13 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <h3>If you lose it</h3>
 <p>Tell IT <strong>the same day</strong>. IT removes it from your account so it can\'t be used, and gives you a new key and a Temporary Access Pass in person. There is no penalty for reporting a lost key.</p>
 <h3>Questions?</h3>
-<p>Reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[OpsHub request page link]">OpsHub request page</a>.</p>
+<p>Reply to any rollout email, contact [IT help desk email / phone], or open a request on the <a href="[ITOps request page link]">ITOps request page</a>.</p>
 <h3>Related articles</h3>
 <ul>
 <li>Set up your sign-in approval (MFA): app, security key or text message</li>
 <li>Troubleshooting sign-in and security prompts</li>
 </ul>
-<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, OpsHub link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
+<p><em>Draft — review and replace the [bracketed] placeholders (help desk email/phone, ITOps link, dates) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>'],
         ['title' => 'Cómo usar su llave de seguridad', 'lang' => 'es', 'audience' => 'staff', 'replaces' => null, 'content' => '<p><strong>En resumen:</strong> Una llave de seguridad es un pequeño dispositivo USB que le entrega {{org}} para comprobar que es usted al iniciar sesión, sin necesidad de teléfono. Se configura una sola vez con TI; después, solo la conecta, escribe su PIN y la toca. Llévela en su llavero y avise a TI ese mismo día si la pierde.</p>
 <h3>Para quién es</h3>
 <p>Para el personal que eligió una llave de seguridad como método de verificación, o que lo está pensando. Cualquier persona puede pedir una sin costo.</p>
@@ -903,7 +903,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 </ul>
 <h3>Cómo obtenerla</h3>
 <ol>
-<li>Pídala a TI en [correo / teléfono de la mesa de ayuda de TI] o en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>. Indique si su computadora tiene puertos USB-A (rectangulares) o USB-C (pequeños y ovalados).</li>
+<li>Pídala a TI en [correo / teléfono de la mesa de ayuda de TI] o en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>. Indique si su computadora tiene puertos USB-A (rectangulares) o USB-C (pequeños y ovalados).</li>
 <li>TI agendará una breve cita en persona. Si tiene computadora de trabajo, llévela.</li>
 </ol>
 <h3>Configuración con TI</h3>
@@ -937,13 +937,13 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <h3>Si la pierde</h3>
 <p>Avise a TI <strong>ese mismo día</strong>. TI la quita de su cuenta para que nadie pueda usarla y le entrega en persona una llave nueva y un Pase de acceso temporal. Reportar una llave perdida no tiene ninguna sanción.</p>
 <h3>¿Preguntas?</h3>
-<p>Responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>.</p>
+<p>Responda a cualquier correo del proyecto, comuníquese con [correo / teléfono de la mesa de ayuda de TI] o abra una solicitud en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>.</p>
 <h3>Artículos relacionados</h3>
 <ul>
 <li>Configure su verificación de inicio de sesión (MFA): aplicación, llave de seguridad o mensaje de texto</li>
 <li>Solución de problemas de inicio de sesión y avisos de seguridad</li>
 </ul>
-<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de OpsHub, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
+<p><em>Borrador — revise y reemplace los marcadores entre [corchetes] (correo/teléfono de soporte, enlace de ITOps, fechas) con los datos de su organización antes de publicar. Responsable: [nombre] · Última revisión: [fecha].</em></p>'],
         ['title' => 'Personal devices at work: our policy (draft for HR review)', 'lang' => 'en', 'audience' => 'manager', 'replaces' => null, 'content' => '<p><em>DRAFT for HR and leadership to review, edit and adopt. This is a plain-language template, not legal advice. Once approved, it could be issued as a standard operating procedure (SOP) that staff read and acknowledge. Items in [brackets] need a decision.</em></p>
 <p><strong>TL;DR:</strong> Using a personal phone or computer for work is voluntary. The only required step is a sign-in approval (MFA), and {{org}} provides a security key on request so no one needs a personal phone. The company never manages personal devices, no one is expected to answer work messages on them outside working hours, and lost devices must be reported the same day.</p>
 <h3>1. Purpose and scope</h3>
@@ -985,7 +985,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li>The person deletes any work files saved on personal devices and returns the security key and any company equipment.</li>
 </ul>
 <h3>8. Lost or stolen devices</h3>
-<p>Report a lost or stolen device the <strong>same day</strong> to [IT help desk email / phone] or the <a href="[OpsHub request page link]">OpsHub request page</a>. This includes a personal phone used for work apps or sign-in approval, a security key, and any company computer. There is no penalty for reporting.</p>
+<p>Report a lost or stolen device the <strong>same day</strong> to [IT help desk email / phone] or the <a href="[ITOps request page link]">ITOps request page</a>. This includes a personal phone used for work apps or sign-in approval, a security key, and any company computer. There is no penalty for reporting.</p>
 <h3>9. Acknowledgment</h3>
 <p>[If adopted as an SOP: “I have read and understand this policy.” Name · Signature · Date]</p>
 <h3>Related articles</h3>
@@ -1036,7 +1036,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
 <li>La persona elimina los archivos de trabajo que haya guardado en dispositivos personales y devuelve la llave de seguridad y cualquier equipo de la empresa.</li>
 </ul>
 <h3>8. Dispositivos perdidos o robados</h3>
-<p>Reporte un dispositivo perdido o robado <strong>el mismo día</strong> a [correo / teléfono de la mesa de ayuda de TI] o en la <a href="[enlace a la página de solicitudes de OpsHub]">página de solicitudes de OpsHub</a>. Esto incluye un teléfono personal con aplicaciones de trabajo o usado para la verificación, una llave de seguridad y cualquier computadora de la empresa. Reportarlo no tiene ninguna sanción.</p>
+<p>Reporte un dispositivo perdido o robado <strong>el mismo día</strong> a [correo / teléfono de la mesa de ayuda de TI] o en la <a href="[enlace a la página de solicitudes de ITOps]">página de solicitudes de ITOps</a>. Esto incluye un teléfono personal con aplicaciones de trabajo o usado para la verificación, una llave de seguridad y cualquier computadora de la empresa. Reportarlo no tiene ninguna sanción.</p>
 <h3>9. Constancia de recibido</h3>
 <p>[Si se adopta como SOP: “He leído y entiendo esta política.” Nombre · Firma · Fecha]</p>
 <h3>Artículos relacionados</h3>
@@ -1049,21 +1049,21 @@ if (!function_exists('opsh_kb_rollout_articles')) {
         ];
     }
 
-    function opsh_kb_seed_rollout(PDO $db, int $userId): array {
+    function itops_kb_seed_rollout(PDO $db, int $userId): array {
         $catId = null;
-        try { $c = $db->query("SELECT id FROM opsh_categories WHERE kind='kb' AND slug='microsoft-365' LIMIT 1")->fetchColumn(); if ($c) $catId = (int)$c; } catch (\Throwable $e) {}
-        $find = $db->prepare('SELECT id,status,content FROM opsh_kb_articles WHERE title=? ORDER BY id LIMIT 1');
+        try { $c = $db->query("SELECT id FROM itops_categories WHERE kind='kb' AND slug='microsoft-365' LIMIT 1")->fetchColumn(); if ($c) $catId = (int)$c; } catch (\Throwable $e) {}
+        $find = $db->prepare('SELECT id,status,content FROM itops_kb_articles WHERE title=? ORDER BY id LIMIT 1');
         // Review WORK-8: a draft is refreshed only while it still holds the text the app put there (a hash per article is
         // kept); a draft someone has edited is left alone and counted as kept.
-        $hashes = []; try { $hv = $db->query("SELECT sval FROM opsh_settings WHERE skey='kb_rollout_hashes'")->fetchColumn(); $hashes = $hv ? (json_decode($hv, true) ?: []) : []; } catch (\Throwable $e) {}
+        $hashes = []; try { $hv = $db->query("SELECT sval FROM itops_settings WHERE skey='kb_rollout_hashes'")->fetchColumn(); $hashes = $hv ? (json_decode($hv, true) ?: []) : []; } catch (\Throwable $e) {}
         $kept = 0;
-        $ins = $db->prepare("INSERT INTO opsh_kb_articles (title,slug,content,category_id,author_id,status,created_at) VALUES (?,?,?,?,?, 'draft', NOW())");
-        $upd = $db->prepare("UPDATE opsh_kb_articles SET title=?, content=? WHERE id=? AND status='draft'");
-        $created = 0; $updated = 0; $skipped = 0; $all = opsh_kb_rollout_articles();
+        $ins = $db->prepare("INSERT INTO itops_kb_articles (title,slug,content,category_id,author_id,status,created_at) VALUES (?,?,?,?,?, 'draft', NOW())");
+        $upd = $db->prepare("UPDATE itops_kb_articles SET title=?, content=? WHERE id=? AND status='draft'");
+        $created = 0; $updated = 0; $skipped = 0; $all = itops_kb_rollout_articles();
         require_once __DIR__ . '/Brand.php';
-        $org = opsh_org_name($db);   // BT96
+        $org = itops_org_name($db);   // BT96
         foreach ($all as $a) {
-            $a['content'] = opsh_brand($a['content']);   // BT20: the client's app name in the articles
+            $a['content'] = itops_brand($a['content']);   // BT20: the client's app name in the articles
             // BT96: the organization's name (Settings → Branding), or a placeholder to fill in before publishing
             $a['content'] = str_replace('{{org}}', $org !== '' ? htmlspecialchars($org, ENT_QUOTES, 'UTF-8') : (($a['lang'] ?? 'en') === 'es' ? '[nombre de la organización]' : '[organization name]'), $a['content']);
             $a['title'] = str_replace('{{org}}', $org !== '' ? $org : (($a['lang'] ?? 'en') === 'es' ? '[nombre de la organización]' : '[organization name]'), $a['title']);
@@ -1079,7 +1079,7 @@ if (!function_exists('opsh_kb_rollout_articles')) {
             try { $ins->execute([$a['title'], $slug . '-' . $a['lang'], $a['content'], $catId, $userId]); $hashes[(int)$db->lastInsertId()] = hash('sha256', $a['content']); $created++; }
             catch (\Throwable $e) { $skipped++; }
         }
-        try { $db->prepare("INSERT INTO opsh_settings (skey,sval) VALUES ('kb_rollout_hashes',?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([json_encode($hashes)]); } catch (\Throwable $e) {}
+        try { $db->prepare("INSERT INTO itops_settings (skey,sval) VALUES ('kb_rollout_hashes',?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([json_encode($hashes)]); } catch (\Throwable $e) {}
         return ['created' => $created, 'updated' => $updated, 'kept' => $kept, 'skipped' => $skipped, 'total' => count($all)];
     }
 }

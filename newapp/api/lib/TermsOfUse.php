@@ -1,43 +1,43 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Terms of Use (BT97).
+ * ITOps — Terms of Use (BT97).
  *
  * Every person who signs in accepts the Terms once ("I agree" / "Sign out"). The organization's acceptance is given by a
  * person whose role has "Terms of Use · accept for the organization" (BT98: module terms_org; Super Admin always, nobody
  * else until a Super Admin ticks it on a role). Continued use is acceptance too (term 1.2), but the click is the evidence: each acceptance is a
- * row in opsh_terms_acceptances and an Audit Log entry (user, version, date and time, address).
+ * row in itops_terms_acceptances and an Audit Log entry (user, version, date and time, address).
  *
  * The text and its version are fixed here: nothing in the app can change them. A material change gets a new
- * OPSH_TOU_VERSION, and everyone accepts again at their next sign-in. BT98: the Terms name only the organization (this
+ * ITOPS_TOU_VERSION, and everyone accepts again at their next sign-in. BT98: the Terms name only the organization (this
  * installation's own name) and the product; the owner is named only in term 6 (Independent developer). The effective date
  * is this installation's start (installed_at, else its first Audit Log entry).
  *
  * Until the database update of BT97 has run (no acceptance table yet) nobody is asked, so an upload never locks people out.
  */
-if (!defined('OPSH_TOU_VERSION')) {
-    define('OPSH_TOU_VERSION', '1.0');
+if (!defined('ITOPS_TOU_VERSION')) {
+    define('ITOPS_TOU_VERSION', '1.0');
 }
 require_once __DIR__ . '/Brand.php';
 
-if (!function_exists('opsh_tou')) {
+if (!function_exists('itops_tou')) {
     /** BT98: the date these Terms take effect on this installation — when it was installed, else its first Audit Log entry. */
-    function opsh_tou_effective(PDO $db): string {
+    function itops_tou_effective(PDO $db): string {
         try {
-            $v = (string)$db->query("SELECT sval FROM opsh_settings WHERE skey='installed_at'")->fetchColumn();
+            $v = (string)$db->query("SELECT sval FROM itops_settings WHERE skey='installed_at'")->fetchColumn();
             if (preg_match('/^\d{4}-\d{2}-\d{2}/', $v)) return substr($v, 0, 10);
-            $v = (string)$db->query("SELECT MIN(created_at) FROM opsh_audit_log")->fetchColumn();
+            $v = (string)$db->query("SELECT MIN(created_at) FROM itops_audit_log")->fetchColumn();
             if (preg_match('/^\d{4}-\d{2}-\d{2}/', $v)) return substr($v, 0, 10);
         } catch (Throwable $e) {}
         return date('Y-m-d');
     }
 
     /** The Terms: [h => heading, p => [paragraphs], items => [list]] per term. The organization is this installation's own name. */
-    function opsh_tou(PDO $db): array {
-        $P = OPSH_PRODUCT; $org = opsh_org_name($db);
+    function itops_tou(PDO $db): array {
+        $P = ITOPS_PRODUCT; $org = itops_org_name($db);
         $S = [];
         $S[] = ['h' => '1. Acceptance', 'p' => [
-            '1.1 These Terms of Use ("Terms") are an agreement between ' . OPSH_OWNER . ', the owner of ' . $P . ' (the "Owner"), and ' . ($org !== '' ? $org : 'the organization that installs or uses ' . $P) . ' (the "Organization"). They also apply to each person who signs in (a "User").',
+            '1.1 These Terms of Use ("Terms") are an agreement between ' . ITOPS_OWNER . ', the owner of ' . $P . ' (the "Owner"), and ' . ($org !== '' ? $org : 'the organization that installs or uses ' . $P) . ' (the "Organization"). They also apply to each person who signs in (a "User").',
             '1.2 By selecting "I agree", or by installing, accessing or continuing to use ' . $P . ', you accept these Terms. If you do not accept them, do not use ' . $P . '.',
             '1.3 You may not use ' . $P . ' if you cannot form a binding contract, or if the law forbids you to receive it.']];
         $S[] = ['h' => '2. Who is bound', 'p' => [
@@ -61,7 +61,7 @@ if (!function_exists('opsh_tou')) {
             '5.2 Using, testing, suggesting or requesting features of ' . $P . ', or being the first or only organization to use a version or module, gives no Organization or User any ownership or co-authorship in ' . $P . ' or in what is made from it. Ideas and feedback may be used by the Owner freely and without payment.',
             '5.3 The Organization owns its own data (term 7) and its own names and logos entered through branding.']];
         $S[] = ['h' => '6. Independent developer', 'p' => [
-            '6.1 ' . $P . ' was conceived, designed and developed by ' . OPSH_OWNER . ' as an independent software developer, and not as an employee, contractor or consultant of any company or organization. It was not commissioned by, and is not a work made for hire for, any Organization that uses it.',
+            '6.1 ' . $P . ' was conceived, designed and developed by ' . ITOPS_OWNER . ' as an independent software developer, and not as an employee, contractor or consultant of any company or organization. It was not commissioned by, and is not a work made for hire for, any Organization that uses it.',
             '6.2 The Owner is an independent software vendor. These Terms create no employment, partnership, joint-venture or agency relationship. Any other work the Owner does for an Organization is separate from these Terms and transfers no right in ' . $P . '.']];
         $S[] = ['h' => '7. Your data', 'p' => [
             '7.1 The Organization owns the data entered into or connected to ' . $P . ' and is responsible for it: its accuracy, its lawful use, who may see it, backups, and the security of the server it runs on.',
@@ -89,83 +89,83 @@ if (!function_exists('opsh_tou')) {
         $S[] = ['h' => '15. General and contact', 'p' => [
             'These Terms, with any signed agreement under term 2.3, are the entire agreement on their subject. If a term is unenforceable, the rest stays in force. Not enforcing a term is not a waiver of it. Questions about these Terms go to the Organization\'s administrator, who can reach the Owner.']];
         return [
-            'product' => $P, 'title' => $P . ' Terms of Use', 'version' => OPSH_TOU_VERSION, 'effective' => opsh_tou_effective($db),
+            'product' => $P, 'title' => $P . ' Terms of Use', 'version' => ITOPS_TOU_VERSION, 'effective' => itops_tou_effective($db),
             'organization' => $org, 'sections' => $S,
         ];
     }
 
-    function opsh_tou_table(PDO $db): bool {
+    function itops_tou_table(PDO $db): bool {
         static $ok = null;
         if ($ok !== null) return $ok;
-        try { $q = $db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='opsh_terms_acceptances'"); $ok = (int)$q->fetchColumn() > 0; }
+        try { $q = $db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='itops_terms_acceptances'"); $ok = (int)$q->fetchColumn() > 0; }
         catch (Throwable $e) { $ok = false; }
         return $ok;
     }
 
     /** Who may accept for the organization (BT98): the permission "Terms of Use · accept for the organization"
      *  (module terms_org, edit). Super Admin always; no other role has it until a Super Admin ticks it. */
-    function opsh_tou_can_org(array $user): bool {
-        return ($user['role_slug'] ?? '') === 'super_admin' || opsh_can($user, 'terms_org', 'edit');
+    function itops_tou_can_org(array $user): bool {
+        return ($user['role_slug'] ?? '') === 'super_admin' || itops_can($user, 'terms_org', 'edit');
     }
 
     /** BT98: who has accepted the current Terms (for the people who manage users or may accept for the organization). */
-    function opsh_tou_acceptances(PDO $db): array {
-        if (!opsh_tou_table($db)) return [];
+    function itops_tou_acceptances(PDO $db): array {
+        if (!itops_tou_table($db)) return [];
         try {
-            $q = $db->prepare("SELECT a.user_id, u.display_name, u.email, r.name AS role_name, a.scope, a.org_name, a.accepted_at FROM opsh_terms_acceptances a
-                               LEFT JOIN opsh_users u ON u.id=a.user_id LEFT JOIN opsh_roles r ON r.id=u.role_id WHERE a.version=? ORDER BY a.accepted_at DESC, a.id DESC LIMIT 2000");
-            $q->execute([OPSH_TOU_VERSION]);
+            $q = $db->prepare("SELECT a.user_id, u.display_name, u.email, r.name AS role_name, a.scope, a.org_name, a.accepted_at FROM itops_terms_acceptances a
+                               LEFT JOIN itops_users u ON u.id=a.user_id LEFT JOIN itops_roles r ON r.id=u.role_id WHERE a.version=? ORDER BY a.accepted_at DESC, a.id DESC LIMIT 2000");
+            $q->execute([ITOPS_TOU_VERSION]);
             return array_map(fn($r) => ['user_id' => (int)$r['user_id'], 'name' => (string)$r['display_name'], 'email' => (string)$r['email'], 'role' => (string)$r['role_name'],
                                         'for_org' => $r['scope'] === 'org', 'org_name' => (string)$r['org_name'], 'at' => (string)$r['accepted_at']], $q->fetchAll(PDO::FETCH_ASSOC));
         } catch (Throwable $e) { return []; }
     }
     /** BT98: the active people who still have to accept the current Terms. */
-    function opsh_tou_pending_count(PDO $db): ?int {
-        if (!opsh_tou_table($db)) return null;
-        try { $q = $db->prepare("SELECT COUNT(*) FROM opsh_users u WHERE u.status='active' AND NOT EXISTS (SELECT 1 FROM opsh_terms_acceptances a WHERE a.user_id=u.id AND a.version=? AND a.scope='user')");
-              $q->execute([OPSH_TOU_VERSION]); return (int)$q->fetchColumn(); } catch (Throwable $e) { return null; }
+    function itops_tou_pending_count(PDO $db): ?int {
+        if (!itops_tou_table($db)) return null;
+        try { $q = $db->prepare("SELECT COUNT(*) FROM itops_users u WHERE u.status='active' AND NOT EXISTS (SELECT 1 FROM itops_terms_acceptances a WHERE a.user_id=u.id AND a.version=? AND a.scope='user')");
+              $q->execute([ITOPS_TOU_VERSION]); return (int)$q->fetchColumn(); } catch (Throwable $e) { return null; }
     }
 
     /** Where this person stands with the current Terms. API keys are never asked (no person behind them). */
-    function opsh_tou_status(PDO $db, ?array $user): array {
-        $st = ['version' => OPSH_TOU_VERSION, 'required' => false, 'accepted_at' => null, 'org_accepted' => null, 'org_needed' => false, 'org_name' => opsh_org_name($db), 'can_org' => false];
-        if (!$user || empty($user['id']) || !empty($user['api_key_id']) || !opsh_tou_table($db)) return $st;
+    function itops_tou_status(PDO $db, ?array $user): array {
+        $st = ['version' => ITOPS_TOU_VERSION, 'required' => false, 'accepted_at' => null, 'org_accepted' => null, 'org_needed' => false, 'org_name' => itops_org_name($db), 'can_org' => false];
+        if (!$user || empty($user['id']) || !empty($user['api_key_id']) || !itops_tou_table($db)) return $st;
         try {
-            $q = $db->prepare("SELECT accepted_at FROM opsh_terms_acceptances WHERE user_id=? AND version=? AND scope='user' ORDER BY id DESC LIMIT 1");
-            $q->execute([(int)$user['id'], OPSH_TOU_VERSION]); $mine = $q->fetchColumn();
-            $q = $db->prepare("SELECT a.accepted_at, a.org_name, u.display_name FROM opsh_terms_acceptances a LEFT JOIN opsh_users u ON u.id=a.user_id WHERE a.version=? AND a.scope='org' ORDER BY a.id LIMIT 1");
-            $q->execute([OPSH_TOU_VERSION]); $org = $q->fetch(PDO::FETCH_ASSOC) ?: null;
+            $q = $db->prepare("SELECT accepted_at FROM itops_terms_acceptances WHERE user_id=? AND version=? AND scope='user' ORDER BY id DESC LIMIT 1");
+            $q->execute([(int)$user['id'], ITOPS_TOU_VERSION]); $mine = $q->fetchColumn();
+            $q = $db->prepare("SELECT a.accepted_at, a.org_name, u.display_name FROM itops_terms_acceptances a LEFT JOIN itops_users u ON u.id=a.user_id WHERE a.version=? AND a.scope='org' ORDER BY a.id LIMIT 1");
+            $q->execute([ITOPS_TOU_VERSION]); $org = $q->fetch(PDO::FETCH_ASSOC) ?: null;
         } catch (Throwable $e) { return $st; }
         $st['accepted_at'] = $mine ?: null;
         $st['org_accepted'] = $org ? ['at' => $org['accepted_at'], 'by' => (string)($org['display_name'] ?? ''), 'org_name' => (string)$org['org_name']] : null;
-        $st['can_org'] = opsh_tou_can_org($user);
+        $st['can_org'] = itops_tou_can_org($user);
         $st['org_needed'] = !$org && $st['can_org'];
         $st['required'] = !$mine || $st['org_needed'];
         return $st;
     }
-    function opsh_tou_required(PDO $db, ?array $user): bool { return opsh_tou_status($db, $user)['required']; }
+    function itops_tou_required(PDO $db, ?array $user): bool { return itops_tou_status($db, $user)['required']; }
 
     /** Record an acceptance (and the organization's, when this person may give it and it is still missing). */
-    function opsh_tou_accept(PDO $db, array $user, bool $forOrg, string $orgName): array {
-        if (!opsh_tou_table($db)) error_response('The database update of this build has not run yet (Settings → Maintenance → Apply updates now).', 409);
-        $st = opsh_tou_status($db, $user);
+    function itops_tou_accept(PDO $db, array $user, bool $forOrg, string $orgName): array {
+        if (!itops_tou_table($db)) error_response('The database update of this build has not run yet (Settings → Maintenance → Apply updates now).', 409);
+        $st = itops_tou_status($db, $user);
         $ip = substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45); $ua = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
-        $ins = $db->prepare("INSERT INTO opsh_terms_acceptances (user_id, version, scope, org_name, ip_address, user_agent, accepted_at) VALUES (?,?,?,?,?,?,NOW())");
+        $ins = $db->prepare("INSERT INTO itops_terms_acceptances (user_id, version, scope, org_name, ip_address, user_agent, accepted_at) VALUES (?,?,?,?,?,?,NOW())");
         if ($st['org_needed']) {
             if (!$forOrg) error_response('Tick the box to accept the Terms for your organization first.', 400);
-            $set = opsh_org_name($db);
+            $set = itops_org_name($db);
             $orgName = $set !== '' ? $set : trim(preg_replace('/\s+/u', ' ', $orgName));   // BT98: an organization already named keeps its name
             if ($orgName === '') error_response('Type the name of your organization.', 400);
             if (mb_strlen($orgName) > 120) error_response('The organization name is longer than 120 characters.', 400);
-            $ins->execute([(int)$user['id'], OPSH_TOU_VERSION, 'org', $orgName, $ip, $ua]);
-            if (function_exists('audit_log')) audit_log('terms_accept_org', 'terms', (int)$user['id'], OPSH_TOU_VERSION, null, ['version' => OPSH_TOU_VERSION, 'organization' => $orgName]);
+            $ins->execute([(int)$user['id'], ITOPS_TOU_VERSION, 'org', $orgName, $ip, $ua]);
+            if (function_exists('audit_log')) audit_log('terms_accept_org', 'terms', (int)$user['id'], ITOPS_TOU_VERSION, null, ['version' => ITOPS_TOU_VERSION, 'organization' => $orgName]);
             // The organization's name feeds About & ownership → Licensed to, when it is not set yet.
-            try { if (opsh_org_name($db) === '') $db->prepare("INSERT INTO opsh_settings (skey, sval) VALUES ('org_name', ?) ON DUPLICATE KEY UPDATE sval=IF(sval='' OR sval IS NULL, VALUES(sval), sval)")->execute([$orgName]); } catch (Throwable $e) {}
+            try { if (itops_org_name($db) === '') $db->prepare("INSERT INTO itops_settings (skey, sval) VALUES ('org_name', ?) ON DUPLICATE KEY UPDATE sval=IF(sval='' OR sval IS NULL, VALUES(sval), sval)")->execute([$orgName]); } catch (Throwable $e) {}
         }
         if (!$st['accepted_at']) {
-            $ins->execute([(int)$user['id'], OPSH_TOU_VERSION, 'user', null, $ip, $ua]);
-            if (function_exists('audit_log')) audit_log('terms_accept', 'terms', (int)$user['id'], OPSH_TOU_VERSION, null, ['version' => OPSH_TOU_VERSION]);
+            $ins->execute([(int)$user['id'], ITOPS_TOU_VERSION, 'user', null, $ip, $ua]);
+            if (function_exists('audit_log')) audit_log('terms_accept', 'terms', (int)$user['id'], ITOPS_TOU_VERSION, null, ['version' => ITOPS_TOU_VERSION]);
         }
-        return opsh_tou_status($db, $user);
+        return itops_tou_status($db, $user);
     }
 }

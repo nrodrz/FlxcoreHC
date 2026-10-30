@@ -1,19 +1,19 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — vTiger database access (READ-ONLY).
+ * ITOps — vTiger database access (READ-ONLY).
  *
  * Used only for deduplication during onboarding (does a user with this email
  * already exist?) and simple lookups. Read-only: SELECTs
  * only. User CREATION never happens here — that goes through the bridge
- * (opsh-bridge.php) with vTiger's own model.
+ * (itops-bridge.php) with vTiger's own model.
  *
- * Config comes from opsh_settings key 'vtiger_db' (JSON: host/db/user/pass/port).
+ * Config comes from itops_settings key 'vtiger_db' (JSON: host/db/user/pass/port).
  * Grant this DB user read access on the vTiger schema (read-only).
  */
 
-if (!class_exists('OpshVTigerDb')) {
-    final class OpshVTigerDb {
+if (!class_exists('ItopsVTigerDb')) {
+    final class ItopsVTigerDb {
         private PDO $pdo;
 
         public function __construct(array $cfg) {

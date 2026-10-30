@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — the IT budget as a formal document (BT60), in PDF and Word, from the same content.
+ * ITOps — the IT budget as a formal document (BT60), in PDF and Word, from the same content.
  *
  * Sections (each can be left out): executive summary, budget by category with the year before, Run/Grow/Transform
  * and operating/capital, offices, Microsoft 365 licenses, equipment replacement plan, contracts and renewals,
@@ -10,33 +10,33 @@
  * into the document that is not in the budget, except the text a person writes (introduction, names).
  *
  * The options a person chooses for a year (status, version, who it is for, introduction, approvers, sections) are kept
- * in opsh_settings.budget_doc ({fy: options}) so the next document starts from them; a change is audited.
+ * in itops_settings.budget_doc ({fy: options}) so the next document starts from them; a change is audited.
  */
 require_once __DIR__ . '/Budget.php';
 require_once __DIR__ . '/DocExport.php';
 
-if (!function_exists('opsh_budget_document')) {
+if (!function_exists('itops_budget_document')) {
 
-    function opsh_budget_doc_sections(): array {
+    function itops_budget_doc_sections(): array {
         return ['summary' => 'Executive summary', 'categories' => 'Budget by category', 'mix' => 'Run / Grow / Transform and operating / capital', 'offices' => 'Offices',
                 'm365' => 'Microsoft 365 licenses', 'equipment' => 'Equipment replacement plan', 'contracts' => 'Contracts and renewals', 'vendors' => 'Vendors',
                 'benchmarks' => 'Benchmarks', 'spend' => 'Spend to date', 'assumptions' => 'Assumptions and notes', 'approval' => 'Approval', 'detail' => 'Appendix: line detail'];
     }
-    function opsh_budget_doc_statuses(): array {
+    function itops_budget_doc_statuses(): array {
         return ['draft' => 'Draft for review', 'proposed' => 'Proposed for approval', 'approved' => 'Approved', 'final' => 'Final'];
     }
-    function opsh_budget_doc_defaults(array $user): array {
+    function itops_budget_doc_defaults(array $user): array {
         return ['status' => 'draft', 'version' => '1.0', 'title' => '', 'prepared_for' => 'Executive Leadership', 'prepared_by' => trim((string)($user['display_name'] ?? '')),
                 'prepared_by_title' => trim((string)($user['job_title'] ?? '')) ?: 'IT', 'intro' => '', 'detail_group' => 'category',
-                'sections' => array_keys(opsh_budget_doc_sections()),
+                'sections' => array_keys(itops_budget_doc_sections()),
                 'approvers' => [['Prepared by', trim((string)($user['display_name'] ?? '')), ''], ['Reviewed by', '', 'Finance'], ['Approved by', '', 'Executive Director / CEO']]];
     }
-    function opsh_budget_doc_saved(PDO $db, int $fy): ?array {
-        try { $s = $db->prepare("SELECT sval FROM opsh_settings WHERE skey='budget_doc'"); $s->execute(); $j = json_decode((string)$s->fetchColumn(), true); } catch (Throwable $e) { $j = null; }
+    function itops_budget_doc_saved(PDO $db, int $fy): ?array {
+        try { $s = $db->prepare("SELECT sval FROM itops_settings WHERE skey='budget_doc'"); $s->execute(); $j = json_decode((string)$s->fetchColumn(), true); } catch (Throwable $e) { $j = null; }
         return is_array($j[(string)$fy] ?? null) ? $j[(string)$fy] : null;
     }
     /** Check the options a person sends. Throws InvalidArgumentException with a sentence. */
-    function opsh_budget_doc_clean(array $in, array $base): array {
+    function itops_budget_doc_clean(array $in, array $base): array {
         $o = $base; $bad = fn($m) => throw new InvalidArgumentException($m);
         foreach (['title' => 160, 'version' => 30, 'prepared_for' => 160, 'prepared_by' => 120, 'prepared_by_title' => 120, 'intro' => 4000] as $k => $max) if (array_key_exists($k, $in)) {
             if (!is_string($in[$k])) $bad('The document options are not in the expected form.');
@@ -44,11 +44,11 @@ if (!function_exists('opsh_budget_document')) {
             if (mb_strlen($v) > $max) $bad(['title' => 'The title', 'version' => 'The version', 'prepared_for' => '"Prepared for"', 'prepared_by' => '"Prepared by"', 'prepared_by_title' => 'The title of the person who prepared it', 'intro' => 'The introduction'][$k] . " is longer than $max characters.");
             $o[$k] = $v;
         }
-        if (array_key_exists('status', $in)) { if (!isset(opsh_budget_doc_statuses()[$in['status']])) $bad('Choose the status of the document.'); $o['status'] = $in['status']; }
+        if (array_key_exists('status', $in)) { if (!isset(itops_budget_doc_statuses()[$in['status']])) $bad('Choose the status of the document.'); $o['status'] = $in['status']; }
         if (array_key_exists('detail_group', $in)) { if (!in_array($in['detail_group'], ['category', 'office'], true)) $bad('The line detail is grouped by category or by office.'); $o['detail_group'] = $in['detail_group']; }
         if (array_key_exists('sections', $in)) {
             if (!is_array($in['sections'])) $bad('Choose the sections.');
-            $o['sections'] = array_values(array_intersect(array_keys(opsh_budget_doc_sections()), array_map('strval', $in['sections'])));
+            $o['sections'] = array_values(array_intersect(array_keys(itops_budget_doc_sections()), array_map('strval', $in['sections'])));
             if (!$o['sections']) $bad('Choose at least one section.');
         }
         if (array_key_exists('approvers', $in)) {
@@ -67,29 +67,29 @@ if (!function_exists('opsh_budget_document')) {
     }
 
     /** The document for fiscal year $fy. */
-    function opsh_budget_document(PDO $db, int $fy, array $opt, array $user): OpshDoc {
-        $sum = opsh_budget_summary($db, $fy); $cfg = $sum['cfg']; $k = $sum['kpi']; $fyd = $sum['fy']; $cur = $cfg['currency'];
-        $M = fn(?float $v, bool $c = false) => opsh_doc_money($v, $cur, $c);
-        $pools = opsh_budget_pools(); $natures = opsh_budget_natures(); $bill = opsh_budget_billings();
-        $brand = opsh_doc_brand($db); $on = array_flip($opt['sections']);
-        $status = opsh_budget_doc_statuses()[$opt['status']] ?? '';
+    function itops_budget_document(PDO $db, int $fy, array $opt, array $user): ItopsDoc {
+        $sum = itops_budget_summary($db, $fy); $cfg = $sum['cfg']; $k = $sum['kpi']; $fyd = $sum['fy']; $cur = $cfg['currency'];
+        $M = fn(?float $v, bool $c = false) => itops_doc_money($v, $cur, $c);
+        $pools = itops_budget_pools(); $natures = itops_budget_natures(); $bill = itops_budget_billings();
+        $brand = itops_doc_brand($db); $on = array_flip($opt['sections']);
+        $status = itops_budget_doc_statuses()[$opt['status']] ?? '';
         $title = $opt['title'] !== '' ? $opt['title'] : 'IT Budget ' . $fyd['label'];
         $fmtD = fn(?string $d) => $d ? date('m/d/Y', strtotime(substr($d, 0, 10))) : '';
 
         // lines with names
-        $st = $db->prepare('SELECT l.*, s.name AS site_name, v.name AS vendor_name FROM opsh_budget_lines l LEFT JOIN opsh_budget_sites s ON s.id = l.site_id LEFT JOIN opsh_vendors v ON v.id = l.vendor_id WHERE l.fy = ? ORDER BY l.pool, l.amount DESC, l.name');
+        $st = $db->prepare('SELECT l.*, s.name AS site_name, v.name AS vendor_name FROM itops_budget_lines l LEFT JOIN itops_budget_sites s ON s.id = l.site_id LEFT JOIN itops_vendors v ON v.id = l.vendor_id WHERE l.fy = ? ORDER BY l.pool, l.amount DESC, l.name');
         $st->execute([$fy]); $all = [];
-        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) { $l = opsh_budget_line_row($r); $l['site_name'] = (string)($r['site_name'] ?? ''); $l['vendor_name'] = (string)($r['vendor_name'] ?? ''); $all[] = $l; }
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) { $l = itops_budget_line_row($r); $l['site_name'] = (string)($r['site_name'] ?? ''); $l['vendor_name'] = (string)($r['vendor_name'] ?? ''); $all[] = $l; }
         $live = array_values(array_filter($all, fn($l) => $l['status'] !== 'cut'));
-        $planned = (float)$k['planned']; $pct = fn(float $v) => $planned > 0 ? opsh_doc_pct($v / $planned * 100) : '—';
-        $prevPool = []; $pp = $db->prepare("SELECT pool, SUM(amount) FROM opsh_budget_lines WHERE fy=? AND status<>'cut' GROUP BY pool"); $pp->execute([$fy - 1]);
+        $planned = (float)$k['planned']; $pct = fn(float $v) => $planned > 0 ? itops_doc_pct($v / $planned * 100) : '—';
+        $prevPool = []; $pp = $db->prepare("SELECT pool, SUM(amount) FROM itops_budget_lines WHERE fy=? AND status<>'cut' GROUP BY pool"); $pp->execute([$fy - 1]);
         foreach ($pp->fetchAll(PDO::FETCH_NUM) as [$p, $v]) $prevPool[$p] = (float)$v;
-        $prev = $sum['prev_planned']; $prevLabel = opsh_budget_fy($cfg, $fy - 1)['label'];
+        $prev = $sum['prev_planned']; $prevLabel = itops_budget_fy($cfg, $fy - 1)['label'];
         $change = ($prev && $prev > 0) ? ($planned - $prev) / $prev * 100 : null;
 
-        $d = new OpshDoc(['title' => $title, 'subtitle' => 'Information technology operating and capital budget · ' . $fyd['label'] . ' (' . $fmtD($fyd['start']) . ' – ' . $fmtD($fyd['end']) . ')',
+        $d = new ItopsDoc(['title' => $title, 'subtitle' => 'Information technology operating and capital budget · ' . $fyd['label'] . ' (' . $fmtD($fyd['start']) . ' – ' . $fmtD($fyd['end']) . ')',
             'org' => $brand['org'], 'logo' => $brand['logo'], 'footer' => $brand['footer'], 'accent' => $brand['accent'], 'status' => $status, 'watermark' => $opt['status'] === 'draft' ? 'Draft' : '',
-            'header' => $title . ($opt['version'] !== '' ? ' · v' . $opt['version'] : ''), 'author' => $opt['prepared_by'], 'producer' => function_exists('opsh_app_name') ? opsh_app_name() : 'OpsHub',
+            'header' => $title . ($opt['version'] !== '' ? ' · v' . $opt['version'] : ''), 'author' => $opt['prepared_by'], 'producer' => function_exists('itops_app_name') ? itops_app_name() : 'ITOps',
             'cover' => [['Prepared for', $opt['prepared_for']], ['Prepared by', trim($opt['prepared_by'] . ($opt['prepared_by_title'] !== '' ? ', ' . $opt['prepared_by_title'] : ''), ', ')],
                         ['Fiscal year', $fyd['label'] . ' · ' . $fmtD($fyd['start']) . ' – ' . $fmtD($fyd['end'])], ['Version', trim(($opt['version'] !== '' ? $opt['version'] . ' · ' : '') . date('m/d/Y'))]],
             'date' => date('m/d/Y')]);
@@ -99,13 +99,13 @@ if (!function_exists('opsh_budget_document')) {
             $d->h1('Executive summary');
             $top = $sum['by_pool'][0] ?? null;
             $intro = $opt['intro'] !== '' ? $opt['intro'] : 'This document presents the proposed information technology budget for ' . $fyd['label'] . ', from ' . $fmtD($fyd['start']) . ' to ' . $fmtD($fyd['end']) . '. '
-                . 'It requests ' . $M((float)$k['total']) . ': ' . $M($planned) . ' of planned costs in ' . count($live) . ' budget lines and a contingency of ' . $M((float)$k['contingency']) . ' (' . opsh_doc_pct((float)$cfg['contingency_pct'], 0) . ').'
-                . ($change !== null ? ' Planned costs ' . ($change >= 0 ? 'increase' : 'decrease') . ' by ' . opsh_doc_pct(abs($change)) . ' from ' . $prevLabel . ' (' . $M($prev) . ').' : '')
+                . 'It requests ' . $M((float)$k['total']) . ': ' . $M($planned) . ' of planned costs in ' . count($live) . ' budget lines and a contingency of ' . $M((float)$k['contingency']) . ' (' . itops_doc_pct((float)$cfg['contingency_pct'], 0) . ').'
+                . ($change !== null ? ' Planned costs ' . ($change >= 0 ? 'increase' : 'decrease') . ' by ' . itops_doc_pct(abs($change)) . ' from ' . $prevLabel . ' (' . $M($prev) . ').' : '')
                 . ' Each line names its vendor and, for recurring costs, the contract or agreement it is paid under, so every amount can be traced to who is paid and why.';
             foreach (preg_split('/\n\s*\n/', $intro) as $para) $d->p($para);
-            $d->kpis([['Total request', $M((float)$k['total']), 'Planned + ' . opsh_doc_pct((float)$cfg['contingency_pct'], 0) . ' contingency'],
+            $d->kpis([['Total request', $M((float)$k['total']), 'Planned + ' . itops_doc_pct((float)$cfg['contingency_pct'], 0) . ' contingency'],
                       ['Planned costs', $M($planned), count($live) . ' lines'],
-                      ['Change from ' . $prevLabel, $change === null ? '—' : ($change >= 0 ? '+' : '') . opsh_doc_pct($change), $prev ? $M($planned - $prev) . ($planned >= $prev ? ' more' : ' less') : 'No earlier year in the app'],
+                      ['Change from ' . $prevLabel, $change === null ? '—' : ($change >= 0 ? '+' : '') . itops_doc_pct($change), $prev ? $M($planned - $prev) . ($planned >= $prev ? ' more' : ' less') : 'No earlier year in the app'],
                       ['Operating / capital', $planned > 0 ? round((float)$k['opex'] / $planned * 100) . '% / ' . round((float)$k['capex'] / $planned * 100) . '%' : '—', $M((float)$k['opex']) . ' / ' . $M((float)$k['capex'])]]);
             $pts = [];
             if ($top && $top['amount'] > 0) $pts[] = $top['label'] . ' is the largest category: ' . $M($top['amount']) . ' (' . $pct($top['amount']) . ' of planned costs).';
@@ -114,7 +114,7 @@ if (!function_exists('opsh_budget_document')) {
             $eq = array_filter($live, fn($l) => $l['source'] === 'equipment');
             if ($eq) $pts[] = 'Equipment replacement: ' . (int)array_sum(array_column($eq, 'qty')) . ' items that reach their refresh cycle, ' . $M(array_sum(array_column($eq, 'amount'))) . '.';
             if ($sum['renewals']) { $nr = count($sum['renewals']); $pts[] = $nr . ' renewal' . ($nr === 1 ? ' falls' : 's fall') . ' inside the year (see Contracts and renewals).'; }
-            if ($k['run_pct'] !== null) $pts[] = opsh_doc_pct((float)$k['run_pct'], 0) . ' of planned costs keep current services running; the rest grows or transforms them.';
+            if ($k['run_pct'] !== null) $pts[] = itops_doc_pct((float)$k['run_pct'], 0) . ' of planned costs keep current services running; the rest grows or transforms them.';
             if ($k['needs_price']) $pts[] = $k['needs_price'] . ' line' . ($k['needs_price'] === 1 ? ' still needs a price and is' : 's still need a price and are') . ' not counted yet.';
             $d->bullets($pts);
         }
@@ -126,11 +126,11 @@ if (!function_exists('opsh_budget_document')) {
             foreach ($sum['by_pool'] as $p) {
                 if ($p['amount'] <= 0 && empty($prevPool[$p['key']])) continue;
                 $pv = $prevPool[$p['key']] ?? null; $ch = ($pv && $pv > 0) ? ($p['amount'] - $pv) / $pv * 100 : null;
-                $rows[] = [$p['label'], $pv !== null ? $M($pv) : '—', $M($p['amount']), $ch === null ? '—' : ($ch >= 0 ? '+' : '') . opsh_doc_pct($ch), $pct($p['amount'])];
+                $rows[] = [$p['label'], $pv !== null ? $M($pv) : '—', $M($p['amount']), $ch === null ? '—' : ($ch >= 0 ? '+' : '') . itops_doc_pct($ch), $pct($p['amount'])];
                 if ($p['amount'] > 0) $bars[] = [$p['label'], $p['amount'], $M($p['amount'])];
             }
-            $rows[] = ['cells' => ['Planned costs', $prev ? $M($prev) : '—', $M($planned), $change === null ? '—' : ($change >= 0 ? '+' : '') . opsh_doc_pct($change), $planned > 0 ? '100%' : '—'], 'style' => 'total'];
-            $rows[] = ['cells' => ['Contingency (' . opsh_doc_pct((float)$cfg['contingency_pct'], 0) . ')', '', $M((float)$k['contingency']), '', ''], 'style' => 'muted'];
+            $rows[] = ['cells' => ['Planned costs', $prev ? $M($prev) : '—', $M($planned), $change === null ? '—' : ($change >= 0 ? '+' : '') . itops_doc_pct($change), $planned > 0 ? '100%' : '—'], 'style' => 'total'];
+            $rows[] = ['cells' => ['Contingency (' . itops_doc_pct((float)$cfg['contingency_pct'], 0) . ')', '', $M((float)$k['contingency']), '', ''], 'style' => 'muted'];
             $rows[] = ['cells' => ['Total request', '', $M((float)$k['total']), '', ''], 'style' => 'total'];
             $d->table([['label' => 'Category', 'w' => 3.2], ['label' => $prevLabel, 'w' => 1.5, 'align' => 'R'], ['label' => $fyd['label'], 'w' => 1.5, 'align' => 'R'], ['label' => 'Change', 'w' => 1.1, 'align' => 'R'], ['label' => 'Share', 'w' => 1, 'align' => 'R']], $rows);
             if ($bars) { $d->h2('Where the money goes'); $d->bars($bars); }
@@ -149,7 +149,7 @@ if (!function_exists('opsh_budget_document')) {
         // ── Offices
         if (isset($on['offices'])) {
             $d->h1('Offices');
-            $sites = opsh_budget_sites($db); $counts = []; try { $counts = opsh_budget_site_counts($db, $sites); } catch (Throwable $e) {}
+            $sites = itops_budget_sites($db); $counts = []; try { $counts = itops_budget_site_counts($db, $sites); } catch (Throwable $e) {}
             $bySite = []; foreach ($live as $l) { $kk = (int)($l['site_id'] ?? 0); $bySite[$kk]['amount'] = ($bySite[$kk]['amount'] ?? 0) + $l['amount']; $bySite[$kk]['tele'] = ($bySite[$kk]['tele'] ?? 0) + ($l['pool'] === 'telecom' ? $l['amount'] : 0); $bySite[$kk]['hw'] = ($bySite[$kk]['hw'] ?? 0) + ($l['pool'] === 'hardware' ? $l['amount'] : 0); }
             $rows = []; $none = [];
             foreach ($sites as $s) {
@@ -177,7 +177,7 @@ if (!function_exists('opsh_budget_document')) {
         // ── Equipment
         if (isset($on['equipment'])) {
             $d->h1('Equipment replacement plan');
-            $plan = opsh_budget_equipment_plan($db, $fy); $t = $plan['totals'];
+            $plan = itops_budget_equipment_plan($db, $fy); $t = $plan['totals'];
             $d->p('From the equipment recorded in the app: every item in use whose purchase date plus its refresh cycle falls on or before ' . $fmtD($fyd['end']) . ' is due for replacement in ' . $fyd['label'] . '.');
             $d->kpis([['Items recorded', (string)$t['items'], 'In use, on loan or in repair'], ['Due in ' . $fyd['label'], (string)$t['due'], $t['overdue'] ? $t['overdue'] . ' already past their cycle' : 'None past due'],
                       ['Estimated cost', $M((float)$t['cost']), $t['needs_price'] ? 'Some kinds have no price yet' : 'At the prices shown'], ['Age unknown', (string)$t['unknown'], 'No purchase date recorded']]);
@@ -193,7 +193,7 @@ if (!function_exists('opsh_budget_document')) {
             $withC = array_values(array_filter($live, fn($l) => !empty($l['contract_id'])));
             $rows = [];
             foreach ($withC as $l) {
-                $c = opsh_budget_contract($db, (int)$l['contract_id']); if (!$c) continue; $fl = opsh_budget_contract_flags($c, $l, $fyd);
+                $c = itops_budget_contract($db, (int)$l['contract_id']); if (!$c) continue; $fl = itops_budget_contract_flags($c, $l, $fyd);
                 $note = ['ends' => 'ends in the year, does not renew by itself', 'ended' => 'ended before the year', 'closed' => 'terminated or archived', 'ok' => ''][$fl['state']] ?? '';
                 $rows[] = [$c['ref'] . ' ' . $c['title'], $l['vendor_name'] ?: $c['vendor_name'], $c['end'] ? $fmtD($c['end']) . ($c['auto_renew'] ? ' (auto)' : '') : 'no end date', $M($l['amount']), $note];
             }
@@ -217,11 +217,11 @@ if (!function_exists('opsh_budget_document')) {
         if (isset($on['benchmarks'])) {
             $d->h1('Benchmarks');
             $d->p('Reference figures to put this budget in context. A benchmark is a question to ask, not a target: organizations differ in how much they buy as services, how many offices they run and what they count as IT.');
-            $ours = ['np_pct' => $k['pct_operating_comparable'] !== null ? opsh_doc_pct((float)$k['pct_operating_comparable'], 2) . ' (without IT staff and telecom)' : 'enter the operating budget in Settings',
+            $ours = ['np_pct' => $k['pct_operating_comparable'] !== null ? itops_doc_pct((float)$k['pct_operating_comparable'], 2) . ' (without IT staff and telecom)' : 'enter the operating budget in Settings',
                      'np_emp' => $k['per_employee_comparable'] !== null ? $M((float)$k['per_employee_comparable']) . ' (without IT staff and telecom)' : 'enter the number of employees in Settings',
-                     'growth' => $change !== null ? ($change >= 0 ? '+' : '') . opsh_doc_pct($change) : '—', 'security' => $k['security_pct'] !== null ? opsh_doc_pct((float)$k['security_pct']) : '—',
-                     'personnel' => $k['labor_pct'] !== null ? opsh_doc_pct((float)$k['labor_pct']) : '—', 'run' => $k['run_pct'] !== null ? opsh_doc_pct((float)$k['run_pct']) : '—',
-                     'contingency' => opsh_doc_pct((float)$cfg['contingency_pct'], 0), 'm365' => ucfirst((string)$cfg['pricing']) . ' prices'];
+                     'growth' => $change !== null ? ($change >= 0 ? '+' : '') . itops_doc_pct($change) : '—', 'security' => $k['security_pct'] !== null ? itops_doc_pct((float)$k['security_pct']) : '—',
+                     'personnel' => $k['labor_pct'] !== null ? itops_doc_pct((float)$k['labor_pct']) : '—', 'run' => $k['run_pct'] !== null ? itops_doc_pct((float)$k['run_pct']) : '—',
+                     'contingency' => itops_doc_pct((float)$cfg['contingency_pct'], 0), 'm365' => ucfirst((string)$cfg['pricing']) . ' prices'];
             $rows = []; $src = [];
             foreach ($sum['benchmarks'] as $b) { $rows[] = [$b['label'], $b['value'], $ours[$b['key']] ?? '—']; if (!empty($b['source'])) $src[$b['source'][0]] = $b['source'][1]; }
             $d->table([['label' => 'Measure', 'w' => 2.6], ['label' => 'Benchmark', 'w' => 3.2], ['label' => 'This budget', 'w' => 2]], $rows);
@@ -231,19 +231,19 @@ if (!function_exists('opsh_budget_document')) {
         if (isset($on['spend']) && (float)$k['actual'] > 0) {
             $d->h1('Spend to date');
             $d->p('Spent so far: ' . $M((float)$k['actual']) . ' after ' . $k['elapsed_months'] . ' month' . ($k['elapsed_months'] === 1 ? '' : 's') . ' of the year, against ' . $M((float)$k['expected_to_date']) . ' expected at an even pace.');
-            $rows = []; foreach ($sum['by_pool'] as $p) if ($p['amount'] > 0 || $p['actual'] > 0) $rows[] = [$p['label'], $M($p['amount']), $M($p['actual']), $p['amount'] > 0 ? opsh_doc_pct($p['actual'] / $p['amount'] * 100, 0) : '—'];
+            $rows = []; foreach ($sum['by_pool'] as $p) if ($p['amount'] > 0 || $p['actual'] > 0) $rows[] = [$p['label'], $M($p['amount']), $M($p['actual']), $p['amount'] > 0 ? itops_doc_pct($p['actual'] / $p['amount'] * 100, 0) : '—'];
             $d->table([['label' => 'Category', 'w' => 3], ['label' => 'Planned', 'w' => 1.4, 'align' => 'R'], ['label' => 'Spent', 'w' => 1.4, 'align' => 'R'], ['label' => 'Used', 'w' => 1, 'align' => 'R']], $rows);
         }
         // ── Assumptions
         if (isset($on['assumptions'])) {
             $d->h1('Assumptions and notes');
-            $rc = []; foreach ($cfg['refresh'] as $c => $y) if ($y > 0) $rc[] = mb_strtolower(opsh_budget_cat_label($c, true)) . ' ' . $y;
+            $rc = []; foreach ($cfg['refresh'] as $c => $y) if ($y > 0) $rc[] = mb_strtolower(itops_budget_cat_label($c, true)) . ' ' . $y;
             $pts = ['Fiscal year ' . $fyd['label'] . ': ' . $fmtD($fyd['start']) . ' to ' . $fmtD($fyd['end']) . '. Amounts in ' . $cur . '.',
                     'Each amount is price × quantity × the times it is billed in the year, computed by the application from the budget lines.',
-                    'Contingency: ' . opsh_doc_pct((float)$cfg['contingency_pct'], 0) . ' of planned costs, for price increases and failures nobody planned.',
+                    'Contingency: ' . itops_doc_pct((float)$cfg['contingency_pct'], 0) . ' of planned costs, for price increases and failures nobody planned.',
                     'Microsoft 365: ' . $cfg['pricing'] . ' pricing; the price on the invoice replaces Microsoft\'s published price once it is saved.',
                     'Equipment refresh cycles (years): ' . implode(', ', $rc) . '.',
-                    'Yearly increase used when a year is copied forward: ' . opsh_doc_pct((float)$cfg['increase_pct']) . '.'];
+                    'Yearly increase used when a year is copied forward: ' . itops_doc_pct((float)$cfg['increase_pct']) . '.'];
             if ($k['needs_price']) $pts[] = $k['needs_price'] . ' line(s) have no price yet and are not counted in the totals.';
             if ($k['incomplete']) $pts[] = $k['incomplete'] . ' line(s) still need a vendor or a contract.';
             if ($k['cut']) $pts[] = $k['cut'] . ' line(s) were cut and are not counted.';

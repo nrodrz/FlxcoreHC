@@ -1,17 +1,17 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
-/** OpsHub — the role permission check, shared by the API and the background jobs (BT66: moved here from api/index.php, unchanged). */
-if (!function_exists('opsh_can')) {
+/** ITOps — the role permission check, shared by the API and the background jobs (BT66: moved here from api/index.php, unchanged). */
+if (!function_exists('itops_can')) {
 /**
  * Server-side permission check (defence in depth — the UI also hides modules).
  * Mirrors the client `can()` logic against the role's stored permissions JSON.
  */
-function opsh_can($user, $module, $action = 'view') {
+function itops_can($user, $module, $action = 'view') {
     if (!$user) return false;
     // BT101: a permission of a module that is not part of this installation (not licensed, or switched off) is refused for
     // everyone, Super Admin included. The data stays; switching the module on brings it back.
     require_once __DIR__ . '/Modules.php';
-    if (!opsh_perm_enabled((string)$module)) return false;
+    if (!itops_perm_enabled((string)$module)) return false;
     if (($user['role_slug'] ?? '') === 'super_admin') return true;
     $perms = $user['role_perms'] ?? null;
     if (is_string($perms)) { $d = json_decode($perms, true); $perms = is_array($d) ? $d : []; }
@@ -43,7 +43,7 @@ function opsh_can($user, $module, $action = 'view') {
         if ($module === 'changelog') return $action === 'view';
         if (isset($inherit[$module])) {
             [$pm, $need] = $inherit[$module];
-            return opsh_can($user, $pm, $action === 'view' ? 'view' : $need);
+            return itops_can($user, $pm, $action === 'view' ? 'view' : $need);
         }
         return false;
     }
@@ -57,7 +57,7 @@ function opsh_can($user, $module, $action = 'view') {
 }
 }
 
-if (!function_exists('opsh_audit_types')) {
+if (!function_exists('itops_audit_types')) {
 /**
  * BT70: which Audit Log entries a role may read. Each kind of entry (entity_type) belongs to a module; a role sees the
  * entries of the modules it can see (any one of the listed grants is enough). A person always sees what they did
@@ -65,33 +65,33 @@ if (!function_exists('opsh_audit_types')) {
  */
 /**
  * BT76: people a Super Admin named under Settings → General → Cases & Projects get those actions in the permissions the
- * browser receives (so the menu shows Cases). The server checks the same list itself (lib/Cases.php opsh_cs_can).
+ * browser receives (so the menu shows Cases). The server checks the same list itself (lib/Cases.php itops_cs_can).
  */
-function opsh_perm_overlay($perms, int $uid) {
+function itops_perm_overlay($perms, int $uid) {
     if (!is_array($perms) || !empty($perms['*'])) return $perms;
     $granular = false; foreach ($perms as $pv) { if (is_array($pv)) { $granular = true; break; } }
     if (!$granular) return $perms;   // a legacy role (strings) is left as it is
     try {
-        $s = getDB()->prepare("SELECT sval FROM opsh_settings WHERE skey='cases_people'"); $s->execute(); $p = json_decode((string)$s->fetchColumn(), true);
+        $s = getDB()->prepare("SELECT sval FROM itops_settings WHERE skey='cases_people'"); $s->execute(); $p = json_decode((string)$s->fetchColumn(), true);
         if (!is_array($p)) $p = [];
         $add = [];
         if (in_array($uid, array_map('intval', (array)($p['create'] ?? [])), true)) $add = array_merge($add, ['view', 'create']);
         if (in_array($uid, array_map('intval', (array)($p['all'] ?? [])), true)) $add = array_merge($add, ['view', 'all']);
         // someone given a task, watching, sponsoring or invited to a meeting of an open case or project opens the Cases & Projects page for it, whatever their role
         if (!$add && !(is_array($perms['cases'] ?? null) && in_array('view', $perms['cases'], true))) {
-            try { $q = getDB()->prepare("SELECT 1 FROM opsh_cases c WHERE c.status IN ('open','in_progress') AND (EXISTS (SELECT 1 FROM opsh_case_watchers w WHERE w.case_id=c.id AND w.user_id=?) OR EXISTS (SELECT 1 FROM opsh_case_tasks t WHERE t.case_id=c.id AND t.assignee_id=? AND t.kind<>'requester')) LIMIT 1");
+            try { $q = getDB()->prepare("SELECT 1 FROM itops_cases c WHERE c.status IN ('open','in_progress') AND (EXISTS (SELECT 1 FROM itops_case_watchers w WHERE w.case_id=c.id AND w.user_id=?) OR EXISTS (SELECT 1 FROM itops_case_tasks t WHERE t.case_id=c.id AND t.assignee_id=? AND t.kind<>'requester')) LIMIT 1");
                   $q->execute([$uid, $uid]); if ($q->fetchColumn()) $add = ['view']; } catch (Throwable $e) {}
-            if (!$add) { try { $q = getDB()->prepare("SELECT 1 FROM opsh_cases WHERE sponsor_id=? AND status IN ('open','in_progress') LIMIT 1");   // BT80: a project's sponsor
+            if (!$add) { try { $q = getDB()->prepare("SELECT 1 FROM itops_cases WHERE sponsor_id=? AND status IN ('open','in_progress') LIMIT 1");   // BT80: a project's sponsor
                   $q->execute([$uid]); if ($q->fetchColumn()) $add = ['view']; } catch (Throwable $e) {} }
-            if (!$add) { try { $q = getDB()->prepare("SELECT 1 FROM opsh_case_tasks t JOIN opsh_cases c ON c.id=t.case_id JOIN opsh_calendar_attendees a ON a.event_id=t.event_id
-                  WHERE a.user_id=? AND c.status IN ('open','in_progress') AND NOT EXISTS (SELECT 1 FROM opsh_tickets k WHERE k.case_id=c.id AND k.requester_id=a.user_id) LIMIT 1");   // BT80: invited to a case or project meeting
+            if (!$add) { try { $q = getDB()->prepare("SELECT 1 FROM itops_case_tasks t JOIN itops_cases c ON c.id=t.case_id JOIN itops_calendar_attendees a ON a.event_id=t.event_id
+                  WHERE a.user_id=? AND c.status IN ('open','in_progress') AND NOT EXISTS (SELECT 1 FROM itops_tickets k WHERE k.case_id=c.id AND k.requester_id=a.user_id) LIMIT 1");   // BT80: invited to a case or project meeting
                   $q->execute([$uid]); if ($q->fetchColumn()) $add = ['view']; } catch (Throwable $e) {} }
         }
         if ($add) $perms['cases'] = array_values(array_unique(array_merge(is_array($perms['cases'] ?? null) ? $perms['cases'] : [], $add)));
     } catch (Throwable $e) {}
     return $perms;
 }
-function opsh_audit_types(): array {
+function itops_audit_types(): array {
     $s = [['settings', 'view']];
     return [
         'ticket' => ['Tickets', [['tickets', 'all']]], 'case' => ['Cases & Projects', [['cases', 'all'], ['cases', 'create']]], 'ticket_category' => ['Ticket categories', [['categories', 'view'], ['tickets', 'all']]],
@@ -118,15 +118,15 @@ function opsh_audit_types(): array {
     ];
 }
 /** The kinds this person may read, or null for everything (Super Admin). */
-function opsh_audit_allowed(array $user): ?array {
+function itops_audit_allowed(array $user): ?array {
     if (($user['role_slug'] ?? '') === 'super_admin') return null;
     $out = [];
-    foreach (opsh_audit_types() as $t => [$label, $grants]) foreach ($grants as [$m, $a]) if (opsh_can($user, $m, $a)) { $out[] = $t; break; }
+    foreach (itops_audit_types() as $t => [$label, $grants]) foreach ($grants as [$m, $a]) if (itops_can($user, $m, $a)) { $out[] = $t; break; }
     return $out;
 }
-/** SQL condition (and its values) limiting opsh_audit_log to what this person may read. */
-function opsh_audit_scope(array $user, string $alias = ''): array {
-    $ok = opsh_audit_allowed($user); $c = $alias !== '' ? $alias . '.' : '';
+/** SQL condition (and its values) limiting itops_audit_log to what this person may read. */
+function itops_audit_scope(array $user, string $alias = ''): array {
+    $ok = itops_audit_allowed($user); $c = $alias !== '' ? $alias . '.' : '';
     if ($ok === null) return ['1=1', []];
     $own = $c . 'user_id = ?';
     if (!$ok) return ['(' . $own . ')', [(int)$user['id']]];
@@ -138,18 +138,18 @@ function opsh_audit_scope(array $user, string $alias = ''): array {
  * BT143 (role validation): permissions that only work together with another one. A Microsoft 365 sub-permission (People,
  * Licenses, Mailboxes…) is useless without Microsoft 365 · View (the screens and every read need it); vTiger passwords
  * without vTiger users · View. The Roles editor ticks the
- * base for you; a role saved through the API gets it too (opsh_perm_normalize).
+ * base for you; a role saved through the API gets it too (itops_perm_normalize).
  */
-function opsh_perm_bases(): array {
+function itops_perm_bases(): array {
     $b = [];
     foreach (['m365_users', 'm365_credentials', 'm365_licenses', 'm365_groups', 'm365_roles', 'm365_devices', 'm365_keys', 'm365_mail', 'm365_admin', 'm365_ca', 'm365_incidents', 'm365_device_wipe'] as $k) $b[$k] = 'm365';
     $b['vtiger_credentials'] = 'vtiger_users';   // Ask IT and KB Content Gaps work on their own (no base)
     return $b;
 }
 /** Adds the base View where a sub-permission is held without it. Returns [permissions, list of "sub → base" added]. */
-function opsh_perm_normalize(array $p): array {
+function itops_perm_normalize(array $p): array {
     $added = [];
-    foreach (opsh_perm_bases() as $sub => $base) {
+    foreach (itops_perm_bases() as $sub => $base) {
         $v = $p[$sub] ?? null;
         if (!is_array($v) || !$v) continue;
         $bv = $p[$base] ?? null;

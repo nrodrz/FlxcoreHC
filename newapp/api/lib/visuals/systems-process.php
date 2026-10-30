@@ -1,13 +1,13 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
-/* BT50: a Help Center visual. BT51: the systems come from the shared list (visuals/systems.php, window.OPSH_SYSTEMS),
+/* BT50: a Help Center visual. BT51: the systems come from the shared list (visuals/systems.php, window.ITOPS_SYSTEMS),
    the same list as the Integration map; light and dark theme. Served only through api/routes/help.php to the people it is given to; requested
    directly, this file prints nothing. */
-return <<<'OPSH_VISUAL'
+return <<<'ITOPS_VISUAL'
 <title>Company Systems Process</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a 3D stage (six stations in a row on the OpsHub platform, each system as a small object of its own around
+/* Layout: a 3D stage (six stations in a row on the ITOps platform, each system as a small object of its own around
    it, the HR or IT user in front) with a reading panel beside it; under it, the same process as tables, so nothing
    depends on the 3D view. Light and dark (BT51): the Help Center tells the page which one. */
 :root{
@@ -104,14 +104,14 @@ td ol{margin:0;padding-left:18px}
 
 <div class="wrap">
   <header class="head">
-    <div class="eyebrow">OpsHub · company systems · build 0621-BT51 · 8 October 2026</div>
+    <div class="eyebrow">ITOps · company systems · build 0621-BT51 · 8 October 2026</div>
     <h1>From switch-on to a verified exit</h1>
-    <p class="lede">Every system a person has an account in goes through the same six steps in OpsHub. What changes from system to system is who does the work: OpsHub by itself, OpsHub by reading, or a person who answers in OpsHub. These are the same systems as on the Integration map.</p>
+    <p class="lede">Every system a person has an account in goes through the same six steps in ITOps. What changes from system to system is who does the work: ITOps by itself, ITOps by reading, or a person who answers in ITOps. These are the same systems as on the Integration map.</p>
     <div class="legend" aria-label="Legend">
-      <span><i class="sw" style="background:var(--out)"></i>OpsHub changes it there</span>
-      <span><i class="sw" style="background:var(--in)"></i>OpsHub reads it</span>
-      <span><i class="sw dash"></i>a person does it there, then answers in OpsHub</span>
-      <span><i class="ring" style="border-color:var(--live)"></i>OpsHub acts by itself</span>
+      <span><i class="sw" style="background:var(--out)"></i>ITOps changes it there</span>
+      <span><i class="sw" style="background:var(--in)"></i>ITOps reads it</span>
+      <span><i class="sw dash"></i>a person does it there, then answers in ITOps</span>
+      <span><i class="ring" style="border-color:var(--live)"></i>ITOps acts by itself</span>
       <span><i class="ring" style="border-color:var(--in)"></i>connected, read only</span>
       <span><i class="ring" style="border-color:var(--plan)"></i>tracked by hand, connection planned</span>
       <span><i class="ring" style="border-color:var(--soon)"></i>planned, not in use yet</span>
@@ -132,7 +132,7 @@ td ol{margin:0;padding-left:18px}
 
   <div class="board">
     <div class="stage" id="stage">
-      <canvas id="gl" tabindex="0" aria-label="3D picture of the six steps on the OpsHub platform, the company’s systems around it, each drawn as an object of its own, and the HR or IT user in front. Drag to turn it. The same information is in the tables below."></canvas>
+      <canvas id="gl" tabindex="0" aria-label="3D picture of the six steps on the ITOps platform, the company’s systems around it, each drawn as an object of its own, and the HR or IT user in front. Drag to turn it. The same information is in the tables below."></canvas>
       <div class="tags" id="tags"></div>
       <div class="hint">drag to turn · click a system or a step</div>
       <div class="fallback" id="fallback" hidden>This browser could not draw the 3D view. Everything it shows is in the tables below.</div>
@@ -152,7 +152,7 @@ td ol{margin:0;padding-left:18px}
 
   <section>
     <h2>Connecting each system</h2>
-    <p>For the systems a person has an account in, the same steps are on each system’s set-up page in OpsHub, in the box “How to connect”. They were taken from each vendor’s own help. Only JustCall has a place to paste a key in this build.</p>
+    <p>For the systems a person has an account in, the same steps are on each system’s set-up page in ITOps, in the box “How to connect”. They were taken from each vendor’s own help. Only JustCall has a place to paste a key in this build.</p>
     <div class="tw"><table id="connect"></table></div>
   </section>
 
@@ -168,10 +168,10 @@ td ol{margin:0;padding-left:18px}
     </div>
   </section>
 
-  <p class="foot">Microsoft 365 and vTiger are run by OpsHub. JustCall and WHM are read. HubSpot, eFax, Jotform and the phone system are tracked by hand until their connections are built. Paylocity and the hosting provider are planned. A system added under Settings → Company systems appears here and on the Integration map by itself: both pages show the same list. The plan is the project document OpsHub/INTEGRATIONS-ROADMAP.md.</p>
+  <p class="foot">Microsoft 365 and vTiger are run by ITOps. JustCall and WHM are read. HubSpot, eFax, Jotform and the phone system are tracked by hand until their connections are built. Paylocity and the hosting provider are planned. A system added under Settings → Company systems appears here and on the Integration map by itself: both pages show the same list. The plan is the project document ITOps/INTEGRATIONS-ROADMAP.md.</p>
 </div>
 
 <script src="vendor/three.min.js?v=r128"></script>
 <script src="api/help_script/systems-process"></script>
 
-OPSH_VISUAL;
+ITOPS_VISUAL;

@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub BT126 — read-only user lists of HubSpot, Jotform and eFax (Documo), in the shape SystemConnect uses (the same
+ * ITOps BT126 — read-only user lists of HubSpot, Jotform and eFax (Documo), in the shape SystemConnect uses (the same
  * as JustCall): id, name, email, role, extension, owned_numbers, shared_numbers, groups, created_at, last_login.
  * BT133: HubSpot users can also be changed and removed from a person's page (HubspotPeople.php), through call(); the
  * lists here stay read-only. Jotform and Documo are never written to. Keys go in a request header, never in an address.
@@ -17,25 +17,25 @@
  *   Documo   "Authorization: Basic <the key as it is>". GET /v1/me is documented (the test). A user list is not
  *            documented: GET /v1/users is tried; when Documo answers 404 the connection says so and eFax stays by hand.
  *
- * A test installation can point a vendor elsewhere with OPSH_SAAS_BASE_HUBSPOT / _JOTFORM / _EFAX in config.php.
+ * A test installation can point a vendor elsewhere with ITOPS_SAAS_BASE_HUBSPOT / _JOTFORM / _EFAX in config.php.
  */
-if (!class_exists('OpshSaasUsers')) {
-    class OpshSaasException extends RuntimeException {
+if (!class_exists('ItopsSaasUsers')) {
+    class ItopsSaasException extends RuntimeException {
         public int $status = 0;
         public function __construct(string $m, int $status = 0) { parent::__construct($m); $this->status = $status; }
     }
 
-    final class OpshSaasUsers
+    final class ItopsSaasUsers
     {
         const MAX_PAGES = 40;
         private string $vendor; private array $creds; public ?int $limitLeft = null;
 
         public function __construct(string $vendor, array $creds)
         {
-            if (!in_array($vendor, ['hubspot', 'jotform', 'efax'], true)) throw new OpshSaasException('Unknown system.');
+            if (!in_array($vendor, ['hubspot', 'jotform', 'efax'], true)) throw new ItopsSaasException('Unknown system.');
             $key = trim((string)($creds['api_key'] ?? ''));
-            if ($key === '') throw new OpshSaasException('The key is missing.');
-            if (preg_match('/[\r\n\s]/', $key)) throw new OpshSaasException('The key holds a space or a line break. Copy it again.');
+            if ($key === '') throw new ItopsSaasException('The key is missing.');
+            if (preg_match('/[\r\n\s]/', $key)) throw new ItopsSaasException('The key holds a space or a line break. Copy it again.');
             $this->vendor = $vendor; $this->creds = ['api_key' => $key, 'region' => (string)($creds['region'] ?? '')];
         }
 
@@ -43,7 +43,7 @@ if (!class_exists('OpshSaasUsers')) {
 
         private function base(): string
         {
-            $c = 'OPSH_SAAS_BASE_' . strtoupper($this->vendor);
+            $c = 'ITOPS_SAAS_BASE_' . strtoupper($this->vendor);
             if (defined($c) && is_string(constant($c)) && constant($c) !== '') return rtrim(constant($c), '/');
             if ($this->vendor === 'hubspot') return 'https://api.hubapi.com';
             if ($this->vendor === 'efax') return 'https://api.documo.com';
@@ -53,18 +53,18 @@ if (!class_exists('OpshSaasUsers')) {
 
         private function req(string $path, array $q = [], string $method = 'GET', ?array $body = null): array
         {
-            if (!function_exists('curl_init')) throw new OpshSaasException('This server cannot make web requests (the PHP curl extension is missing).');
+            if (!function_exists('curl_init')) throw new ItopsSaasException('This server cannot make web requests (the PHP curl extension is missing).');
             $k = $this->creds['api_key'];
             $auth = $this->vendor === 'hubspot' ? 'Authorization: Bearer ' . $k : ($this->vendor === 'jotform' ? 'APIKEY: ' . $k : 'Authorization: Basic ' . $k);
             for ($try = 0; $try < 2; $try++) {
                 $ch = curl_init($this->base() . $path . ($q ? '?' . http_build_query($q) : '')); $hdr = [];
                 curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => 15,
-                    CURLOPT_HTTPHEADER => array_merge($body !== null ? ['Content-Type: application/json'] : [], [$auth, 'Accept: application/json', 'User-Agent: ' . (function_exists('opsh_app_name') ? preg_replace('/[^A-Za-z0-9 ._-]/', '', opsh_app_name()) : 'app') . ' user reader']),
+                    CURLOPT_HTTPHEADER => array_merge($body !== null ? ['Content-Type: application/json'] : [], [$auth, 'Accept: application/json', 'User-Agent: ' . (function_exists('itops_app_name') ? preg_replace('/[^A-Za-z0-9 ._-]/', '', itops_app_name()) : 'app') . ' user reader']),
                     CURLOPT_HEADERFUNCTION => function ($c, $line) use (&$hdr) { $p = explode(':', $line, 2); if (count($p) === 2) $hdr[strtolower(trim($p[0]))] = trim($p[1]); return strlen($line); }]);
                 if ($method === 'GET') curl_setopt($ch, CURLOPT_HTTPGET, true); else curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
                 if ($body !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
                 $raw = curl_exec($ch);
-                if ($raw === false) { $e = curl_error($ch); curl_close($ch); throw new OpshSaasException('No answer from ' . self::name($this->vendor) . ' (' . $e . ').'); }
+                if ($raw === false) { $e = curl_error($ch); curl_close($ch); throw new ItopsSaasException('No answer from ' . self::name($this->vendor) . ' (' . $e . ').'); }
                 $st = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
                 foreach (['x-hubspot-ratelimit-daily-remaining', 'x-ratelimit-remaining', 'ratelimit-remaining'] as $h) if (isset($hdr[$h]) && is_numeric($hdr[$h])) $this->limitLeft = (int)$hdr[$h];
                 if (($st === 429 || ($this->vendor === 'jotform' && $st === 503)) && $try === 0 && $method === 'GET') { sleep(max(1, min(5, (int)($hdr['retry-after'] ?? 2)))); continue; }
@@ -77,7 +77,7 @@ if (!class_exists('OpshSaasUsers')) {
         /** BT133: one HubSpot call for HubspotPeople.php (GET, PUT or DELETE). Returns [status, answer]. */
         public function call(string $method, string $path, array $q = [], ?array $body = null): array
         {
-            if ($this->vendor !== 'hubspot' || !in_array($method, ['GET', 'PUT', 'DELETE'], true)) throw new OpshSaasException('That call is not allowed.');
+            if ($this->vendor !== 'hubspot' || !in_array($method, ['GET', 'PUT', 'DELETE'], true)) throw new ItopsSaasException('That call is not allowed.');
             return $this->req($path, $q, $method, $body);
         }
         public function errText(int $st, array $d): string { return $this->err($st, $d); }
@@ -97,18 +97,18 @@ if (!class_exists('OpshSaasUsers')) {
         public function test(): array
         {
             if ($this->vendor === 'efax') {
-                [$s, $d] = $this->req('/v1/me'); if ($s < 200 || $s >= 300) throw new OpshSaasException($this->err($s, $d), $s);
+                [$s, $d] = $this->req('/v1/me'); if ($s < 200 || $s >= 300) throw new ItopsSaasException($this->err($s, $d), $s);
                 [$s2, $d2] = $this->req('/v1/users', ['limit' => 1]);
                 if ($s2 === 404) return ['users_seen' => 0, 'fields' => [], 'total' => null, 'lists' => false,
                     'note' => 'Documo accepted the key (it belongs to ' . (string)($d['email'] ?? 'a user') . '), but its API does not list the users for this key. eFax stays tracked by hand; nothing else changes.'];
-                if ($s2 < 200 || $s2 >= 300) throw new OpshSaasException($this->err($s2, $d2), $s2);
+                if ($s2 < 200 || $s2 >= 300) throw new ItopsSaasException($this->err($s2, $d2), $s2);
                 $rows = $this->rows($d2);
                 return ['users_seen' => count($rows ?? []), 'fields' => $rows ? array_slice(array_keys((array)$rows[0]), 0, 30) : [], 'total' => isset($d2['count']) && is_numeric($d2['count']) ? (int)$d2['count'] : null, 'lists' => $rows !== null, 'note' => ''];
             }
             [$s, $d] = $this->vendor === 'hubspot' ? $this->hubPage(null, 1) : $this->req('/v1/user/subusers');
-            if ($s < 200 || $s >= 300) throw new OpshSaasException($this->err($s, $d), $s);
+            if ($s < 200 || $s >= 300) throw new ItopsSaasException($this->err($s, $d), $s);
             $rows = $this->rows($d);
-            if ($rows === null) throw new OpshSaasException(self::name($this->vendor) . ' answered, but not with a list of users.', $s);
+            if ($rows === null) throw new ItopsSaasException(self::name($this->vendor) . ' answered, but not with a list of users.', $s);
             return ['users_seen' => count($rows), 'fields' => $rows ? array_slice(array_keys((array)$rows[0]), 0, 30) : [], 'total' => null, 'lists' => true, 'note' => ''];
         }
 
@@ -135,41 +135,41 @@ if (!class_exists('OpshSaasUsers')) {
                 $after = null;
                 for ($n = 0; $n < self::MAX_PAGES; $n++) {
                     [$s, $d] = $this->hubPage($after);
-                    if ($s < 200 || $s >= 300) throw new OpshSaasException($this->err($s, $d), $s);
-                    $rows = $this->rows($d); if ($rows === null) throw new OpshSaasException('HubSpot answered, but not with a list of users.', $s);
+                    if ($s < 200 || $s >= 300) throw new ItopsSaasException($this->err($s, $d), $s);
+                    $rows = $this->rows($d); if ($rows === null) throw new ItopsSaasException('HubSpot answered, but not with a list of users.', $s);
                     foreach ($rows as $r) if (is_array($r)) $add($r);
                     $nx = $d['paging']['next']['after'] ?? null;
                     if (!is_string($nx) && !is_int($nx)) return $out;
                     if ((string)$nx === (string)$after) return $out;
                     $after = (string)$nx;
                 }
-                throw new OpshSaasException('HubSpot kept giving more pages; the list was not used.');
+                throw new ItopsSaasException('HubSpot kept giving more pages; the list was not used.');
             }
             if ($this->vendor === 'jotform') {
                 [$s, $d] = $this->req('/v1/user');   // the account owner
                 if ($s >= 200 && $s < 300 && is_array($d['content'] ?? null)) $add($d['content'] + ['_owner' => true]);
                 [$s, $d] = $this->req('/v1/user/subusers');
-                if ($s < 200 || $s >= 300) throw new OpshSaasException($this->err($s, $d), $s);
-                $rows = $this->rows($d); if ($rows === null) throw new OpshSaasException('Jotform answered, but not with a list of team members.', $s);
+                if ($s < 200 || $s >= 300) throw new ItopsSaasException($this->err($s, $d), $s);
+                $rows = $this->rows($d); if ($rows === null) throw new ItopsSaasException('Jotform answered, but not with a list of team members.', $s);
                 foreach ($rows as $r) if (is_array($r)) $add($r);
                 return $out;
             }
             for ($p = 1; $p <= self::MAX_PAGES; $p++) {   // Documo
                 [$s, $d] = $this->req('/v1/users', ['limit' => 100, 'page' => $p]);
-                if ($s === 404) throw new OpshSaasException('Documo\'s API does not list the users for this key, so eFax stays tracked by hand.', 404);
-                if ($s < 200 || $s >= 300) throw new OpshSaasException($this->err($s, $d), $s);
-                $rows = $this->rows($d); if ($rows === null) throw new OpshSaasException('Documo answered, but not with a list of users.', $s);
+                if ($s === 404) throw new ItopsSaasException('Documo\'s API does not list the users for this key, so eFax stays tracked by hand.', 404);
+                if ($s < 200 || $s >= 300) throw new ItopsSaasException($this->err($s, $d), $s);
+                $rows = $this->rows($d); if ($rows === null) throw new ItopsSaasException('Documo answered, but not with a list of users.', $s);
                 foreach ($rows as $r) if (is_array($r)) $add($r);
                 $count = isset($d['count']) && is_numeric($d['count']) ? (int)$d['count'] : null;
                 if (count($rows) < 100 || ($count !== null && count($out) >= $count)) {
-                    if ($count !== null && count($out) < $count) throw new OpshSaasException('Documo has ' . $count . ' users but only ' . count($out) . ' could be read. Nothing was changed.');
+                    if ($count !== null && count($out) < $count) throw new ItopsSaasException('Documo has ' . $count . ' users but only ' . count($out) . ' could be read. Nothing was changed.');
                     return $out;
                 }
             }
-            throw new OpshSaasException('Documo kept giving more pages; the list was not used.');
+            throw new ItopsSaasException('Documo kept giving more pages; the list was not used.');
         }
 
-        /** A user of any of the three in OpsHub's shape (fields the answer does not carry stay empty). */
+        /** A user of any of the three in ITOps's shape (fields the answer does not carry stay empty). */
         public function shape(array $r): array
         {
             $t = fn($v) => is_string($v) || is_int($v) || is_float($v) ? trim((string)$v) : '';

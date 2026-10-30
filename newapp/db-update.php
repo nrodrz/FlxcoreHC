@@ -1,32 +1,32 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Standalone database updater.
- * Visit this page in a browser while signed in to OpsHub as an administrator.
+ * ITOps — Standalone database updater.
+ * Visit this page in a browser while signed in to ITOps as an administrator.
  * It applies any pending database updates (schema changes + content) safely and
  * idempotently. This is the "upgrade" page; it mirrors the in-app Database Updates card.
  */
 $cfg = __DIR__ . '/config.php';
-if (!is_file($cfg)) { http_response_code(503); exit('OpsHub is not installed yet. Run install/ first.'); }
+if (!is_file($cfg)) { http_response_code(503); exit('ITOps is not installed yet. Run install/ first.'); }
 require_once $cfg;
-require_once __DIR__ . '/api/lib/BusinessHours.php'; try { opsh_db_clock_sync(getDB()); } catch (Throwable $e) {}   // BT52: the database clock follows PHP's
+require_once __DIR__ . '/api/lib/BusinessHours.php'; try { itops_db_clock_sync(getDB()); } catch (Throwable $e) {}   // BT52: the database clock follows PHP's
 require_once __DIR__ . '/api/lib/Migrations.php';
 require_once __DIR__ . '/api/lib/Brand.php';   // BT20
-$APPN = htmlspecialchars(opsh_app_name(), ENT_QUOTES, 'UTF-8');
+$APPN = htmlspecialchars(itops_app_name(), ENT_QUOTES, 'UTF-8');
 
-// Authenticate via the OpsHub session cookie; super_admin only.
+// Authenticate via the ITOps session cookie; super_admin only.
 $user = null;
-$token = $_COOKIE['opsh_token'] ?? '';
+$token = $_COOKIE['itops_token'] ?? '';
 if ($token && function_exists('jwt_decode')) {
     $payload = jwt_decode($token);
     // BT14: a real, live session only (not the half-way 2FA token; not a signed-out token).
     $live = false;
     if ($payload && !empty($payload['uid']) && empty($payload['mfa'])) {
-        try { $sq = getDB()->prepare('SELECT 1 FROM opsh_sessions WHERE token_hash=? AND expires_at>=? LIMIT 1'); $sq->execute([hash('sha256', $token), date('Y-m-d H:i:s')]); $live = (bool)$sq->fetchColumn(); } catch (Throwable $e) { $live = false; }
+        try { $sq = getDB()->prepare('SELECT 1 FROM itops_sessions WHERE token_hash=? AND expires_at>=? LIMIT 1'); $sq->execute([hash('sha256', $token), date('Y-m-d H:i:s')]); $live = (bool)$sq->fetchColumn(); } catch (Throwable $e) { $live = false; }
     }
     if ($live) {
         $st = getDB()->prepare('SELECT u.id, u.display_name, r.slug AS role_slug
-                                FROM opsh_users u LEFT JOIN opsh_roles r ON u.role_id = r.id
+                                FROM itops_users u LEFT JOIN itops_roles r ON u.role_id = r.id
                                 WHERE u.id = ? AND u.status = "active"');
         $st->execute([$payload['uid']]);
         $user = $st->fetch();
@@ -38,10 +38,10 @@ $report = null;
 $csrfTok = $token !== '' ? hash_hmac('sha256', 'db-update', $token) : '';
 if ($isAdmin && $_SERVER['REQUEST_METHOD'] === 'POST' && !hash_equals($csrfTok, (string)($_POST['csrf'] ?? ''))) { http_response_code(403); exit('Invalid form token — reload the page and try again.'); }
 if ($isAdmin && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $report = opsh_run_migrations(getDB());
+    $report = itops_run_migrations(getDB());
     if (function_exists('audit_log')) audit_log('db_update_page', 'system', 0, 'run');
 }
-$pending = $isAdmin ? opsh_pending_versions(getDB()) : [];
+$pending = $isAdmin ? itops_pending_versions(getDB()) : [];
 $appBase = rtrim(defined('APP_URL') ? APP_URL : '.', '/');
 ?><!DOCTYPE html>
 <html lang="en"><head>
@@ -72,7 +72,7 @@ code{font-family:ui-monospace,monospace;font-size:12px;color:var(--t3)}
 a.link{color:var(--accent);text-decoration:none}
 </style></head>
 <body><div class="wrap"><div class="card">
-  <div class="head"><div class="mark"><?= htmlspecialchars((function($n){ $w=preg_split('/\s+/',trim($n),-1,PREG_SPLIT_NO_EMPTY); if(count($w)>1) return strtoupper(mb_substr($w[0],0,1).mb_substr($w[1],0,1)); $c=preg_replace('/[^A-Z]/','',$n); return strtoupper(strlen($c)>=2?substr($c,0,2):mb_substr($n,0,2)); })(opsh_app_name()), ENT_QUOTES, 'UTF-8') ?></div><div><h1>Database Update</h1></div></div>
+  <div class="head"><div class="mark"><?= htmlspecialchars((function($n){ $w=preg_split('/\s+/',trim($n),-1,PREG_SPLIT_NO_EMPTY); if(count($w)>1) return strtoupper(mb_substr($w[0],0,1).mb_substr($w[1],0,1)); $c=preg_replace('/[^A-Z]/','',$n); return strtoupper(strlen($c)>=2?substr($c,0,2):mb_substr($n,0,2)); })(itops_app_name()), ENT_QUOTES, 'UTF-8') ?></div><div><h1>Database Update</h1></div></div>
   <div class="sub">Applies pending schema changes and content safely. Running it more than once is harmless.</div>
 
 <?php if (!$isAdmin): ?>

@@ -1,19 +1,19 @@
 /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
-/* OpsHub — the app's dropdown for the pages that are plain HTML (public forms, the signing page, the installer and
+/* ITOps — the app's dropdown for the pages that are plain HTML (public forms, the signing page, the installer and
  * the pop-out editor). The signed-in app (index.html) has the same dropdown as a React component (Sel / DSel); the look
  * is the same on purpose — if you change the rules below, change the .sel-* rules in index.html too.
  *
  * What it does: every <select> on the page is kept (so the page's own code, its value, its "required" check and its
  * change events work exactly as before) but hidden, and a button + list in the app's style is shown in its place.
  * Nothing to call: it runs when the page is ready and watches for selects and options added later
- * (unless window.OPSH_SELECT_MANUAL is set before this file loads — then only scan() does anything).
- *   window.opshSelect.scan(root)   enhance the selects inside root (default: the whole page)
- *   window.opshSelect.refresh(sel) re-read one select after its options or value were changed by code
+ * (unless window.ITOPS_SELECT_MANUAL is set before this file loads — then only scan() does anything).
+ *   window.itopsSelect.scan(root)   enhance the selects inside root (default: the whole page)
+ *   window.itopsSelect.refresh(sel) re-read one select after its options or value were changed by code
  * Not enhanced: <select multiple>, <select size>1>, and any select with data-native.
  */
 (function () {
   'use strict';
-  if (window.opshSelect) return;
+  if (window.itopsSelect) return;
 
   var CSS = [
     '.sel{display:inline-block;position:relative;vertical-align:top;max-width:100%;box-sizing:border-box}',
@@ -44,8 +44,8 @@
   var seq = 0, openOne = null;
 
   function addCss(doc) {
-    if (doc.getElementById('opsh-sel-css')) return;
-    var st = doc.createElement('style'); st.id = 'opsh-sel-css'; st.textContent = CSS;
+    if (doc.getElementById('itops-sel-css')) return;
+    var st = doc.createElement('style'); st.id = 'itops-sel-css'; st.textContent = CSS;
     (doc.head || doc.documentElement).appendChild(st);
   }
 
@@ -67,8 +67,8 @@
   }
 
   function enhance(sel) {
-    if (!sel || sel.__opsh || sel.multiple || sel.size > 1 || sel.hasAttribute('data-native') || !sel.parentNode) return;
-    sel.__opsh = {};
+    if (!sel || sel.__itops || sel.multiple || sel.size > 1 || sel.hasAttribute('data-native') || !sel.parentNode) return;
+    sel.__itops = {};
     var doc = sel.ownerDocument, win = doc.defaultView || window; addCss(doc);
     var id = 'osel' + (++seq), items = [], act = -1, menu = null, ta = { s: '', t: 0 }, skip = 0;
 
@@ -210,7 +210,7 @@
     } catch (e) {}
     /* options added, removed or re-labelled, and disabled / hidden / style changes */
     if (win.MutationObserver) new win.MutationObserver(function () { read(); }).observe(sel, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['disabled', 'hidden', 'style', 'label', 'selected', 'aria-label'] });
-    sel.__opsh = { refresh: read, open: open, close: close, button: btn, wrap: wrap };
+    sel.__itops = { refresh: read, open: open, close: close, button: btn, wrap: wrap };
     read();
   }
 
@@ -221,7 +221,7 @@
   }
   /* a select the page removed takes its button with it; one the page moved gets its button back in front of it */
   function follow(sel) {
-    var o = sel.__opsh; if (!o || !o.wrap) return;
+    var o = sel.__itops; if (!o || !o.wrap) return;
     if (!sel.isConnected) { if (o.wrap.parentNode) o.wrap.parentNode.removeChild(o.wrap); }
     else if (o.wrap.nextSibling !== sel) sel.parentNode.insertBefore(o.wrap, sel);
   }
@@ -231,12 +231,12 @@
     if (window.MutationObserver && document.body) new MutationObserver(function (muts) {
       muts.forEach(function (m) {
         Array.prototype.forEach.call(m.removedNodes, function (n) { each(n, follow); });
-        Array.prototype.forEach.call(m.addedNodes, function (n) { if (n.nodeType === 1 && !(n.classList && (n.classList.contains('sel-menu') || n.classList.contains('sel')))) each(n, function (x) { if (x.__opsh) follow(x); else enhance(x); }); });
+        Array.prototype.forEach.call(m.addedNodes, function (n) { if (n.nodeType === 1 && !(n.classList && (n.classList.contains('sel-menu') || n.classList.contains('sel')))) each(n, function (x) { if (x.__itops) follow(x); else enhance(x); }); });
       });
     }).observe(document.body, { childList: true, subtree: true });
   }
-  window.opshSelect = { scan: scan, refresh: function (sel) { if (sel && sel.__opsh) sel.__opsh.refresh(); else scan(sel); } };
-  /* index.html sets OPSH_SELECT_MANUAL: the app draws its own dropdowns and only calls scan() for the pop-out editor */
-  if (window.OPSH_SELECT_MANUAL) return;
+  window.itopsSelect = { scan: scan, refresh: function (sel) { if (sel && sel.__itops) sel.__itops.refresh(); else scan(sel); } };
+  /* index.html sets ITOPS_SELECT_MANUAL: the app draws its own dropdowns and only calls scan() for the pop-out editor */
+  if (window.ITOPS_SELECT_MANUAL) return;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

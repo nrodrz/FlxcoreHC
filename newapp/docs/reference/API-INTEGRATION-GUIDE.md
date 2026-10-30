@@ -1,25 +1,25 @@
-# OpsHub — API & Webhook Integration Guide
+# ITOps — API & Webhook Integration Guide
 
-**For developers integrating an external system with OpsHub.**
+**For developers integrating an external system with ITOps.**
 
 Version: build 0621-F · Base URL: `https://ops.example.com/api`
 
-OpsHub supports integration in both directions:
+ITOps supports integration in both directions:
 
 | Direction | Mechanism | Use it to… |
 |---|---|---|
-| **Inbound** | REST API + API key | Let another system create or update records in OpsHub (e.g. raise a ticket) |
-| **Outbound** | Signed webhooks | Have OpsHub notify your system when something changes in OpsHub |
+| **Inbound** | REST API + API key | Let another system create or update records in ITOps (e.g. raise a ticket) |
+| **Outbound** | Signed webhooks | Have ITOps notify your system when something changes in ITOps |
 
 You can use either one on its own, or both together.
 
 ---
 
-## Part 1 — Inbound: sending data to OpsHub
+## Part 1 — Inbound: sending data to ITOps
 
 ### 1.1 Get an API key
 
-An OpsHub administrator creates one for you: **Administration → Integrations → API keys → + New key**.
+An ITOps administrator creates one for you: **Administration → Integrations → API keys → + New key**.
 
 When creating the key they choose:
 
@@ -27,7 +27,7 @@ When creating the key they choose:
 - **Scopes** — which modules you may touch, and at what level (*Read only*, *Read + write*, or *Read + write + delete*). You will only be able to reach what you were granted.
 - **An optional expiry date.**
 
-The key looks like `opsk_live_1a2b3c4d…` and is **shown exactly once, at creation**. OpsHub stores only a hash of it, so it cannot be recovered later — if it is lost, the administrator revokes it and issues a new one.
+The key looks like `opsk_live_1a2b3c4d…` and is **shown exactly once, at creation**. ITOps stores only a hash of it, so it cannot be recovered later — if it is lost, the administrator revokes it and issues a new one.
 
 > **Treat the key like a password.** Store it in your system's secret store or environment variables — never in source control, client-side code, or a browser. Anyone holding the key can act with its permissions.
 
@@ -171,7 +171,7 @@ Errors use a consistent shape and a matching HTTP status:
 
 ---
 
-## Part 2 — Outbound: receiving events from OpsHub
+## Part 2 — Outbound: receiving events from ITOps
 
 ### 2.1 Subscribe
 
@@ -180,7 +180,7 @@ An administrator adds your endpoint in **Administration → Integrations → Web
 - **Your URL** — must be **`https://`**.
 - **The events** you want (or *All events*).
 
-OpsHub generates a **signing secret** for that webhook. The administrator gives it to you — you need it to verify deliveries. Store it as a secret.
+ITOps generates a **signing secret** for that webhook. The administrator gives it to you — you need it to verify deliveries. Store it as a secret.
 
 ### 2.2 Events
 
@@ -188,7 +188,7 @@ Event names are `{entity}.{action}` where *action* is `created`, `updated`, or `
 
 Examples: `ticket.created` · `ticket.updated` · `sop.updated` · `job_description.created` · `kb_article.updated` · `vendor.created` · `contract.updated`
 
-Besides the record events, OpsHub also sends these **process events**:
+Besides the record events, ITOps also sends these **process events**:
 
 | Event | When |
 |---|---|
@@ -196,7 +196,7 @@ Besides the record events, OpsHub also sends these **process events**:
 | `onboarding.completed` / `offboarding.completed` | Every step of the process is done or skipped |
 | `asset.loaned` / `asset.returned` | Equipment issued to / checked back in from a person |
 | `signature_request.created` / `signature_request.completed` / `signature.signed` | E-signature requests and signatures |
-| `m365.password_reset`, `m365.license_changed` … | Microsoft 365 admin actions taken in OpsHub |
+| `m365.password_reset`, `m365.license_changed` … | Microsoft 365 admin actions taken in ITOps |
 | `guardian.action_run` | A Server Guardian remediation action ran |
 
 Payloads never contain password hashes, 2FA secrets or encrypted vault values.
@@ -205,14 +205,14 @@ Wildcards are supported when subscribing: `ticket.*` (all ticket events) or `*` 
 
 ### 2.3 What a delivery looks like
 
-OpsHub sends an HTTP **`POST`** with `Content-Type: application/json` and these headers:
+ITOps sends an HTTP **`POST`** with `Content-Type: application/json` and these headers:
 
 ```http
-X-OpsHub-Event:     ticket.created
-X-OpsHub-Delivery:  9f2b7c1d4e6a8b30
-X-OpsHub-Timestamp: 1768392064
-X-OpsHub-Signature: sha256=6f1a…
-User-Agent:         OpsHub-Webhook/1.0
+X-ITOps-Event:     ticket.created
+X-ITOps-Delivery:  9f2b7c1d4e6a8b30
+X-ITOps-Timestamp: 1768392064
+X-ITOps-Signature: sha256=6f1a…
+User-Agent:         ITOps-Webhook/1.0
 ```
 
 **Body:**
@@ -237,9 +237,9 @@ User-Agent:         OpsHub-Webhook/1.0
 
 ### 2.4 Verify the signature — do this before trusting anything
 
-Anyone can POST to a public URL. The signature is what proves the request genuinely came from OpsHub.
+Anyone can POST to a public URL. The signature is what proves the request genuinely came from ITOps.
 
-`X-OpsHub-Signature` is `sha256=` followed by an **HMAC-SHA256**, computed over:
+`X-ITOps-Signature` is `sha256=` followed by an **HMAC-SHA256**, computed over:
 
 ```
 {timestamp}.{raw request body}
@@ -251,9 +251,9 @@ Anyone can POST to a public URL. The signature is what proves the request genuin
 
 ```php
 $raw    = file_get_contents('php://input');
-$ts     = $_SERVER['HTTP_X_OPSHUB_TIMESTAMP'] ?? '';
-$sig    = $_SERVER['HTTP_X_OPSHUB_SIGNATURE'] ?? '';
-$secret = getenv('OPSHUB_WEBHOOK_SECRET');
+$ts     = $_SERVER['HTTP_X_ITOPS_TIMESTAMP'] ?? '';
+$sig    = $_SERVER['HTTP_X_ITOPS_SIGNATURE'] ?? '';
+$secret = getenv('ITOPS_WEBHOOK_SECRET');
 
 // Reject replays: ignore anything older than 5 minutes.
 if (!$ts || abs(time() - (int)$ts) > 300) { http_response_code(401); exit; }
@@ -272,15 +272,15 @@ echo 'ok';
 const crypto = require('crypto');
 
 // The raw body is required — parse it as text, not JSON, on this route.
-app.post('/hooks/opshub', express.text({ type: '*/*' }), (req, res) => {
-  const ts  = req.get('X-OpsHub-Timestamp') || '';
-  const sig = req.get('X-OpsHub-Signature') || '';
+app.post('/hooks/itops', express.text({ type: '*/*' }), (req, res) => {
+  const ts  = req.get('X-ITOps-Timestamp') || '';
+  const sig = req.get('X-ITOps-Signature') || '';
   const raw = req.body;
 
   if (!ts || Math.abs(Date.now() / 1000 - Number(ts)) > 300) return res.sendStatus(401);
 
   const expected = 'sha256=' + crypto
-    .createHmac('sha256', process.env.OPSHUB_WEBHOOK_SECRET)
+    .createHmac('sha256', process.env.ITOPS_WEBHOOK_SECRET)
     .update(`${ts}.${raw}`)
     .digest('hex');
 
@@ -297,7 +297,7 @@ app.post('/hooks/opshub', express.text({ type: '*/*' }), (req, res) => {
 ### 2.5 How to respond
 
 - Reply **`2xx`** to acknowledge. Anything else counts as a failure.
-- **Reply quickly.** OpsHub gives up after **5 seconds**. Acknowledge first, then do your slow work in a background job.
+- **Reply quickly.** ITOps gives up after **5 seconds**. Acknowledge first, then do your slow work in a background job.
 - Failures are **retried automatically — up to 5 attempts**, with an increasing delay (roughly 1 min, 3 min, 9 min, 27 min).
 
 ### 2.6 Build your handler to be idempotent
@@ -313,7 +313,7 @@ Administrators can see every attempt in **Administration → Integrations → De
 If deliveries are failing, check in this order:
 
 1. Is your URL **https** and reachable from the public internet (not behind a VPN or firewall)?
-2. Is its **TLS certificate valid**? OpsHub verifies certificates and will refuse to deliver otherwise.
+2. Is its **TLS certificate valid**? ITOps verifies certificates and will refuse to deliver otherwise.
 3. Are you replying **within 5 seconds** with a `2xx`?
 4. Are you rejecting the signature? Re-check that you hash `timestamp + "." + raw body`.
 
@@ -331,15 +331,15 @@ If deliveries are failing, check in this order:
 
 ### If you need to both send and receive
 
-A common pattern: your system POSTs a ticket into OpsHub, then subscribes to `ticket.updated` to learn when staff change its status — closing the loop without polling. Record the `id` returned at creation and match it to `data.id` on incoming events.
+A common pattern: your system POSTs a ticket into ITOps, then subscribes to `ticket.updated` to learn when staff change its status — closing the loop without polling. Record the `id` returned at creation and match it to `data.id` on incoming events.
 
 ### Limits and behaviour worth knowing
 
 - Webhooks are dispatched **as the change is saved**, so events arrive within seconds.
 - List endpoints return a **maximum of 100 records** per page — page through the rest.
 - Unknown fields in a create/update are **silently ignored**, so a typo in a field name fails quietly. Verify the response contains what you expect.
-- Every API-key action is written to the OpsHub **audit log**, attributed to the key's name.
+- Every API-key action is written to the ITOps **audit log**, attributed to the key's name.
 
 ### Getting help
 
-Contact the OpsHub administrator to issue or revoke keys, adjust scopes, register webhooks, retrieve a signing secret, or inspect the delivery log for your endpoint.
+Contact the ITOps administrator to issue or revoke keys, adjust scopes, register webhooks, retrieve a signing secret, or inspect the delivery log for your endpoint.

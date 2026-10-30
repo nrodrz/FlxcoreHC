@@ -1,19 +1,19 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Email Intake admin API (super_admin only)
+ * ITOps — Email Intake admin API (super_admin only)
  * GET  /api/mail            → current mail settings (password masked)
  * PUT  /api/mail             → save settings (password encrypted via vault)
  * POST /api/mail/test        → test the IMAP connection
  * POST /api/mail/poll        → run the poller now
  */
-opsh_require($currentUser, 'email_cfg', $method === 'GET' ? 'view' : 'edit');   // BT18: Settings · Email area
+itops_require($currentUser, 'email_cfg', $method === 'GET' ? 'view' : 'edit');   // BT18: Settings · Email area
 require_once __DIR__ . '/../lib/MailIntake.php';
 $db = getDB();
 
 if (!function_exists('mail_set')) {
     function mail_set($db, $k, $v, $uid) {
-        $db->prepare('INSERT INTO opsh_settings (skey,sval,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval),updated_by=VALUES(updated_by)')
+        $db->prepare('INSERT INTO itops_settings (skey,sval,updated_by) VALUES (?,?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval),updated_by=VALUES(updated_by)')
            ->execute([$k, $v, $uid]);
     }
 }
@@ -38,7 +38,7 @@ switch ($method) {
             'mail_cron_token'         => (($currentUser['role_slug'] ?? '') === 'super_admin') ? ($cfg['mail_cron_token'] ?? '') : '',
             'mail_cron_token_set'     => !empty($cfg['mail_cron_token']) ? 1 : 0,
             // BT96: this installation's own cron line (its folder and PHP), never a fixed path — Super Admin only.
-            'cron_mail_cmd'           => (($currentUser['role_slug'] ?? '') === 'super_admin') ? (function () { require_once __DIR__ . '/../lib/CronMonitor.php'; return '*/5 * * * * ' . opsh_cron_cmd('cron-mail.php'); })() : '',
+            'cron_mail_cmd'           => (($currentUser['role_slug'] ?? '') === 'super_admin') ? (function () { require_once __DIR__ . '/../lib/CronMonitor.php'; return '*/5 * * * * ' . itops_cron_cmd('cron-mail.php'); })() : '',
             'imap_available'          => function_exists('imap_open') ? 1 : 0,
             'mail_out_enabled'        => $cfg['mail_out_enabled'] ?? '0',
             'mail_out_method'         => $cfg['mail_out_method'] ?? 'mailfn',
@@ -54,8 +54,8 @@ switch ($method) {
             'mail_notify_status'      => $cfg['mail_notify_status'] ?? '0',
             'mail_auto_tick'          => $cfg['mail_auto_tick'] ?? '1',
             'mail_notify_assign'      => $cfg['mail_notify_assign'] ?? '1',
-            'mail_log'                => (function () { try { return getDB()->query("SELECT l.id,l.to_email,l.subject,l.method,l.kind,l.ticket_id,l.ok,l.error,l.created_at,u.display_name AS sent_by_name FROM opsh_mail_log l LEFT JOIN opsh_users u ON u.id=l.sent_by ORDER BY l.id DESC LIMIT 40")->fetchAll(); } catch (Throwable $e) { return []; } })(),
-            'auto_tick_last'          => (function () { try { $v = getDB()->query("SELECT sval FROM opsh_settings WHERE skey='auto_tick_last'")->fetchColumn(); return $v ? json_decode($v, true) : null; } catch (Throwable $e) { return null; } })(),
+            'mail_log'                => (function () { try { return getDB()->query("SELECT l.id,l.to_email,l.subject,l.method,l.kind,l.ticket_id,l.ok,l.error,l.created_at,u.display_name AS sent_by_name FROM itops_mail_log l LEFT JOIN itops_users u ON u.id=l.sent_by ORDER BY l.id DESC LIMIT 40")->fetchAll(); } catch (Throwable $e) { return []; } })(),
+            'auto_tick_last'          => (function () { try { $v = getDB()->query("SELECT sval FROM itops_settings WHERE skey='auto_tick_last'")->fetchColumn(); return $v ? json_decode($v, true) : null; } catch (Throwable $e) { return null; } })(),
         ]);
         break;
 
@@ -120,7 +120,7 @@ switch ($method) {
         } elseif ($id === 'sendtest') {
             $to = $currentUser['email'] ?? '';
             if (!$to) error_response('Your account has no email address', 400);
-            $r = mail_send($to, opsh_app_name() . ' test email', 'This is a test message from ' . opsh_app_name() . ". If you received it, outbound email is working.\n\n— IT Help Desk");   // review CORE-23
+            $r = mail_send($to, itops_app_name() . ' test email', 'This is a test message from ' . itops_app_name() . ". If you received it, outbound email is working.\n\n— IT Help Desk");   // review CORE-23
             $r['to'] = $to;
             json_response($r);
         } else {

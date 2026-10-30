@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — TOTP (RFC 6238) helpers. No external dependencies.
+ * ITOps — TOTP (RFC 6238) helpers. No external dependencies.
  * Secrets are base32 (RFC 4648). Store them vault-encrypted at rest.
  */
 
@@ -50,7 +50,7 @@ function totp_code(string $secret, ?int $ts = null, int $step = 30, int $digits 
     return str_pad((string) $code, $digits, '0', STR_PAD_LEFT);
 }
 
-/** BT90: the time step (counter) the code belongs to, or null — so a code can be accepted once (opsh_totp_once). */
+/** BT90: the time step (counter) the code belongs to, or null — so a code can be accepted once (itops_totp_once). */
 function totp_match_step(string $secret, string $code, int $window = 1): ?int {
     $code = preg_replace('/\D/', '', $code);
     if (strlen($code) !== 6) return null;
@@ -71,7 +71,7 @@ function totp_verify(string $secret, string $code, int $window = 1): bool {
     return false;
 }
 
-function totp_uri(string $secret, string $label, string $issuer = 'OpsHub'): string {
+function totp_uri(string $secret, string $label, string $issuer = 'ITOps'): string {
     return 'otpauth://totp/' . rawurlencode($issuer . ':' . $label)
          . '?secret=' . $secret
          . '&issuer=' . rawurlencode($issuer)

@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub BT133 — a person's HubSpot user, on their page under People (like Microsoft 365 and vTiger).
+ * ITOps BT133 — a person's HubSpot user, on their page under People (like Microsoft 365 and vTiger).
  *
  *   Find    GET    /settings/v3/users/{email}?idProperty=EMAIL      (settings.users.read)
  *   Roles   GET    /settings/v3/users/roles                         (settings.users.read)
@@ -17,18 +17,18 @@
  */
 require_once __DIR__ . '/SaasUsers.php';
 
-if (!function_exists('opsh_hsp_client')) {
-    function opsh_hsp_client(PDO $db): OpshSaasUsers {
+if (!function_exists('itops_hsp_client')) {
+    function itops_hsp_client(PDO $db): ItopsSaasUsers {
         require_once __DIR__ . '/SystemConnect.php';
-        $sys = function_exists('opsh_sys_get') ? opsh_sys_get($db, 'hubspot') : null;
-        if (!$sys || $sys['mode'] !== 'connected') throw new OpshSaasException('HubSpot is not connected. Company systems → HubSpot → Set up… → Connection.', 409);
-        $pub = opsh_conn_public($db, 'hubspot');
-        if (!$pub || !$pub['configured']) throw new OpshSaasException('No HubSpot key is saved yet (Company systems → HubSpot → Set up… → Connection).', 409);
-        return new OpshSaasUsers('hubspot', opsh_conn_creds($db, 'hubspot'));
+        $sys = function_exists('itops_sys_get') ? itops_sys_get($db, 'hubspot') : null;
+        if (!$sys || $sys['mode'] !== 'connected') throw new ItopsSaasException('HubSpot is not connected. Company systems → HubSpot → Set up… → Connection.', 409);
+        $pub = itops_conn_public($db, 'hubspot');
+        if (!$pub || !$pub['configured']) throw new ItopsSaasException('No HubSpot key is saved yet (Company systems → HubSpot → Set up… → Connection).', 409);
+        return new ItopsSaasUsers('hubspot', itops_conn_creds($db, 'hubspot'));
     }
 
     /** HubSpot's answer to a change or a removal, in words. */
-    function opsh_hsp_err(OpshSaasUsers $c, int $st, array $d, string $doing): string {
+    function itops_hsp_err(ItopsSaasUsers $c, int $st, array $d, string $doing): string {
         $m = $d['message'] ?? ''; $m = is_string($m) ? trim(mb_substr($m, 0, 240)) : '';
         if ($st === 403 || $st === 401) return 'HubSpot refused to ' . $doing . ' (HTTP ' . $st . '). The key needs the scope settings.users.write'
             . (stripos($m, 'billing') !== false ? ', and a role with a paid seat also needs billing-write' : '') . '.' . ($m !== '' ? ' HubSpot said: ' . $m : '');
@@ -37,7 +37,7 @@ if (!function_exists('opsh_hsp_client')) {
     }
 
     /** A HubSpot user in the shape the page uses. */
-    function opsh_hsp_shape(array $r, array $roles = [], array $teams = []): array {
+    function itops_hsp_shape(array $r, array $roles = [], array $teams = []): array {
         $s = fn($v) => is_string($v) || is_int($v) ? trim((string)$v) : '';
         $list = fn($v) => array_values(array_filter(array_map($s, is_array($v) ? $v : []), fn($x) => $x !== ''));
         $roleId = $s($r['roleId'] ?? ''); $prim = $s($r['primaryTeamId'] ?? '');
@@ -49,7 +49,7 @@ if (!function_exists('opsh_hsp_client')) {
     }
 
     /** [roles id=>name, paid role ids, teams id=>name, teams readable?] */
-    function opsh_hsp_lists(OpshSaasUsers $c): array {
+    function itops_hsp_lists(ItopsSaasUsers $c): array {
         $roles = []; $paid = []; $teams = []; $teamsOk = false;
         [$st, $d] = $c->call('GET', '/settings/v3/users/roles');
         if ($st >= 200 && $st < 300) foreach ((array)($d['results'] ?? []) as $r) if (is_array($r) && isset($r['id'], $r['name'])) {
@@ -60,24 +60,24 @@ if (!function_exists('opsh_hsp_client')) {
     }
 
     /** Look a person up by each email given. Returns the raw HubSpot user or null (not found). Throws when HubSpot cannot be asked. */
-    function opsh_hsp_find(OpshSaasUsers $c, array $emails): ?array {
+    function itops_hsp_find(ItopsSaasUsers $c, array $emails): ?array {
         foreach ($emails as $e) {
             [$st, $d] = $c->call('GET', '/settings/v3/users/' . rawurlencode($e), ['idProperty' => 'EMAIL']);
             if ($st >= 200 && $st < 300 && isset($d['id'])) return $d;
-            if ($st !== 404) throw new OpshSaasException($c->errText($st, $d), $st);
+            if ($st !== 404) throw new ItopsSaasException($c->errText($st, $d), $st);
         }
         return null;
     }
 
-    function opsh_hsp_get(OpshSaasUsers $c, string $id): ?array {
+    function itops_hsp_get(ItopsSaasUsers $c, string $id): ?array {
         [$st, $d] = $c->call('GET', '/settings/v3/users/' . rawurlencode($id), ['idProperty' => 'USER_ID']);
         if ($st === 404) return null;
-        if ($st < 200 || $st >= 300 || !isset($d['id'])) throw new OpshSaasException($c->errText($st, $d), $st);
+        if ($st < 200 || $st >= 300 || !isset($d['id'])) throw new ItopsSaasException($c->errText($st, $d), $st);
         return $d;
     }
 
     /** What the Audit Log shows of a user. */
-    function opsh_hsp_audit_view(array $u): array {
+    function itops_hsp_audit_view(array $u): array {
         return ['Name' => trim($u['first_name'] . ' ' . $u['last_name']), 'Role' => $u['super_admin'] ? 'Super Admin' : ($u['role'] ?: '(none)'),
                 'Primary team' => $u['primary_team'] ?: '(none)', 'Other teams' => $u['secondary_teams'] ? implode(', ', $u['secondary_teams']) : '(none)'];
     }
@@ -86,7 +86,7 @@ if (!function_exists('opsh_hsp_client')) {
      * The change asked for, checked. $in = first_name, last_name, role_id, primary_team_id, secondary_team_ids (only the
      * fields that change). Returns HubSpot's body. Throws InvalidArgumentException with the reason.
      */
-    function opsh_hsp_clean_change(array $in, array $now, array $roles, array $teams, bool $teamsOk): array {
+    function itops_hsp_clean_change(array $in, array $now, array $roles, array $teams, bool $teamsOk): array {
         $out = [];
         foreach (['first_name' => 'firstName', 'last_name' => 'lastName'] as $k => $hk) {
             if (!array_key_exists($k, $in)) continue;

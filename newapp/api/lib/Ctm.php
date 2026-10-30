@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub BT148 — CallTrackingMetrics (CTM), read only.
+ * ITOps BT148 — CallTrackingMetrics (CTM), read only.
  *
  *   API      https://api.calltrackingmetrics.com/api/v1 (REST, JSON). Basic authentication with the account's access key
  *            and secret key (Account Settings → API Integration), sent in the Authorization header only, never in an
@@ -15,15 +15,15 @@
  *
  * The fields of a user, a number and a call are read tolerantly (several names each): CTM's reference does not fix them
  * for every account type, and "Save the key and test" shows the fields a real user carries.
- * Nothing is ever written to CTM. A test installation can point the client elsewhere with OPSH_CTM_BASE in config.php.
+ * Nothing is ever written to CTM. A test installation can point the client elsewhere with ITOPS_CTM_BASE in config.php.
  */
-if (!class_exists('OpshCtm')) {
-    class OpshCtmException extends RuntimeException {
+if (!class_exists('ItopsCtm')) {
+    class ItopsCtmException extends RuntimeException {
         public int $status = 0;
         public function __construct(string $m, int $status = 0) { parent::__construct($m); $this->status = $status; }
     }
 
-    final class OpshCtm
+    final class ItopsCtm
     {
         const BASE = 'https://api.calltrackingmetrics.com/api/v1';
         const PER_PAGE = 100;
@@ -35,15 +35,15 @@ if (!class_exists('OpshCtm')) {
         public function __construct(string $accessKey, string $secretKey, string $accountId = '', int $timeout = 15)
         {
             $accessKey = trim($accessKey); $secretKey = trim($secretKey); $accountId = trim($accountId);
-            if ($accessKey === '' || $secretKey === '') throw new OpshCtmException('The CallTrackingMetrics access key or secret key is missing.');
-            if (preg_match('/[\r\n\s]/', $accessKey . $secretKey)) throw new OpshCtmException('The CallTrackingMetrics key holds a space or a line break. Copy it again.');
-            if ($accountId !== '' && !preg_match('/^[0-9]{1,20}$/', $accountId)) throw new OpshCtmException('The CallTrackingMetrics account ID is a number (Account Settings shows it). Leave it empty when the key reaches one account.');
+            if ($accessKey === '' || $secretKey === '') throw new ItopsCtmException('The CallTrackingMetrics access key or secret key is missing.');
+            if (preg_match('/[\r\n\s]/', $accessKey . $secretKey)) throw new ItopsCtmException('The CallTrackingMetrics key holds a space or a line break. Copy it again.');
+            if ($accountId !== '' && !preg_match('/^[0-9]{1,20}$/', $accountId)) throw new ItopsCtmException('The CallTrackingMetrics account ID is a number (Account Settings shows it). Leave it empty when the key reaches one account.');
             $this->auth = 'Basic ' . base64_encode($accessKey . ':' . $secretKey); $this->account = $accountId; $this->timeout = max(3, min(40, $timeout));
         }
 
         public static function base(): string
         {
-            return defined('OPSH_CTM_BASE') && is_string(OPSH_CTM_BASE) && OPSH_CTM_BASE !== '' ? rtrim(OPSH_CTM_BASE, '/') : self::BASE;
+            return defined('ITOPS_CTM_BASE') && is_string(ITOPS_CTM_BASE) && ITOPS_CTM_BASE !== '' ? rtrim(ITOPS_CTM_BASE, '/') : self::BASE;
         }
 
         /** The account the key works on. Throws with a sentence when there is none, or several and none was chosen. */
@@ -51,20 +51,20 @@ if (!class_exists('OpshCtm')) {
         {
             if ($this->acct) return $this->acct;
             [$s, $d] = $this->req('/accounts.json', ['page' => 1, 'per_page' => self::PER_PAGE]);
-            if ($s < 200 || $s >= 300) throw new OpshCtmException($this->errMsg($s, $d), $s);
+            if ($s < 200 || $s >= 300) throw new ItopsCtmException($this->errMsg($s, $d), $s);
             $rows = self::rowsOf($d, 'accounts');
             if ($rows === null && isset($d['id'])) $rows = [$d];   // a key that answers with its own account
-            if ($rows === null) throw new OpshCtmException('CallTrackingMetrics answered, but not with a list of accounts.', $s);
+            if ($rows === null) throw new ItopsCtmException('CallTrackingMetrics answered, but not with a list of accounts.', $s);
             $all = [];
             foreach ($rows as $r) if (is_array($r) && self::txt($r['id'] ?? '') !== '') $all[] = ['id' => self::txt($r['id']), 'name' => mb_substr(self::txt($r['name'] ?? ''), 0, 120)];
             if ($this->account !== '') {
                 foreach ($all as $a) if ($a['id'] === $this->account) return $this->acct = $a;
                 if (!$all) return $this->acct = ['id' => $this->account, 'name' => ''];   // the list is empty for an account-level key on some plans: trust the ID given
-                throw new OpshCtmException('This key does not reach the account ' . $this->account . '. It reaches: ' . self::names($all) . '.');
+                throw new ItopsCtmException('This key does not reach the account ' . $this->account . '. It reaches: ' . self::names($all) . '.');
             }
             if (count($all) === 1) return $this->acct = $all[0];
-            if (!$all) throw new OpshCtmException('This key reaches no CallTrackingMetrics account. Enter the account ID on the connection.');
-            throw new OpshCtmException('This key reaches ' . count($all) . ' accounts (' . self::names($all) . '). Enter the ID of the company\'s account on the connection.');
+            if (!$all) throw new ItopsCtmException('This key reaches no CallTrackingMetrics account. Enter the account ID on the connection.');
+            throw new ItopsCtmException('This key reaches ' . count($all) . ' accounts (' . self::names($all) . '). Enter the ID of the company\'s account on the connection.');
         }
 
         /** One cheap call that proves the key works and can read users. */
@@ -72,9 +72,9 @@ if (!class_exists('OpshCtm')) {
         {
             $a = $this->account();
             [$s, $d] = $this->req('/accounts/' . $a['id'] . '/users.json', ['page' => 1, 'per_page' => 1]);
-            if ($s < 200 || $s >= 300) throw new OpshCtmException($this->errMsg($s, $d), $s);
+            if ($s < 200 || $s >= 300) throw new ItopsCtmException($this->errMsg($s, $d), $s);
             $rows = self::rowsOf($d, 'users');
-            if ($rows === null) throw new OpshCtmException('CallTrackingMetrics answered, but not with a list of users. The key may not be allowed to read users.', $s);
+            if ($rows === null) throw new ItopsCtmException('CallTrackingMetrics answered, but not with a list of users. The key may not be allowed to read users.', $s);
             return ['account' => $a, 'users_seen' => count($rows), 'fields' => $rows && is_array($rows[0]) ? array_slice(array_keys($rows[0]), 0, 30) : [], 'total' => self::total($d)];
         }
 
@@ -207,9 +207,9 @@ if (!class_exists('OpshCtm')) {
             $out = []; $total = null; $pages = null; $trunc = false; $seen = [];
             for ($p = 1; $p <= $maxPages; $p++) {
                 [$s, $d] = $this->req($path, $q + ['page' => $p, 'per_page' => self::PER_PAGE]);
-                if ($s < 200 || $s >= 300) throw new OpshCtmException($this->errMsg($s, $d), $s);
+                if ($s < 200 || $s >= 300) throw new ItopsCtmException($this->errMsg($s, $d), $s);
                 $rows = self::rowsOf($d, $key);
-                if ($rows === null) throw new OpshCtmException('CallTrackingMetrics answered, but not with a list of ' . $key . '.', $s);
+                if ($rows === null) throw new ItopsCtmException('CallTrackingMetrics answered, but not with a list of ' . $key . '.', $s);
                 if ($total === null) $total = self::total($d);
                 if ($pages === null && isset($d['total_pages']) && is_numeric($d['total_pages'])) $pages = (int)$d['total_pages'];
                 $new = 0;
@@ -220,25 +220,25 @@ if (!class_exists('OpshCtm')) {
                 if ($p === $maxPages) $trunc = true;
             }
             if ($strict && ($trunc || ($total !== null && count($out) < $total)))
-                throw new OpshCtmException('CallTrackingMetrics has ' . ($total ?? 'more') . ' ' . $key . ' but only ' . count($out) . ' could be read. Nothing was changed.', 0);
+                throw new ItopsCtmException('CallTrackingMetrics has ' . ($total ?? 'more') . ' ' . $key . ' but only ' . count($out) . ' could be read. Nothing was changed.', 0);
             return $out;
         }
 
         private function req(string $path, array $query = []): array
         {
-            if (!function_exists('curl_init')) throw new OpshCtmException('This server cannot make web requests (the PHP curl extension is missing).');
+            if (!function_exists('curl_init')) throw new ItopsCtmException('This server cannot make web requests (the PHP curl extension is missing).');
             $url = self::base() . $path . ($query ? '?' . http_build_query($query) : '');
             for ($try = 0; $try < 2; $try++) {
                 $ch = curl_init($url); $hdr = [];
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPGET => true, CURLOPT_FOLLOWLOCATION => false,
-                    CURLOPT_PROTOCOLS => CURLPROTO_HTTPS | (defined('OPSH_CTM_BASE') ? CURLPROTO_HTTP : 0),
-                    CURLOPT_HTTPHEADER => ['Authorization: ' . $this->auth, 'Accept: application/json', 'User-Agent: ' . (function_exists('opsh_app_name') ? preg_replace('/[^A-Za-z0-9 ._-]/', '', opsh_app_name()) : 'app') . ' company systems reader'],
+                    CURLOPT_PROTOCOLS => CURLPROTO_HTTPS | (defined('ITOPS_CTM_BASE') ? CURLPROTO_HTTP : 0),
+                    CURLOPT_HTTPHEADER => ['Authorization: ' . $this->auth, 'Accept: application/json', 'User-Agent: ' . (function_exists('itops_app_name') ? preg_replace('/[^A-Za-z0-9 ._-]/', '', itops_app_name()) : 'app') . ' company systems reader'],
                     CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => $this->timeout,
                     CURLOPT_HEADERFUNCTION => function ($c, $line) use (&$hdr) { $p = explode(':', $line, 2); if (count($p) === 2) $hdr[strtolower(trim($p[0]))] = trim($p[1]); return strlen($line); },
                 ]);
                 $raw = curl_exec($ch);
-                if ($raw === false) { $err = curl_error($ch); curl_close($ch); throw new OpshCtmException('No answer from CallTrackingMetrics (' . $err . ').', 0); }
+                if ($raw === false) { $err = curl_error($ch); curl_close($ch); throw new ItopsCtmException('No answer from CallTrackingMetrics (' . $err . ').', 0); }
                 $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
                 if ($status === 429 && $try === 0) { sleep(max(1, min(5, (int)($hdr['retry-after'] ?? 2)))); continue; }
                 $data = json_decode((string)$raw, true);

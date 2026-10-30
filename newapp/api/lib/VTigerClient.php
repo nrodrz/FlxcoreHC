@@ -1,27 +1,27 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — vTiger provisioning client.
+ * ITOps — vTiger provisioning client.
  *
  * Two channels:
- *   1. opsh_vtiger_bridge_call() — the PREFERRED path for creating users, since
- *      vTiger's Web Services CANNOT create Users. Talks to OpsHub's own bridge
- *      (opsh-bridge.php) over an HMAC-signed request. OpsHub's own secret.
- *   2. OpshVTigerClient — the webservice (getchallenge → login), used as a
+ *   1. itops_vtiger_bridge_call() — the PREFERRED path for creating users, since
+ *      vTiger's Web Services CANNOT create Users. Talks to ITOps's own bridge
+ *      (itops-bridge.php) over an HMAC-signed request. ITOps's own secret.
+ *   2. ItopsVTigerClient — the webservice (getchallenge → login), used as a
  *      fallback and to verify credentials. Rarely completes a Users create on
  *      its own, which is why the bridge exists.
  *
- * Config from opsh_settings key 'vtiger_provision' (JSON):
+ * Config from itops_settings key 'vtiger_provision' (JSON):
  *   endpoint, username, access_key, default_roleid, bridge_url, bridge_secret
  */
 
-if (!function_exists('opsh_vtiger_bridge_call')) {
+if (!function_exists('itops_vtiger_bridge_call')) {
 
     /**
-     * HMAC-signed POST to OpsHub's vTiger bridge, with OpsHub's own headers/secret. Returns the decoded JSON reply
+     * HMAC-signed POST to ITOps's vTiger bridge, with ITOps's own headers/secret. Returns the decoded JSON reply
      * (['ok'=>bool, ...]); never throws — transport errors come back as ok:false.
      */
-    function opsh_vtiger_bridge_call(array $prov, string $action, array $payload = []): array {
+    function itops_vtiger_bridge_call(array $prov, string $action, array $payload = []): array {
         $url    = (string)($prov['bridge_url'] ?? '');
         $secret = (string)($prov['bridge_secret'] ?? '');
         if ($url === '' || $secret === '') return ['ok' => false, 'error' => 'Bridge not configured.'];
@@ -36,7 +36,7 @@ if (!function_exists('opsh_vtiger_bridge_call')) {
             CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 25,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-Opsh-Timestamp: ' . $ts, 'X-Opsh-Signature: ' . $sig],
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-Itops-Timestamp: ' . $ts, 'X-Itops-Signature: ' . $sig],
         ]);
         $resp  = curl_exec($ch);
         $errno = curl_errno($ch);
@@ -50,24 +50,24 @@ if (!function_exists('opsh_vtiger_bridge_call')) {
     }
 
     /** BT89: passwords travel only over HTTPS, or to the same machine. */
-    function opsh_vtiger_url_secure(string $u): bool {
+    function itops_vtiger_url_secure(string $u): bool {
         $h = strtolower(trim((string)parse_url($u, PHP_URL_HOST), '[]'));
         return stripos(trim($u), 'https://') === 0 || in_array($h, ['127.0.0.1', 'localhost', '::1'], true);
     }
 
     /** Is the bridge configured (URL + secret present)? */
-    function opsh_vtiger_bridge_ready(array $prov): bool {
+    function itops_vtiger_bridge_ready(array $prov): bool {
         return trim((string)($prov['bridge_url'] ?? '')) !== '' && trim((string)($prov['bridge_secret'] ?? '')) !== '';
     }
 }
 
-if (!class_exists('OpshVTigerClient')) {
+if (!class_exists('ItopsVTigerClient')) {
     /**
      * Minimal vTiger Web Services client: getchallenge → login. Used to verify
      * credentials (testLogin) and as a create fallback. No session-cache
      * stampede handling (onboarding is a single call, not the parallel dashboard).
      */
-    final class OpshVTigerClient {
+    final class ItopsVTigerClient {
         private string $endpoint;
         private string $username;
         private string $accessKey;

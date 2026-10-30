@@ -1,9 +1,9 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — the calendar (BT60): event types, times, recurrence, reminders, attendees, offices, and calendar reports.
+ * ITOps — the calendar (BT60): event types, times, recurrence, reminders, attendees, offices, and calendar reports.
  *
- * Events (opsh_calendar_events) have a type (Settings of the calendar: meeting, maintenance window, change window,
+ * Events (itops_calendar_events) have a type (Settings of the calendar: meeting, maintenance window, change window,
  * training, vendor visit, audit, deadline, out of office, office closure, task, other — editable, each with a colour
  * and defaults), a start and an end (or all day), a status (scheduled, tentative, cancelled, done), a location (an
  * office from IT Budget → Offices, or free text, or an online meeting link), an organizer, attendees (people of the app
@@ -17,14 +17,14 @@
  * The agenda also shows the due dates of other modules, each filtered by the viewer's permissions (BT24): ticket
  * response and resolution, contract ends, SOP reviews, credential terms and rotations, equipment warranty ends (BT60).
  *
- * Reports (opsh_cal_report): events by type, upcoming deadlines and renewals, maintenance and change windows,
+ * Reports (itops_cal_report): events by type, upcoming deadlines and renewals, maintenance and change windows,
  * attendance by person, activity by office, overdue items, and the full agenda — on screen, CSV, PDF, Word and
  * calendar file (.ics).
  */
 
-if (!function_exists('opsh_cal_types')) {
+if (!function_exists('itops_cal_types')) {
 
-    function opsh_cal_type_defaults(): array {
+    function itops_cal_type_defaults(): array {
         return [
             ['key' => 'meeting', 'label' => 'Meeting', 'color' => '#1D4D7A', 'minutes' => 60, 'all_day' => false, 'window' => false, 'reminders' => [15]],
             ['key' => 'maintenance', 'label' => 'Maintenance window', 'color' => '#C08A30', 'minutes' => 120, 'all_day' => false, 'window' => true, 'reminders' => [1440, 60]],
@@ -39,15 +39,15 @@ if (!function_exists('opsh_cal_types')) {
             ['key' => 'other', 'label' => 'Other', 'color' => '#8FB3C7', 'minutes' => 60, 'all_day' => false, 'window' => false, 'reminders' => []],
         ];
     }
-    function opsh_cal_reminder_choices(): array { return [0 => 'At the start', 5 => '5 minutes before', 10 => '10 minutes before', 15 => '15 minutes before', 30 => '30 minutes before', 60 => '1 hour before', 120 => '2 hours before', 240 => '4 hours before', 1440 => '1 day before', 2880 => '2 days before', 10080 => '1 week before']; }
+    function itops_cal_reminder_choices(): array { return [0 => 'At the start', 5 => '5 minutes before', 10 => '10 minutes before', 15 => '15 minutes before', 30 => '30 minutes before', 60 => '1 hour before', 120 => '2 hours before', 240 => '4 hours before', 1440 => '1 day before', 2880 => '2 days before', 10080 => '1 week before']; }
     /** The event types: the defaults, as changed in the calendar settings (a type in use is never removed, only hidden). */
-    function opsh_cal_types(PDO $db): array {
-        $d = opsh_cal_type_defaults();
-        try { $s = $db->prepare("SELECT sval FROM opsh_settings WHERE skey='calendar_types'"); $s->execute(); $j = json_decode((string)$s->fetchColumn(), true); } catch (Throwable $e) { $j = null; }
+    function itops_cal_types(PDO $db): array {
+        $d = itops_cal_type_defaults();
+        try { $s = $db->prepare("SELECT sval FROM itops_settings WHERE skey='calendar_types'"); $s->execute(); $j = json_decode((string)$s->fetchColumn(), true); } catch (Throwable $e) { $j = null; }
         if (!is_array($j) || !$j) return array_map(fn($t) => $t + ['hidden' => false], $d);
         return array_map(fn($t) => $t + ['hidden' => false], $j);
     }
-    function opsh_cal_types_clean(array $in): array {
+    function itops_cal_types_clean(array $in): array {
         $bad = fn($m) => throw new InvalidArgumentException($m);
         if (!$in || count($in) > 40) $bad('Keep between 1 and 40 kinds of event.');
         $o = []; $seen = [];
@@ -60,16 +60,16 @@ if (!function_exists('opsh_cal_types')) {
             if (isset($seen[$key])) $bad('Two kinds of event have the same key "' . $key . '".'); $seen[$key] = 1;
             $col = strtoupper((string)($t['color'] ?? '#8FB3C7')); if (!preg_match('/^#[0-9A-F]{6}$/', $col)) $bad('"' . $label . '": the colour is a hex colour such as #1D4D7A.');
             $min = (int)($t['minutes'] ?? 60); if ($min < 0 || $min > 1440) $bad('"' . $label . '": the usual length is 0 to 1440 minutes.');
-            $rem = []; foreach ((array)($t['reminders'] ?? []) as $m) { if (!array_key_exists((int)$m, opsh_cal_reminder_choices())) $bad('"' . $label . '": choose reminders from the list.'); $rem[] = (int)$m; }
+            $rem = []; foreach ((array)($t['reminders'] ?? []) as $m) { if (!array_key_exists((int)$m, itops_cal_reminder_choices())) $bad('"' . $label . '": choose reminders from the list.'); $rem[] = (int)$m; }
             $o[] = ['key' => $key, 'label' => $label, 'color' => $col, 'minutes' => $min, 'all_day' => !empty($t['all_day']), 'window' => !empty($t['window']), 'reminders' => array_values(array_unique($rem)), 'hidden' => !empty($t['hidden'])];
         }
         return $o;
     }
-    function opsh_cal_type(array $types, string $key): ?array { foreach ($types as $t) if ($t['key'] === $key) return $t; return null; }
+    function itops_cal_type(array $types, string $key): ?array { foreach ($types as $t) if ($t['key'] === $key) return $t; return null; }
 
     // ── one event ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-    function opsh_cal_row(array $r): array {
+    function itops_cal_row(array $r): array {
         $j = fn($v) => ($v === null || $v === '') ? null : json_decode((string)$v, true);
         return ['id' => (int)$r['id'], 'title' => (string)$r['title'], 'description' => (string)($r['description'] ?? ''), 'event_type' => (string)($r['event_type'] ?: 'other'),
             'start' => (string)$r['start_date'], 'end' => $r['end_date'] ? (string)$r['end_date'] : null, 'all_day' => (bool)$r['all_day'], 'color' => (string)($r['color'] ?? ''),
@@ -78,17 +78,17 @@ if (!function_exists('opsh_cal_types')) {
             'reminders' => $j($r['reminders'] ?? null) ?: [], 'owner_id' => ($r['owner_id'] ?? null) ? (int)$r['owner_id'] : (($r['created_by'] ?? null) ? (int)$r['created_by'] : null),
             'department_id' => $r['department_id'] ? (int)$r['department_id'] : null, 'entity_type' => $r['entity_type'] ?? null, 'entity_id' => $r['entity_id'] ? (int)$r['entity_id'] : null,
             'series_id' => ($r['series_id'] ?? null) ? (int)$r['series_id'] : null, 'created_by' => $r['created_by'] ? (int)$r['created_by'] : null,
-            'origin' => (string)($r['origin'] ?? '')];   // BT68: '' made in OpsHub, 'outlook' their own Outlook event, 'outlook_invite' an Outlook invitation
+            'origin' => (string)($r['origin'] ?? '')];   // BT68: '' made in ITOps, 'outlook' their own Outlook event, 'outlook_invite' an Outlook invitation
     }
-    function opsh_cal_get(PDO $db, int $id): ?array {
-        $s = $db->prepare('SELECT * FROM opsh_calendar_events WHERE id=?'); $s->execute([$id]); $r = $s->fetch(PDO::FETCH_ASSOC); if (!$r) return null;
-        $e = opsh_cal_row($r);
-        $a = $db->prepare('SELECT a.user_id, a.email, a.name, a.response, u.display_name, u.email AS uemail FROM opsh_calendar_attendees a LEFT JOIN opsh_users u ON u.id = a.user_id WHERE a.event_id=? ORDER BY a.id'); $a->execute([$id]);
+    function itops_cal_get(PDO $db, int $id): ?array {
+        $s = $db->prepare('SELECT * FROM itops_calendar_events WHERE id=?'); $s->execute([$id]); $r = $s->fetch(PDO::FETCH_ASSOC); if (!$r) return null;
+        $e = itops_cal_row($r);
+        $a = $db->prepare('SELECT a.user_id, a.email, a.name, a.response, u.display_name, u.email AS uemail FROM itops_calendar_attendees a LEFT JOIN itops_users u ON u.id = a.user_id WHERE a.event_id=? ORDER BY a.id'); $a->execute([$id]);
         $e['attendees'] = array_map(fn($x) => ['user_id' => $x['user_id'] ? (int)$x['user_id'] : null, 'email' => (string)($x['user_id'] ? $x['uemail'] : $x['email']), 'name' => (string)($x['user_id'] ? $x['display_name'] : $x['name']), 'response' => (string)$x['response']], $a->fetchAll(PDO::FETCH_ASSOC));
         return $e;
     }
     /** May this person see the event (private events: organizer, attendees, creator, Super Admin)? */
-    function opsh_cal_can_see(array $e, array $user, ?array $attUserIds = null): bool {
+    function itops_cal_can_see(array $e, array $user, ?array $attUserIds = null): bool {
         if (($e['visibility'] ?? 'team') !== 'private') return true;
         $uid = (int)($user['id'] ?? 0); if (($user['role_slug'] ?? '') === 'super_admin') return true;
         if ($uid && ($uid === (int)($e['owner_id'] ?? 0) || $uid === (int)($e['created_by'] ?? 0))) return true;
@@ -97,7 +97,7 @@ if (!function_exists('opsh_cal_types')) {
     }
 
     /** Check an event sent by a person. Returns [event fields, attendees]. Throws InvalidArgumentException with a sentence. */
-    function opsh_cal_clean(PDO $db, array $in, ?array $cur, array $types, array $user): array {
+    function itops_cal_clean(PDO $db, array $in, ?array $cur, array $types, array $user): array {
         $bad = fn($m) => throw new InvalidArgumentException($m);
         $o = $cur ?? ['title' => '', 'description' => '', 'event_type' => 'meeting', 'start' => null, 'end' => null, 'all_day' => false, 'color' => '', 'location' => '', 'site_id' => null, 'online_url' => '',
                       'visibility' => 'team', 'status' => 'scheduled', 'recur' => null, 'exdates' => [], 'reminders' => [], 'owner_id' => (int)$user['id'], 'department_id' => null, 'entity_type' => null, 'entity_id' => null];
@@ -105,7 +105,7 @@ if (!function_exists('opsh_cal_types')) {
         if (array_key_exists('title', $in)) $o['title'] = $str('title', 255);
         if ($o['title'] === '') $bad('Give the event a title.');
         if (array_key_exists('description', $in)) $o['description'] = $str('description', 5000, true);
-        if (array_key_exists('event_type', $in)) { if (!opsh_cal_type($types, (string)$in['event_type'])) $bad('Choose what kind of event it is.'); $o['event_type'] = (string)$in['event_type']; }
+        if (array_key_exists('event_type', $in)) { if (!itops_cal_type($types, (string)$in['event_type'])) $bad('Choose what kind of event it is.'); $o['event_type'] = (string)$in['event_type']; }
         if (array_key_exists('all_day', $in)) { if (!is_bool($in['all_day'])) $bad('"All day" is on or off.'); $o['all_day'] = $in['all_day']; }
         $dt = function ($v, string $what) use ($bad, $o): string {
             if (!is_string($v)) $bad('Choose the ' . $what . '.');
@@ -127,23 +127,23 @@ if (!function_exists('opsh_cal_types')) {
         if (array_key_exists('online_url', $in)) { $u = $str('online_url', 500); if ($u !== '' && !preg_match('~^https://[^\s<>"]+$~i', $u)) $bad('The online meeting link starts with https://.'); $o['online_url'] = $u; }
         if (array_key_exists('visibility', $in)) { if (!in_array($in['visibility'], ['team', 'private'], true)) $bad('Visible to the team, or private.'); $o['visibility'] = $in['visibility']; }
         if (array_key_exists('status', $in)) { if (!in_array($in['status'], ['scheduled', 'tentative', 'cancelled', 'done'], true)) $bad('Choose the status: scheduled, tentative, cancelled or done.'); $o['status'] = $in['status']; }
-        foreach (['site_id' => ['opsh_budget_sites', 'That office is not in the list any more.'], 'department_id' => ['opsh_departments', 'That department is not in the list any more.'], 'owner_id' => ['opsh_users', 'Choose the organizer from the list.']] as $k => [$tbl, $msg]) if (array_key_exists($k, $in)) {
+        foreach (['site_id' => ['itops_budget_sites', 'That office is not in the list any more.'], 'department_id' => ['itops_departments', 'That department is not in the list any more.'], 'owner_id' => ['itops_users', 'Choose the organizer from the list.']] as $k => [$tbl, $msg]) if (array_key_exists($k, $in)) {
             $v = $in[$k]; if ($v === null || $v === '' || $v === 0) { if ($k === 'owner_id') $bad('Every event has an organizer.'); $o[$k] = null; continue; }
             if (!is_numeric($v)) $bad($msg);
-            try { $s = $db->prepare("SELECT COUNT(*) FROM $tbl WHERE id=?" . ($tbl === 'opsh_users' ? " AND status='active'" : '')); $s->execute([(int)$v]); if (!$s->fetchColumn()) $bad($msg); } catch (InvalidArgumentException $e) { throw $e; } catch (Throwable $e) { $bad($msg); }
+            try { $s = $db->prepare("SELECT COUNT(*) FROM $tbl WHERE id=?" . ($tbl === 'itops_users' ? " AND status='active'" : '')); $s->execute([(int)$v]); if (!$s->fetchColumn()) $bad($msg); } catch (InvalidArgumentException $e) { throw $e; } catch (Throwable $e) { $bad($msg); }
             $o[$k] = (int)$v;
         }
         if (array_key_exists('reminders', $in)) {
             if (!is_array($in['reminders']) || count($in['reminders']) > 5) $bad('Up to five reminders.');
-            $r = []; foreach ($in['reminders'] as $m) { if (!is_numeric($m) || !array_key_exists((int)$m, opsh_cal_reminder_choices())) $bad('Choose the reminders from the list.'); $r[] = (int)$m; }
+            $r = []; foreach ($in['reminders'] as $m) { if (!is_numeric($m) || !array_key_exists((int)$m, itops_cal_reminder_choices())) $bad('Choose the reminders from the list.'); $r[] = (int)$m; }
             rsort($r); $o['reminders'] = array_values(array_unique($r));
         }
-        if (array_key_exists('recur', $in)) $o['recur'] = opsh_cal_recur_clean($in['recur'], $o['start']);
+        if (array_key_exists('recur', $in)) $o['recur'] = itops_cal_recur_clean($in['recur'], $o['start']);
         if (array_key_exists('entity_type', $in) || array_key_exists('entity_id', $in)) {
             $et = (string)($in['entity_type'] ?? ''); $ei = $in['entity_id'] ?? null;
             if ($et === '' || $ei === null || $ei === '') { $o['entity_type'] = null; $o['entity_id'] = null; }
             else {
-                $map = ['ticket' => 'opsh_tickets', 'contract' => 'opsh_contracts', 'vendor' => 'opsh_vendors', 'asset' => 'opsh_assets', 'sop' => 'opsh_sops', 'case' => 'opsh_cases'];   // BT77: a case's meeting
+                $map = ['ticket' => 'itops_tickets', 'contract' => 'itops_contracts', 'vendor' => 'itops_vendors', 'asset' => 'itops_assets', 'sop' => 'itops_sops', 'case' => 'itops_cases'];   // BT77: a case's meeting
                 if (!isset($map[$et]) || !is_numeric($ei)) $bad('The related item is not one the calendar knows.');
                 $s = $db->prepare("SELECT COUNT(*) FROM {$map[$et]} WHERE id=?"); $s->execute([(int)$ei]); if (!$s->fetchColumn()) $bad('The related item is not there any more.');
                 $o['entity_type'] = $et; $o['entity_id'] = (int)$ei;
@@ -157,7 +157,7 @@ if (!function_exists('opsh_cal_types')) {
                 if (!is_array($a)) $bad('The attendees are not in the expected form.');
                 if (!empty($a['user_id'])) {
                     if (!is_numeric($a['user_id'])) $bad('Choose the attendees from the list.');
-                    $s = $db->prepare("SELECT id FROM opsh_users WHERE id=? AND status='active'"); $s->execute([(int)$a['user_id']]); if (!$s->fetchColumn()) $bad('An attendee is not an active person of the app any more.');
+                    $s = $db->prepare("SELECT id FROM itops_users WHERE id=? AND status='active'"); $s->execute([(int)$a['user_id']]); if (!$s->fetchColumn()) $bad('An attendee is not an active person of the app any more.');
                     $k = 'u' . (int)$a['user_id']; if (isset($seen[$k])) continue; $seen[$k] = 1;
                     $att[] = ['user_id' => (int)$a['user_id'], 'email' => '', 'name' => ''];
                 } else {
@@ -170,7 +170,7 @@ if (!function_exists('opsh_cal_types')) {
         return [$o, $att];
     }
 
-    function opsh_cal_recur_clean($r, string $start): ?array {
+    function itops_cal_recur_clean($r, string $start): ?array {
         $bad = fn($m) => throw new InvalidArgumentException($m);
         if ($r === null || $r === '' || $r === false) return null;
         if (!is_array($r)) $bad('The repeat is not in the expected form.');
@@ -191,7 +191,7 @@ if (!function_exists('opsh_cal_types')) {
         return $o;
     }
     /** "Every 2 weeks on Tue, Thu until Dec 31, 2026" */
-    function opsh_cal_recur_text(?array $r, string $start): string {
+    function itops_cal_recur_text(?array $r, string $start): string {
         if (!$r) return '';
         $u = ['daily' => ['day', 'days'], 'weekly' => ['week', 'weeks'], 'monthly' => ['month', 'months'], 'yearly' => ['year', 'years']][$r['freq']];
         $t = 'Every ' . ($r['interval'] > 1 ? $r['interval'] . ' ' . $u[1] : $u[0]);
@@ -204,7 +204,7 @@ if (!function_exists('opsh_cal_types')) {
     }
 
     /** The start times of an event between $from and $to (YYYY-MM-DD, both included). At most 1,000. */
-    function opsh_cal_occurrences(array $e, string $from, string $to): array {
+    function itops_cal_occurrences(array $e, string $from, string $to): array {
         $S = strtotime($e['start']); $dur = $e['end'] ? strtotime($e['end']) - $S : 0; $time = date('H:i:s', $S);
         $f0 = strtotime($from . ' 00:00:00'); $t1 = strtotime($to . ' 23:59:59');
         $r = $e['recur']; $ex = array_flip((array)($e['exdates'] ?? []));
@@ -257,16 +257,16 @@ if (!function_exists('opsh_cal_types')) {
      * permission, BT24) and the calendar events with their occurrences. $opt: mine (only the viewer's own items),
      * types (event types to keep), site_id, user_id (organized by or attended by), department_id, sources (bool: other modules).
      */
-    function opsh_cal_agenda(PDO $db, array $currentUser, string $from, string $to, array $opt = []): array {
+    function itops_cal_agenda(PDO $db, array $currentUser, string $from, string $to, array $opt = []): array {
         $f = $from . ' 00:00:00'; $tt = $to . ' 23:59:59'; $ev = [];
         $mine = !empty($opt['mine']); $uid = (int)$currentUser['id'];
-        $canT = opsh_can($currentUser, 'tickets', 'view'); $allT = $canT && opsh_can($currentUser, 'tickets', 'all');
+        $canT = itops_can($currentUser, 'tickets', 'view'); $allT = $canT && itops_can($currentUser, 'tickets', 'all');
         $tryQ = function ($sql, $args) use ($db) { try { $s = $db->prepare($sql); $s->execute($args); return $s->fetchAll(PDO::FETCH_ASSOC); } catch (Throwable $e) { return []; } };
         if (!array_key_exists('sources', $opt) || $opt['sources']) {
-        $edT = opsh_can($currentUser, 'tickets', 'edit');
+        $edT = itops_can($currentUser, 'tickets', 'edit');
         if ($canT) {
             $own = ($allT && !$mine) ? '' : "AND (assignee_id=$uid OR requester_id=$uid OR backup_id=$uid) ";
-            $st = $db->prepare("SELECT id,ticket_number,subject,priority,status,due_date,sla_response_due,resolved_at,closed_at,first_response_at FROM opsh_tickets WHERE status NOT IN ('cancelled') " . $own . "AND ((due_date BETWEEN ? AND ?) OR (sla_response_due BETWEEN ? AND ?))");
+            $st = $db->prepare("SELECT id,ticket_number,subject,priority,status,due_date,sla_response_due,resolved_at,closed_at,first_response_at FROM itops_tickets WHERE status NOT IN ('cancelled') " . $own . "AND ((due_date BETWEEN ? AND ?) OR (sla_response_due BETWEEN ? AND ?))");
             $st->execute([$f,$tt,$f,$tt]);
             foreach ($st->fetchAll() as $r) {
                 $open = !in_array($r['status'], ['resolved','closed']);
@@ -278,36 +278,36 @@ if (!function_exists('opsh_cal_types')) {
         }
         $tryQ = function($sql,$args) use ($db) { try { $s=$db->prepare($sql); $s->execute($args); return $s->fetchAll(); } catch (Throwable $e) { return []; } };
         $ownQ = function($col) use ($mine,$uid) { return $mine ? " AND $col=$uid" : ''; };
-        if (opsh_can($currentUser, 'contracts', 'view')) { $ed = opsh_can($currentUser, 'contracts', 'edit');
-            foreach ($tryQ("SELECT id,title,end_date FROM opsh_contracts WHERE end_date BETWEEN ? AND ? AND status NOT IN ('renewed','terminated','archived')" . $ownQ('owner_id'), [$from,$to]) as $r)
+        if (itops_can($currentUser, 'contracts', 'view')) { $ed = itops_can($currentUser, 'contracts', 'edit');
+            foreach ($tryQ("SELECT id,title,end_date FROM itops_contracts WHERE end_date BETWEEN ? AND ? AND status NOT IN ('renewed','terminated','archived')" . $ownQ('owner_id'), [$from,$to]) as $r)
                 $ev[] = ['date'=>$r['end_date'],'datetime'=>$r['end_date'].' 00:00:00','type'=>'contract_end','title'=>'Contract ends','subtitle'=>$r['title'],'entity'=>'contract','entity_id'=>(int)$r['id'],'page'=>'contracts','color'=>'#5E6FA8','overdue'=>(strtotime($r['end_date'])<time()),'can_edit'=>$ed]; }
-        if (opsh_can($currentUser, 'sops', 'view')) { $ed = opsh_can($currentUser, 'sops', 'edit');
-            foreach ($tryQ("SELECT s.id,s.title,s.next_review_date,s.owner_id,u.display_name AS owner_name FROM opsh_sops s LEFT JOIN opsh_users u ON u.id=s.owner_id WHERE s.next_review_date BETWEEN ? AND ? AND s.status<>'archived'" . $ownQ('s.owner_id'), [$from,$to]) as $r)
+        if (itops_can($currentUser, 'sops', 'view')) { $ed = itops_can($currentUser, 'sops', 'edit');
+            foreach ($tryQ("SELECT s.id,s.title,s.next_review_date,s.owner_id,u.display_name AS owner_name FROM itops_sops s LEFT JOIN itops_users u ON u.id=s.owner_id WHERE s.next_review_date BETWEEN ? AND ? AND s.status<>'archived'" . $ownQ('s.owner_id'), [$from,$to]) as $r)
                 $ev[] = ['date'=>$r['next_review_date'],'datetime'=>$r['next_review_date'].' 00:00:00','type'=>'sop_review','title'=>'SOP review due','subtitle'=>$r['title'] . ($r['owner_name'] ? ' · ' . $r['owner_name'] : ''),'entity'=>'sop','entity_id'=>(int)$r['id'],'page'=>'sops','color'=>'#3D9A6E','overdue'=>(strtotime($r['next_review_date'])<time()),'can_edit'=>$ed,'owner_id'=>$r['owner_id']?(int)$r['owner_id']:null]; }
-        if (opsh_can($currentUser, 'creds', 'view')) { $ed = opsh_can($currentUser, 'creds', 'edit');
-            foreach ($tryQ("SELECT id,name,valid_until FROM opsh_credentials WHERE valid_until BETWEEN ? AND ? AND status NOT IN ('retired','archived')" . $ownQ('owner_id'), [$from,$to]) as $r)
+        if (itops_can($currentUser, 'creds', 'view')) { $ed = itops_can($currentUser, 'creds', 'edit');
+            foreach ($tryQ("SELECT id,name,valid_until FROM itops_credentials WHERE valid_until BETWEEN ? AND ? AND status NOT IN ('retired','archived')" . $ownQ('owner_id'), [$from,$to]) as $r)
                 $ev[] = ['date'=>$r['valid_until'],'datetime'=>$r['valid_until'].' 00:00:00','type'=>'cred_term','title'=>'Credential term ends','subtitle'=>$r['name'],'entity'=>'credential','entity_id'=>(int)$r['id'],'page'=>'credentials','color'=>'#8E5BB5','overdue'=>(strtotime($r['valid_until'])<strtotime(date('Y-m-d'))),'can_edit'=>$ed];
-            foreach ($tryQ("SELECT id,name,next_rotation_date FROM opsh_credentials WHERE next_rotation_date BETWEEN ? AND ? AND status NOT IN ('retired','archived','disabled')" . $ownQ('owner_id'), [$from,$to]) as $r)
+            foreach ($tryQ("SELECT id,name,next_rotation_date FROM itops_credentials WHERE next_rotation_date BETWEEN ? AND ? AND status NOT IN ('retired','archived','disabled')" . $ownQ('owner_id'), [$from,$to]) as $r)
                 $ev[] = ['date'=>$r['next_rotation_date'],'datetime'=>$r['next_rotation_date'].' 00:00:00','type'=>'cred_rotation','title'=>'Credential rotation','subtitle'=>$r['name'],'entity'=>'credential','entity_id'=>(int)$r['id'],'page'=>'credentials','color'=>'#1D4D7A','overdue'=>(strtotime($r['next_rotation_date'])<time()),'can_edit'=>$ed]; }
         // BT60: equipment warranty ends
-        if (opsh_can($currentUser, 'assets', 'view')) { $ed = opsh_can($currentUser, 'assets', 'edit');
-            foreach ($tryQ("SELECT id, asset_tag, make, model, warranty_expiry FROM opsh_assets WHERE warranty_expiry BETWEEN ? AND ? AND status NOT IN ('retired','lost')" . ($mine ? " AND assigned_to=$uid" : ''), [$from, $to]) as $r)
+        if (itops_can($currentUser, 'assets', 'view')) { $ed = itops_can($currentUser, 'assets', 'edit');
+            foreach ($tryQ("SELECT id, asset_tag, make, model, warranty_expiry FROM itops_assets WHERE warranty_expiry BETWEEN ? AND ? AND status NOT IN ('retired','lost')" . ($mine ? " AND assigned_to=$uid" : ''), [$from, $to]) as $r)
                 $ev[] = ['date' => $r['warranty_expiry'], 'datetime' => $r['warranty_expiry'] . ' 00:00:00', 'type' => 'warranty_end', 'title' => 'Warranty ends', 'subtitle' => trim($r['asset_tag'] . ' · ' . $r['make'] . ' ' . $r['model']), 'entity' => 'asset', 'entity_id' => (int)$r['id'], 'page' => 'assets', 'color' => '#7A6A3A', 'overdue' => false, 'can_edit' => $ed, 'all_day' => true]; }
-        // BT77: case task dates and target dates (the person's own, the cases they own or watch) — they stay in OpsHub
-        if (is_file(__DIR__ . '/Cases.php')) { try { require_once __DIR__ . '/Cases.php'; foreach (opsh_cs_agenda($db, $currentUser, $from, $to, $mine) as $x) $ev[] = $x; } catch (Throwable $e) {} }
+        // BT77: case task dates and target dates (the person's own, the cases they own or watch) — they stay in ITOps
+        if (is_file(__DIR__ . '/Cases.php')) { try { require_once __DIR__ . '/Cases.php'; foreach (itops_cs_agenda($db, $currentUser, $from, $to, $mine) as $x) $ev[] = $x; } catch (Throwable $e) {} }
         }
         // calendar events
-        if (opsh_can($currentUser, 'calendar', 'view')) {
-            $types = opsh_cal_types($db); $tmap = []; foreach ($types as $t) $tmap[$t['key']] = $t;
-            $edE = opsh_can($currentUser, 'calendar', 'edit'); $isSuper = ($currentUser['role_slug'] ?? '') === 'super_admin';
-            $sites = []; try { foreach ($db->query('SELECT id, name FROM opsh_budget_sites')->fetchAll(PDO::FETCH_ASSOC) as $s) $sites[(int)$s['id']] = $s['name']; } catch (Throwable $e) {}
-            $rows = $tryQ("SELECT e.*, u.display_name AS owner_name FROM opsh_calendar_events e LEFT JOIN opsh_users u ON u.id = COALESCE(e.owner_id, e.created_by)
+        if (itops_can($currentUser, 'calendar', 'view')) {
+            $types = itops_cal_types($db); $tmap = []; foreach ($types as $t) $tmap[$t['key']] = $t;
+            $edE = itops_can($currentUser, 'calendar', 'edit'); $isSuper = ($currentUser['role_slug'] ?? '') === 'super_admin';
+            $sites = []; try { foreach ($db->query('SELECT id, name FROM itops_budget_sites')->fetchAll(PDO::FETCH_ASSOC) as $s) $sites[(int)$s['id']] = $s['name']; } catch (Throwable $e) {}
+            $rows = $tryQ("SELECT e.*, u.display_name AS owner_name FROM itops_calendar_events e LEFT JOIN itops_users u ON u.id = COALESCE(e.owner_id, e.created_by)
                            WHERE e.start_date <= ? AND (e.recur IS NOT NULL OR COALESCE(e.end_date, e.start_date) >= ?)", [$tt, $f]);
             $ids = array_map(fn($r) => (int)$r['id'], $rows); $att = []; $caseRole = [];
-            if ($ids) { foreach ($tryQ('SELECT a.event_id, a.user_id, a.email, a.name, u.display_name FROM opsh_calendar_attendees a LEFT JOIN opsh_users u ON u.id = a.user_id WHERE a.event_id IN (' . implode(',', $ids) . ')', []) as $a) $att[(int)$a['event_id']][] = $a; }
+            if ($ids) { foreach ($tryQ('SELECT a.event_id, a.user_id, a.email, a.name, u.display_name FROM itops_calendar_attendees a LEFT JOIN itops_users u ON u.id = a.user_id WHERE a.event_id IN (' . implode(',', $ids) . ')', []) as $a) $att[(int)$a['event_id']][] = $a; }
             foreach ($rows as $r) {
-                $e = opsh_cal_row($r); $au = array_map(fn($a) => (int)$a['user_id'], array_filter($att[$e['id']] ?? [], fn($a) => $a['user_id']));
-                if (!opsh_cal_can_see($e, $currentUser, $au)) continue;
+                $e = itops_cal_row($r); $au = array_map(fn($a) => (int)$a['user_id'], array_filter($att[$e['id']] ?? [], fn($a) => $a['user_id']));
+                if (!itops_cal_can_see($e, $currentUser, $au)) continue;
                 $mineE = $uid === (int)$e['owner_id'] || $uid === (int)$e['created_by'] || in_array($uid, $au, true);
                 if ($mine && !$mineE) continue;
                 if (!empty($opt['types']) && !in_array($e['event_type'], (array)$opt['types'], true)) continue;
@@ -318,11 +318,11 @@ if (!function_exists('opsh_cal_types')) {
                 $dur = $e['end'] ? strtotime($e['end']) - strtotime($e['start']) : 0;
                 $hide = false;   // BT92 (code audit Low): a case meeting's text is for the case's people (and its invitees)
                 if (($e['entity_type'] ?? '') === 'case' && !$isSuper && !$mineE) {
-                    if (!array_key_exists((int)$e['entity_id'], $caseRole)) { $caseRole[(int)$e['entity_id']] = null; try { require_once __DIR__ . '/Cases.php'; $cs = opsh_cs_get($db, (int)$e['entity_id']); $caseRole[(int)$e['entity_id']] = $cs ? opsh_cs_role($db, $cs, $currentUser) : null; } catch (Throwable $x) {} }
+                    if (!array_key_exists((int)$e['entity_id'], $caseRole)) { $caseRole[(int)$e['entity_id']] = null; try { require_once __DIR__ . '/Cases.php'; $cs = itops_cs_get($db, (int)$e['entity_id']); $caseRole[(int)$e['entity_id']] = $cs ? itops_cs_role($db, $cs, $currentUser) : null; } catch (Throwable $x) {} }
                     $hide = !in_array($caseRole[(int)$e['entity_id']], ['owner', 'lead', 'member'], true);
                 }
                 $canE = $edE && ($isSuper || $mineE || $e['visibility'] === 'team');
-                foreach (opsh_cal_occurrences($e, $from, $to) as $occ) {
+                foreach (itops_cal_occurrences($e, $from, $to) as $occ) {
                     $end = $e['end'] ? date('Y-m-d H:i:s', strtotime($occ) + $dur) : null;
                     $ev[] = ['date' => substr($occ, 0, 10), 'datetime' => $occ, 'end' => $end, 'all_day' => $e['all_day'], 'type' => 'event', 'event_type' => $e['event_type'], 'type_label' => $t['label'],
                              'title' => $hide ? 'Case meeting' : $e['title'], 'subtitle' => $hide ? '' : mb_substr($e['description'], 0, 200), 'location' => $hide ? '' : ($e['site_id'] && isset($sites[$e['site_id']]) ? $sites[$e['site_id']] . ($e['location'] !== '' ? ' · ' . $e['location'] : '') : $e['location']),
@@ -339,44 +339,44 @@ if (!function_exists('opsh_cal_types')) {
     // ── reminders (main scheduler) ─────────────────────────────────────────────────────────────────────────────────
 
     /** Send the reminders that are due: in the app and by email, to the organizer and the attendees who are people of the app. */
-    function opsh_cal_reminders_run(PDO $db): int {
-        try { $db->query('SELECT 1 FROM opsh_calendar_reminders_sent LIMIT 1'); } catch (Throwable $e) { return 0; }
-        $now = time(); $sent = 0; $types = opsh_cal_types($db); $tl = []; foreach ($types as $t) $tl[$t['key']] = $t['label'];
-        $rows = $db->query("SELECT * FROM opsh_calendar_events WHERE reminders IS NOT NULL AND reminders NOT IN ('','[]') AND status NOT IN ('cancelled','done')
+    function itops_cal_reminders_run(PDO $db): int {
+        try { $db->query('SELECT 1 FROM itops_calendar_reminders_sent LIMIT 1'); } catch (Throwable $e) { return 0; }
+        $now = time(); $sent = 0; $types = itops_cal_types($db); $tl = []; foreach ($types as $t) $tl[$t['key']] = $t['label'];
+        $rows = $db->query("SELECT * FROM itops_calendar_events WHERE reminders IS NOT NULL AND reminders NOT IN ('','[]') AND status NOT IN ('cancelled','done')
                             AND start_date <= '" . date('Y-m-d H:i:s', $now + 8 * 86400) . "' AND (recur IS NOT NULL OR start_date >= '" . date('Y-m-d H:i:s', $now - 86400) . "')")->fetchAll(PDO::FETCH_ASSOC);
-        $sites = []; try { foreach ($db->query('SELECT id, name FROM opsh_budget_sites')->fetchAll(PDO::FETCH_ASSOC) as $s) $sites[(int)$s['id']] = $s['name']; } catch (Throwable $e) {}
-        $mark = $db->prepare('INSERT IGNORE INTO opsh_calendar_reminders_sent (event_id, occ, minutes, user_id, sent_at) VALUES (?,?,?,?,?)');
-        $note = $db->prepare('INSERT INTO opsh_notifications (user_id, title, body, type, link) VALUES (?,?,?,?,?)');
+        $sites = []; try { foreach ($db->query('SELECT id, name FROM itops_budget_sites')->fetchAll(PDO::FETCH_ASSOC) as $s) $sites[(int)$s['id']] = $s['name']; } catch (Throwable $e) {}
+        $mark = $db->prepare('INSERT IGNORE INTO itops_calendar_reminders_sent (event_id, occ, minutes, user_id, sent_at) VALUES (?,?,?,?,?)');
+        $note = $db->prepare('INSERT INTO itops_notifications (user_id, title, body, type, link) VALUES (?,?,?,?,?)');
         foreach ($rows as $r) {
-            $e = opsh_cal_row($r); if (!$e['reminders']) continue;
+            $e = itops_cal_row($r); if (!$e['reminders']) continue;
             $who = []; if ($e['owner_id']) $who[] = $e['owner_id'];
-            foreach ($db->query('SELECT user_id FROM opsh_calendar_attendees WHERE event_id=' . (int)$e['id'] . ' AND user_id IS NOT NULL AND response <> \'declined\'')->fetchAll(PDO::FETCH_COLUMN) as $u) $who[] = (int)$u;
+            foreach ($db->query('SELECT user_id FROM itops_calendar_attendees WHERE event_id=' . (int)$e['id'] . ' AND user_id IS NOT NULL AND response <> \'declined\'')->fetchAll(PDO::FETCH_COLUMN) as $u) $who[] = (int)$u;
             $who = array_values(array_unique($who)); if (!$who) continue;
-            foreach (opsh_cal_occurrences($e, date('Y-m-d', $now - 86400), date('Y-m-d', $now + 8 * 86400)) as $occ) {
+            foreach (itops_cal_occurrences($e, date('Y-m-d', $now - 86400), date('Y-m-d', $now + 8 * 86400)) as $occ) {
                 $base = $e['all_day'] ? strtotime(substr($occ, 0, 10) . ' 08:00:00') : strtotime($occ);
                 foreach ($e['reminders'] as $m) {
                     $at = $base - $m * 60; if ($at > $now || $at < $now - 6 * 3600) continue;   // due, and not older than six hours (no flood after a pause)
                     foreach ($who as $u) {
                         $mark->execute([$e['id'], substr($occ, 0, 10), $m, $u, date('Y-m-d H:i:s')]); if ($mark->rowCount() !== 1) continue;
-                        $uRow = $db->query('SELECT id, email, display_name FROM opsh_users WHERE id=' . (int)$u . " AND status='active'")->fetch(PDO::FETCH_ASSOC); if (!$uRow) continue;
+                        $uRow = $db->query('SELECT id, email, display_name FROM itops_users WHERE id=' . (int)$u . " AND status='active'")->fetch(PDO::FETCH_ASSOC); if (!$uRow) continue;
                         $end = $e['end'] ? date('g:i A', strtotime($occ) + strtotime($e['end']) - strtotime($e['start'])) : '';
                         $when = $e['all_day'] ? date('D, m/d/Y', strtotime($occ)) . ' (all day)' : date('D, m/d/Y g:i A', strtotime($occ)) . ($end ? ' – ' . $end : '');
                         $where = trim(($e['site_id'] && isset($sites[$e['site_id']]) ? $sites[$e['site_id']] : '') . ($e['location'] !== '' ? ' · ' . $e['location'] : '') . ($e['online_url'] !== '' ? ' · online' : ''), ' ·');
                         $note->execute([$u, 'Reminder: ' . $e['title'], $when . ($where !== '' ? ' · ' . $where : ''), 'info', 'calendar']);
-                        if (!empty($uRow['email']) && function_exists('opsh_email')) { try { opsh_email('calendar_reminder', (string)$uRow['email'], ['event_title' => $e['title'], 'event_type' => $tl[$e['event_type']] ?? $e['event_type'], 'when' => $when, 'location' => $where !== '' ? $where : '—',
+                        if (!empty($uRow['email']) && function_exists('itops_email')) { try { itops_email('calendar_reminder', (string)$uRow['email'], ['event_title' => $e['title'], 'event_type' => $tl[$e['event_type']] ?? $e['event_type'], 'when' => $when, 'location' => $where !== '' ? $where : '—',
                             'recipient_name' => (string)$uRow['display_name'], 'link' => defined('APP_URL') ? rtrim(APP_URL, '/') . '/#calendar' : ''], ['user_id' => (int)$u]); } catch (Throwable $x) {} }
                         $sent++;
                     }
                 }
             }
         }
-        try { $db->prepare('DELETE FROM opsh_calendar_reminders_sent WHERE sent_at < ?')->execute([date('Y-m-d H:i:s', $now - 60 * 86400)]); } catch (Throwable $e) {}
+        try { $db->prepare('DELETE FROM itops_calendar_reminders_sent WHERE sent_at < ?')->execute([date('Y-m-d H:i:s', $now - 60 * 86400)]); } catch (Throwable $e) {}
         return $sent;
     }
 
     // ── reports ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-    function opsh_cal_report_types(): array {
+    function itops_cal_report_types(): array {
         return ['events' => ['Events', 'Every event in the period: when, kind, organizer, attendees, place and status. Click a total to show only those.'],
                 'summary' => ['Events by type', 'How many events of each kind, and the hours they took.'],
                 'deadlines' => ['Upcoming deadlines and renewals', 'Ticket due dates, contract ends, SOP reviews, credential rotations and terms, warranty ends, and deadline events.'],
@@ -391,15 +391,15 @@ if (!function_exists('opsh_cal_types')) {
      * A calendar report: ['title', 'subtitle', 'columns' => [[label, w, align]], 'rows' => [[cells]|['cells','style']], 'kpis' => [[label, value, note]], 'ics' => events for a calendar file].
      * $f: from, to, types[], site_id, user_id, department_id, mine.
      */
-    function opsh_cal_report(PDO $db, array $user, string $type, array $f): array {
-        $types = opsh_cal_report_types(); if (!isset($types[$type])) throw new InvalidArgumentException('Choose a kind of report.');
+    function itops_cal_report(PDO $db, array $user, string $type, array $f): array {
+        $types = itops_cal_report_types(); if (!isset($types[$type])) throw new InvalidArgumentException('Choose a kind of report.');
         $from = (string)$f['from']; $to = (string)$f['to'];
-        $ctypes = opsh_cal_types($db); $tl = []; foreach ($ctypes as $t) $tl[$t['key']] = $t['label'];
+        $ctypes = itops_cal_types($db); $tl = []; foreach ($ctypes as $t) $tl[$t['key']] = $t['label'];
         $hrs = fn(array $e) => $e['all_day'] ? 0.0 : ($e['end'] ? max(0, (strtotime($e['end']) - strtotime($e['datetime'])) / 3600) : 0.0);
         $h1 = fn(float $h) => $h > 0 ? rtrim(rtrim(number_format($h, 1), '0'), '.') : '—';
         $dt = fn(array $e) => $e['all_day'] || substr($e['datetime'], 11, 5) === '00:00' && ($e['type'] ?? '') !== 'event' ? date('D M j, Y', strtotime($e['date'])) : date('D M j, Y g:i A', strtotime($e['datetime']));
         $opt = ['mine' => !empty($f['mine']), 'types' => $f['types'] ?? [], 'site_id' => $f['site_id'] ?? null, 'user_id' => $f['user_id'] ?? null, 'department_id' => $f['department_id'] ?? null];
-        $events = fn(array $o = []) => array_values(array_filter(opsh_cal_agenda($db, $user, $from, $to, $o + $opt + ['sources' => false]), fn($e) => $e['type'] === 'event'));
+        $events = fn(array $o = []) => array_values(array_filter(itops_cal_agenda($db, $user, $from, $to, $o + $opt + ['sources' => false]), fn($e) => $e['type'] === 'event'));
         $period = date('m/d/Y', strtotime($from)) . ' – ' . date('m/d/Y', strtotime($to));
         $out = ['title' => $types[$type][0], 'subtitle' => $period, 'columns' => [], 'rows' => [], 'kpis' => [], 'ics' => [], 'landscape' => false];
         $kindLabel = ['ticket_resolution' => 'Ticket resolution due', 'ticket_response' => 'Ticket response due', 'contract_end' => 'Contract ends', 'sop_review' => 'SOP review', 'cred_rotation' => 'Credential rotation', 'cred_term' => 'Credential term ends', 'warranty_end' => 'Warranty ends', 'event' => 'Event'];
@@ -430,7 +430,7 @@ if (!function_exists('opsh_cal_types')) {
                 $out['bars'] = array_map(fn($k, $v) => [$tl[$k] ?? $k, $v['n'], (string)$v['n']], array_keys($by), $by);
                 break; }
             case 'deadlines': case 'overdue': {
-                $all = opsh_cal_agenda($db, $user, $type === 'overdue' ? date('Y-m-d', strtotime('-2 years')) : $from, $type === 'overdue' ? date('Y-m-d', strtotime('-1 day')) : $to, $opt + ['sources' => true]);
+                $all = itops_cal_agenda($db, $user, $type === 'overdue' ? date('Y-m-d', strtotime('-2 years')) : $from, $type === 'overdue' ? date('Y-m-d', strtotime('-1 day')) : $to, $opt + ['sources' => true]);
                 $all = array_values(array_filter($all, fn($e) => $e['type'] !== 'event' || $e['event_type'] === 'deadline'));
                 if ($type === 'overdue') $all = array_values(array_filter($all, fn($e) => !empty($e['overdue']) || ($e['type'] === 'event' && $e['status'] === 'scheduled')));
                 $today = strtotime(date('Y-m-d'));
@@ -455,7 +455,7 @@ if (!function_exists('opsh_cal_types')) {
                 break; }
             case 'people': {
                 $ev = array_filter($events(), fn($e) => $e['status'] !== 'cancelled'); $p = [];
-                $names = []; foreach ($db->query("SELECT id, display_name FROM opsh_users")->fetchAll(PDO::FETCH_ASSOC) as $u) $names[(int)$u['id']] = $u['display_name'];
+                $names = []; foreach ($db->query("SELECT id, display_name FROM itops_users")->fetchAll(PDO::FETCH_ASSOC) as $u) $names[(int)$u['id']] = $u['display_name'];
                 foreach ($ev as $e) { $h = $hrs($e);
                     if ($e['owner_id']) { $o = (int)$e['owner_id']; $p[$o]['org'] = ($p[$o]['org'] ?? 0) + 1; $p[$o]['h'] = ($p[$o]['h'] ?? 0) + $h; $p[$o]['t'][$e['event_type']] = ($p[$o]['t'][$e['event_type']] ?? 0) + 1; }
                     foreach ($e['attendee_ids'] as $a) { if ($a === (int)$e['owner_id']) continue; $p[$a]['att'] = ($p[$a]['att'] ?? 0) + 1; $p[$a]['h'] = ($p[$a]['h'] ?? 0) + $h; $p[$a]['t'][$e['event_type']] = ($p[$a]['t'][$e['event_type']] ?? 0) + 1; } }
@@ -466,7 +466,7 @@ if (!function_exists('opsh_cal_types')) {
                 break; }
             case 'offices': {
                 $ev = array_filter($events(), fn($e) => $e['status'] !== 'cancelled'); $o = [];
-                $sites = []; try { foreach ($db->query('SELECT id, name FROM opsh_budget_sites')->fetchAll(PDO::FETCH_ASSOC) as $s) $sites[(int)$s['id']] = $s['name']; } catch (Throwable $e) {}
+                $sites = []; try { foreach ($db->query('SELECT id, name FROM itops_budget_sites')->fetchAll(PDO::FETCH_ASSOC) as $s) $sites[(int)$s['id']] = $s['name']; } catch (Throwable $e) {}
                 foreach ($ev as $e) { $k = $e['site_id'] ? ($sites[$e['site_id']] ?? 'Office #' . $e['site_id']) : ($e['online'] ? 'Online' : 'No office set'); $o[$k]['n'] = ($o[$k]['n'] ?? 0) + 1; $o[$k]['h'] = ($o[$k]['h'] ?? 0) + $hrs($e); $o[$k]['t'][$e['event_type']] = ($o[$k]['t'][$e['event_type']] ?? 0) + 1; }
                 uasort($o, fn($a, $b) => $b['n'] <=> $a['n']);
                 foreach ($o as $k => $v) { arsort($v['t']); $out['rows'][] = [$k, (string)$v['n'], $h1($v['h']), implode(', ', array_map(fn($kk, $n) => ($tl[$kk] ?? $kk) . ' ' . $n, array_keys($v['t']), $v['t']))]; }
@@ -475,7 +475,7 @@ if (!function_exists('opsh_cal_types')) {
                 $out['bars'] = array_map(fn($k, $v) => [$k, $v['n'], (string)$v['n']], array_keys($o), $o);
                 break; }
             case 'agenda': {
-                $all = opsh_cal_agenda($db, $user, $from, $to, $opt + ['sources' => !isset($f['sources']) || !empty($f['sources'])]);
+                $all = itops_cal_agenda($db, $user, $from, $to, $opt + ['sources' => !isset($f['sources']) || !empty($f['sources'])]);
                 $day = '';
                 foreach ($all as $e) {
                     if ($e['date'] !== $day) { $day = $e['date']; $out['rows'][] = ['cells' => [date('l, F j, Y', strtotime($day))], 'style' => 'group']; }
@@ -494,14 +494,14 @@ if (!function_exists('opsh_cal_types')) {
     }
 
     /** A calendar file (.ics) of events, so they can be added to Outlook or any calendar. */
-    function opsh_cal_ics(array $events, string $name): string {
+    function itops_cal_ics(array $events, string $name): string {
         $esc = fn(string $s) => str_replace(["\\", ";", ",", "\r\n", "\n"], ["\\\\", "\\;", "\\,", "\\n", "\\n"], $s);
         $fold = function (string $l): string { $o = ''; while (strlen($l) > 74) { $cut = 74; while ($cut > 1 && (ord($l[$cut]) & 0xC0) === 0x80) $cut--; $o .= substr($l, 0, $cut) . "\r\n "; $l = substr($l, $cut); } return $o . $l; };
-        $host = preg_replace('/[^a-z0-9.\-]/i', '', preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? 'opshub'))) ?: 'opshub';
-        $L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//OpsHub//Calendar//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:' . $esc($name)];
+        $host = preg_replace('/[^a-z0-9.\-]/i', '', preg_replace('/:\d+$/', '', (string)($_SERVER['HTTP_HOST'] ?? 'itops'))) ?: 'itops';
+        $L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ITOps//Calendar//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:' . $esc($name)];
         foreach ($events as $e) {
             $L[] = 'BEGIN:VEVENT';
-            $L[] = 'UID:opsh-' . (int)$e['entity_id'] . '-' . str_replace('-', '', (string)$e['occ']) . '@' . $host;
+            $L[] = 'UID:itops-' . (int)$e['entity_id'] . '-' . str_replace('-', '', (string)$e['occ']) . '@' . $host;
             $L[] = 'DTSTAMP:' . gmdate('Ymd\THis\Z');
             if ($e['all_day']) { $L[] = 'DTSTART;VALUE=DATE:' . date('Ymd', strtotime($e['datetime'])); $L[] = 'DTEND;VALUE=DATE:' . date('Ymd', strtotime(($e['end'] ?: $e['datetime']) . ' +1 day')); }
             else { $L[] = 'DTSTART:' . gmdate('Ymd\THis\Z', strtotime($e['datetime'])); $L[] = 'DTEND:' . gmdate('Ymd\THis\Z', strtotime($e['end'] ?: date('Y-m-d H:i:s', strtotime($e['datetime']) + 3600))); }   // UTC: every calendar app reads it

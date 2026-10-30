@@ -2,41 +2,41 @@
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 declare(strict_types=1);
 
-// OpsHub BT21 — Microsoft 365 domain service (lib/M365.php design), kept as close to that design as
+// ITOps BT21 — Microsoft 365 domain service (lib/M365.php design), kept as close to that design as
 // possible so both apps offer the same Microsoft 365 options. Changes from the original:
-//   class M365 → OpshM365, OpshM365Exception → OpshM365Exception, GraphClient → OpshGraphClient
-//   (OpsHub's Graph connection), fromConfig() reads OpsHub's settings, and attachVtiger() uses
-//   OpsHub's vTiger lookup (read-only DB when configured, otherwise the provisioning bridge).
+//   class M365 → ItopsM365, ItopsM365Exception → ItopsM365Exception, GraphClient → ItopsGraphClient
+//   (ITOps's Graph connection), fromConfig() reads ITOps's settings, and attachVtiger() uses
+//   ITOps's vTiger lookup (read-only DB when configured, otherwise the provisioning bridge).
 //
 // M365.php — domain service over GraphClient for the Microsoft 365 console.
 // Phase 1: directory reads (users, SKUs), account enable/disable, password and
 // MFA reset, and session revocation. All app-only via the daemon app registration.
 // vTiger linkage is read-only: it matches M365 emails to vtiger_users.email1.
 
-require_once __DIR__ . '/OpshGraphClient.php';
+require_once __DIR__ . '/ItopsGraphClient.php';
 require_once __DIR__ . '/HubVtiger.php';
 
-if (!class_exists('OpshM365')) {
-final class OpshM365Exception extends Exception {}
+if (!class_exists('ItopsM365')) {
+final class ItopsM365Exception extends Exception {}
 
-final class OpshM365
+final class ItopsM365
 {
-    private OpshGraphClient $g;
+    private ItopsGraphClient $g;
 
-    public function __construct(OpshGraphClient $graph)
+    public function __construct(ItopsGraphClient $graph)
     {
         $this->g = $graph;
     }
 
-    /** Build from OpsHub's Microsoft 365 connection; throws a friendly error if it isn't set up. */
+    /** Build from ITOps's Microsoft 365 connection; throws a friendly error if it isn't set up. */
     public static function fromConfig(array $config = []): self
     {
-        if (!function_exists('opsh_graph_configured') || !opsh_graph_configured()) {
-            throw new OpshM365Exception(
+        if (!function_exists('itops_graph_configured') || !itops_graph_configured()) {
+            throw new ItopsM365Exception(
                 'Microsoft 365 is not connected. Open Settings → Sign-in & AI → Microsoft 365 connection and save the Azure app first.'
             );
         }
-        return new self(new OpshGraphClient());
+        return new self(new ItopsGraphClient());
     }
 
     private const USER_SELECT_LIST = 'id,displayName,userPrincipalName,mail,accountEnabled,jobTitle,department,userType,assignedLicenses';
@@ -195,8 +195,8 @@ final class OpshM365
             catch (Throwable $e) { $unread++; }
         }
         self::$rosterNote = ['listed' => count($rows), 'missing' => count($missing), 'unread' => $unread];
-        if ($missing && function_exists('opsh_log')) {
-            try { opsh_log('warning', 'm365', "Microsoft 365: the listing with sign-in dates left out " . count($missing) . ' of ' . count($rows) . ' accounts. They are in the reports all the same; their sign-in dates were read one by one'
+        if ($missing && function_exists('itops_log')) {
+            try { itops_log('warning', 'm365', "Microsoft 365: the listing with sign-in dates left out " . count($missing) . ' of ' . count($rows) . ' accounts. They are in the reports all the same; their sign-in dates were read one by one'
                 . ($unread ? ' (' . $unread . ' could not be read and show as not known)' : '') . '.', ['missing' => count($missing), 'accounts' => count($rows), 'unread' => $unread]); } catch (Throwable $e) {}
         }
         foreach ($rows as $i => $u) {
@@ -472,7 +472,7 @@ final class OpshM365
     /** Exchange mailbox usage detail. Requires Reports.Read.All. JSON via $format. */
     public function mailboxUsage(string $period = 'D30'): array
     {
-        $period = opsh_graph_period($period);   // BT88
+        $period = itops_graph_period($period);   // BT88
         $body = $this->g->getReportBeta("reports/getMailboxUsageDetail(period='{$period}')");
         $out = [];
         foreach (($body['value'] ?? []) as $r) {
@@ -495,7 +495,7 @@ final class OpshM365
     /** Microsoft Teams user activity detail. Requires Reports.Read.All. JSON via $format. */
     public function teamsActivity(string $period = 'D30'): array
     {
-        $period = opsh_graph_period($period);   // BT88
+        $period = itops_graph_period($period);   // BT88
         $body = $this->g->getReportBeta("reports/getTeamsUserActivityUserDetail(period='{$period}')");
         $out = [];
         foreach (($body['value'] ?? []) as $r) {
@@ -521,14 +521,14 @@ final class OpshM365
      * BT55: Copilot reports, v1.0 first then beta. Microsoft moved these reports to a new version that refuses the
      * documented 30 days and says so in one of two ways ("The period value 'RL30' is not supported with version 'v2'.
      * Use 'RL28' instead." / "Invalid period value specified: RL28. Supported values are: D7,D28,…").
-     * opsh_graph_period_next() reads both; ask again with what it gives (at most four periods in all) and remember the
+     * itops_graph_period_next() reads both; ask again with what it gives (at most four periods in all) and remember the
      * one that worked per report (cache file copilot-period2; the first file could hold 'RL28', which Microsoft refuses).
      */
     private function copilotReport(string $fn, string $period): array
     {
-        $period = opsh_graph_period($period);   // BT88
+        $period = itops_graph_period($period);   // BT88
         if (!preg_match('/^[A-Za-z0-9]{3,80}$/', $fn)) throw new InvalidArgumentException('Unknown report.');
-        $memo = function_exists('opsh_m365_cache_file') ? opsh_m365_cache_file('copilot-period2') : null;
+        $memo = function_exists('itops_m365_cache_file') ? itops_m365_cache_file('copilot-period2') : null;
         $known = ($memo && is_file($memo)) ? (json_decode((string)@file_get_contents($memo), true) ?: []) : [];
         $asked = $period; $p = $period; $last = null; $tried = [];
         $mk = $fn . '|' . $asked;
@@ -538,11 +538,11 @@ final class OpshM365
             $path = "copilot/reports/{$fn}(period='{$p}')";
             $next = null;
             try { $body = $this->g->getReport($path); $this->remember($memo, $known, $mk, $p, $asked); return $body; }
-            catch (\Throwable $e) { $last = $e; $next = opsh_graph_period_next($e->getMessage(), $p, $tried); }
+            catch (\Throwable $e) { $last = $e; $next = itops_graph_period_next($e->getMessage(), $p, $tried); }
             if ($next === null) {
                 // Not yet GA on v1.0 in some tenants — fall back to the beta endpoint.
                 try { $body = $this->g->getReportBeta($path); $this->remember($memo, $known, $mk, $p, $asked); return $body; }
-                catch (\Throwable $e) { $last = $e; $next = opsh_graph_period_next($e->getMessage(), $p, $tried); }
+                catch (\Throwable $e) { $last = $e; $next = itops_graph_period_next($e->getMessage(), $p, $tried); }
             }
             if ($next === null) break;
             $p = $next;
@@ -692,7 +692,7 @@ final class OpshM365
     /** OneDrive usage per account. Requires Reports.Read.All. JSON via $format. */
     public function oneDriveUsage(string $period = 'D30'): array
     {
-        $period = opsh_graph_period($period);   // BT88
+        $period = itops_graph_period($period);   // BT88
         $body = $this->g->getReportBeta("reports/getOneDriveUsageAccountDetail(period='{$period}')");
         $out = [];
         foreach (($body['value'] ?? []) as $r) {
@@ -717,7 +717,7 @@ final class OpshM365
     /** SharePoint site usage. Requires Reports.Read.All. JSON via $format. */
     public function sharePointUsage(string $period = 'D30'): array
     {
-        $period = opsh_graph_period($period);   // BT88
+        $period = itops_graph_period($period);   // BT88
         $body = $this->g->getReportBeta("reports/getSharePointSiteUsageDetail(period='{$period}')");
         $out = [];
         foreach (($body['value'] ?? []) as $r) {
@@ -869,7 +869,7 @@ final class OpshM365
         try {
             $am = $this->g->get("users/{$id}/authentication/methods");
         } catch (Throwable $e) {
-            throw new OpshM365Exception('Could not read the user\'s authentication methods: ' . $e->getMessage());
+            throw new ItopsM365Exception('Could not read the user\'s authentication methods: ' . $e->getMessage());
         }
         foreach ($am['value'] ?? [] as $m) {
             $type = (string)($m['@odata.type'] ?? '');
@@ -946,7 +946,7 @@ final class OpshM365
         $nick    = trim((string)($p['mailNickname'] ?? ''));
         $pwd     = (string)($p['password'] ?? '');
         if ($upn === '' || $display === '' || $nick === '' || $pwd === '') {
-            throw new OpshM365Exception('Display name, username, domain, and password are all required.');
+            throw new ItopsM365Exception('Display name, username, domain, and password are all required.');
         }
         $body = [
             'accountEnabled'   => true,
@@ -987,7 +987,7 @@ final class OpshM365
     {
         $loc = strtoupper(trim((string)$v));
         if ($loc === '') return '';
-        if (!preg_match('/^[A-Z]{2}$/', $loc)) throw new OpshM365Exception('Usage location must be a two-letter country code, for example US.');
+        if (!preg_match('/^[A-Z]{2}$/', $loc)) throw new ItopsM365Exception('Usage location must be a two-letter country code, for example US.');
         return $loc;
     }
 
@@ -1151,7 +1151,7 @@ final class OpshM365
     public function getManager(string $id): ?array
     {
         try { $m = $this->g->get("users/{$id}/manager", ['$select' => 'id,displayName,userPrincipalName']); }
-        catch (OpshGraphException $e) { if ($e->getStatus() === 404) return null; throw $e; }
+        catch (ItopsGraphException $e) { if ($e->getStatus() === 404) return null; throw $e; }
         if (empty($m['id'])) return null;
         return ['id' => (string)$m['id'], 'name' => (string)($m['displayName'] ?? ''), 'upn' => (string)($m['userPrincipalName'] ?? '')];
     }
@@ -1244,7 +1244,7 @@ final class OpshM365
             if ($late()) $r = $unsent($r);
             else {
                 try { $this->g->patch("users/{$id}", $body); }
-                catch (Throwable $e) { $r['ok'] = false; $r['error'] = $e->getMessage(); $r['status'] = $e instanceof OpshGraphException ? $e->getStatus() : 0; $r['uncertain'] = self::outcomeUnknown($e); $r['hint'] = self::profileHint($grp, $e); }
+                catch (Throwable $e) { $r['ok'] = false; $r['error'] = $e->getMessage(); $r['status'] = $e instanceof ItopsGraphException ? $e->getStatus() : 0; $r['uncertain'] = self::outcomeUnknown($e); $r['hint'] = self::profileHint($grp, $e); }
             }
             if ($onResult) $onResult($r);
             $results[] = $r;
@@ -1261,7 +1261,7 @@ final class OpshM365
                 elseif ($late()) $r = $unsent($r);   // the read above took its time: the removal is not started past the deadline
                 else {
                     try { if ($manager === '') $this->removeManager($id); else $this->setManager($id, $manager); }
-                    catch (Throwable $e) { $r['ok'] = false; $r['error'] = $e->getMessage(); $r['status'] = $e instanceof OpshGraphException ? $e->getStatus() : 0; $r['uncertain'] = self::outcomeUnknown($e); $r['hint'] = self::profileHint('manager', $e); }
+                    catch (Throwable $e) { $r['ok'] = false; $r['error'] = $e->getMessage(); $r['status'] = $e instanceof ItopsGraphException ? $e->getStatus() : 0; $r['uncertain'] = self::outcomeUnknown($e); $r['hint'] = self::profileHint('manager', $e); }
                 }
             }
             if ($onResult) $onResult($r);
@@ -1283,7 +1283,7 @@ final class OpshM365
      *  answered with a server error. A clear 4xx means it was not. */
     public static function outcomeUnknown(Throwable $e): bool
     {
-        if (!($e instanceof OpshGraphException)) return true;
+        if (!($e instanceof ItopsGraphException)) return true;
         $st = $e->getStatus();
         return $st === 0 || $st >= 500;
     }
@@ -1293,8 +1293,8 @@ final class OpshM365
     {
         if (self::outcomeUnknown($e)) return 'No clear answer came back from Microsoft, so this part may or may not have been saved. Open the account again to see the values it has now.';
         $msg = $e->getMessage();
-        $code = $e instanceof OpshGraphException ? $e->getGraphCode() : '';
-        $status = $e instanceof OpshGraphException ? $e->getStatus() : 0;
+        $code = $e instanceof ItopsGraphException ? $e->getGraphCode() : '';
+        $status = $e instanceof ItopsGraphException ? $e->getStatus() : 0;
         if (stripos($msg, 'on-premises mastered') !== false || stripos($msg, 'Directory Sync') !== false)
             return 'This account, or this value, is kept in an on-premises directory and copied to Microsoft 365. Change it there; the copy follows.';
         if ($status === 403 || stripos($code, 'Authorization_RequestDenied') !== false || stripos($msg, 'Insufficient privileges') !== false) {
@@ -1375,7 +1375,7 @@ final class OpshM365
             $items = $res['value'] ?? [];
         } else {
             $res = $this->g->getAll('groups', ['$select' => $sel, '$top' => 999], 3);
-            $items = isset($res['value']) ? $res['value'] : $res;   // OpsHub fix: getAll() returns the rows themselves
+            $items = isset($res['value']) ? $res['value'] : $res;   // ITOps fix: getAll() returns the rows themselves
         }
         $out = [];
         foreach ($items as $g) {
@@ -1413,14 +1413,14 @@ final class OpshM365
     {
         $res = $this->g->getAll('roleManagement/directory/roleDefinitions', ['$select' => 'id,displayName,description,isEnabled'], 5);
         $out = [];
-        foreach ((isset($res['value']) ? $res['value'] : $res) as $r) {   // OpsHub fix: getAll() returns the rows themselves
+        foreach ((isset($res['value']) ? $res['value'] : $res) as $r) {   // ITOps fix: getAll() returns the rows themselves
             if (array_key_exists('isEnabled', $r) && $r['isEnabled'] === false) continue;
             $name = (string)($r['displayName'] ?? '');
             $out[] = [
                 'id'          => (string)($r['id'] ?? ''),
                 'name'        => $name,
                 'description' => (string)($r['description'] ?? ''),
-                'privileged'  => in_array($name, self::HIGH_RISK_ROLES, true) || (function_exists('opsh_m365_role_is_high') && opsh_m365_role_is_high((string)($r['id'] ?? ''), $name)),   // BT88: the same list as the guard
+                'privileged'  => in_array($name, self::HIGH_RISK_ROLES, true) || (function_exists('itops_m365_role_is_high') && itops_m365_role_is_high((string)($r['id'] ?? ''), $name)),   // BT88: the same list as the guard
             ];
         }
         usort($out, fn($a, $b) => strcasecmp($a['name'], $b['name']));
@@ -1442,7 +1442,7 @@ final class OpshM365
                 'assignment_id' => (string)($a['id'] ?? ''),
                 'role_id'       => (string)($a['roleDefinitionId'] ?? ($rd['id'] ?? '')),
                 'name'          => $name,
-                'privileged'    => in_array($name, self::HIGH_RISK_ROLES, true) || (function_exists('opsh_m365_role_is_high') && opsh_m365_role_is_high((string)($a['roleDefinitionId'] ?? ''), $name)),   // BT88
+                'privileged'    => in_array($name, self::HIGH_RISK_ROLES, true) || (function_exists('itops_m365_role_is_high') && itops_m365_role_is_high((string)($a['roleDefinitionId'] ?? ''), $name)),   // BT88
                 'scope'         => (string)($a['directoryScopeId'] ?? '/'),
             ];
         }
@@ -1552,7 +1552,7 @@ final class OpshM365
         try {
             $d = $this->g->get("devices(deviceId='{$deviceId}')", ['$select' => 'id,deviceId,displayName,operatingSystem,operatingSystemVersion,trustType,isManaged,'
                 . 'isCompliant,accountEnabled,approximateLastSignInDateTime,registrationDateTime,physicalIds,profileType']);
-        } catch (OpshGraphException $e) {
+        } catch (ItopsGraphException $e) {
             if ($e->getStatus() === 404) return null;
             throw $e;
         }
@@ -1610,7 +1610,7 @@ final class OpshM365
     {
         $deviceId = self::guid($deviceId, 'device id');
         try { $r = $this->g->get("directory/deviceLocalCredentials/{$deviceId}", ['$select' => 'credentials']); }
-        catch (OpshGraphException $e) { if ($e->getStatus() === 404) return null; throw $e; }
+        catch (ItopsGraphException $e) { if ($e->getStatus() === 404) return null; throw $e; }
         if (isset($r['value']) && is_array($r['value']) && !isset($r['credentials'])) $r = $r['value'];
         $out = [];
         foreach (($r['credentials'] ?? []) as $c) {
@@ -1781,7 +1781,7 @@ final class OpshM365
     public static function tokenRoles(): ?array
     {
         try {
-            $cl = opsh_graph_jwt_claims(opsh_graph_token());
+            $cl = itops_graph_jwt_claims(itops_graph_token());
             $r = $cl['roles'] ?? null;
             return is_array($r) && $r ? array_values(array_map('strval', $r)) : null;
         } catch (Throwable $e) { return null; }
@@ -1859,7 +1859,7 @@ final class OpshM365
         $this->g->delete("groups/{$groupId}/owners/{$userId}/\$ref");
     }
 
-    /** Ids of the groups that already carry exactly this name (Entra allows duplicates; OpsHub does not create them). */
+    /** Ids of the groups that already carry exactly this name (Entra allows duplicates; ITOps does not create them). */
     public function groupsNamed(string $name): array
     {
         $rows = $this->g->get('groups', ['$filter' => "displayName eq '" . str_replace("'", "''", $name) . "'", '$select' => 'id,displayName', '$top' => 5]);
@@ -1936,7 +1936,7 @@ final class OpshM365
                     if ($name === '') continue;
                     $appPerms[(string)($a['principalId'] ?? '')][] = ['resource' => (string)($res['displayName'] ?? $rid), 'name' => $name, 'high' => in_array($name, self::HIGH_APP_PERMISSIONS, true)];
                 }
-            } catch (OpshGraphException $e) {
+            } catch (ItopsGraphException $e) {
                 if ($e->getStatus() === 404) continue;                       // the tenant has no such API (for example no SharePoint)
                 if ($denied($e)) { $needs['app_permissions'] = 'Application.Read.All'; break; }
                 throw $e;
@@ -2008,7 +2008,7 @@ final class OpshM365
         $pages = 0;
         $count = function ($n) use (&$pages) { $pages = $n; };
         try { $rows = $this->g->getAll('auditLogs/directoryAudits', ['$filter' => $f, '$top' => 500, '$orderby' => 'activityDateTime desc'], $maxPages, $count); }
-        catch (OpshGraphException $e) {
+        catch (ItopsGraphException $e) {
             if ($e->getStatus() !== 400) throw $e;                              // some tenants refuse $orderby together with $filter
             $pages = 0;
             $rows = $this->g->getAll('auditLogs/directoryAudits', ['$filter' => $f, '$top' => 500], $maxPages, $count);
@@ -2132,13 +2132,13 @@ final class OpshM365
     public static function attachVtiger(array $users, array $config = []): array
     {
         self::$vtigerError = '';
-        $avail = function_exists('opsh_hub_vtiger_available') && opsh_hub_vtiger_available();
+        $avail = function_exists('itops_hub_vtiger_available') && itops_hub_vtiger_available();
         if (!$avail) {
             foreach ($users as &$u) { $u['vtiger'] = null; $u['vtiger_available'] = false; }
             return $users;
         }
         $ok = true;
-        try { opsh_hub_vtiger_all_users(); }
+        try { itops_hub_vtiger_all_users(); }
         catch (Throwable $e) { $ok = false; self::$vtigerError = $e->getMessage(); }   // linkage is best-effort, but say why
 
         foreach ($users as &$u) {
@@ -2146,7 +2146,7 @@ final class OpshM365
             if ($ok) {
                 $upn = (string)($u['upn'] ?? '');
                 $guest = strcasecmp((string)($u['user_type'] ?? ''), 'Guest') === 0 || strpos($upn, '#') !== false;
-                $m = opsh_hub_vtiger_match([$u['mail'] ?? '', $upn], $guest ? '#' : $upn);
+                $m = itops_hub_vtiger_match([$u['mail'] ?? '', $upn], $guest ? '#' : $upn);
                 if ($m) $hit = ['id' => (string)$m['id'], 'username' => (string)$m['user_name'], 'email' => (string)($m['email'] ?? ''), 'status' => (string)$m['status'],
                                 'is_admin' => (bool)$m['is_admin'], 'matched_by' => (string)$m['matched_by']];
             }

@@ -1,15 +1,15 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — BT115: which changes need a second person's approval (Settings → Approvals, Super Admin).
- * Setting opsh_settings.m365_approvals = {"retire":true,"wipe":true,"fresh_start":true,"ca_change":false}.
+ * ITOps — BT115: which changes need a second person's approval (Settings → Approvals, Super Admin).
+ * Setting itops_settings.m365_approvals = {"retire":true,"wipe":true,"fresh_start":true,"ca_change":false}.
  * A small organization with one administrator switches an action off: it then runs on the word of the one person who
  * asks (reason and typed confirmation still required), and the Audit Log records that no second person approved it.
  */
-if (!function_exists('opsh_appr_catalog')) {
+if (!function_exists('itops_appr_catalog')) {
 
     /** key => [label, area, on by default, what it covers, in use now] */
-    function opsh_appr_catalog(): array {
+    function itops_appr_catalog(): array {
         return [
             'retire'      => ['Retire a device', 'Devices', true, 'Removes the organization\'s apps and data from a device and takes it out of Intune.', true],
             'wipe'        => ['Wipe a device (factory reset)', 'Devices', true, 'Erases a device and returns it to factory settings.', true],
@@ -20,25 +20,25 @@ if (!function_exists('opsh_appr_catalog')) {
     }
 
     /** The current setting, every key present (defaults filled in). */
-    function opsh_appr_cfg(PDO $db): array {
+    function itops_appr_cfg(PDO $db): array {
         $j = [];
-        try { $st = $db->prepare("SELECT sval FROM opsh_settings WHERE skey='m365_approvals'"); $st->execute(); $j = json_decode((string)$st->fetchColumn(), true); } catch (Throwable $e) {}
+        try { $st = $db->prepare("SELECT sval FROM itops_settings WHERE skey='m365_approvals'"); $st->execute(); $j = json_decode((string)$st->fetchColumn(), true); } catch (Throwable $e) {}
         if (!is_array($j)) $j = [];
         $out = [];
-        foreach (opsh_appr_catalog() as $k => $c) $out[$k] = array_key_exists($k, $j) ? (bool)$j[$k] : $c[2];
+        foreach (itops_appr_catalog() as $k => $c) $out[$k] = array_key_exists($k, $j) ? (bool)$j[$k] : $c[2];
         return $out;
     }
 
     /** Does this action need a second person right now? */
-    function opsh_appr_needed(PDO $db, string $key): bool {
-        $c = opsh_appr_cfg($db); return $c[$key] ?? true;   // an action this list does not know always needs a second person
+    function itops_appr_needed(PDO $db, string $key): bool {
+        $c = itops_appr_cfg($db); return $c[$key] ?? true;   // an action this list does not know always needs a second person
     }
 
     /** Save; returns [old, new] of the keys that changed. Unknown keys are ignored. */
-    function opsh_appr_save(PDO $db, array $want): array {
-        $old = opsh_appr_cfg($db); $new = $old;
-        foreach (opsh_appr_catalog() as $k => $c) if (array_key_exists($k, $want)) $new[$k] = (bool)$want[$k];
-        $db->prepare("INSERT INTO opsh_settings (skey,sval) VALUES ('m365_approvals',?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([json_encode($new)]);
+    function itops_appr_save(PDO $db, array $want): array {
+        $old = itops_appr_cfg($db); $new = $old;
+        foreach (itops_appr_catalog() as $k => $c) if (array_key_exists($k, $want)) $new[$k] = (bool)$want[$k];
+        $db->prepare("INSERT INTO itops_settings (skey,sval) VALUES ('m365_approvals',?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")->execute([json_encode($new)]);
         $o = []; $n = [];
         foreach ($new as $k => $v) if ($old[$k] !== $v) { $o[$k] = $old[$k]; $n[$k] = $v; }
         return [$o, $n];

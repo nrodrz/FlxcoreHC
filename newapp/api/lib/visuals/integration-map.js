@@ -1,5 +1,5 @@
 /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
-/* OpsHub Help Center visual "integration-map" (BT90: served by api/help_script, so the page policy allows no inline scripts). */
+/* ITOps Help Center visual "integration-map" (BT90: served by api/help_script, so the page policy allows no inline scripts). */
 (function(){
 'use strict';
 /* ───────── data: one list drives the 3D view, the panel and the tables ───────── */
@@ -12,8 +12,8 @@ var MODS={
   guardian:{name:'Server Guardian',x:2.8,z:1.35}
 };
 /* BT51: the systems are the shared list (the same as on "Company systems: the whole process"). */
-var SYS=(window.OPSH_SYSTEMS||[]).slice();
-var STATUS={acts:['OpsHub acts by itself','--live'],reads:['connected · OpsHub reads it','--in'],hand:['tracked by hand · connection planned','--plan'],
+var SYS=(window.ITOPS_SYSTEMS||[]).slice();
+var STATUS={acts:['ITOps acts by itself','--live'],reads:['connected · ITOps reads it','--in'],hand:['tracked by hand · connection planned','--plan'],
   planned:['planned · not in use yet','--soon'],indirect:['no connection · follows Microsoft 365','--manual']};
 /* round the hub: Microsoft 365 at the back, CodeTwo beside it, Paylocity last (next to Microsoft 365 on the other side) */
 var first=SYS.filter(function(n){ return n.id==='m365'; }), cod=SYS.filter(function(n){ return n.id==='codetwo'; }), pay=SYS.filter(function(n){ return n.id==='paylocity'; });
@@ -25,9 +25,9 @@ var FLOWS=[], have={};
 NODES.forEach(function(n){ have[n.id]=1; });
 NODES.forEach(function(n){
   var fl=(n.flows&&n.flows.length)?n.flows:(
-    n.role==='people'?[['lifecycle',n.id,'manual','A step in every onboarding and offboarding: a person does the work there and answers in OpsHub'],[n.id,'links','manual','Accounts recorded by hand: a pasted list, or per person']]:
+    n.role==='people'?[['lifecycle',n.id,'manual','A step in every onboarding and offboarding: a person does the work there and answers in ITOps'],[n.id,'links','manual','Accounts recorded by hand: a pasted list, or per person']]:
     n.role==='infra'?[[n.id,'guardian',n.status==='reads'?'in':'both','Server and hosting information']]:
-    n.role==='follows'?[['m365',n.id,'ext','Reads the Microsoft 365 account by itself']]:[[n.id,'lifecycle','in','Tells OpsHub who joins and who leaves']]);
+    n.role==='follows'?[['m365',n.id,'ext','Reads the Microsoft 365 account by itself']]:[[n.id,'lifecycle','in','Tells ITOps who joins and who leaves']]);
   fl.forEach(function(f){ var a=f[0], b=f[1]; if((!MODS[a]&&!have[a])||(!MODS[b]&&!have[b]))return;
     var st=f[4]||((n.status==='planned'||n.status==='hand')?'planned':'live');
     FLOWS.push({id:a+'>'+b,a:a,b:b,dir:f[2],st:st,t:f[3]}); });
@@ -37,35 +37,35 @@ var listOf=function(a){ return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' 
 /* steps: [lines it lights ('@hand' = the step of every system tracked by hand), text ({hand} = their names)] */
 var SCEN={
  hire:{name:'A new hire',steps:[
-  [['paylocity>lifecycle'],'HR enters the hire in Paylocity. Once Paylocity is connected, it sends the event to OpsHub.'],
-  [null,'OpsHub creates a draft onboarding, filled with name, title, department, manager and start date. Someone reviews it and presses Start.'],
-  [['lifecycle>m365'],'OpsHub creates the Microsoft 365 account with its license and groups.'],
-  [['lifecycle>vtiger'],'OpsHub creates the CRM user in vTiger.'],
-  [['lifecycle>justcall'],'A person adds the user in JustCall; OpsHub checks that JustCall lists them.'],
-  [['@hand'],'{hand}: each has its own step. A person sets the account up there and answers in OpsHub.'],
+  [['paylocity>lifecycle'],'HR enters the hire in Paylocity. Once Paylocity is connected, it sends the event to ITOps.'],
+  [null,'ITOps creates a draft onboarding, filled with name, title, department, manager and start date. Someone reviews it and presses Start.'],
+  [['lifecycle>m365'],'ITOps creates the Microsoft 365 account with its license and groups.'],
+  [['lifecycle>vtiger'],'ITOps creates the CRM user in vTiger.'],
+  [['lifecycle>justcall'],'A person adds the user in JustCall; ITOps checks that JustCall lists them.'],
+  [['@hand'],'{hand}: each has its own step. A person sets the account up there and answers in ITOps.'],
   [['m365>codetwo'],'CodeTwo picks up the new account’s title and phone for the signature.'],
   [['paylocity>links'],'The nightly roster comparison confirms the person now has an account.']]},
  leave:{name:'A departure',steps:[
-  [['paylocity>lifecycle'],'HR enters the termination in Paylocity. OpsHub creates a draft offboarding dated to the last day.'],
+  [['paylocity>lifecycle'],'HR enters the termination in Paylocity. ITOps creates a draft offboarding dated to the last day.'],
   [['lifecycle>m365'],'When someone starts it: sign-in is blocked, sessions are revoked, licenses are released.'],
   [['lifecycle>vtiger'],'The CRM user is deactivated and its records are reassigned.'],
   [['lifecycle>justcall'],'A person removes the user in JustCall; the step is done only when JustCall no longer lists them.'],
-  [['@hand'],'{hand}: a person removes or hands over the account there and answers in OpsHub.'],
+  [['@hand'],'{hand}: a person removes or hands over the account there and answers in ITOps.'],
   [['justcall>links','vtiger>links'],'Verify offboarding asks each connected system again, and reports the answers given for the others.']]},
  call:{name:'A missed call',steps:[
-  [['justcall>tickets'],'Later: JustCall tells OpsHub about a missed call or a voicemail on the help line.'],
-  [null,'OpsHub checks the signature, then fetches the call from JustCall by its id before trusting it.'],
+  [['justcall>tickets'],'Later: JustCall tells ITOps about a missed call or a voicemail on the help line.'],
+  [null,'ITOps checks the signature, then fetches the call from JustCall by its id before trusting it.'],
   [null,'A ticket is created with the caller, the number called, the time and the voicemail text. Repeat calls from the same caller join the same ticket.'],
   [null,'Normal ticket routing applies: owner, backup and alerts.']]},
  sign:{name:'A signature change',steps:[
-  [null,'Someone changes a title, a phone number or a custom field on Accounts in OpsHub.'],
-  [['m365>accounts'],'OpsHub writes it to the Microsoft 365 account and records the old and new value in the Audit Log.'],
+  [null,'Someone changes a title, a phone number or a custom field on Accounts in ITOps.'],
+  [['m365>accounts'],'ITOps writes it to the Microsoft 365 account and records the old and new value in the Audit Log.'],
   [['m365>codetwo'],'CodeTwo reads the account again within about 20 minutes.'],
   [null,'The next email carries the new signature. Nobody opened the Microsoft or CodeTwo portal.']]},
  host:{name:'Hosting',steps:[
   [['whm>guardian'],'Server Guardian checks the web server and its cPanel accounts through WHM. This runs today.'],
   [['hosting>guardian'],'Later: the hosting provider adds the servers, the vendor tickets and the invoices.'],
-  [null,'A hosting provider ticket can be linked to an OpsHub ticket, so the vendor conversation sits on the incident.'],
+  [null,'A hosting provider ticket can be linked to an ITOps ticket, so the vendor conversation sits on the incident.'],
   [null,'Invoices give a reminder before the due date and a yearly hosting cost for the vendor record.']]}
 };
 var stepRefs=function(r){ if(!r)return []; var o=[]; r.forEach(function(x){ if(x==='@hand') NODES.forEach(function(n){ if(n.status==='hand')o.push('lifecycle>'+n.id); }); else o.push(x); }); return o; };
@@ -74,11 +74,11 @@ var byId={}; NODES.forEach(function(n){ byId[n.id]=n; });
 var esc=function(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
 var nameOf=function(id){ return byId[id]?byId[id].name:(MODS[id]?MODS[id].name:id); };
 var dirColor={in:'--in',out:'--out',both:'--accent',manual:'--manual',ext:'--manual'};
-var dirWord={in:'into OpsHub',out:'out of OpsHub',both:'both ways',manual:'by hand',ext:'outside OpsHub'};
+var dirWord={in:'into ITOps',out:'out of ITOps',both:'both ways',manual:'by hand',ext:'outside ITOps'};
 
 /* ───────── tables and scenario lists (always on the page) ───────── */
 (function(){
-  var h='<thead><tr><th>Service</th><th>Status</th><th>How OpsHub connects</th><th>OpsHub reads</th><th>OpsHub changes</th><th>Limits</th></tr></thead><tbody>';
+  var h='<thead><tr><th>Service</th><th>Status</th><th>How ITOps connects</th><th>ITOps reads</th><th>ITOps changes</th><th>Limits</th></tr></thead><tbody>';
   NODES.forEach(function(n){ var s=STATUS[n.status];
     h+='<tr data-sys="'+esc(n.id)+'"><td>'+esc(n.name)+'</td><td><span class="status"><i class="dot" style="background:var('+s[1]+')"></i>'+esc(s[0])+'</span>'+(n.in_use===false?'<div style="font-size:12px;color:var(--ink3);margin-top:4px">not switched on here</div>':'')+'</td><td>'+esc(n.connect)+'</td><td>'+esc(n.reads)+'</td><td>'+esc(n.writes)+'</td><td>'+esc(n.limits)+'</td></tr>'; });
   document.getElementById('matrix').innerHTML=h+'</tbody>';
@@ -100,11 +100,11 @@ function renderPanel(){
     h='<div><span class="status"><i class="dot" style="background:var('+s[1]+')"></i>'+esc(s[0])+'</span></div><h3>'+esc(n.name)+'</h3><p style="color:var(--ink2);font-size:14px">'+esc(n.what)+'</p>'
      +(n.in_use===false?'<p style="font-size:13px;color:var(--ink3)">Not switched on under Settings → Company systems.</p>':'')
      +'<div class="how">'+esc(n.connect)+'</div><dl>'
-     +'<div><dt>OpsHub reads</dt><dd>'+esc(n.reads)+'</dd></div><div><dt>OpsHub changes</dt><dd>'+esc(n.writes)+'</dd></div><div><dt>Limits</dt><dd>'+esc(n.limits)+'</dd></div>'
+     +'<div><dt>ITOps reads</dt><dd>'+esc(n.reads)+'</dd></div><div><dt>ITOps changes</dt><dd>'+esc(n.writes)+'</dd></div><div><dt>Limits</dt><dd>'+esc(n.limits)+'</dd></div>'
      +(n.mind?'<div><dt>Keep in mind</dt><dd>'+esc(n.mind)+'</dd></div>':'')+'</dl>'
      +'<div><dt style="font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px">Its lines on the map</dt><ul class="flowlist">'+fl.map(flowLine).join('')+'</ul></div>';
   } else {
-    h='<div class="eyebrow">The hub</div><h3>OpsHub</h3><p style="color:var(--ink2);font-size:14px">Six parts of OpsHub take part. The dark base under them is the Audit Log: every change that leaves OpsHub is recorded there with the old and the new value.</p>'
+    h='<div class="eyebrow">The hub</div><h3>ITOps</h3><p style="color:var(--ink2);font-size:14px">Six parts of ITOps take part. The dark base under them is the Audit Log: every change that leaves ITOps is recorded there with the old and the new value.</p>'
      +'<dl><div><dt>Onboard · Offboard</dt><dd>Starts and ends accounts in every system, one checklist per person.</dd></div>'
      +'<div><dt>Accounts</dt><dd>One Microsoft 365 account: contact information, licenses, groups, sign-in.</dd></div>'
      +'<div><dt>People links</dt><dd>Says which account in every system belongs to which person: the CRM user, the JustCall user, the extension, and each account recorded by hand.</dd></div>'
@@ -154,7 +154,7 @@ function start3d(){
   block(RX*2+6,RZ*2+6,.12,3,mat('--ground'),0,-.14,0,null).castShadow=false;
   /* the office: the phone system stands in it */
   var office=byId.pbx; if(office) block(5.6,5.6,.1,1.1,mat('--zone'),office.x,-.02,office.z,'--wall').castShadow=false;
-  /* OpsHub: Audit Log base, working surface, six parts */
+  /* ITOps: Audit Log base, working surface, six parts */
   block(9.6,6.9,.5,.7,mat('--hubBase'),0,0,0,null);
   var hubTop=block(9,6.3,.32,.6,mat('--hub'),0,.5,0,'--accent');
   var modMesh={};
@@ -162,7 +162,7 @@ function start3d(){
 
   /* the systems: the same objects as on "Company systems: the whole process" (visuals/objects.php), on a round stand
      whose ring shows the kind */
-  var OB=window.OPSH_OBJECTS(T), nodeMesh={}, pickables=[], FADE=new T.Color(css('--surface'));
+  var OB=window.ITOPS_OBJECTS(T), nodeMesh={}, pickables=[], FADE=new T.Color(css('--surface'));
   NODES.forEach(function(n){ var p=OB.place(n,css(STATUS[n.status][1]),css('--stand'),STATUS[n.status][1]); n.h=p.h; scene.add(p.group);
     p.group.traverse(function(m){ if(m.isMesh) pickables.push(m); }); nodeMesh[n.id]={mats:p.mats}; });
 
@@ -193,7 +193,7 @@ function start3d(){
   /* labels: plain HTML placed over the canvas */
   var labels=[];
   function addLabel(el,pos){ tags.appendChild(el); labels.push({el:el,pos:pos}); return el; }
-  var hubTag=document.createElement('button'); hubTag.className='tag hubtag'; hubTag.id='tag-opshub'; hubTag.type='button'; hubTag.textContent='OpsHub';
+  var hubTag=document.createElement('button'); hubTag.className='tag hubtag'; hubTag.id='tag-itops'; hubTag.type='button'; hubTag.textContent='ITOps';
   hubTag.addEventListener('click',function(){ state.sel=null; setScenario(''); });
   addLabel(hubTag,new T.Vector3(0,2.5,-3.6));
   Object.keys(MODS).forEach(function(k){ var d=document.createElement('div'); d.className='mod'; d.textContent=MODS[k].name; addLabel(d,new T.Vector3(MODS[k].x,1.3,MODS[k].z)); });

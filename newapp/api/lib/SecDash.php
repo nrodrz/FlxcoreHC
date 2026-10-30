@@ -1,15 +1,15 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — BT146: the security alerts dashboard (Microsoft 365 → Security → Dashboard). Follows Microsoft Defender's
+ * ITOps — BT146: the security alerts dashboard (Microsoft 365 → Security → Dashboard). Follows Microsoft Defender's
  * alerts and incidents over 7, 30 or 90 days: what is open, how old, who has it, where alerts come from, the trend per
  * day, how fast they are resolved and how many were real, the people and devices hit most, and what needs attention
  * now. Read from Microsoft each time (kept briefly by the read store); nothing is changed in Microsoft 365 here.
  * Needs SecurityAlert.Read.All (alerts) and SecurityIncident.Read.All (incidents); each part degrades on its own.
  */
-if (!function_exists('opsh_sd_build')) {
+if (!function_exists('itops_sd_build')) {
     /** Readable names for Microsoft's alert sources. */
-    function opsh_sd_sources(): array {
+    function itops_sd_sources(): array {
         return ['microsoftDefenderForEndpoint' => 'Defender for Endpoint (devices)', 'microsoftDefenderForIdentity' => 'Defender for Identity',
                 'microsoftDefenderForCloudApps' => 'Defender for Cloud Apps', 'microsoftDefenderForOffice365' => 'Defender for Office 365 (email)',
                 'microsoft365Defender' => 'Microsoft Defender XDR', 'azureAdIdentityProtection' => 'Entra ID Protection (sign-ins)',
@@ -17,15 +17,15 @@ if (!function_exists('opsh_sd_build')) {
                 'microsoftSentinel' => 'Microsoft Sentinel', 'microsoftInsiderRiskManagement' => 'Insider risk management', 'unknown' => 'Other', 'unknownFutureValue' => 'Other'];
     }
     /** Attention rules: an open alert older than this many hours, by severity. */
-    function opsh_sd_targets(): array { return ['high' => 24, 'medium' => 72, 'low' => 168, 'informational' => 0]; }
-    function opsh_sd_hours(?string $a, ?string $b = null): ?float {
+    function itops_sd_targets(): array { return ['high' => 24, 'medium' => 72, 'low' => 168, 'informational' => 0]; }
+    function itops_sd_hours(?string $a, ?string $b = null): ?float {
         $t1 = $a ? strtotime($a) : false; $t2 = $b ? strtotime($b) : time(); if ($t1 === false || $t2 === false) return null; return max(0, ($t2 - $t1) / 3600);
     }
-    function opsh_sd_median(array $v): ?float { if (!$v) return null; sort($v); $n = count($v); return $n % 2 ? $v[intdiv($n, 2)] : ($v[$n / 2 - 1] + $v[$n / 2]) / 2; }
+    function itops_sd_median(array $v): ?float { if (!$v) return null; sort($v); $n = count($v); return $n % 2 ? $v[intdiv($n, 2)] : ($v[$n / 2 - 1] + $v[$n / 2]) / 2; }
 
     /** The dashboard from raw alerts_v2 rows and incident rows (either may be null when it could not be read). */
-    function opsh_sd_build(?array $alerts, ?array $incidents, int $days): array {
-        $S = opsh_sd_sources(); $T = opsh_sd_targets();
+    function itops_sd_build(?array $alerts, ?array $incidents, int $days): array {
+        $S = itops_sd_sources(); $T = itops_sd_targets();
         $since = strtotime('-' . $days . ' days'); $sevs = ['high', 'medium', 'low', 'informational'];
         $out = ['days' => $days, 'alerts_read' => $alerts !== null, 'incidents_read' => $incidents !== null];
         if ($alerts !== null) {
@@ -45,14 +45,14 @@ if (!function_exists('opsh_sd_build')) {
                 $row = ['id' => (string)($a['id'] ?? ''), 'title' => (string)($a['title'] ?? ''), 'severity' => $sev, 'status' => $st, 'created' => $a['createdDateTime'] ?? null,
                     'source' => $S[(string)($a['serviceSource'] ?? 'unknown')] ?? (string)($a['serviceSource'] ?? 'Other'), 'category' => (string)($a['category'] ?? ''),
                     'assigned' => (string)($a['assignedTo'] ?? ''), 'incident' => (string)($a['incidentId'] ?? ''), 'url' => (string)($a['alertWebUrl'] ?? ''),
-                    'users' => array_values($users), 'devices' => array_values($devs), 'age_h' => $isOpen ? round(opsh_sd_hours($a['createdDateTime'] ?? null) ?? 0, 1) : null];
+                    'users' => array_values($users), 'devices' => array_values($devs), 'age_h' => $isOpen ? round(itops_sd_hours($a['createdDateTime'] ?? null) ?? 0, 1) : null];
                 if ($isOpen) {
                     $open[] = $row; $h = $row['age_h'];
                     $aging[$h < 24 ? '< 1 day' : ($h < 72 ? '1–3 days' : ($h < 168 ? '3–7 days' : ($h < 720 ? '7–30 days' : '> 30 days')))]++;
                 }
                 $rs = $a['resolvedDateTime'] ?? null;
                 if ($st === 'resolved' && $rs && ($rt = strtotime((string)$rs)) !== false && $rt >= $since) {   // resolved in the period, whenever it started
-                    $hh = opsh_sd_hours($a['createdDateTime'] ?? null, $rs); if ($hh !== null) $ttr[] = $hh; $rd = date('Y-m-d', $rt); if (isset($trend[$rd])) $trend[$rd]['resolved']++; $resolvedN = ($resolvedN ?? 0) + 1; }
+                    $hh = itops_sd_hours($a['createdDateTime'] ?? null, $rs); if ($hh !== null) $ttr[] = $hh; $rd = date('Y-m-d', $rt); if (isset($trend[$rd])) $trend[$rd]['resolved']++; $resolvedN = ($resolvedN ?? 0) + 1; }
                 if ($c < $since) continue;   // the rest counts only what started in the period; open ones count whatever their age
                 $all[] = $row; $status[$st] = ($status[$st] ?? 0) + 1;
                 $day = date('Y-m-d', $c); if (isset($trend[$day])) $trend[$day][$sev]++;
@@ -74,7 +74,7 @@ if (!function_exists('opsh_sd_build')) {
             $out += [
                 'kpi' => ['open' => count($open), 'open_high' => $openN('high'), 'open_medium' => $openN('medium'), 'unassigned' => count(array_filter($open, fn($r) => $r['assigned'] === '')),
                     'oldest_days' => $open ? round(max(array_column($open, 'age_h')) / 24, 1) : null, 'new' => count($all), 'resolved' => $resolvedN ?? 0,
-                    'median_resolve_h' => ($m = opsh_sd_median($ttr)) === null ? null : round($m, 1), 'true_positive_pct' => $classified ? (int)round(100 * $cls['truePositive'] / $classified) : null,
+                    'median_resolve_h' => ($m = itops_sd_median($ttr)) === null ? null : round($m, 1), 'true_positive_pct' => $classified ? (int)round(100 * $cls['truePositive'] / $classified) : null,
                     'attention' => count($attention)],
                 'trend' => array_map(fn($d, $v) => ['day' => $d] + $v, array_keys($trend), array_values($trend)),
                 'by_source' => array_values($src), 'by_category' => array_map(fn($k, $v) => ['name' => preg_replace('/(?<!^)([A-Z])/', ' $1', $k), 'count' => $v], array_slice(array_keys($cat), 0, 8), array_slice(array_values($cat), 0, 8)),
@@ -88,7 +88,7 @@ if (!function_exists('opsh_sd_build')) {
                 'unassigned' => count(array_filter($io, fn($i) => (string)($i['assignedTo'] ?? '') === '')), 'new' => count($inPeriod),
                 'list' => array_slice(array_map(fn($i) => ['id' => (string)($i['id'] ?? ''), 'name' => (string)($i['displayName'] ?? ''), 'severity' => strtolower((string)($i['severity'] ?? '')),
                     'status' => (string)($i['status'] ?? ''), 'assigned' => (string)($i['assignedTo'] ?? ''), 'created' => $i['createdDateTime'] ?? null, 'url' => (string)($i['incidentWebUrl'] ?? ''),
-                    'age_h' => round(opsh_sd_hours($i['createdDateTime'] ?? null) ?? 0, 1)], $io), 0, 10)];
+                    'age_h' => round(itops_sd_hours($i['createdDateTime'] ?? null) ?? 0, 1)], $io), 0, 10)];
         }
         return $out;
     }

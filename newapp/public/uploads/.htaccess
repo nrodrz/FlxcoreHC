@@ -1,4 +1,4 @@
-# OpsHub — uploads hardening: never execute or render active content from uploads (BT14: case-insensitive, more types)
+# ITOps — uploads hardening: never execute or render active content from uploads (BT14: case-insensitive, more types)
 Options -ExecCGI -Indexes
 <IfModule mod_headers.c>
   Header set X-Content-Type-Options "nosniff"

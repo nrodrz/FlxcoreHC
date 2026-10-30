@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — /api/links   (generic cross-links between records)
+ * ITOps — /api/links   (generic cross-links between records)
  *
  * GET    /links?type=sops&id=5   — items linked to (type,id), with resolved titles
  * POST   /links                  — create a link { a_type,a_id,b_type,b_id }  (deduped)
@@ -20,14 +20,14 @@ $id  = ctype_digit((string)$p1) ? (int)$p1 : null;
 
 // linkable type -> [table, display column, label]
 $TYPES = [
-    'sops'             => ['opsh_sops',             'title',   'SOP'],
-    'job_descriptions' => ['opsh_job_descriptions', 'title',   'Job Description'],
-    'credentials'      => ['opsh_credentials',      'name',    'Credential'],
-    'contracts'        => ['opsh_contracts',        'title',   'Contract'],
-    'vendors'          => ['opsh_vendors',          'name',    'Vendor'],
-    'kb'               => ['opsh_kb_articles',      'title',   'Knowledge Base'],
-    'tickets'          => ['opsh_tickets',          'subject', 'Ticket'],
-    'std_req'         => ['opsh_std_requirements', 'title',   'Requirement'],
+    'sops'             => ['itops_sops',             'title',   'SOP'],
+    'job_descriptions' => ['itops_job_descriptions', 'title',   'Job Description'],
+    'credentials'      => ['itops_credentials',      'name',    'Credential'],
+    'contracts'        => ['itops_contracts',        'title',   'Contract'],
+    'vendors'          => ['itops_vendors',          'name',    'Vendor'],
+    'kb'               => ['itops_kb_articles',      'title',   'Knowledge Base'],
+    'tickets'          => ['itops_tickets',          'subject', 'Ticket'],
+    'std_req'         => ['itops_std_requirements', 'title',   'Requirement'],
 ];
 
 // type -> permission module (most map to themselves; evidence uses the 'standards' module)
@@ -44,9 +44,9 @@ $needMig = function (\Throwable $e) {
 
 // BT91: may this person see that record? (the module; a ticket also needs to be theirs without Tickets · All records)
 $canSee = function (string $type, int $rid) use ($db, $currentUser, $permOf): bool {
-    if (!opsh_can($currentUser, $permOf($type), 'view')) return false;
-    if ($type === 'tickets' && !opsh_can($currentUser, 'tickets', 'all')) {
-        $q = $db->prepare('SELECT 1 FROM opsh_tickets WHERE id=? AND (assignee_id=? OR requester_id=? OR backup_id=?)'); $u = (int)$currentUser['id'];
+    if (!itops_can($currentUser, $permOf($type), 'view')) return false;
+    if ($type === 'tickets' && !itops_can($currentUser, 'tickets', 'all')) {
+        $q = $db->prepare('SELECT 1 FROM itops_tickets WHERE id=? AND (assignee_id=? OR requester_id=? OR backup_id=?)'); $u = (int)$currentUser['id'];
         $q->execute([$rid, $u, $u, $u]); return (bool)$q->fetchColumn();
     }
     return true;
@@ -56,9 +56,9 @@ $lRefuse = function (string $wanted, string $why, string $msg, int $code = 403) 
     error_response($msg, $code);
 };
 $mayLink = function (string $from, int $fid, string $other, int $oid) use ($currentUser, $permOf, $canSee): ?string {
-    if (!opsh_can($currentUser, $permOf($from), 'edit')) return 'needs Edit on ' . $from;
+    if (!itops_can($currentUser, $permOf($from), 'edit')) return 'needs Edit on ' . $from;
     if (!$canSee($from, $fid) || !$canSee($other, $oid)) return 'cannot see one of the records';
-    if (($from === 'std_req' || $other === 'std_req') && !opsh_can($currentUser, 'standards', 'edit')) return 'needs Standards & Audits · Edit (evidence)';
+    if (($from === 'std_req' || $other === 'std_req') && !itops_can($currentUser, 'standards', 'edit')) return 'needs Standards & Audits · Edit (evidence)';
     return null;
 };
 
@@ -79,10 +79,10 @@ if ($method === 'GET' && $id === null) {
     $type = $_GET['type'] ?? '';
     $rid  = (int)($_GET['id'] ?? 0);
     if (!isset($TYPES[$type]) || !$rid) error_response('type and id are required');
-    opsh_require($currentUser, $permOf($type), 'view');
+    itops_require($currentUser, $permOf($type), 'view');
     if (!$canSee($type, $rid)) error_response('You cannot open this record.', 403);   // review CORE-21: the source record too
     try {
-        $st = $db->prepare("SELECT * FROM opsh_links WHERE (a_type=? AND a_id=?) OR (b_type=? AND b_id=?) ORDER BY id DESC");
+        $st = $db->prepare("SELECT * FROM itops_links WHERE (a_type=? AND a_id=?) OR (b_type=? AND b_id=?) ORDER BY id DESC");
         $st->execute([$type, $rid, $type, $rid]);
         $rows = $st->fetchAll();
     } catch (\Throwable $e) { $needMig($e); }
@@ -109,10 +109,10 @@ if ($method === 'POST' && $id === null) {
     if ($resolve($at, $ai) === null || $resolve($bt, $bi) === null) error_response('One of the records does not exist (any more).', 404);
     if ($why = $mayLink($at, $ai, $bt, $bi)) $lRefuse('Link ' . $at . ' #' . $ai . ' to ' . $bt . ' #' . $bi, $why, 'Linking needs Edit on this record and access to the other one' . (strpos($why, 'Standards & Audits') !== false ? ', and Standards & Audits · Edit for evidence' : '') . '.');
     try {
-        $dup = $db->prepare("SELECT id FROM opsh_links WHERE (a_type=? AND a_id=? AND b_type=? AND b_id=?) OR (a_type=? AND a_id=? AND b_type=? AND b_id=?) LIMIT 1");
+        $dup = $db->prepare("SELECT id FROM itops_links WHERE (a_type=? AND a_id=? AND b_type=? AND b_id=?) OR (a_type=? AND a_id=? AND b_type=? AND b_id=?) LIMIT 1");
         $dup->execute([$at, $ai, $bt, $bi, $bt, $bi, $at, $ai]);
         if ($dup->fetch()) json_response(['ok' => true, 'duplicate' => true]);
-        $db->prepare("INSERT INTO opsh_links (a_type,a_id,b_type,b_id,created_by,created_at) VALUES (?,?,?,?,?,NOW())")
+        $db->prepare("INSERT INTO itops_links (a_type,a_id,b_type,b_id,created_by,created_at) VALUES (?,?,?,?,?,NOW())")
            ->execute([$at, $ai, $bt, $bi, (int)$currentUser['id']]);
         $__newId = (int)$db->lastInsertId();   // capture now — audit_log() inserts a row too
     } catch (\Throwable $e) { $needMig($e); }
@@ -122,7 +122,7 @@ if ($method === 'POST' && $id === null) {
 
 // ── DELETE ────────────────────────────────────────────
 if ($method === 'DELETE' && $id !== null) {
-    $st = $db->prepare("SELECT * FROM opsh_links WHERE id = ?");
+    $st = $db->prepare("SELECT * FROM itops_links WHERE id = ?");
     $st->execute([$id]);
     $lk = $st->fetch();
     if ($lk) {
@@ -130,7 +130,7 @@ if ($method === 'DELETE' && $id !== null) {
         $w1 = $mayLink((string)$lk['a_type'], (int)$lk['a_id'], (string)$lk['b_type'], (int)$lk['b_id']);
         $w2 = $w1 ? $mayLink((string)$lk['b_type'], (int)$lk['b_id'], (string)$lk['a_type'], (int)$lk['a_id']) : null;
         if ($w1 && $w2) $lRefuse('Unlink ' . $lk['a_type'] . ' #' . $lk['a_id'] . ' and ' . $lk['b_type'] . ' #' . $lk['b_id'], $w1, 'Removing this link needs Edit on one of the records and access to both' . (strpos($w1 . $w2, 'Standards & Audits') !== false ? ', and Standards & Audits · Edit for evidence' : '') . '.');
-        $db->prepare("DELETE FROM opsh_links WHERE id = ?")->execute([$id]);
+        $db->prepare("DELETE FROM itops_links WHERE id = ?")->execute([$id]);
         audit_log('unlinked', (string)$lk['a_type'], (int)$lk['a_id'], ($TYPES[$lk['b_type']][2] ?? $lk['b_type']) . ' #' . (int)$lk['b_id']);
     }
     json_response(['ok' => true]);

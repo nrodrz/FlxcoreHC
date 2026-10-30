@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
-require_once __DIR__ . '/Brand.php';   // BT20: opsh_app_name() for cron scripts too
-/** cron-mail.php runs without api/index.php: same rule as opsh_can(user,'tickets','all'). */
+require_once __DIR__ . '/Brand.php';   // BT20: itops_app_name() for cron scripts too
+/** cron-mail.php runs without api/index.php: same rule as itops_can(user,'tickets','all'). */
 if (!function_exists('mail_can_all_tickets')) {
     function mail_can_all_tickets(array $u): bool {
         if (($u['role_slug'] ?? '') === 'super_admin') return true;
@@ -13,17 +13,17 @@ if (!function_exists('mail_can_all_tickets')) {
     }
 }
 /**
- * OpsHub — Email-to-Ticket intake library
+ * ITOps — Email-to-Ticket intake library
  * Inbound: IMAP (basic auth mailboxes) or Microsoft 365 Graph (modern auth).
  * Outbound: PHP mail(), SMTP, or Microsoft 365 Graph.
- * Configuration lives in opsh_settings (set in the admin area).
+ * Configuration lives in itops_settings (set in the admin area).
  */
 require_once __DIR__ . '/O365.php';
 require_once __DIR__ . '/EmailTemplates.php';
 
 if (!function_exists('mail_cfg')) {
     function mail_cfg(): array {
-        $rows = getDB()->query("SELECT skey, sval FROM opsh_settings WHERE skey LIKE 'mail_%'")->fetchAll(PDO::FETCH_KEY_PAIR);
+        $rows = getDB()->query("SELECT skey, sval FROM itops_settings WHERE skey LIKE 'mail_%'")->fetchAll(PDO::FETCH_KEY_PAIR);
         return $rows ?: [];
     }
 }
@@ -178,7 +178,7 @@ if (!function_exists('mail_ingest_message')) {
         $fl = strtolower((string)$fromEmail);
         if ($fl !== '' && (in_array($fl, $self, true) || preg_match('/^(mailer-daemon|postmaster|no-?reply)@/i', $fl))) return 'skipped';
         if ($fromEmail && !$spoof) {
-            $u = $db->prepare("SELECT id FROM opsh_users WHERE email=? AND status='active' LIMIT 1");   // review DESK-21: an inactive account is an outsider
+            $u = $db->prepare("SELECT id FROM itops_users WHERE email=? AND status='active' LIMIT 1");   // review DESK-21: an inactive account is an outsider
             $u->execute([$fromEmail]);
             $rid = $u->fetchColumn() ?: null;
         }
@@ -186,33 +186,33 @@ if (!function_exists('mail_ingest_message')) {
         if (!$rid) $rid = 1; // system/admin fallback — the real sender is kept in contact_email
 
         if ($replyMode === 'thread' && preg_match('/TK-\d{4}-\d{3,}/', $subject, $m)) {
-            $t = $db->prepare('SELECT id FROM opsh_tickets WHERE ticket_number=?');
+            $t = $db->prepare('SELECT id FROM itops_tickets WHERE ticket_number=?');
             $t->execute([$m[0]]);
             $tid = $t->fetchColumn();
             // BT75: a reply to a merged ticket goes to the ticket it was merged into
             for ($hop = 0; $tid && $hop < 5; $hop++) {
-                try { $mq = $db->prepare('SELECT merged_into_id FROM opsh_tickets WHERE id=?'); $mq->execute([(int)$tid]); $nx = (int)($mq->fetchColumn() ?: 0); } catch (Throwable $e) { $nx = 0; }
+                try { $mq = $db->prepare('SELECT merged_into_id FROM itops_tickets WHERE id=?'); $mq->execute([(int)$tid]); $nx = (int)($mq->fetchColumn() ?: 0); } catch (Throwable $e) { $nx = 0; }
                 if (!$nx) break; $tid = $nx;
             }
             if ($tid) {
-                // Only people connected to the ticket (its requester / contact / assignee) or OpsHub users can add
+                // Only people connected to the ticket (its requester / contact / assignee) or ITOps users can add
                 // a public reply. Anyone else quoting the number (TK numbers are sequential) is kept as an
                 // INTERNAL note for the team to review, so strangers can't post into someone else's ticket.
-                // OpsHub users count only if they're on the ticket or work the queue (Tickets "All records").
+                // ITOps users count only if they're on the ticket or work the queue (Tickets "All records").
                 $ok = false;
                 if ($spoof || $auto) { /* failed sender checks, or an automatic reply: never a public reply, never reopens — kept as an internal note */ }
-                elseif ($known) { try { $ku = $db->prepare('SELECT u.*, r.slug AS role_slug, r.permissions AS role_perms FROM opsh_users u LEFT JOIN opsh_roles r ON r.id=u.role_id WHERE u.id=?'); $ku->execute([(int)$rid]); $kr = $ku->fetch(); if ($kr) $ok = function_exists('opsh_can') ? opsh_can($kr, 'tickets', 'all') : mail_can_all_tickets($kr); } catch (Throwable $e) {} }
+                elseif ($known) { try { $ku = $db->prepare('SELECT u.*, r.slug AS role_slug, r.permissions AS role_perms FROM itops_users u LEFT JOIN itops_roles r ON r.id=u.role_id WHERE u.id=?'); $ku->execute([(int)$rid]); $kr = $ku->fetch(); if ($kr) $ok = function_exists('itops_can') ? itops_can($kr, 'tickets', 'all') : mail_can_all_tickets($kr); } catch (Throwable $e) {} }
                 if (!$ok && !$spoof) {
-                    $cq = $db->prepare('SELECT LOWER(COALESCE(t.contact_email,\'\')) ce, LOWER(COALESCE(r.email,\'\')) re, LOWER(COALESCE(a.email,\'\')) ae, LOWER(COALESCE(b.email,\'\')) be FROM opsh_tickets t LEFT JOIN opsh_users r ON r.id=t.requester_id LEFT JOIN opsh_users a ON a.id=t.assignee_id LEFT JOIN opsh_users b ON b.id=t.backup_id WHERE t.id=?');
+                    $cq = $db->prepare('SELECT LOWER(COALESCE(t.contact_email,\'\')) ce, LOWER(COALESCE(r.email,\'\')) re, LOWER(COALESCE(a.email,\'\')) ae, LOWER(COALESCE(b.email,\'\')) be FROM itops_tickets t LEFT JOIN itops_users r ON r.id=t.requester_id LEFT JOIN itops_users a ON a.id=t.assignee_id LEFT JOIN itops_users b ON b.id=t.backup_id WHERE t.id=?');
                     try { $cq->execute([$tid]); $cr = $cq->fetch() ?: []; $ok = in_array($fl, array_filter([$cr['ce'] ?? '', $cr['re'] ?? '', $cr['ae'] ?? '', $cr['be'] ?? '']), true);   /* review DESK-21: the backup too */ } catch (Throwable $e) { $ok = false; }
                 }
-                $db->prepare('INSERT INTO opsh_ticket_comments (ticket_id,user_id,content,is_internal) VALUES (?,?,?,?)')
+                $db->prepare('INSERT INTO itops_ticket_comments (ticket_id,user_id,content,is_internal) VALUES (?,?,?,?)')
                    ->execute([$tid, $rid, ($ok ? "(email reply from {$fromEmail})" : ($spoof ? "(email claiming to be from {$fromEmail} FAILED the sender checks (DMARC) — it may be forged; review before acting)" : "(email from UNRECOGNISED sender {$fromEmail} quoting this ticket number — review before acting)")) . "\n\n" . $bodyText, $ok ? 0 : 1]);
                 if ($spoof && function_exists('audit_log')) { try { audit_log('mail_spoof_suspected', 'ticket', (int)$tid, 'From ' . mb_substr($fromEmail, 0, 120), null, ['result' => 'kept as an internal note', 'subject' => mb_substr($subject, 0, 200)]); } catch (Throwable $e) {} }
                 if ($ok) {   // let the agent know (bell + "Requester replied" email)
-                    if (!function_exists('opsh_ticket_notify_assignee')) require_once __DIR__ . '/Requesters.php';
-                    opsh_ticket_notify_assignee($db, (int)$tid, $known ? (int)$rid : 0, ($fromName && $fromName !== $fromEmail) ? (string)$fromName : (string)$fromEmail, (string)$bodyText);
-                    try { require_once __DIR__ . '/TicketLifecycle.php'; opsh_tk_on_requester_reply($db, (int)$tid, $known ? (int)$rid : null, (string)$fromEmail); } catch (Throwable $e) {}   // BT75 reopen; BT92 ends Pending
+                    if (!function_exists('itops_ticket_notify_assignee')) require_once __DIR__ . '/Requesters.php';
+                    itops_ticket_notify_assignee($db, (int)$tid, $known ? (int)$rid : 0, ($fromName && $fromName !== $fromEmail) ? (string)$fromName : (string)$fromEmail, (string)$bodyText);
+                    try { require_once __DIR__ . '/TicketLifecycle.php'; itops_tk_on_requester_reply($db, (int)$tid, $known ? (int)$rid : null, (string)$fromEmail); } catch (Throwable $e) {}   // BT75 reopen; BT92 ends Pending
                 }
                 return 'appended';
             }
@@ -221,23 +221,23 @@ if (!function_exists('mail_ingest_message')) {
         $clean = trim(preg_replace('/^((re|res|rv|fwd?|reenv)\s*:\s*)+/i', '', $subject)) ?: '(no subject)';
         $desc = ($spoof ? "WARNING: this email FAILED the sender checks (DMARC) — the From address may be forged. It is kept as from an unknown sender.\n" : '') . "From: {$fromName} <{$fromEmail}>\n\n" . $bodyText;
         require_once __DIR__ . '/TicketNumbers.php';   // BT52: a number nobody else holds
-        [$tn, $newTicketId] = opsh_ticket_create_numbered($db, function (string $tn) use ($db, $clean, $desc, $cfg, $rid) {
-            $db->prepare('INSERT INTO opsh_tickets (ticket_number,subject,description,category_id,department_id,priority,status,requester_id) VALUES (?,?,?,?,?,?,?,?)')
+        [$tn, $newTicketId] = itops_ticket_create_numbered($db, function (string $tn) use ($db, $clean, $desc, $cfg, $rid) {
+            $db->prepare('INSERT INTO itops_tickets (ticket_number,subject,description,category_id,department_id,priority,status,requester_id) VALUES (?,?,?,?,?,?,?,?)')
                ->execute([$tn, $clean, $desc, (($cfg['mail_default_category'] ?? '') ?: null), (($cfg['mail_default_department'] ?? '') ?: null), (($cfg['mail_default_priority'] ?? '') ?: 'p3_medium'), 'open', $rid]);
             return [$tn, (int)$db->lastInsertId()];
         });
-        if (!function_exists('opsh_ticket_sla_fill')) require_once __DIR__ . '/BusinessHours.php';
-        opsh_ticket_sla_fill($db, $newTicketId);
-        if ($spoof) { try { $db->prepare("UPDATE opsh_tickets SET contact_email='', contact_name=? WHERE id=?")->execute([mb_substr('Unverified sender (failed DMARC): ' . $fromEmail, 0, 160), $newTicketId]); } catch (Throwable $e) {} }   // BT87: no email goes back to a forged address
-        else if (!$known && $fromEmail) { try { $db->prepare('UPDATE opsh_tickets SET contact_email=?, contact_name=? WHERE id=?')->execute([strtolower($fromEmail), mb_substr((string)$fromName, 0, 160), $newTicketId]); } catch (Throwable $e) {} }
+        if (!function_exists('itops_ticket_sla_fill')) require_once __DIR__ . '/BusinessHours.php';
+        itops_ticket_sla_fill($db, $newTicketId);
+        if ($spoof) { try { $db->prepare("UPDATE itops_tickets SET contact_email='', contact_name=? WHERE id=?")->execute([mb_substr('Unverified sender (failed DMARC): ' . $fromEmail, 0, 160), $newTicketId]); } catch (Throwable $e) {} }   // BT87: no email goes back to a forged address
+        else if (!$known && $fromEmail) { try { $db->prepare('UPDATE itops_tickets SET contact_email=?, contact_name=? WHERE id=?')->execute([strtolower($fromEmail), mb_substr((string)$fromName, 0, 160), $newTicketId]); } catch (Throwable $e) {} }
         // BT17: owner + backup from the category routing, and tell them (or the alert list) — a new ticket is never silent.
-        try { require_once __DIR__ . '/TicketRouting.php'; opsh_tr_on_created($db, $newTicketId, null, 'email'); } catch (Throwable $e) {}
+        try { require_once __DIR__ . '/TicketRouting.php'; itops_tr_on_created($db, $newTicketId, null, 'email'); } catch (Throwable $e) {}
         if ($spoof && function_exists('audit_log')) { try { audit_log('mail_spoof_suspected', 'ticket', (int)$newTicketId, $tn . ' · from ' . mb_substr($fromEmail, 0, 120), null, ['result' => 'new ticket from an unknown sender, no acknowledgement sent']); } catch (Throwable $e) {} }
         // BT124 (review DESK-6): no acknowledgement to an automatic message, nor more than five an hour to one sender (loops)
-        $ackN = 0; try { $aq = $db->prepare('SELECT COUNT(*) FROM opsh_tickets WHERE contact_email=? AND created_at > NOW() - INTERVAL 1 HOUR'); $aq->execute([strtolower($fromEmail)]); $ackN = (int)$aq->fetchColumn(); } catch (Throwable $e) {}
-        if ($fromEmail && !$spoof && !$auto && $ackN <= 5) {   // opsh_email() honours the "mail_ack" switch and the template's own on/off (BT87: nothing back to a forged address)
+        $ackN = 0; try { $aq = $db->prepare('SELECT COUNT(*) FROM itops_tickets WHERE contact_email=? AND created_at > NOW() - INTERVAL 1 HOUR'); $aq->execute([strtolower($fromEmail)]); $ackN = (int)$aq->fetchColumn(); } catch (Throwable $e) {}
+        if ($fromEmail && !$spoof && !$auto && $ackN <= 5) {   // itops_email() honours the "mail_ack" switch and the template's own on/off (BT87: nothing back to a forged address)
             $newId = $newTicketId;
-            opsh_email('ticket_ack_email', $fromEmail, ['ticket_number' => $tn, 'subject' => $clean, 'requester_email' => $fromEmail,
+            itops_email('ticket_ack_email', $fromEmail, ['ticket_number' => $tn, 'subject' => $clean, 'requester_email' => $fromEmail,
                 'recipient_name' => ($fromName && $fromName !== $fromEmail) ? $fromName : ''], ['ticket_id' => $newId ?: null]);
         }
         return 'created';
@@ -250,8 +250,8 @@ if (!function_exists('mail_intake_poll')) {
         if (($cfg['mail_enabled'] ?? '0') !== '1') return ['ok' => false, 'error' => 'Email intake is disabled.'];
         // BT124 (review DESK-4): one reader of the mailbox at a time (the system cron and the in-app scheduler both poll)
         $db0 = getDB();
-        if ((int)$db0->query("SELECT GET_LOCK('opsh_mail_poll', 0)")->fetchColumn() !== 1) return ['ok' => true, 'skipped' => 'another mail check is running', 'scanned' => 0, 'created' => 0, 'appended' => 0];
-        try { return mail_intake_poll_locked($cfg); } finally { try { $db0->query("SELECT RELEASE_LOCK('opsh_mail_poll')"); } catch (\Throwable $e) {} }
+        if ((int)$db0->query("SELECT GET_LOCK('itops_mail_poll', 0)")->fetchColumn() !== 1) return ['ok' => true, 'skipped' => 'another mail check is running', 'scanned' => 0, 'created' => 0, 'appended' => 0];
+        try { return mail_intake_poll_locked($cfg); } finally { try { $db0->query("SELECT RELEASE_LOCK('itops_mail_poll')"); } catch (\Throwable $e) {} }
     }
     function mail_intake_poll_locked(array $cfg): array {
 
@@ -279,7 +279,7 @@ if (!function_exists('mail_intake_poll')) {
             $auth = mail_auth_verdict($hdrRaw, $fromEmail);   // BT87
             // BT124 (review DESK-11): one message that fails is left unread for the next check; the others go on
             try { $res = mail_ingest_message($db, $cfg, $subject, $fromEmail, $fromName, $bodyText, $auth, mail_is_automatic($hdrRaw)); }
-            catch (\Throwable $e) { if (function_exists('opsh_log')) { try { opsh_log('error', 'mail', 'An email could not be taken in: ' . $e->getMessage()); } catch (\Throwable $x) {} } continue; }
+            catch (\Throwable $e) { if (function_exists('itops_log')) { try { itops_log('error', 'mail', 'An email could not be taken in: ' . $e->getMessage()); } catch (\Throwable $x) {} } continue; }
             if ($res === 'created') $created++; elseif ($res === 'appended') $appended++;
             @imap_setflag_full($imap, $num, "\\Seen");
         }
@@ -292,15 +292,15 @@ if (!function_exists('mail_intake_poll')) {
 if (!function_exists('mail_send')) {
     /** Outbound email via the configured method: graph | smtp | mailfn. */
     function mail_send(string $to, string $subject, string $body, array $ctx = []): array {
-        require_once __DIR__ . '/Brand.php'; $subject = opsh_brand($subject);   // BT20: the log shows the subject as sent
+        require_once __DIR__ . '/Brand.php'; $subject = itops_brand($subject);   // BT20: the log shows the subject as sent
         $r = mail_send_raw($to, $subject, $body, $ctx['html'] ?? null);
         // Every attempt is recorded (Connection → Email → Outbound email log) so "no email arrived"
         // can be diagnosed without guessing.
         try {
-            getDB()->prepare('INSERT INTO opsh_mail_log (to_email,subject,method,kind,ticket_id,ok,error,sent_by) VALUES (?,?,?,?,?,?,?,?)')
+            getDB()->prepare('INSERT INTO itops_mail_log (to_email,subject,method,kind,ticket_id,ok,error,sent_by) VALUES (?,?,?,?,?,?,?,?)')
                    ->execute([$to, mb_substr($subject, 0, 255), (string)(mail_cfg()['mail_out_method'] ?? 'mailfn'), (string)($ctx['kind'] ?? ''),
                               isset($ctx['ticket_id']) ? (int)$ctx['ticket_id'] : null, !empty($r['ok']) ? 1 : 0, mb_substr((string)($r['error'] ?? ''), 0, 1000),
-                              (int)($_SERVER['OPSH_USER_ID'] ?? 0) ?: null]);
+                              (int)($_SERVER['ITOPS_USER_ID'] ?? 0) ?: null]);
         } catch (Throwable $e) { /* log table missing until db-update runs — never block the send */ }
         return $r;
     }
@@ -312,7 +312,7 @@ if (!function_exists('mail_send_raw')) {
     function mail_mime(string $text, ?string $html): array {
         $b64 = fn($s) => rtrim(chunk_split(base64_encode($s), 76, "\r\n"));
         if (!$html) return ["Content-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64", $b64($text)];
-        $bd = '=_opsh_' . bin2hex(random_bytes(8));
+        $bd = '=_itops_' . bin2hex(random_bytes(8));
         $body = "--$bd\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . $b64($text) . "\r\n"
               . "--$bd\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . $b64($html) . "\r\n--$bd--";
         return ["Content-Type: multipart/alternative; boundary=\"$bd\"", $body];
@@ -324,7 +324,7 @@ if (!function_exists('mail_send_raw')) {
     function mail_send_raw(string $to, string $subject, string $body, ?string $html = null): array {
         // BT20: every outgoing email carries the client's app name (also covers templates saved before BT20).
         require_once __DIR__ . '/Brand.php';
-        $subject = opsh_brand($subject); $body = opsh_brand($body); if ($html !== null) $html = opsh_brand($html);
+        $subject = itops_brand($subject); $body = itops_brand($body); if ($html !== null) $html = itops_brand($html);
         $cfg = mail_cfg();
         if (($cfg['mail_out_enabled'] ?? '0') !== '1') return ['ok' => false, 'error' => 'Outbound email is disabled (Connection → Email → Outbound email)'];
         if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return ['ok' => false, 'error' => 'Invalid recipient'];
@@ -335,7 +335,7 @@ if (!function_exists('mail_send_raw')) {
         }
 
         $fromEmail = ($cfg['mail_from_email'] ?? '') ?: ($cfg['mail_username'] ?? '');
-        $fromName  = opsh_brand(($cfg['mail_from_name'] ?? '') ?: 'IT Help Desk');   // BT20
+        $fromName  = itops_brand(($cfg['mail_from_name'] ?? '') ?: 'IT Help Desk');   // BT20
         if (!$fromEmail) return ['ok' => false, 'error' => 'No From address configured'];
 
         if ($method === 'smtp') {

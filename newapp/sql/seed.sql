@@ -1,6 +1,6 @@
 -- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- ═══════════════════════════════════════════════════════════════
--- OpsHub — Seed Data (inserted after schema + first user)
+-- ITOps — Seed Data (inserted after schema + first user)
 -- Note: Credential values are encrypted at insert time by PHP
 -- This file contains the PLAINTEXT reference for initial setup
 -- ═══════════════════════════════════════════════════════════════
@@ -9,7 +9,7 @@
 -- A placeholder Super Admin so seed rows below can reference owner_id=1.
 -- The installer's finalize step UPDATEs this row (id=1) with the real
 -- admin name, email, and Argon2id password hash. role_id=1 = Super Admin.
-INSERT INTO `opsh_users`
+INSERT INTO `itops_users`
   (`id`,`email`,`password_hash`,`display_name`,`first_name`,`last_name`,`role_id`,`department_id`,`auth_provider`,`status`)
 VALUES
   (1,'admin@pending.local','!','Administrator','System','Admin',1,1,'local','active');
@@ -21,7 +21,7 @@ VALUES
 -- Content library: KB articles + IT SOP library (auto-appended)
 -- ============================================================
 -- 2) Knowledge Base articles
-INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Reset or recover your password','reset-your-password','<h2>Reset your work password</h2>
+INSERT IGNORE INTO itops_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Reset or recover your password','reset-your-password','<h2>Reset your work password</h2>
 <p>If you are locked out or your password expired, you can reset it yourself in a couple of minutes.</p>
 <h3>Self-service reset</h3>
 <ol>
@@ -38,8 +38,8 @@ INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_i
 </ul>
 <p><strong>Tip:</strong> a short passphrase like <code>Coffee-Rain-42!</code> is both strong and easy to remember.</p>
 <h3>Still stuck?</h3>
-<p>Reset links expire after 30 minutes. If you do not receive the email, check spam, wait two minutes, and try again. If it still fails, open a ticket under <em>Software &gt; Access / Login</em> and IT will reset it for you.</p>', (SELECT id FROM opsh_kb_categories WHERE name='Security' LIMIT 1), 1, 'published', 412 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_kb_articles WHERE slug='reset-your-password') x);
-INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Connect to the office VPN','connect-office-vpn','<h2>Working securely from outside the office</h2>
+<p>Reset links expire after 30 minutes. If you do not receive the email, check spam, wait two minutes, and try again. If it still fails, open a ticket under <em>Software &gt; Access / Login</em> and IT will reset it for you.</p>', (SELECT id FROM itops_kb_categories WHERE name='Security' LIMIT 1), 1, 'published', 412 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_kb_articles WHERE slug='reset-your-password') x);
+INSERT IGNORE INTO itops_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Connect to the office VPN','connect-office-vpn','<h2>Working securely from outside the office</h2>
 <p>The VPN gives you an encrypted connection back to company resources (file shares, internal apps) when you are working remotely or on public Wi-Fi.</p>
 <h3>First-time setup</h3>
 <ol>
@@ -59,8 +59,8 @@ INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_i
 <li><strong>Stuck on "Connecting":</strong> toggle Wi-Fi off and on, then retry.</li>
 <li><strong>Authentication failed:</strong> confirm your password works on the webmail/portal first.</li>
 <li><strong>Slow:</strong> switch to a closer gateway in the client settings.</li>
-</ul>', (SELECT id FROM opsh_kb_categories WHERE name='Network' LIMIT 1), 1, 'published', 288 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_kb_articles WHERE slug='connect-office-vpn') x);
-INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Set up email and calendar on your phone','email-on-your-phone','<h2>Get your email on your phone</h2>
+</ul>', (SELECT id FROM itops_kb_categories WHERE name='Network' LIMIT 1), 1, 'published', 288 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_kb_articles WHERE slug='connect-office-vpn') x);
+INSERT IGNORE INTO itops_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Set up email and calendar on your phone','email-on-your-phone','<h2>Get your email on your phone</h2>
 <p>We use Microsoft 365, so the easiest and most secure option is the <strong>Outlook mobile app</strong>.</p>
 <h3>Steps</h3>
 <ol>
@@ -76,8 +76,8 @@ INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_i
 <li>Your device may be asked to set a screen lock/PIN &mdash; this is a security requirement to protect company mail.</li>
 <li>If you get a new phone, just install Outlook and sign in; nothing is stored only on the old device.</li>
 <li>Lost your phone? Tell IT immediately so we can sign that device out remotely.</li>
-</ul>', (SELECT id FROM opsh_kb_categories WHERE name='Microsoft 365' LIMIT 1), 1, 'published', 651 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_kb_articles WHERE slug='email-on-your-phone') x);
-INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Spot and report phishing emails','recognise-phishing','<h2>How to recognise a phishing email</h2>
+</ul>', (SELECT id FROM itops_kb_categories WHERE name='Microsoft 365' LIMIT 1), 1, 'published', 651 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_kb_articles WHERE slug='email-on-your-phone') x);
+INSERT IGNORE INTO itops_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Spot and report phishing emails','recognise-phishing','<h2>How to recognise a phishing email</h2>
 <p>Phishing is the number-one way attackers get in. A few seconds of caution protects the whole organisation.</p>
 <h3>Warning signs</h3>
 <ul>
@@ -94,8 +94,8 @@ INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_i
 <li>We will never ask for your password or MFA code by email.</li>
 </ol>
 <h3>Report it</h3>
-<p>Use the <strong>Report Phish</strong> button in Outlook, or forward the message to the IT help desk and then delete it. When in doubt, report it &mdash; we would much rather check a safe email than miss a real one.</p>', (SELECT id FROM opsh_kb_categories WHERE name='Security' LIMIT 1), 1, 'published', 520 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_kb_articles WHERE slug='recognise-phishing') x);
-INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Request new hardware or accessories','request-new-hardware','<h2>Requesting a laptop, monitor or accessories</h2>
+<p>Use the <strong>Report Phish</strong> button in Outlook, or forward the message to the IT help desk and then delete it. When in doubt, report it &mdash; we would much rather check a safe email than miss a real one.</p>', (SELECT id FROM itops_kb_categories WHERE name='Security' LIMIT 1), 1, 'published', 520 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_kb_articles WHERE slug='recognise-phishing') x);
+INSERT IGNORE INTO itops_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Request new hardware or accessories','request-new-hardware','<h2>Requesting a laptop, monitor or accessories</h2>
 <p>Standard equipment can be requested through a ticket; your manager approves it and IT handles ordering and setup.</p>
 <h3>How to request</h3>
 <ol>
@@ -111,8 +111,8 @@ INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_i
 <tr><td>Headset</td><td>USB noise-cancelling</td><td>In stock</td></tr>
 <tr><td>Dock / adapters</td><td>USB-C dock</td><td>In stock</td></tr>
 </table>
-<p>Non-standard or higher-spec equipment needs a short business justification and budget-holder sign-off.</p>', (SELECT id FROM opsh_kb_categories WHERE name='General' LIMIT 1), 1, 'published', 134 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_kb_articles WHERE slug='request-new-hardware') x);
-INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Printer is not responding','printer-not-responding','<h2>Fix a printer that will not print</h2>
+<p>Non-standard or higher-spec equipment needs a short business justification and budget-holder sign-off.</p>', (SELECT id FROM itops_kb_categories WHERE name='General' LIMIT 1), 1, 'published', 134 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_kb_articles WHERE slug='request-new-hardware') x);
+INSERT IGNORE INTO itops_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Printer is not responding','printer-not-responding','<h2>Fix a printer that will not print</h2>
 <p>Most printer problems are solved in under five minutes with these steps.</p>
 <h3>Quick fixes</h3>
 <ol>
@@ -127,8 +127,8 @@ INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_i
 <li><strong>macOS:</strong> System Settings &gt; Printers &amp; Scanners &gt; Add Printer.</li>
 <li>Choose the network printer for your floor (ask a neighbour for the name if unsure).</li>
 </ul>
-<p>Still stuck after that? Open a ticket under <em>Hardware &gt; Printer</em> with the printer name/location and a photo of any error.</p>', (SELECT id FROM opsh_kb_categories WHERE name='General' LIMIT 1), 1, 'published', 97 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_kb_articles WHERE slug='printer-not-responding') x);
-INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Microsoft 365 and Teams basics','m365-teams-basics','<h2>Getting the most from Microsoft 365</h2>
+<p>Still stuck after that? Open a ticket under <em>Hardware &gt; Printer</em> with the printer name/location and a photo of any error.</p>', (SELECT id FROM itops_kb_categories WHERE name='General' LIMIT 1), 1, 'published', 97 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_kb_articles WHERE slug='printer-not-responding') x);
+INSERT IGNORE INTO itops_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Microsoft 365 and Teams basics','m365-teams-basics','<h2>Getting the most from Microsoft 365</h2>
 <p>Your account includes Outlook, Teams, Word, Excel, PowerPoint and 1&nbsp;TB of OneDrive storage.</p>
 <h3>Save files to OneDrive or SharePoint, not your desktop</h3>
 <ul>
@@ -143,8 +143,8 @@ INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_i
 <li>Set your status and quiet hours so notifications respect your focus time.</li>
 </ul>
 <h3>Co-author in real time</h3>
-<p>Open a document from Teams or SharePoint and several people can edit at once &mdash; no more emailing versions back and forth.</p>', (SELECT id FROM opsh_kb_categories WHERE name='Microsoft 365' LIMIT 1), 1, 'published', 243 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_kb_articles WHERE slug='m365-teams-basics') x);
-INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Set up multi-factor authentication (MFA)','set-up-mfa','<h2>Set up multi-factor authentication</h2>
+<p>Open a document from Teams or SharePoint and several people can edit at once &mdash; no more emailing versions back and forth.</p>', (SELECT id FROM itops_kb_categories WHERE name='Microsoft 365' LIMIT 1), 1, 'published', 243 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_kb_articles WHERE slug='m365-teams-basics') x);
+INSERT IGNORE INTO itops_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Set up multi-factor authentication (MFA)','set-up-mfa','<h2>Set up multi-factor authentication</h2>
 <p>MFA adds a second check beyond your password, so even a stolen password cannot get into your account. It is required for all staff.</p>
 <h3>Recommended: Microsoft Authenticator app</h3>
 <ol>
@@ -160,8 +160,8 @@ INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_i
 <li>When you sign in, approve the push notification (or enter the rotating code).</li>
 <li>Only approve prompts you started. If you get a prompt you did not request, <strong>deny it and tell IT</strong> &mdash; someone may have your password.</li>
 </ul>
-<p>Getting a new phone? Set up Authenticator on the new device <em>before</em> wiping the old one.</p>', (SELECT id FROM opsh_kb_categories WHERE name='Security' LIMIT 1), 1, 'published', 376 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_kb_articles WHERE slug='set-up-mfa') x);
-INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Wi-Fi and guest network access','wifi-and-guest-access','<h2>Connecting to Wi-Fi</h2>
+<p>Getting a new phone? Set up Authenticator on the new device <em>before</em> wiping the old one.</p>', (SELECT id FROM itops_kb_categories WHERE name='Security' LIMIT 1), 1, 'published', 376 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_kb_articles WHERE slug='set-up-mfa') x);
+INSERT IGNORE INTO itops_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Wi-Fi and guest network access','wifi-and-guest-access','<h2>Connecting to Wi-Fi</h2>
 <h3>Staff Wi-Fi</h3>
 <ol>
 <li>Select the staff network for your office from the Wi-Fi list.</li>
@@ -179,8 +179,8 @@ INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_i
 <li>Forget the network and rejoin to clear a stale connection.</li>
 <li>Move closer to an access point; thick walls and microwaves cause interference.</li>
 <li>If a whole area is affected, open a ticket under <em>Network</em> with the office and room.</li>
-</ul>', (SELECT id FROM opsh_kb_categories WHERE name='Network' LIMIT 1), 1, 'published', 159 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_kb_articles WHERE slug='wifi-and-guest-access') x);
-INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Back up and recover your files','back-up-and-recover-files','<h2>Make sure your work is never lost</h2>
+</ul>', (SELECT id FROM itops_kb_categories WHERE name='Network' LIMIT 1), 1, 'published', 159 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_kb_articles WHERE slug='wifi-and-guest-access') x);
+INSERT IGNORE INTO itops_kb_articles (title, slug, content, category_id, author_id, status, views_count) SELECT 'Back up and recover your files','back-up-and-recover-files','<h2>Make sure your work is never lost</h2>
 <p>The safest place for your files is <strong>OneDrive</strong> or a <strong>SharePoint/Teams</strong> library. Anything stored there is automatically backed up, versioned, and recoverable.</p>
 <h3>Turn on OneDrive backup</h3>
 <ol>
@@ -198,10 +198,10 @@ INSERT IGNORE INTO opsh_kb_articles (title, slug, content, category_id, author_i
 <li>Files saved only to your computer''s local <em>C:</em> drive or desktop (unless OneDrive backup is on).</li>
 <li>Data on USB sticks and external drives.</li>
 </ul>
-<p>If you need to recover something older than 30 days or cannot find a file, open a ticket and IT will help.</p>', (SELECT id FROM opsh_kb_categories WHERE name='General' LIMIT 1), 1, 'published', 201 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_kb_articles WHERE slug='back-up-and-recover-files') x);
+<p>If you need to recover something older than 30 days or cannot find a file, open a ticket and IT will help.</p>', (SELECT id FROM itops_kb_categories WHERE name='General' LIMIT 1), 1, 'published', 201 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_kb_articles WHERE slug='back-up-and-recover-files') x);
 
 -- 3) IT SOP library (published)
-INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'New Employee IT Onboarding','sop-it-onboarding','<h2>Purpose</h2>
+INSERT IGNORE INTO itops_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'New Employee IT Onboarding','sop-it-onboarding','<h2>Purpose</h2>
 <p>Standardise how IT provisions accounts, equipment and access for a new hire so they are productive on day one and access is granted by least privilege.</p>
 <h2>Scope</h2>
 <p>All new employees, contractors and interns who require IT accounts or equipment.</p>
@@ -230,8 +230,8 @@ INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, 
 <li>Close the onboarding ticket with a checklist of what was granted.</li>
 </ol>
 <h2>Records</h2>
-<p>Onboarding ticket, asset assignment, and group membership changes are logged for audit.</p>', (SELECT id FROM opsh_sop_categories WHERE name='Systems' LIMIT 1), (SELECT id FROM opsh_departments WHERE name='Information Technology' LIMIT 1), 'published', 2, 180, DATE_ADD(CURDATE(), INTERVAL 180 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_sops WHERE slug='sop-it-onboarding') x);
-INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Employee Offboarding and Deprovisioning','sop-it-offboarding','<h2>Purpose</h2>
+<p>Onboarding ticket, asset assignment, and group membership changes are logged for audit.</p>', (SELECT id FROM itops_sop_categories WHERE name='Systems' LIMIT 1), (SELECT id FROM itops_departments WHERE name='Information Technology' LIMIT 1), 'published', 2, 180, DATE_ADD(CURDATE(), INTERVAL 180 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_sops WHERE slug='sop-it-onboarding') x);
+INSERT IGNORE INTO itops_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Employee Offboarding and Deprovisioning','sop-it-offboarding','<h2>Purpose</h2>
 <p>Ensure that when someone leaves, access is revoked promptly, data is preserved, and equipment is recovered &mdash; closing security gaps.</p>
 <h2>Scope</h2>
 <p>All departing employees, contractors and interns.</p>
@@ -259,8 +259,8 @@ INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, 
 <li>Rotate any shared credentials the person had access to.</li>
 </ol>
 <h2>Verification</h2>
-<p>A second IT staff member confirms the account is disabled and access removed, then signs off the offboarding ticket.</p>', (SELECT id FROM opsh_sop_categories WHERE name='Systems' LIMIT 1), (SELECT id FROM opsh_departments WHERE name='Information Technology' LIMIT 1), 'published', 2, 180, DATE_ADD(CURDATE(), INTERVAL 180 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_sops WHERE slug='sop-it-offboarding') x);
-INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Incident Response Runbook','sop-incident-response','<h2>Purpose</h2>
+<p>A second IT staff member confirms the account is disabled and access removed, then signs off the offboarding ticket.</p>', (SELECT id FROM itops_sop_categories WHERE name='Systems' LIMIT 1), (SELECT id FROM itops_departments WHERE name='Information Technology' LIMIT 1), 'published', 2, 180, DATE_ADD(CURDATE(), INTERVAL 180 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_sops WHERE slug='sop-it-offboarding') x);
+INSERT IGNORE INTO itops_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Incident Response Runbook','sop-incident-response','<h2>Purpose</h2>
 <p>Provide a repeatable process to detect, contain, eradicate and recover from security incidents (malware, account compromise, data exposure, ransomware) while preserving evidence.</p>
 <h2>Severity levels</h2>
 <table border="1" cellpadding="6" style="border-collapse:collapse">
@@ -292,8 +292,8 @@ INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, 
 <li>Monitor closely for re-infection before returning to normal operations.</li>
 </ol>
 <h3>5. Review</h3>
-<p>Within 5 business days, hold a blameless post-incident review: timeline, root cause, and corrective actions. Update controls and this runbook.</p>', (SELECT id FROM opsh_sop_categories WHERE name='Systems' LIMIT 1), (SELECT id FROM opsh_departments WHERE name='Information Technology' LIMIT 1), 'published', 2, 90, DATE_ADD(CURDATE(), INTERVAL 90 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_sops WHERE slug='sop-incident-response') x);
-INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Password and MFA Policy','sop-password-mfa-policy','<h2>Purpose</h2>
+<p>Within 5 business days, hold a blameless post-incident review: timeline, root cause, and corrective actions. Update controls and this runbook.</p>', (SELECT id FROM itops_sop_categories WHERE name='Systems' LIMIT 1), (SELECT id FROM itops_departments WHERE name='Information Technology' LIMIT 1), 'published', 2, 90, DATE_ADD(CURDATE(), INTERVAL 90 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_sops WHERE slug='sop-incident-response') x);
+INSERT IGNORE INTO itops_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Password and MFA Policy','sop-password-mfa-policy','<h2>Purpose</h2>
 <p>Define authentication requirements that protect accounts without creating unnecessary friction.</p>
 <h2>Password requirements</h2>
 <ul>
@@ -314,8 +314,8 @@ INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, 
 <li>Shared/service credentials are stored in the credential vault and rotated on schedule and on staff departure.</li>
 </ul>
 <h2>Enforcement</h2>
-<p>Exceptions require documented approval from the IT &amp; Operations Advisor and a defined expiry date.</p>', (SELECT id FROM opsh_sop_categories WHERE name='Systems' LIMIT 1), (SELECT id FROM opsh_departments WHERE name='Information Technology' LIMIT 1), 'published', 1, 180, DATE_ADD(CURDATE(), INTERVAL 180 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_sops WHERE slug='sop-password-mfa-policy') x);
-INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Patch and Update Management','sop-patch-management','<h2>Purpose</h2>
+<p>Exceptions require documented approval from the IT &amp; Operations Advisor and a defined expiry date.</p>', (SELECT id FROM itops_sop_categories WHERE name='Systems' LIMIT 1), (SELECT id FROM itops_departments WHERE name='Information Technology' LIMIT 1), 'published', 1, 180, DATE_ADD(CURDATE(), INTERVAL 180 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_sops WHERE slug='sop-password-mfa-policy') x);
+INSERT IGNORE INTO itops_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Patch and Update Management','sop-patch-management','<h2>Purpose</h2>
 <p>Keep operating systems, applications and firmware current to reduce vulnerability exposure, while avoiding disruptive surprises.</p>
 <h2>Cadence</h2>
 <table border="1" cellpadding="6" style="border-collapse:collapse">
@@ -334,8 +334,8 @@ INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, 
 <li>Record completion and any rollbacks in the change log.</li>
 </ol>
 <h2>Servers and hosting</h2>
-<p>For the cPanel hosting environment, apply cPanel and OS updates per vendor guidance and confirm a current backup exists <strong>before</strong> applying major updates (see the cPanel Backup SOP).</p>', (SELECT id FROM opsh_sop_categories WHERE name='Operations' LIMIT 1), (SELECT id FROM opsh_departments WHERE name='Information Technology' LIMIT 1), 'published', 1, 90, DATE_ADD(CURDATE(), INTERVAL 90 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_sops WHERE slug='sop-patch-management') x);
-INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Network Change Management','sop-network-change-management','<h2>Purpose</h2>
+<p>For the cPanel hosting environment, apply cPanel and OS updates per vendor guidance and confirm a current backup exists <strong>before</strong> applying major updates (see the cPanel Backup SOP).</p>', (SELECT id FROM itops_sop_categories WHERE name='Operations' LIMIT 1), (SELECT id FROM itops_departments WHERE name='Information Technology' LIMIT 1), 'published', 1, 90, DATE_ADD(CURDATE(), INTERVAL 90 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_sops WHERE slug='sop-patch-management') x);
+INSERT IGNORE INTO itops_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Network Change Management','sop-network-change-management','<h2>Purpose</h2>
 <p>Control changes to network and core infrastructure so they are planned, approved, reversible and communicated.</p>
 <h2>What requires a change record</h2>
 <ul>
@@ -353,9 +353,9 @@ INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, 
 <li>Close the change with results and update network documentation.</li>
 </ol>
 <h2>Emergency changes</h2>
-<p>For outages, implement the fix immediately, then document and review within 24 hours.</p>', (SELECT id FROM opsh_sop_categories WHERE name='Operations' LIMIT 1), (SELECT id FROM opsh_departments WHERE name='Information Technology' LIMIT 1), 'published', 1, 180, DATE_ADD(CURDATE(), INTERVAL 180 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_sops WHERE slug='sop-network-change-management') x);
-INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'cPanel Server Backup (Detailed Procedure)','sop-cpanel-server-backup','<h2>1. Purpose</h2>
-<p>Define a complete, repeatable procedure to back up the company&rsquo;s cPanel hosting account(s) at the hosting provider &mdash; including all websites, application files, databases (notably this app&rsquo;s database <code>opshub_db</code>), email, and DNS &mdash; so that any data loss, corruption, compromise or accidental deletion can be recovered within the recovery objectives below.</p>
+<p>For outages, implement the fix immediately, then document and review within 24 hours.</p>', (SELECT id FROM itops_sop_categories WHERE name='Operations' LIMIT 1), (SELECT id FROM itops_departments WHERE name='Information Technology' LIMIT 1), 'published', 1, 180, DATE_ADD(CURDATE(), INTERVAL 180 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_sops WHERE slug='sop-network-change-management') x);
+INSERT IGNORE INTO itops_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'cPanel Server Backup (Detailed Procedure)','sop-cpanel-server-backup','<h2>1. Purpose</h2>
+<p>Define a complete, repeatable procedure to back up the company&rsquo;s cPanel hosting account(s) at the hosting provider &mdash; including all websites, application files, databases (notably this app&rsquo;s database <code>itops_db</code>), email, and DNS &mdash; so that any data loss, corruption, compromise or accidental deletion can be recovered within the recovery objectives below.</p>
 
 <h2>2. Scope</h2>
 <p>This SOP covers the cPanel environment at the hosting provider that serves company web properties and this app. It applies to both scenarios:</p>
@@ -386,7 +386,7 @@ INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, 
 <table border="1" cellpadding="6" style="border-collapse:collapse">
 <tr><th>Data set</th><th>Frequency</th><th>Method</th><th>Destination</th><th>Retention</th></tr>
 <tr><td>Full cPanel account</td><td>Weekly (Sun 02:00)</td><td>cPanel full backup / JetBackup</td><td>Remote SFTP + offsite object storage</td><td>4 weekly, 6 monthly</td></tr>
-<tr><td>Databases (incl. <code>opshub_db</code>)</td><td>Daily (02:00)</td><td><code>mysqldump</code> via cron</td><td>Home dir &rarr; offsite</td><td>14 daily</td></tr>
+<tr><td>Databases (incl. <code>itops_db</code>)</td><td>Daily (02:00)</td><td><code>mysqldump</code> via cron</td><td>Home dir &rarr; offsite</td><td>14 daily</td></tr>
 <tr><td>Home directory (web files)</td><td>Daily incremental</td><td><code>tar</code>/<code>rsync</code></td><td>Offsite SFTP/S3</td><td>14 daily</td></tr>
 <tr><td>Email (mailboxes)</td><td>Weekly</td><td>Included in full account backup</td><td>As full backup</td><td>As full backup</td></tr>
 <tr><td>DNS zone files</td><td>Weekly + on change</td><td>Export via cPanel/API</td><td>Offsite</td><td>8 weeks</td></tr>
@@ -395,7 +395,7 @@ INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, 
 <h2>6. What must be included</h2>
 <ul>
 <li><strong>Home directory</strong> (<code>/home/USERNAME</code>): all <code>public_html</code> web roots and application files (including this app).</li>
-<li><strong>All MySQL databases</strong>, especially <code>opshub_db</code>, plus DB users/grants.</li>
+<li><strong>All MySQL databases</strong>, especially <code>itops_db</code>, plus DB users/grants.</li>
 <li><strong>Email</strong>: mailboxes, filters, forwarders, autoresponders.</li>
 <li><strong>DNS zone files</strong> and any custom records.</li>
 <li><strong>cPanel metadata</strong>: subdomains, addon/parked domains, cron jobs, SSL certificates/keys, FTP accounts.</li>
@@ -450,7 +450,7 @@ mkdir -p "$DEST"
 
 # Single most-critical DB (this app)
 mysqldump --single-transaction --routines --triggers \
-  opshub_db | gzip > "$DEST/opshub_db-$STAMP.sql.gz"
+  itops_db | gzip > "$DEST/itops_db-$STAMP.sql.gz"
 
 # OR: every database the cPanel user owns
 for DB in $(mysql -N -e "SHOW DATABASES" | grep -E ''^USERNAME_''); do
@@ -483,7 +483,7 @@ for f in $(find "$SRC" -name ''*.gz'' -newermt ''-1 day''); do
   gpg --batch --yes --encrypt --recipient backups@yourcompany.com "$f"
 done
 # Sync only the encrypted .gpg files offsite (rclone remote configured separately)
-rclone copy "$SRC" b2:yourcompany-opshub-backups \
+rclone copy "$SRC" b2:yourcompany-itops-backups \
   --include ''*.gpg'' --transfers 4 --checksum</code></pre>
 
 <h3>10.4 Schedule with cron (cPanel &gt; Cron Jobs)</h3>
@@ -499,7 +499,7 @@ rclone copy "$SRC" b2:yourcompany-opshub-backups \
 <p>A backup that has never been restored is only a hope. Each month:</p>
 <ol>
 <li>Pick one database and one site folder from the most recent backup.</li>
-<li>Decrypt: <code>gpg --decrypt opshub_db-DATE.sql.gz.gpg &gt; test.sql.gz</code>.</li>
+<li>Decrypt: <code>gpg --decrypt itops_db-DATE.sql.gz.gpg &gt; test.sql.gz</code>.</li>
 <li>Restore the DB into a scratch database and confirm row counts and a few key records:
 <pre><code>gunzip -c test.sql.gz | mysql USERNAME_restoretest</code></pre></li>
 <li>Extract the files archive to a temp folder and spot-check critical files.</li>
@@ -539,8 +539,8 @@ rclone copy "$SRC" b2:yourcompany-opshub-backups \
 <tr><th>Version</th><th>Change</th></tr>
 <tr><td>1</td><td>Initial cPanel backup procedure.</td></tr>
 <tr><td>2</td><td>Added JetBackup, offsite encryption (GPG + rclone), GFS retention and monthly restore test.</td></tr>
-</table>', (SELECT id FROM opsh_sop_categories WHERE name='Operations' LIMIT 1), (SELECT id FROM opsh_departments WHERE name='Information Technology' LIMIT 1), 'published', 2, 90, DATE_ADD(CURDATE(), INTERVAL 90 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_sops WHERE slug='sop-cpanel-server-backup') x);
-INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Backup Restore and Disaster Recovery Test','sop-backup-restore-dr-test','<h2>Purpose</h2>
+</table>', (SELECT id FROM itops_sop_categories WHERE name='Operations' LIMIT 1), (SELECT id FROM itops_departments WHERE name='Information Technology' LIMIT 1), 'published', 2, 90, DATE_ADD(CURDATE(), INTERVAL 90 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_sops WHERE slug='sop-cpanel-server-backup') x);
+INSERT IGNORE INTO itops_sops (title, slug, content, category_id, department_id, status, current_version, review_frequency_days, next_review_date) SELECT 'Backup Restore and Disaster Recovery Test','sop-backup-restore-dr-test','<h2>Purpose</h2>
 <p>Prove that backups are usable by restoring them on a schedule, and define how to recover after a major outage.</p>
 <h2>Monthly restore test</h2>
 <ol>
@@ -554,10 +554,10 @@ INSERT IGNORE INTO opsh_sops (title, slug, content, category_id, department_id, 
 <li>Declare the incident and notify leadership; open a SEV-1 ticket.</li>
 <li>Provision replacement hosting (the hosting provider&rsquo;s support / new cPanel account).</li>
 <li>Restore the most recent <strong>full account</strong> backup from offsite storage.</li>
-<li>Restore databases (including <code>opshub_db</code>) and verify application login.</li>
+<li>Restore databases (including <code>itops_db</code>) and verify application login.</li>
 <li>Repoint DNS; confirm SSL; test email flow.</li>
 <li>Run smoke tests on each critical site/app before announcing recovery.</li>
 </ol>
 <h2>Targets</h2>
-<p>RPO 24 hours; RTO 8 hours for full recovery. Review after every real or simulated DR event and update the cPanel Backup SOP accordingly.</p>', (SELECT id FROM opsh_sop_categories WHERE name='Operations' LIMIT 1), (SELECT id FROM opsh_departments WHERE name='Information Technology' LIMIT 1), 'published', 1, 90, DATE_ADD(CURDATE(), INTERVAL 90 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM opsh_sops WHERE slug='sop-backup-restore-dr-test') x);
+<p>RPO 24 hours; RTO 8 hours for full recovery. Review after every real or simulated DR event and update the cPanel Backup SOP accordingly.</p>', (SELECT id FROM itops_sop_categories WHERE name='Operations' LIMIT 1), (SELECT id FROM itops_departments WHERE name='Information Technology' LIMIT 1), 'published', 1, 90, DATE_ADD(CURDATE(), INTERVAL 90 DAY) FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM (SELECT id FROM itops_sops WHERE slug='sop-backup-restore-dr-test') x);
 

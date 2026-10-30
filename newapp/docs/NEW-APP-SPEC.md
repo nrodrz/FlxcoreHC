@@ -1,6 +1,6 @@
-# NewApp — specification and plan (Microsoft services only)
+# ITOps — specification and plan (Microsoft services only)
 
-Owner: Indisse-BTS · Started 10/30/2026 from the reference app's build 0621-BT169 · Product name: placeholder "NewApp"
+Owner: Indisse-BTS · Started 10/30/2026 from the reference app's build 0621-BT169 · Product name: ITOps (decided 10/30/2026)
 
 ## 1. What this app is
 
@@ -114,8 +114,8 @@ and carry this app's own changes forward (only sensible before step 2).
 
 | # | Decision | Recommendation |
 | --- | --- | --- |
-| 1 | Product name and line | — (placeholder NewApp until decided) |
-| 2 | Keep the `opsh_` prefix or rename before the first installation | Keep for now |
-| 3 | Plans and prices (Complete, Essentials, per-user pricing) | Two plans to start |
-| 4 | Keep announcements to Teams (the reference app's Announcements module) in this product | Leave out unless asked; can be re-added with `--keep` |
-| 5 | Multi-tenant management | Not in version 1 |
+| 1 | Product name and line | **Decided:** ITOps; product line stays "Microsoft 365 Administration" (0001-A002) |
+| 2 | Keep the `opsh_` prefix or rename before the first installation | **Decided:** renamed to `itops_` (0001-A002) |
+| 3 | Plans and prices (Complete, Essentials, per-user pricing) | **Decided:** leave as is for now (Complete and Essentials) |
+| 4 | Keep announcements to Teams (the reference app's Announcements module) in this product | **Decided:** left out |
+| 5 | Multi-tenant management | **Decided:** wanted. Needs its own design (tenant table, per-tenant Microsoft connection and tokens, tenant picker, data separation, permissions per tenant, licensing per tenant) before it is built |

@@ -1,4 +1,4 @@
-OpsHub — the source of the app (BT90)
+ITOps — the source of the app (BT90)
 =====================================
 This folder is closed to the web (src/.htaccess). The browser never loads it.
 
@@ -11,5 +11,5 @@ shipped, so the page policy allows no 'unsafe-eval' and no inline scripts, and n
 
 To build (only needed after changing app.jsx or help.jsx):
   1. In any folder: npm install @babel/standalone@7.24.7
-  2. From the OpsHub folder: NODE_PATH=<that folder>/node_modules node src/build.js
+  2. From the ITOps folder: NODE_PATH=<that folder>/node_modules node src/build.js
 The libraries the app uses are in ../vendor (licenses in vendor/LICENSES.txt).

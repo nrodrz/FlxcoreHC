@@ -1,16 +1,16 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — starter Knowledge Base content.
+ * ITOps — starter Knowledge Base content.
  *
  * Original, plain-language articles seeded as DRAFTS so an admin can review, tailor
  * (replace the [bracketed] placeholders with your real links/contacts) and publish.
  * Idempotent: articles are matched by title and skipped if one already exists.
  */
 
-if (!function_exists('opsh_kb_seed_articles')) {
+if (!function_exists('itops_kb_seed_articles')) {
 
-    function opsh_kb_seed_articles(): array {
+    function itops_kb_seed_articles(): array {
         $foot = '<hr><p style="color:#667;font-size:13px"><em>Draft — review and replace the [bracketed] placeholders (support email, portal links, tool names) with your organization’s details before publishing. Owner: [name] · Last reviewed: [date].</em></p>';
 
         $a = [];
@@ -279,14 +279,14 @@ HTML];
     }
 
     /** Insert starter articles as drafts, skipping any whose title already exists. */
-    function opsh_kb_seed(PDO $db, $userId): array {
-        $arts = opsh_kb_seed_articles();
+    function itops_kb_seed(PDO $db, $userId): array {
+        $arts = itops_kb_seed_articles();
         // resolve category ids by slug once
         $cats = [];
-        try { $cats = $db->query("SELECT slug, id FROM opsh_categories WHERE kind='kb'")->fetchAll(PDO::FETCH_KEY_PAIR); } catch (\Throwable $e) {}
+        try { $cats = $db->query("SELECT slug, id FROM itops_categories WHERE kind='kb'")->fetchAll(PDO::FETCH_KEY_PAIR); } catch (\Throwable $e) {}
         $created = 0; $skipped = 0;
-        $chk = $db->prepare("SELECT id FROM opsh_kb_articles WHERE title=? LIMIT 1");
-        $ins = $db->prepare("INSERT INTO opsh_kb_articles (title,slug,content,category_id,author_id,status,created_at) VALUES (?,?,?,?,?, 'draft', NOW())");
+        $chk = $db->prepare("SELECT id FROM itops_kb_articles WHERE title=? LIMIT 1");
+        $ins = $db->prepare("INSERT INTO itops_kb_articles (title,slug,content,category_id,author_id,status,created_at) VALUES (?,?,?,?,?, 'draft', NOW())");
         foreach ($arts as $art) {
             $chk->execute([$art['title']]);
             if ($chk->fetch()) { $skipped++; continue; }

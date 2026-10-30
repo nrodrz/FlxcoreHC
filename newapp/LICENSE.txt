@@ -1,24 +1,24 @@
-OpsHub — IT Operations Management Platform
+ITOps — IT Operations Management Platform
 Copyright © 2026 Indisse-BTS. All rights reserved.
 
 OWNERSHIP
-OpsHub is designed, developed and owned by Indisse-BTS. The software — its source
+ITOps is designed, developed and owned by Indisse-BTS. The software — its source
 code, object code, database structure, screens, design, documentation, Help Center
 content and any change, improvement or derivative made to any of them — is the
 exclusive property of the owner and is protected by copyright and other
 intellectual-property laws.
 
 INDEPENDENT DEVELOPMENT
-OpsHub was conceived, designed and developed by its owner as an independent software
+ITOps was conceived, designed and developed by its owner as an independent software
 developer, and not as an employee, contractor or consultant of any company or
 organization. It was not commissioned by, and is not a work made for hire for, any
-organization that uses it. Licensing, using, testing or requesting features of OpsHub
+organization that uses it. Licensing, using, testing or requesting features of ITOps
 gives no organization any ownership interest in it, in its updates, or in improvements
 made at its request.
 
 LICENSED, NOT SOLD
-OpsHub is proprietary software. It is licensed, not sold. An organization may use it
-only under the OpsHub Terms of Use, which every person accepts in the app (the first
+ITOps is proprietary software. It is licensed, not sold. An organization may use it
+only under the ITOps Terms of Use, which every person accepts in the app (the first
 administrator also for the organization), and, where the organization has one, a
 written license agreement signed with the owner. A signed agreement sets the term, the
 installation, the number of users, the modules and any other condition, and it
@@ -36,17 +36,17 @@ Unless the license agreement allows it in writing, the licensee may not:
     the sign-in page and the Help Center).
 
 THE LICENSEE'S DATA
-The licensed organization owns the data it enters into or keeps in OpsHub. The owner
-of OpsHub claims no right to that data.
+The licensed organization owns the data it enters into or keeps in ITOps. The owner
+of ITOps claims no right to that data.
 
 OTHER NAMES
 Names of other products and services (for example Microsoft 365, Microsoft Entra ID,
 Intune, Defender, vTiger, cPanel/WHM, JustCall) are used only to identify the
-services OpsHub can connect to. They belong to their respective owners and imply no
+services ITOps can connect to. They belong to their respective owners and imply no
 affiliation with, or endorsement by, them.
 
 THIRD-PARTY COMPONENTS
-OpsHub includes open-source components under their own licenses, listed in
+ITOps includes open-source components under their own licenses, listed in
 THIRD-PARTY-NOTICES.txt with their full texts in vendor/LICENSES.txt and
 public/teams/TEAMS-JS-LICENSE.txt. Those licenses
 apply to those components only.

@@ -1,9 +1,9 @@
 /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
-/* OpsHub Help Center visual "systems-process" (BT90: served by api/help_script, so the page policy allows no inline scripts). */
+/* ITOps Help Center visual "systems-process" (BT90: served by api/help_script, so the page policy allows no inline scripts). */
 (function(){
 'use strict';
 /* ───────── data: one list drives the 3D view, the panel and the tables ───────── */
-var KIND={acts:['OpsHub acts by itself','--live'],reads:['connected · read only','--in'],hand:['tracked by hand · connection planned','--plan']};
+var KIND={acts:['ITOps acts by itself','--live'],reads:['connected · read only','--in'],hand:['tracked by hand · connection planned','--plan']};
 var STEPS=[
  {n:1,id:'s1',name:'Set up',short:'Set up',x:-8.75,
   what:'Each system is switched on once, on its own page: how it is used, the link to its admin page, whether it takes part in onboarding and offboarding, and what to do there in your own words.',
@@ -13,22 +13,22 @@ var STEPS=[
   other:'Paylocity and the hosting provider: nothing until they are connected. CodeTwo: nothing, it reads Microsoft 365. WHM: its token is entered once for Server Guardian.',
   where:'Administration → Settings → Company systems → “Switch on…”'},
  {n:2,id:'s2',name:'The accounts become known',short:'Accounts',x:-5.25,
-  what:'OpsHub has to know who has an account where, so offboarding can name exactly what to remove.',
+  what:'ITOps has to know who has an account where, so offboarding can name exactly what to remove.',
   acts:'Read live every time: the Microsoft 365 account and its state, and the vTiger user.',
-  reads:'OpsHub reads every JustCall user with role and numbers: on “Read now”, when a step is opened or answered, at verification, and every four hours.',
+  reads:'ITOps reads every JustCall user with role and numbers: on “Read now”, when a step is opened or answered, at verification, and every four hours.',
   hand:'A person records the accounts once: from a pasted list under Settings → Company systems (a user export usually fits), or on the person, under Accounts. From then on onboarding and offboarding keep the records up to date.',
   other:'Paylocity (planned) will say who works here: its roster, read every night. CodeTwo and the servers hold no account of their own for a person.',
   where:'Microsoft 365 → Accounts, the block “Systems” on a person · the JustCall tab · “Needs attention” on Company systems'},
  {n:3,id:'s3',name:'Onboarding',short:'Onboarding',x:-1.75,
   what:'On Onboard, tick the systems the new person needs; a template can tick them. The record stays open until every system is answered.',
-  acts:'OpsHub creates the Microsoft 365 account with its license and groups, and the vTiger user.',
+  acts:'ITOps creates the Microsoft 365 account with its license and groups, and the vTiger user.',
   reads:'A person adds the user in JustCall with the work email, then clicks “Check JustCall for the user”. The step is done when JustCall lists them.',
   hand:'A box shows your instructions and the link. A person sets the account up there, types its name, and clicks “The account is set up”. It is recorded for the person.',
   other:'Paylocity (planned): a hire creates a draft onboarding that a person reviews. CodeTwo picks up the new account for the signature by itself.',
   where:'Microsoft 365 → Accounts → Onboard, and History'},
  {n:4,id:'s4',name:'Offboarding',short:'Offboarding',x:1.75,
   what:'On Offboard, each system is listed with the accounts known for the person. Run it; the offboarding stays “in progress” until every system is answered.',
-  acts:'OpsHub blocks sign-in, revokes sessions, removes licenses and groups in Microsoft 365; reassigns the records and deactivates the user in vTiger.',
+  acts:'ITOps blocks sign-in, revokes sessions, removes licenses and groups in Microsoft 365; reassigns the records and deactivates the user in vTiger.',
   reads:'A person reassigns the numbers and removes the user in JustCall, then clicks “I removed the user: check JustCall again”. The step is done only when JustCall no longer lists them.',
   hand:'A person does the work there and answers: “Removed there”, “Handed over to a colleague…” or “Checked: no account there”. The recorded account is closed or moved.',
   other:'Paylocity (planned): a termination creates a draft offboarding dated to the last day. CodeTwo stops with the Microsoft 365 account. The servers take no part.',
@@ -37,21 +37,21 @@ var STEPS=[
   what:'“Verify offboarding”, and the monthly re-check of past leavers, has one line per system. Any line that fails keeps the offboarding from being clean.',
   acts:'Asked live: is sign-in blocked, are the licenses gone, is the vTiger user inactive, does it still own records.',
   reads:'“Account removed (read from JustCall)”: JustCall is asked at that moment. It fails when the user is still listed or JustCall cannot be read.',
-  hand:'“Account removed (recorded by hand)”: OpsHub reports what was answered. It fails while an account is still recorded as open or the step is unanswered.',
+  hand:'“Account removed (recorded by hand)”: ITOps reports what was answered. It fails while an account is still recorded as open or the step is unanswered.',
   other:'Not asked: Paylocity, CodeTwo and the servers hold no account of a person to remove.',
   where:'The offboarding record · Verify offboarding'},
  {n:6,id:'s6',name:'The record',short:'The record',x:8.75,
   what:'Every step, answer, reading and correction is kept on the person’s record and in the Audit Log. It is the evidence that a leaver lost every access, system by system.',
-  acts:'Each change OpsHub made: what, when, and the result.',
+  acts:'Each change ITOps made: what, when, and the result.',
   reads:'Each reading that changed something, with a line per user that appeared, disappeared or changed, and whether a person or the scheduled job read.',
   hand:'Each answer with who gave it and when, and every correction afterwards.',
   other:'A draft that came from Paylocity will say so on the record.',
   where:'History · Logs & Integrations → Audit Log, type “access”'}
 ];
 /* BT51: the systems are the shared list (the same as on the Integration map). */
-var KIND={acts:['OpsHub acts by itself','--live'],reads:['connected · OpsHub reads it','--in'],hand:['tracked by hand · connection planned','--plan'],
+var KIND={acts:['ITOps acts by itself','--live'],reads:['connected · ITOps reads it','--in'],hand:['tracked by hand · connection planned','--plan'],
   planned:['planned · not in use yet','--soon'],indirect:['no connection · follows Microsoft 365','--manual']};
-var NODES=(window.OPSH_SYSTEMS||[]).filter(function(n){ return KIND[n.status]; }).map(function(n){ var o={}; for(var k in n)o[k]=n[k]; o.kind=n.status; return o; });
+var NODES=(window.ITOPS_SYSTEMS||[]).filter(function(n){ return KIND[n.status]; }).map(function(n){ var o={}; for(var k in n)o[k]=n[k]; o.kind=n.status; return o; });
 /* who does the work in the steps: the column a system belongs to */
 var grp=function(n){ return n.role!=='people'?'other':(n.status==='acts'?'acts':(n.status==='reads'?'reads':'hand')); };
 var namesIn=function(g){ return NODES.filter(function(n){ return grp(n)===g; }).map(function(n){ return n.name; }); };
@@ -70,13 +70,13 @@ var SAY={
 var FLOWS=[], fid=0;
 function fl(step,a,b,dir,t){ FLOWS.push({id:'f'+(++fid),step:step,a:a,b:b,dir:dir,t:t}); }
 NODES.forEach(function(n){ var g=grp(n), sy=SAY[n.id]||{}, id=n.id;
-  if(g==='acts'){ fl('',id,'hub','both','OpsHub reads it and acts in it by itself'); fl('2',id,'s2','in',sy.b||'Accounts read live'); fl('3','s3',id,'out',sy.c||'Creates the account'); fl('4','s4',id,'out',sy.d||'Closes the account'); fl('5',id,'s5','in',sy.e||'Asked live: the account is closed'); }
-  else if(g==='reads'){ fl('',id,'hub','in','OpsHub reads it; a person makes the changes there'); fl('1',id,'s1','in','The key is pasted once; the test reads one user');
-    fl('2',id,'s2','in','Users, roles and numbers: on demand, at each step, every four hours'); fl('3',id,'s3','in','A person adds the user there; OpsHub checks that it lists them');
+  if(g==='acts'){ fl('',id,'hub','both','ITOps reads it and acts in it by itself'); fl('2',id,'s2','in',sy.b||'Accounts read live'); fl('3','s3',id,'out',sy.c||'Creates the account'); fl('4','s4',id,'out',sy.d||'Closes the account'); fl('5',id,'s5','in',sy.e||'Asked live: the account is closed'); }
+  else if(g==='reads'){ fl('',id,'hub','in','ITOps reads it; a person makes the changes there'); fl('1',id,'s1','in','The key is pasted once; the test reads one user');
+    fl('2',id,'s2','in','Users, roles and numbers: on demand, at each step, every four hours'); fl('3',id,'s3','in','A person adds the user there; ITOps checks that it lists them');
     fl('4',id,'s4','in','A person removes the user there; done when it no longer lists them'); fl('5',id,'s5','in','Asked at that moment: no user for this person'); }
-  else if(g==='hand'){ fl('','hub',id,'manual','A person does the work there and answers in OpsHub'); fl('2',id,'s2','manual','Recorded by a person: a pasted list, or per person');
+  else if(g==='hand'){ fl('','hub',id,'manual','A person does the work there and answers in ITOps'); fl('2',id,'s2','manual','Recorded by a person: a pasted list, or per person');
     fl('3','s3',id,'manual','Set up by hand; answered “The account is set up”'); fl('4','s4',id,'manual','Removed by hand; answered removed, handed over, or no account'); }
-  else if(n.role==='source'){ fl('',id,'hub','plan','Planned: tells OpsHub who joins and who leaves'); fl('2',id,'s2','plan','Planned: the roster, read every night');
+  else if(n.role==='source'){ fl('',id,'hub','plan','Planned: tells ITOps who joins and who leaves'); fl('2',id,'s2','plan','Planned: the roster, read every night');
     fl('3',id,'s3','plan','Planned: a hire creates a draft onboarding'); fl('4',id,'s4','plan','Planned: a termination creates a draft offboarding'); }
   else if(n.role==='follows'){ var m=NODES.some(function(x){ return x.id==='m365'; })?'m365':'hub';
     fl('',m,id,'ext','Reads the Microsoft 365 account by itself'); fl('3',m,id,'ext','Picks up the new account for the signature'); fl('4',m,id,'ext','Stops with the Microsoft 365 account'); }
@@ -99,9 +99,9 @@ var CONNECT=NODES.map(function(n){ return [n.name,KIND[n.kind][0]+(n.in_use===fa
 var byId={}; NODES.forEach(function(n){ byId[n.id]=n; });
 var stepById={}; STEPS.forEach(function(s){ stepById[s.id]=s; });
 var esc=function(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
-var nameOf=function(id){ return byId[id]?byId[id].name:(stepById[id]?stepById[id].n+' '+stepById[id].short:(id==='it'?PERSON.name:'OpsHub')); };
+var nameOf=function(id){ return byId[id]?byId[id].name:(stepById[id]?stepById[id].n+' '+stepById[id].short:(id==='it'?PERSON.name:'ITOps')); };
 var dirColor={in:'--in',out:'--out',both:'--accent',manual:'--manual',plan:'--soon',ext:'--manual'};
-var dirWord={in:'OpsHub reads',out:'OpsHub changes',both:'reads and changes',manual:'by hand',plan:'planned',ext:'by itself, outside OpsHub'};
+var dirWord={in:'ITOps reads',out:'ITOps changes',both:'reads and changes',manual:'by hand',plan:'planned',ext:'by itself, outside ITOps'};
 var DASH={manual:1,plan:1};
 
 /* ───────── tables (always on the page) ───────── */
@@ -134,14 +134,14 @@ function renderPanel(){
      +(n.in_use===false?'<p style="font-size:13px;color:var(--ink3)">Not switched on under Settings → Company systems.</p>':'')+'<dl>'
      +'<div><dt>'+(n.kind==='acts'?'How it is connected':'How it connects')+'</dt><dd>'+esc(n.connect)+'</dd></div><div><dt>Keep in mind</dt><dd>'+esc(n.mind)+'</dd></div></dl>'
      +'<div><div class="eyebrow" style="color:var(--ink3);margin-bottom:6px">Its part in each step</div><ul class="flowlist">'+fl.map(flowLine).join('')
-     +(grp(n)==='hand'?'<li><i class="sw dash"></i><span><b>5 Verification</b> · not asked<br>OpsHub reports what was answered: “Account removed (recorded by hand)”.</span></li>':'')
+     +(grp(n)==='hand'?'<li><i class="sw dash"></i><span><b>5 Verification</b> · not asked<br>ITOps reports what was answered: “Account removed (recorded by hand)”.</span></li>':'')
      +(n.role==='infra'?'<li><i class="sw dash"></i><span><b>Not in the steps</b><br>It holds no personal accounts, so onboarding and offboarding do not touch it.</span></li>':'')+'</ul></div>';
   } else {
-    h='<div class="eyebrow">The whole picture</div><h3>Four kinds of system</h3><p>The platform in the middle is OpsHub. The six tiles on it are the steps every system goes through, left to right; the dark base under them is the Audit Log. Around it stands each system, and the ring under it shows its kind. In front, the HR or IT user who sets the systems up and answers what is done by hand.</p><dl>'
-     +'<div><dt><i class="ring" style="border-color:var(--live)"></i>OpsHub acts by itself</dt><dd>'+esc(GRP.acts[1])+'. OpsHub creates, blocks and removes, and reads the result live.</dd></div>'
-     +'<div><dt><i class="ring" style="border-color:var(--in)"></i>Connected, read only</dt><dd>'+esc(GRP.reads[1])+'. A person makes the change there; OpsHub reads it to know it is done. Nobody’s word is taken for it.</dd></div>'
-     +'<div><dt><i class="ring" style="border-color:var(--plan)"></i>Tracked by hand</dt><dd>'+esc(GRP.hand[1])+', and any system you add. A person does the work there and answers in OpsHub. A connection is planned for each.</dd></div>'
-     +'<div><dt><i class="ring" style="border-color:var(--soon)"></i>No personal accounts</dt><dd>'+esc(GRP.other[1])+'. They tell OpsHub who joins and leaves, follow Microsoft 365, or run the servers; nobody has an account there to open or close.</dd></div></dl>'
+    h='<div class="eyebrow">The whole picture</div><h3>Four kinds of system</h3><p>The platform in the middle is ITOps. The six tiles on it are the steps every system goes through, left to right; the dark base under them is the Audit Log. Around it stands each system, and the ring under it shows its kind. In front, the HR or IT user who sets the systems up and answers what is done by hand.</p><dl>'
+     +'<div><dt><i class="ring" style="border-color:var(--live)"></i>ITOps acts by itself</dt><dd>'+esc(GRP.acts[1])+'. ITOps creates, blocks and removes, and reads the result live.</dd></div>'
+     +'<div><dt><i class="ring" style="border-color:var(--in)"></i>Connected, read only</dt><dd>'+esc(GRP.reads[1])+'. A person makes the change there; ITOps reads it to know it is done. Nobody’s word is taken for it.</dd></div>'
+     +'<div><dt><i class="ring" style="border-color:var(--plan)"></i>Tracked by hand</dt><dd>'+esc(GRP.hand[1])+', and any system you add. A person does the work there and answers in ITOps. A connection is planned for each.</dd></div>'
+     +'<div><dt><i class="ring" style="border-color:var(--soon)"></i>No personal accounts</dt><dd>'+esc(GRP.other[1])+'. They tell ITOps who joins and leaves, follow Microsoft 365, or run the servers; nobody has an account there to open or close.</dd></div></dl>'
      +'<p style="font-size:13px;color:var(--ink3)">Choose a step above, or click a system on the picture.</p>'
      +'<div class="navrow"><button type="button" id="nav-next">Start at step 1 →</button></div>';
   }
@@ -188,7 +188,7 @@ function start3d(){
   /* ground */
   var GZ0=ZC-RZ-3.4, GZ1=PERSON.z+2.6;
   block(RX*2+6,GZ1-GZ0,.12,3.4,mat('--ground'),0,-.14,(GZ0+GZ1)/2,null).castShadow=false;
-  /* OpsHub: the Audit Log base, the working surface, six step tiles in a row */
+  /* ITOps: the Audit Log base, the working surface, six step tiles in a row */
   var base=block(22.4,5.2,.5,.7,mat('--hubBase'),0,0,0,null);
   block(21.8,4.6,.32,.6,mat('--hub'),0,.5,0,'--accent');
   var pickables=[], tileMesh={};
@@ -201,7 +201,7 @@ function start3d(){
      The objects are plain pictures of what the system is for (a cloud with mail and a document, a card index, a
      headset…), drawn here from simple solids. They are not the vendors' logos. ── */
   /* BT51: the objects are shared with the Integration map (visuals/objects.php) */
-  var OB=window.OPSH_OBJECTS(T), Kit=OB.Kit, FACE=OB.FACE, BIG=OB.BIG, INK=OB.INK, PAPER=OB.PAPER, RULE=OB.RULE, STEEL=OB.STEEL;
+  var OB=window.ITOPS_OBJECTS(T), Kit=OB.Kit, FACE=OB.FACE, BIG=OB.BIG, INK=OB.INK, PAPER=OB.PAPER, RULE=OB.RULE, STEEL=OB.STEEL;
   NODES.forEach(function(n){ n.h=OB.height(n.id); });
   var nodeMesh={}, FADE=new T.Color(css('--surface'));
   NODES.forEach(function(n){ var p=OB.place(n,css(KIND[n.kind][1]),css('--stand'),KIND[n.kind][1]); scene.add(p.group);
@@ -259,7 +259,7 @@ function start3d(){
   /* labels: plain HTML placed over the canvas */
   var labels=[];
   function addLabel(el,pos){ tags.appendChild(el); labels.push({el:el,pos:pos}); return el; }
-  var hubTag=document.createElement('button'); hubTag.className='tag hubtag'; hubTag.id='tag-opshub'; hubTag.type='button'; hubTag.textContent='OpsHub';
+  var hubTag=document.createElement('button'); hubTag.className='tag hubtag'; hubTag.id='tag-itops'; hubTag.type='button'; hubTag.textContent='ITOps';
   hubTag.addEventListener('click',function(){ setStep(''); });
   addLabel(hubTag,new T.Vector3(-10.4,1.5,-2.2));
   var modEl={};

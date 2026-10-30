@@ -4,16 +4,16 @@
  * Fire an outbound webhook event. Safe no-op if integrations are not installed.
  * Never throws — an integration failure must not break a core write.
  */
-if (!function_exists('opsh_emit')) {
-    function opsh_emit(string $event, array $row): void {
+if (!function_exists('itops_emit')) {
+    function itops_emit(string $event, array $row): void {
         $f = __DIR__ . '/Integrations.php';
         if (!is_file($f)) return;
         require_once $f;
-        if (function_exists('opsh_fire_event')) opsh_fire_event($event, $row);
+        if (function_exists('itops_fire_event')) itops_fire_event($event, $row);
     }
 }
 /**
- * OpsHub — Generic CRUD Engine
+ * ITOps — Generic CRUD Engine
  * Reusable CRUD operations for all entity types
  */
 
@@ -143,7 +143,7 @@ class CrudEngine {
         audit_log('created', $this->entityType, $id, $data['name'] ?? $data['title'] ?? $data['subject'] ?? $data['display_name'] ?? $data['email'] ?? '', null, self::scrub($fields));
 
         $row = $this->getById($id) ?? ['id' => $id];
-        opsh_emit($this->entityType . '.created', self::scrub($row, true));
+        itops_emit($this->entityType . '.created', self::scrub($row, true));
         return $row;
     }
     
@@ -174,7 +174,7 @@ class CrudEngine {
         audit_log('updated', $this->entityType, $id, $old['name'] ?? $old['title'] ?? $old['subject'] ?? $old['display_name'] ?? $old['email'] ?? '', self::scrub(array_intersect_key($old, $fields)), self::scrub($fields));
 
         $row = $this->getById($id) ?? $old;
-        opsh_emit($this->entityType . '.updated', self::scrub($row, true));
+        itops_emit($this->entityType . '.updated', self::scrub($row, true));
         return $row;
     }
     
@@ -188,12 +188,12 @@ class CrudEngine {
         $nm = $old['name'] ?? $old['title'] ?? $old['subject'] ?? $old['display_name'] ?? $old['email'] ?? '';
         // BT141: a record the app keeps in Deleted items goes there (with what belongs to it) instead of being erased
         require_once __DIR__ . '/RecycleBin.php';
-        $binKind = opsh_bin_kind_by_table($this->table);
+        $binKind = itops_bin_kind_by_table($this->table);
         if ($binKind) {
-            try { opsh_bin_put($this->db, $binKind, $id, $this->currentUser); }
-            catch (OpshBinRefused $e) { audit_log('delete_refused', $this->entityType, $id, (string)$nm, null, ['Why' => $e->getMessage()]); error_response('Not deleted: ' . $e->getMessage(), 409); }
+            try { itops_bin_put($this->db, $binKind, $id, $this->currentUser); }
+            catch (ItopsBinRefused $e) { audit_log('delete_refused', $this->entityType, $id, (string)$nm, null, ['Why' => $e->getMessage()]); error_response('Not deleted: ' . $e->getMessage(), 409); }
             audit_log('deleted', $this->entityType, $id, (string)$nm, null, ['Kept in' => 'Deleted items']);
-            opsh_emit($this->entityType . '.deleted', self::scrub($old, true));
+            itops_emit($this->entityType . '.deleted', self::scrub($old, true));
             return true;
         }
         if ($soft && in_array('status', $this->allowedFields)) {
@@ -203,7 +203,7 @@ class CrudEngine {
         }
         
         audit_log('deleted', $this->entityType, $id, $nm);
-        opsh_emit($this->entityType . '.deleted', self::scrub($old, true));
+        itops_emit($this->entityType . '.deleted', self::scrub($old, true));
         return true;
     }
 }

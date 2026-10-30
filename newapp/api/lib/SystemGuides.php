@@ -1,8 +1,8 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub BT46 — the reference shown on a company system's set-up page: where its API key is made at the vendor, what
- * the key must be allowed to do, and what OpsHub does with the connection.
+ * ITOps BT46 — the reference shown on a company system's set-up page: where its API key is made at the vendor, what
+ * the key must be allowed to do, and what ITOps does with the connection.
  *
  * The steps come from each vendor's own help pages, read on the date in 'checked'. Vendors move their menus: when a
  * step no longer matches, follow the link in 'sources' and correct the text here. Nothing in this file is a secret and
@@ -12,11 +12,11 @@
  *           'planned'   = a connection is planned; the system is tracked by hand until then, and the steps are kept
  *                         here so the key can be prepared (or simply so it is known where it comes from)
  */
-if (!function_exists('opsh_sys_guide')) {
+if (!function_exists('itops_sys_guide')) {
 
-    function opsh_sys_guides(): array {
+    function itops_sys_guides(): array {
         $app = 'this app';
-        try { if (!function_exists('opsh_app_name')) { $f = __DIR__ . '/Brand.php'; if (is_file($f)) require_once $f; } if (function_exists('opsh_app_name')) $app = opsh_app_name(); } catch (Throwable $e) {}
+        try { if (!function_exists('itops_app_name')) { $f = __DIR__ . '/Brand.php'; if (is_file($f)) require_once $f; } if (function_exists('itops_app_name')) $app = itops_app_name(); } catch (Throwable $e) {}
         return [
             'justcall' => [
                 'status' => 'available',
@@ -283,9 +283,9 @@ if (!function_exists('opsh_sys_guide')) {
         ];
     }
 
-    function opsh_sys_guide(string $key): ?array {
+    function itops_sys_guide(string $key): ?array {
         static $all = null;
-        if ($all === null) $all = opsh_sys_guides();
+        if ($all === null) $all = itops_sys_guides();
         return $all[$key] ?? null;
     }
 }

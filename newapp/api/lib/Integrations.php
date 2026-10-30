@@ -1,42 +1,42 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Integrations
+ * ITOps — Integrations
  *
  * Inbound : API keys (per system, scoped, hashed at rest, revocable)
  * Outbound: HMAC-signed webhooks fired on record create/update/delete
  *
  * Key format ....... opsk_live_<40 hex>   (shown once at creation; only a
  *                    SHA-256 hash + a short prefix are stored)
- * Signature ........ X-OpsHub-Signature: sha256=<hmac(secret, timestamp . '.' . body)>
- *                    X-OpsHub-Timestamp: <unix seconds>   (receiver should reject if skewed)
+ * Signature ........ X-ITOps-Signature: sha256=<hmac(secret, timestamp . '.' . body)>
+ *                    X-ITOps-Timestamp: <unix seconds>   (receiver should reject if skewed)
  */
 
-if (!function_exists('opsh_api_key_generate')) {
+if (!function_exists('itops_api_key_generate')) {
 
 /** Generate a new plaintext API key. Returned once, never stored in the clear. */
-function opsh_api_key_generate(): string {
+function itops_api_key_generate(): string {
     return 'opsk_live_' . bin2hex(random_bytes(20));
 }
 
-function opsh_api_key_hash(string $key): string {
+function itops_api_key_hash(string $key): string {
     return hash('sha256', $key);
 }
 
 /** First 18 chars ("opsk_live_1a2b3c4d"), stored so the UI can show which key is which. */
-function opsh_api_key_prefix(string $key): string {
+function itops_api_key_prefix(string $key): string {
     return substr($key, 0, 18);
 }
 
 /**
- * Resolve a plaintext API key into a pseudo-user that opsh_can() understands.
+ * Resolve a plaintext API key into a pseudo-user that itops_can() understands.
  * Returns null when the key is unknown, revoked, or expired.
  */
-function opsh_api_key_user(PDO $db, string $rawKey): ?array {
+function itops_api_key_user(PDO $db, string $rawKey): ?array {
     if (strpos($rawKey, 'opsk_') !== 0) return null;
     try {
-        $st = $db->prepare("SELECT * FROM opsh_api_keys WHERE key_hash = ? AND status = 'active' LIMIT 1");
-        $st->execute([opsh_api_key_hash($rawKey)]);
+        $st = $db->prepare("SELECT * FROM itops_api_keys WHERE key_hash = ? AND status = 'active' LIMIT 1");
+        $st->execute([itops_api_key_hash($rawKey)]);
         $k = $st->fetch();
     } catch (\Throwable $e) {
         return null; // table not migrated yet
@@ -45,7 +45,7 @@ function opsh_api_key_user(PDO $db, string $rawKey): ?array {
     if (!empty($k['expires_at']) && strtotime($k['expires_at']) < time()) return null;
 
     // Record usage (best effort — never block the request on this)
-    try { $db->prepare('UPDATE opsh_api_keys SET last_used_at = NOW() WHERE id = ?')->execute([(int)$k['id']]); } catch (\Throwable $e) {}
+    try { $db->prepare('UPDATE itops_api_keys SET last_used_at = NOW() WHERE id = ?')->execute([(int)$k['id']]); } catch (\Throwable $e) {}
 
     $scopes = json_decode($k['scopes'] ?? '{}', true);
     if (!is_array($scopes)) $scopes = [];
@@ -68,7 +68,7 @@ function opsh_api_key_user(PDO $db, string $rawKey): ?array {
 //  Outbound webhooks
 // ─────────────────────────────────────────────────────────────
 
-function opsh_webhook_sign(string $secret, string $timestamp, string $body): string {
+function itops_webhook_sign(string $secret, string $timestamp, string $body): string {
     return 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $body, $secret);
 }
 
@@ -76,7 +76,7 @@ function opsh_webhook_sign(string $secret, string $timestamp, string $body): str
  * Deliver one payload to one subscription. Returns [ok, httpStatus, error].
  * Short timeout so an unresponsive receiver can never hang the API request.
  */
-function opsh_webhook_send(array $hook, string $event, array $payload, ?string $deliveryId = null): array {
+function itops_webhook_send(array $hook, string $event, array $payload, ?string $deliveryId = null): array {
     $deliveryId = $deliveryId ?: bin2hex(random_bytes(8));
     $body = json_encode([
         'event'      => $event,
@@ -87,16 +87,16 @@ function opsh_webhook_send(array $hook, string $event, array $payload, ?string $
 
     $ts  = (string)time();
     require_once __DIR__ . '/Secrets.php';
-    try { $hookSecret = opsh_secret_unwrap((string)($hook['secret'] ?? '')); } catch (\Throwable $e) { $hookSecret = ''; }   // BT14: stored encrypted
-    $sig = opsh_webhook_sign($hookSecret, $ts, $body);
+    try { $hookSecret = itops_secret_unwrap((string)($hook['secret'] ?? '')); } catch (\Throwable $e) { $hookSecret = ''; }   // BT14: stored encrypted
+    $sig = itops_webhook_sign($hookSecret, $ts, $body);
 
     if (!function_exists('curl_init')) return [false, 0, 'curl unavailable on this server'];
     require_once __DIR__ . '/NetGuard.php';   // BT88 (code audit M-30): public addresses only, pinned to the address checked
-    $chk = opsh_net_check((string)$hook['url']);
+    $chk = itops_net_check((string)$hook['url']);
     if (!$chk['ok']) return [false, 0, $chk['error']];
 
     $ch = curl_init($hook['url']);
-    opsh_net_pin($ch, $chk);
+    itops_net_pin($ch, $chk);
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => $body,
@@ -107,11 +107,11 @@ function opsh_webhook_send(array $hook, string $event, array $payload, ?string $
         CURLOPT_FOLLOWLOCATION => false,
         CURLOPT_HTTPHEADER     => [
             'Content-Type: application/json',
-            'User-Agent: OpsHub-Webhook/1.0',
-            'X-OpsHub-Event: ' . $event,
-            'X-OpsHub-Delivery: ' . $deliveryId,
-            'X-OpsHub-Timestamp: ' . $ts,
-            'X-OpsHub-Signature: ' . $sig,
+            'User-Agent: ITOps-Webhook/1.0',
+            'X-ITOps-Event: ' . $event,
+            'X-ITOps-Delivery: ' . $deliveryId,
+            'X-ITOps-Timestamp: ' . $ts,
+            'X-ITOps-Signature: ' . $sig,
         ],
     ]);
     $resp   = curl_exec($ch);
@@ -128,15 +128,15 @@ function opsh_webhook_send(array $hook, string $event, array $payload, ?string $
  * Called from CrudEngine after create / update / delete — safe to call anywhere.
  * Never throws: an integration problem must not break the core app.
  */
-function opsh_fire_event(string $event, array $payload): void {
+function itops_fire_event(string $event, array $payload): void {
     static $depth = 0;
     if ($depth > 0) return;          // no webhook-triggered-by-webhook loops
     $depth++;
     try {
         $db = getDB();
-        $hooks = $db->query("SELECT * FROM opsh_webhooks WHERE status = 'active'")->fetchAll();
+        $hooks = $db->query("SELECT * FROM itops_webhooks WHERE status = 'active'")->fetchAll();
         $queueMode = false;
-        try { $queueMode = ($db->query("SELECT sval FROM opsh_settings WHERE skey='webhook_queue_mode'")->fetchColumn() === '1'); } catch (\Throwable $e) {}
+        try { $queueMode = ($db->query("SELECT sval FROM itops_settings WHERE skey='webhook_queue_mode'")->fetchColumn() === '1'); } catch (\Throwable $e) {}
         foreach ($hooks as $hook) {
             $events = json_decode($hook['events'] ?? '[]', true);
             if (!is_array($events)) $events = [];
@@ -152,21 +152,21 @@ function opsh_fire_event(string $event, array $payload): void {
             $deliveryId = bin2hex(random_bytes(8));
             if ($queueMode) {
                 try {
-                    $db->prepare('INSERT INTO opsh_webhook_deliveries (webhook_id, delivery_id, event, payload, response_status, error, attempts, status, created_at) VALUES (?,?,?,?,0,\'\',0,\'queued\',NOW())')
+                    $db->prepare('INSERT INTO itops_webhook_deliveries (webhook_id, delivery_id, event, payload, response_status, error, attempts, status, created_at) VALUES (?,?,?,?,0,\'\',0,\'queued\',NOW())')
                        ->execute([(int)$hook['id'], $deliveryId, $event, json_encode($payload, JSON_UNESCAPED_SLASHES)]);
                 } catch (\Throwable $e) {}
                 continue;
             }
-            [$ok, $status, $err] = opsh_webhook_send($hook, $event, $payload, $deliveryId);
+            [$ok, $status, $err] = itops_webhook_send($hook, $event, $payload, $deliveryId);
 
             if (!$ok) {
                 $elf = __DIR__ . '/EventLog.php';
                 if (is_file($elf)) require_once $elf;
-                if (function_exists('opsh_log')) opsh_log('warning', 'webhook', 'Delivery failed: ' . ($hook['name'] ?? 'hook') . ' (HTTP ' . $status . ')', ['event' => $event, 'error' => substr((string)$err, 0, 200)]);
+                if (function_exists('itops_log')) itops_log('warning', 'webhook', 'Delivery failed: ' . ($hook['name'] ?? 'hook') . ' (HTTP ' . $status . ')', ['event' => $event, 'error' => substr((string)$err, 0, 200)]);
             }
 
             try {
-                $db->prepare('INSERT INTO opsh_webhook_deliveries
+                $db->prepare('INSERT INTO itops_webhook_deliveries
                         (webhook_id, delivery_id, event, payload, response_status, error, attempts, status, created_at)
                         VALUES (?,?,?,?,?,?,?,?,NOW())')
                    ->execute([
@@ -185,18 +185,18 @@ function opsh_fire_event(string $event, array $payload): void {
 /**
  * Drain the queued-delivery backlog (called by cron when queue mode is on).
  */
-function opsh_webhook_process_queue(PDO $db, int $max = 50): int {
+function itops_webhook_process_queue(PDO $db, int $max = 50): int {
     $sent = 0;
     try {
         $rows = $db->query("SELECT d.id, d.delivery_id, d.event, d.payload, w.url AS hook_url, w.secret AS hook_secret, w.name AS hook_name
-                            FROM opsh_webhook_deliveries d JOIN opsh_webhooks w ON w.id = d.webhook_id
+                            FROM itops_webhook_deliveries d JOIN itops_webhooks w ON w.id = d.webhook_id
                             WHERE d.status='queued' ORDER BY d.id ASC LIMIT " . (int)$max)->fetchAll();
     } catch (\Throwable $e) { return 0; }
     foreach ($rows as $d) {
         $hook = ['url' => $d['hook_url'], 'secret' => $d['hook_secret'], 'name' => $d['hook_name']];
         $payload = json_decode($d['payload'], true) ?: [];
-        list($ok, $status, $err) = opsh_webhook_send($hook, $d['event'], $payload, $d['delivery_id']);
-        try { $db->prepare("UPDATE opsh_webhook_deliveries SET status=?, response_status=?, error=?, attempts=1 WHERE id=?")
+        list($ok, $status, $err) = itops_webhook_send($hook, $d['event'], $payload, $d['delivery_id']);
+        try { $db->prepare("UPDATE itops_webhook_deliveries SET status=?, response_status=?, error=?, attempts=1 WHERE id=?")
                  ->execute([$ok ? 'delivered' : 'failed', $status, $err, (int)$d['id']]); } catch (\Throwable $e) {}
         $sent++;
     }
@@ -206,11 +206,11 @@ function opsh_webhook_process_queue(PDO $db, int $max = 50): int {
 /**
  * Retry failed deliveries (called by cron). Exponential-ish backoff, max 5 attempts.
  */
-function opsh_webhook_retry_failed(PDO $db, int $max = 25): int {
+function itops_webhook_retry_failed(PDO $db, int $max = 25): int {
     try {
         $rows = $db->query("SELECT d.*, w.url, w.secret, w.status AS hook_status
-                            FROM opsh_webhook_deliveries d
-                            JOIN opsh_webhooks w ON w.id = d.webhook_id
+                            FROM itops_webhook_deliveries d
+                            JOIN itops_webhooks w ON w.id = d.webhook_id
                             WHERE d.status = 'failed' AND d.attempts < 5 AND w.status = 'active'
                               AND d.created_at > DATE_SUB(NOW(), INTERVAL 2 DAY)
                             ORDER BY d.id ASC LIMIT " . (int)$max)->fetchAll();
@@ -223,12 +223,12 @@ function opsh_webhook_retry_failed(PDO $db, int $max = 25): int {
 
         $payload = json_decode($d['payload'] ?? '{}', true);
         if (!is_array($payload)) $payload = [];
-        [$ok, $status, $err] = opsh_webhook_send(
+        [$ok, $status, $err] = itops_webhook_send(
             ['url' => $d['url'], 'secret' => $d['secret']],
             $d['event'], $payload, $d['delivery_id']
         );
         try {
-            $db->prepare("UPDATE opsh_webhook_deliveries
+            $db->prepare("UPDATE itops_webhook_deliveries
                           SET attempts = attempts + 1, response_status = ?, error = ?, status = ?
                           WHERE id = ?")
                ->execute([$status, $err, $ok ? 'delivered' : 'failed', (int)$d['id']]);

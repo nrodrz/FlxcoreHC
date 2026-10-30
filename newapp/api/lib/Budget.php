@@ -1,16 +1,16 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub BT58 — IT budget.
+ * ITOps BT58 — IT budget.
  *
- *   Sites        offices and regions (opsh_budget_sites). Lines and actuals may belong to one; NULL = the whole
- *                organization. The first visit seeds two neutral sites (see opsh_budget_seed_sites): "Main office" and
+ *   Sites        offices and regions (itops_budget_sites). Lines and actuals may belong to one; NULL = the whole
+ *                organization. The first visit seeds two neutral sites (see itops_budget_seed_sites): "Main office" and
  *                "Remote and field staff"; the organization adds its own offices and addresses.
- *   Lines        one planned cost of one fiscal year (opsh_budget_lines). amount = unit_cost × qty × periods in the year,
+ *   Lines        one planned cost of one fiscal year (itops_budget_lines). amount = unit_cost × qty × periods in the year,
  *                always computed here, never taken from a request. needs_price = a quantity is known, the price is not.
- *   Actuals      money spent, per month (opsh_budget_actuals), against a line or a cost pool.
- *   Settings     opsh_settings.budget_cfg (fiscal year start, currency, pricing, contingency, the organization's figures,
- *                refresh cycles); opsh_settings.budget_m365_prices (price per Microsoft 365 license, per sku id).
+ *   Actuals      money spent, per month (itops_budget_actuals), against a line or a cost pool.
+ *   Settings     itops_settings.budget_cfg (fiscal year start, currency, pricing, contingency, the organization's figures,
+ *                refresh cycles); itops_settings.budget_m365_prices (price per Microsoft 365 license, per sku id).
  *
  * Categories follow the TBM (Technology Business Management) taxonomy: cost pools (what money is spent on) and IT towers
  * (what it runs). Run / Grow / Transform and OpEx / CapEx are the two other usual cuts.
@@ -19,10 +19,10 @@
  * the price per license is a suggestion from Microsoft's published list (nonprofit or commercial) until a person saves
  * the price on the invoice. Nothing here writes to Microsoft 365.
  */
-if (!function_exists('opsh_budget_cfg')) {
+if (!function_exists('itops_budget_cfg')) {
 
     /** TBM cost pools (TBM Taxonomy). key => [label, what goes in it] */
-    function opsh_budget_pools(): array {
+    function itops_budget_pools(): array {
         return [
             'internal_labor'   => ['Internal labor', 'IT staff salaries, benefits and payroll taxes.'],
             'external_labor'   => ['External labor', 'Contractors and staff augmentation billed by the hour.'],
@@ -37,7 +37,7 @@ if (!function_exists('opsh_budget_cfg')) {
     }
 
     /** TBM IT towers (shortened to what a small organization uses). */
-    function opsh_budget_towers(): array {
+    function itops_budget_towers(): array {
         return [
             'end_user'    => 'End user (devices, productivity, collaboration)',
             'application' => 'Business applications (CRM, HR, finance, case work)',
@@ -49,17 +49,17 @@ if (!function_exists('opsh_budget_cfg')) {
         ];
     }
 
-    function opsh_budget_natures(): array {
+    function itops_budget_natures(): array {
         return ['run' => 'Run (keep it working)', 'grow' => 'Grow (more of what exists)', 'transform' => 'Transform (something new)'];
     }
-    function opsh_budget_billings(): array {
+    function itops_budget_billings(): array {
         return ['monthly' => 'Monthly', 'quarterly' => 'Quarterly', 'semi_annual' => 'Twice a year', 'annual' => 'Yearly', 'one_time' => 'One time'];
     }
-    function opsh_budget_site_kinds(): array {
+    function itops_budget_site_kinds(): array {
         return ['office' => 'Office', 'regional' => 'Regional office', 'remote' => 'Remote and field staff', 'datacenter' => 'Hosting / data center'];
     }
 
-    function opsh_budget_cfg_defaults(): array {
+    function itops_budget_cfg_defaults(): array {
         return ['fy_start' => 1, 'currency' => 'USD', 'pricing' => 'nonprofit', 'contingency_pct' => 5.0, 'increase_pct' => 3.0,
                 'require_vendor' => true, 'require_contract' => 'recurring',   // BT59
                 'headcount' => null, 'operating_budget' => null,
@@ -70,9 +70,9 @@ if (!function_exists('opsh_budget_cfg')) {
                 'replace_price' => []];   // BT60: replacement price per Equipment category typed by a person (else the average paid)
     }
 
-    function opsh_budget_cfg(PDO $db): array {
-        $d = opsh_budget_cfg_defaults();
-        try { $s = $db->prepare("SELECT sval FROM opsh_settings WHERE skey='budget_cfg'"); $s->execute(); $j = json_decode((string)$s->fetchColumn(), true); } catch (Throwable $e) { $j = null; }
+    function itops_budget_cfg(PDO $db): array {
+        $d = itops_budget_cfg_defaults();
+        try { $s = $db->prepare("SELECT sval FROM itops_settings WHERE skey='budget_cfg'"); $s->execute(); $j = json_decode((string)$s->fetchColumn(), true); } catch (Throwable $e) { $j = null; }
         if (!is_array($j)) return $d;
         $o = array_merge($d, array_intersect_key($j, $d));
         $ok = fn($k) => is_string($k) && preg_match('/^[a-z0-9][a-z0-9 _\/-]{0,39}$/', $k);
@@ -82,7 +82,7 @@ if (!function_exists('opsh_budget_cfg')) {
     }
 
     /** Check a settings change. Returns the full new config. Throws InvalidArgumentException with a sentence. */
-    function opsh_budget_cfg_clean(array $cur, array $in): array {
+    function itops_budget_cfg_clean(array $cur, array $in): array {
         $o = $cur;
         if (array_key_exists('fy_start', $in)) { $m = $in['fy_start']; if (!is_int($m) && !(is_string($m) && ctype_digit($m))) throw new InvalidArgumentException('The fiscal year starts in a month: 1 to 12.'); $m = (int)$m; if ($m < 1 || $m > 12) throw new InvalidArgumentException('The fiscal year starts in a month: 1 to 12.'); $o['fy_start'] = $m; }
         if (array_key_exists('currency', $in)) { $c = strtoupper(trim((string)$in['currency'])); if (!preg_match('/^[A-Z]{3}$/', $c)) throw new InvalidArgumentException('The currency is a three-letter code, for example USD.'); $o['currency'] = $c; }
@@ -113,7 +113,7 @@ if (!function_exists('opsh_budget_cfg')) {
     }
 
     /** Fiscal year $fy (the calendar year it starts in): first and last day, label, months as YYYY-MM. */
-    function opsh_budget_fy(array $cfg, int $fy): array {
+    function itops_budget_fy(array $cfg, int $fy): array {
         $m = (int)$cfg['fy_start'];
         $start = sprintf('%04d-%02d-01', $fy, $m);
         $end = date('Y-m-d', strtotime($start . ' +1 year -1 day'));
@@ -122,13 +122,13 @@ if (!function_exists('opsh_budget_cfg')) {
         return ['fy' => $fy, 'start' => $start, 'end' => $end, 'label' => $label, 'months' => $months];
     }
     /** The fiscal year a date falls in. */
-    function opsh_budget_fy_of(array $cfg, string $ymd): int {
+    function itops_budget_fy_of(array $cfg, string $ymd): int {
         $y = (int)substr($ymd, 0, 4); $mo = (int)substr($ymd, 5, 2);
         return $mo >= (int)$cfg['fy_start'] ? $y : $y - 1;
     }
 
     /** How many times a line is billed in the year. */
-    function opsh_budget_periods(string $billing, int $months): float {
+    function itops_budget_periods(string $billing, int $months): float {
         $months = max(1, min(12, $months));
         switch ($billing) {
             case 'monthly': return (float)$months;
@@ -137,8 +137,8 @@ if (!function_exists('opsh_budget_cfg')) {
             default: return 1.0;   // annual, one_time
         }
     }
-    function opsh_budget_amount(array $l): float {
-        return round((float)$l['unit_cost'] * (float)$l['qty'] * opsh_budget_periods((string)$l['billing'], (int)$l['months']), 2);
+    function itops_budget_amount(array $l): float {
+        return round((float)$l['unit_cost'] * (float)$l['qty'] * itops_budget_periods((string)$l['billing'], (int)$l['months']), 2);
     }
 
     // ── Microsoft 365 prices ────────────────────────────────────────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ if (!function_exists('opsh_budget_cfg')) {
      * Microsoft licensing news "2026 Microsoft 365 packaging and pricing updates" as reported by partners (commercial).
      * Microsoft adds 5% when an annual subscription is billed monthly.
      */
-    function opsh_budget_m365_catalog(): array {
+    function itops_budget_m365_catalog(): array {
         return [
             'O365_BUSINESS_ESSENTIALS' => ['Microsoft 365 Business Basic', 1.00, 7.00],
             'O365_BUSINESS_PREMIUM'    => ['Microsoft 365 Business Standard', 3.50, 14.00],
@@ -174,7 +174,7 @@ if (!function_exists('opsh_budget_cfg')) {
             'RIGHTSMANAGEMENT_ADHOC'   => ['Rights Management Adhoc', 0.0, 0.0],
         ];
     }
-    function opsh_budget_m365_sources(): array {
+    function itops_budget_m365_sources(): array {
         return [['TechSoup: Microsoft cloud license prices, nonprofit (from July 1, 2026)', 'https://blog.techsoup.org/en-ca/posts/microsoft-cloud-license-prices-are-increasing-on-july-1-2027'],
                 ['Microsoft: 2026 Microsoft 365 packaging and pricing updates', 'https://www.microsoft.com/licensing/news/2026-m365-packaging-pricing-updates']];
     }
@@ -183,21 +183,21 @@ if (!function_exists('opsh_budget_cfg')) {
      * BT59: whom Microsoft 365 is bought from, and under which agreement (setting budget_m365_link). When nothing is
      * saved, the vendor named "Microsoft" is proposed if there is exactly one; the agreement is never guessed.
      */
-    function opsh_budget_m365_link(PDO $db): array {
-        $j = null; try { $s = $db->prepare("SELECT sval FROM opsh_settings WHERE skey='budget_m365_link'"); $s->execute(); $j = json_decode((string)$s->fetchColumn(), true); } catch (Throwable $e) {}
+    function itops_budget_m365_link(PDO $db): array {
+        $j = null; try { $s = $db->prepare("SELECT sval FROM itops_settings WHERE skey='budget_m365_link'"); $s->execute(); $j = json_decode((string)$s->fetchColumn(), true); } catch (Throwable $e) {}
         $o = ['vendor_id' => is_array($j) && !empty($j['vendor_id']) ? (int)$j['vendor_id'] : null, 'contract_id' => is_array($j) && !empty($j['contract_id']) ? (int)$j['contract_id'] : null, 'saved' => is_array($j)];
-        if (!$o['vendor_id'] && !$o['saved']) { try { $r = $db->query("SELECT id FROM opsh_vendors WHERE LOWER(name) LIKE 'microsoft%' AND COALESCE(status,'active')<>'archived'")->fetchAll(PDO::FETCH_COLUMN); if (count($r) === 1) $o['vendor_id'] = (int)$r[0]; } catch (Throwable $e) {} }
+        if (!$o['vendor_id'] && !$o['saved']) { try { $r = $db->query("SELECT id FROM itops_vendors WHERE LOWER(name) LIKE 'microsoft%' AND COALESCE(status,'active')<>'archived'")->fetchAll(PDO::FETCH_COLUMN); if (count($r) === 1) $o['vendor_id'] = (int)$r[0]; } catch (Throwable $e) {} }
         return $o;
     }
 
-    function opsh_budget_prices(PDO $db): array {
-        try { $s = $db->prepare("SELECT sval FROM opsh_settings WHERE skey='budget_m365_prices'"); $s->execute(); $j = json_decode((string)$s->fetchColumn(), true); } catch (Throwable $e) { $j = null; }
+    function itops_budget_prices(PDO $db): array {
+        try { $s = $db->prepare("SELECT sval FROM itops_settings WHERE skey='budget_m365_prices'"); $s->execute(); $j = json_decode((string)$s->fetchColumn(), true); } catch (Throwable $e) { $j = null; }
         return is_array($j) ? $j : [];
     }
 
     /** The price used for one license: the saved one, else the suggestion. ['price','billing','from'=>saved|suggested|unknown,'suggested'] */
-    function opsh_budget_m365_price(array $saved, string $skuId, string $part, string $pricing): array {
-        $cat = opsh_budget_m365_catalog()[$part] ?? null;
+    function itops_budget_m365_price(array $saved, string $skuId, string $part, string $pricing): array {
+        $cat = itops_budget_m365_catalog()[$part] ?? null;
         $sug = $cat ? ($pricing === 'commercial' ? $cat[2] : $cat[1]) : null;
         if (isset($saved[$skuId]) && is_numeric($saved[$skuId]['price'] ?? null)) {
             return ['price' => round((float)$saved[$skuId]['price'], 2), 'billing' => ($saved[$skuId]['billing'] ?? 'annual') === 'monthly' ? 'monthly' : 'annual',
@@ -212,29 +212,29 @@ if (!function_exists('opsh_budget_cfg')) {
      * from the license report the Microsoft 365 pages keep (not read here when it is not kept).
      */
     /** What Microsoft is asked: the licenses and the subscriptions (kept 15 minutes by the route; prices are applied after). */
-    function opsh_budget_m365_read(): array {
-        $svc = OpshM365::fromConfig();
+    function itops_budget_m365_read(): array {
+        $svc = ItopsM365::fromConfig();
         $skus = $svc->skus()['list'];
         $subs = []; $subsErr = null;
         try { $subs = $svc->subscriptions(); } catch (Throwable $e) { $subsErr = $e->getMessage(); }
         return ['skus' => $skus, 'subs' => $subs, 'subs_err' => $subsErr, 'at' => date('c')];
     }
 
-    function opsh_budget_m365(PDO $db, ?array $raw = null): array {
-        $cfg = opsh_budget_cfg($db); $saved = opsh_budget_prices($db);
-        if ($raw === null) $raw = opsh_budget_m365_read();
+    function itops_budget_m365(PDO $db, ?array $raw = null): array {
+        $cfg = itops_budget_cfg($db); $saved = itops_budget_prices($db);
+        if ($raw === null) $raw = itops_budget_m365_read();
         $skus = $raw['skus']; $subs = $raw['subs']; $subsErr = $raw['subs_err'];
         $reclaim = []; $reclaimAt = null;
-        if (function_exists('opsh_m365_cache_file')) {
-            $f = opsh_m365_cache_file('license-report-30');
+        if (function_exists('itops_m365_cache_file')) {
+            $f = itops_m365_cache_file('license-report-30');
             $j = is_file($f) ? json_decode((string)@file_get_contents($f), true) : null;
             if (is_array($j) && is_array($j['payload']['skus'] ?? null)) { foreach ($j['payload']['skus'] as $r) $reclaim[(string)$r['sku_id']] = (int)($r['reclaimable'] ?? 0); $reclaimAt = date('c', (int)$j['ts']); }
         }
         $rows = []; $tot = ['monthly' => 0.0, 'annual' => 0.0, 'unused_annual' => 0.0, 'reclaim_annual' => 0.0, 'unpriced' => 0, 'seats' => 0, 'used' => 0];
         foreach ($skus as $k) {
             $id = (string)$k['sku_id']; $part = (string)$k['part'];
-            $p = opsh_budget_m365_price($saved, $id, $part, (string)$cfg['pricing']);
-            $cat = opsh_budget_m365_catalog()[$part] ?? null;
+            $p = itops_budget_m365_price($saved, $id, $part, (string)$cfg['pricing']);
+            $cat = itops_budget_m365_catalog()[$part] ?? null;
             $mine = array_values(array_filter($subs, fn($s) => ($s['sku_id'] ?? '') === $id));
             $seats = (int)$k['total']; $used = (int)$k['consumed']; $unused = max(0, $seats - $used);
             $unit = $p['price'] === null ? null : round($p['price'] * ($p['billing'] === 'monthly' ? 1.05 : 1.0), 2);   // review OPS-14: cents, as stored
@@ -253,7 +253,7 @@ if (!function_exists('opsh_budget_cfg')) {
         usort($rows, fn($a, $b) => ($b['annual'] ?? -1) <=> ($a['annual'] ?? -1));
         foreach ($tot as $k => $v) if (is_float($v)) $tot[$k] = round($v, 2);
         return ['rows' => $rows, 'totals' => $tot, 'pricing' => $cfg['pricing'], 'currency' => $cfg['currency'], 'read_at' => $raw['at'] ?? null,
-                'renewals' => $subsErr === null, 'renewals_error' => $subsErr, 'reclaim_at' => $reclaimAt, 'sources' => opsh_budget_m365_sources()];
+                'renewals' => $subsErr === null, 'renewals_error' => $subsErr, 'reclaim_at' => $reclaimAt, 'sources' => itops_budget_m365_sources()];
     }
 
     // ── Sites ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -264,19 +264,19 @@ if (!function_exists('opsh_budget_cfg')) {
      * switch off sites on the page.
      * [name, kind, address, region, match names (office location or city in Microsoft 365 / Equipment)]
      */
-    function opsh_budget_seed_list(): array {
+    function itops_budget_seed_list(): array {
         return [
             ['Main office', 'office', '', '', 'Main office, Home Office, Headquarters'],
             ['Remote and field staff', 'remote', '', '', ''],
         ];
     }
 
-    function opsh_budget_seed_sites(PDO $db): int {
-        $n = (int)$db->query('SELECT COUNT(*) FROM opsh_budget_sites')->fetchColumn();
+    function itops_budget_seed_sites(PDO $db): int {
+        $n = (int)$db->query('SELECT COUNT(*) FROM itops_budget_sites')->fetchColumn();
         if ($n > 0) return 0;
-        $ins = $db->prepare('INSERT IGNORE INTO opsh_budget_sites (name, kind, address, region, match_names, notes, sort_order) VALUES (?,?,?,?,?,?,?)');
+        $ins = $db->prepare('INSERT IGNORE INTO itops_budget_sites (name, kind, address, region, match_names, notes, sort_order) VALUES (?,?,?,?,?,?,?)');
         $i = 0;
-        foreach (opsh_budget_seed_list() as $r) {
+        foreach (itops_budget_seed_list() as $r) {
             $note = $r[1] === 'office' ? 'Add the address and the names this office goes by (as written on Microsoft 365 → Accounts and in Equipment).'
                   : 'Staff who work from home or meet people in the field.';
             $ins->execute([$r[0], $r[1], $r[2], $r[3], $r[4], $note, ($i + 1) * 10]); $i++;
@@ -284,30 +284,30 @@ if (!function_exists('opsh_budget_cfg')) {
         return $i;
     }
 
-    function opsh_budget_sites(PDO $db, bool $activeOnly = false): array {
-        $rows = $db->query('SELECT * FROM opsh_budget_sites' . ($activeOnly ? ' WHERE active = 1' : '') . ' ORDER BY sort_order, name')->fetchAll(PDO::FETCH_ASSOC);
+    function itops_budget_sites(PDO $db, bool $activeOnly = false): array {
+        $rows = $db->query('SELECT * FROM itops_budget_sites' . ($activeOnly ? ' WHERE active = 1' : '') . ' ORDER BY sort_order, name')->fetchAll(PDO::FETCH_ASSOC);
         return array_map(fn($r) => ['id' => (int)$r['id'], 'name' => (string)$r['name'], 'kind' => (string)$r['kind'], 'address' => (string)$r['address'], 'region' => (string)$r['region'],
             'match_names' => (string)$r['match_names'], 'notes' => (string)($r['notes'] ?? ''), 'active' => (bool)$r['active'], 'sort_order' => (int)$r['sort_order']], $rows);
     }
 
-    function opsh_budget_site_clean(array $in, ?array $cur): array {
+    function itops_budget_site_clean(array $in, ?array $cur): array {
         $o = $cur ?? ['name' => '', 'kind' => 'office', 'address' => '', 'region' => '', 'match_names' => '', 'notes' => '', 'active' => true];
         foreach (['name' => 120, 'address' => 300, 'region' => 80, 'match_names' => 500, 'notes' => 2000] as $k => $max) if (array_key_exists($k, $in)) {
             if (!is_string($in[$k])) throw new InvalidArgumentException('The site is not in the expected form (text values). Nothing was saved.');
             $v = trim(preg_replace('/\s+/u', ' ', $in[$k]) ?? ''); if ($k === 'notes') $v = trim($in[$k]);
             $o[$k] = mb_substr($v, 0, $max); }
-        if (array_key_exists('kind', $in)) { if (!isset(opsh_budget_site_kinds()[$in['kind']])) throw new InvalidArgumentException('Choose what kind of site it is.'); $o['kind'] = $in['kind']; }
+        if (array_key_exists('kind', $in)) { if (!isset(itops_budget_site_kinds()[$in['kind']])) throw new InvalidArgumentException('Choose what kind of site it is.'); $o['kind'] = $in['kind']; }
         if (array_key_exists('active', $in)) { if (!is_bool($in['active'])) throw new InvalidArgumentException('"In use" is on or off.'); $o['active'] = $in['active']; }
         if (mb_strlen($o['name']) < 2) throw new InvalidArgumentException('Give the site a name (at least two characters).');
         return $o;
     }
-    function opsh_budget_site_view(array $s): array {
-        return ['Name' => $s['name'], 'Kind' => opsh_budget_site_kinds()[$s['kind']] ?? $s['kind'], 'Address' => $s['address'], 'Region' => $s['region'],
+    function itops_budget_site_view(array $s): array {
+        return ['Name' => $s['name'], 'Kind' => itops_budget_site_kinds()[$s['kind']] ?? $s['kind'], 'Address' => $s['address'], 'Region' => $s['region'],
                 'Matches' => $s['match_names'], 'Notes' => $s['notes'], 'In use' => !empty($s['active']) ? 'yes' : 'no'];
     }
 
     /** Which site a text (an office location, a city, an asset location) belongs to, by the site's match names. */
-    function opsh_budget_site_for(array $sites, string $text): ?int {
+    function itops_budget_site_for(array $sites, string $text): ?int {
         $t = mb_strtolower(trim($text)); if ($t === '') return null;
         foreach ($sites as $s) {
             foreach (array_filter(array_map('trim', explode(',', mb_strtolower($s['match_names'])))) as $m) if ($m !== '' && ($t === $m || mb_strpos($t, $m) !== false)) return (int)$s['id'];
@@ -320,26 +320,26 @@ if (!function_exists('opsh_budget_cfg')) {
      * license; office location, else city) and Equipment (location). Nothing is guessed: what matches no site is counted
      * apart with its values, so the matches can be set on the site.
      */
-    function opsh_budget_site_counts(PDO $db, array $sites): array {
+    function itops_budget_site_counts(PDO $db, array $sites): array {
         $out = ['people' => [], 'people_total' => 0, 'people_unmatched' => [], 'people_ok' => false, 'people_error' => null,
                 'assets' => [], 'assets_unmatched' => [], 'refresh_due' => []];
         try {
             $grid = null;
-            if (function_exists('opsh_m365_cache_file')) { $f = opsh_m365_cache_file('m365-grid'); $j = is_file($f) ? json_decode((string)@file_get_contents($f), true) : null; if (is_array($j['payload'] ?? null)) $grid = $j['payload']; }
-            if ($grid === null && function_exists('opsh_m365_build')) { $grid = opsh_m365_build('m365-grid'); if (function_exists('opsh_m365_cache_put') && empty($grid['_nocache'])) opsh_m365_cache_put('m365-grid', $grid); }
+            if (function_exists('itops_m365_cache_file')) { $f = itops_m365_cache_file('m365-grid'); $j = is_file($f) ? json_decode((string)@file_get_contents($f), true) : null; if (is_array($j['payload'] ?? null)) $grid = $j['payload']; }
+            if ($grid === null && function_exists('itops_m365_build')) { $grid = itops_m365_build('m365-grid'); if (function_exists('itops_m365_cache_put') && empty($grid['_nocache'])) itops_m365_cache_put('m365-grid', $grid); }
             foreach ((array)$grid as $u) {
                 if (!is_array($u) || empty($u['enabled']) || ($u['user_type'] ?? 'Member') === 'Guest' || empty($u['licenses'])) continue;
                 $out['people_total']++;
                 $loc = trim((string)($u['profile']['officeLocation'] ?? '')); if ($loc === '') $loc = trim((string)($u['profile']['city'] ?? ''));
-                $sid = opsh_budget_site_for($sites, $loc);
+                $sid = itops_budget_site_for($sites, $loc);
                 if ($sid === null) { $k = $loc === '' ? '(no office or city set)' : $loc; $out['people_unmatched'][$k] = ($out['people_unmatched'][$k] ?? 0) + 1; }
                 else $out['people'][$sid] = ($out['people'][$sid] ?? 0) + 1;
             }
             $out['people_ok'] = true;
         } catch (Throwable $e) { $out['people_error'] = $e->getMessage(); }
         try {
-            foreach ($db->query("SELECT category, location, purchase_date, purchase_cost, warranty_expiry, status FROM opsh_assets WHERE status NOT IN ('retired','disposed','lost')")->fetchAll(PDO::FETCH_ASSOC) as $a) {
-                $sid = opsh_budget_site_for($sites, (string)($a['location'] ?? '')); $cat = mb_strtolower((string)$a['category']) ?: 'other';
+            foreach ($db->query("SELECT category, location, purchase_date, purchase_cost, warranty_expiry, status FROM itops_assets WHERE status NOT IN ('retired','disposed','lost')")->fetchAll(PDO::FETCH_ASSOC) as $a) {
+                $sid = itops_budget_site_for($sites, (string)($a['location'] ?? '')); $cat = mb_strtolower((string)$a['category']) ?: 'other';
                 if ($sid === null) { $k = trim((string)$a['location']) === '' ? '(no location set)' : (string)$a['location']; $out['assets_unmatched'][$k] = ($out['assets_unmatched'][$k] ?? 0) + 1; $sid = 0; }
                 $out['assets'][$sid][$cat] = ($out['assets'][$sid][$cat] ?? 0) + 1;
             }
@@ -354,15 +354,15 @@ if (!function_exists('opsh_budget_cfg')) {
      * equipment where the app knows them; prices are left at 0 and marked "needs a price" — they come from the invoices.
      * Returns the proposed lines; nothing is stored here.
      */
-    function opsh_budget_site_standard(PDO $db, array $site, int $fy, array $counts, array $cfg): array {
+    function itops_budget_site_standard(PDO $db, array $site, int $fy, array $counts, array $cfg): array {
         $sid = (int)$site['id']; $people = (int)($counts['people'][$sid] ?? 0); $as = $counts['assets'][$sid] ?? [];
         $laptops = (int)($as['laptop'] ?? 0); $desktops = (int)($as['desktop'] ?? 0); $phones = (int)($as['phone'] ?? 0);
         $office = in_array($site['kind'], ['office', 'regional'], true); $remote = $site['kind'] === 'remote';
-        $fyd = opsh_budget_fy($cfg, $fy);
+        $fyd = itops_budget_fy($cfg, $fy);
         $due = function (string $cat, int $years) use ($db, $sid, $site, $fyd): int {   // computers of this site whose age reaches the cycle before the year ends
-            $n = 0; $sites = opsh_budget_sites($db);
-            foreach ($db->query("SELECT location, purchase_date FROM opsh_assets WHERE LOWER(category)=" . $db->quote($cat) . " AND status NOT IN ('retired','disposed','lost')")->fetchAll(PDO::FETCH_ASSOC) as $a) {
-                if (opsh_budget_site_for($sites, (string)$a['location']) !== $sid) continue;
+            $n = 0; $sites = itops_budget_sites($db);
+            foreach ($db->query("SELECT location, purchase_date FROM itops_assets WHERE LOWER(category)=" . $db->quote($cat) . " AND status NOT IN ('retired','disposed','lost')")->fetchAll(PDO::FETCH_ASSOC) as $a) {
+                if (itops_budget_site_for($sites, (string)$a['location']) !== $sid) continue;
                 if (!empty($a['purchase_date']) && strtotime($a['purchase_date'] . " +$years years") <= strtotime($fyd['end'])) $n++;
             }
             return $n;
@@ -388,12 +388,12 @@ if (!function_exists('opsh_budget_cfg')) {
     // ── Equipment replacement plan (BT60) ──────────────────────────────────────────────────────────────────────────
 
     /** Equipment categories: the ones Equipment offers plus any already used on items, with a label. */
-    function opsh_budget_equipment_cats(PDO $db): array {
+    function itops_budget_equipment_cats(PDO $db): array {
         $base = ['laptop', 'desktop', 'monitor', 'phone', 'tablet', 'headset', 'dock', 'printer', 'projector', 'badge', 'key', 'other'];
-        try { foreach ($db->query("SELECT DISTINCT LOWER(TRIM(category)) FROM opsh_assets WHERE category <> ''")->fetchAll(PDO::FETCH_COLUMN) as $c) if (preg_match('/^[a-z0-9][a-z0-9 _\/-]{0,39}$/', (string)$c) && !in_array($c, $base, true)) $base[] = (string)$c; } catch (Throwable $e) {}
+        try { foreach ($db->query("SELECT DISTINCT LOWER(TRIM(category)) FROM itops_assets WHERE category <> ''")->fetchAll(PDO::FETCH_COLUMN) as $c) if (preg_match('/^[a-z0-9][a-z0-9 _\/-]{0,39}$/', (string)$c) && !in_array($c, $base, true)) $base[] = (string)$c; } catch (Throwable $e) {}
         return $base;
     }
-    function opsh_budget_cat_label(string $c, bool $plural = false): string {
+    function itops_budget_cat_label(string $c, bool $plural = false): string {
         $m = ['laptop' => ['Laptop', 'Laptops'], 'desktop' => ['Desktop', 'Desktops'], 'monitor' => ['Monitor', 'Monitors'], 'phone' => ['Phone', 'Phones'], 'tablet' => ['Tablet', 'Tablets'],
               'headset' => ['Headset', 'Headsets'], 'dock' => ['Dock', 'Docks'], 'printer' => ['Printer', 'Printers'], 'projector' => ['Projector', 'Projectors'], 'badge' => ['Badge', 'Badges'],
               'key' => ['Key', 'Keys'], 'other' => ['Other equipment', 'Other equipment'], 'network' => ['Network equipment', 'Network equipment'], 'server' => ['Server', 'Servers']];
@@ -407,28 +407,28 @@ if (!function_exists('opsh_budget_cfg')) {
      * counted apart (their age is unknown). Price per category: the price saved in Settings, else the average paid for
      * that category in Equipment over the last three years (else ever), else unknown. Nothing is stored here.
      */
-    function opsh_budget_equipment_plan(PDO $db, int $fy): array {
-        $cfg = opsh_budget_cfg($db); $fyd = opsh_budget_fy($cfg, $fy); $sites = opsh_budget_sites($db); $siteName = [];
+    function itops_budget_equipment_plan(PDO $db, int $fy): array {
+        $cfg = itops_budget_cfg($db); $fyd = itops_budget_fy($cfg, $fy); $sites = itops_budget_sites($db); $siteName = [];
         foreach ($sites as $s) $siteName[$s['id']] = $s['name'];
-        $cats = opsh_budget_equipment_cats($db);
+        $cats = itops_budget_equipment_cats($db);
         $rows = [];
         try { $rows = $db->query("SELECT a.id, a.asset_tag, LOWER(TRIM(a.category)) AS cat, a.make, a.model, a.location, a.status, a.purchase_date, a.purchase_cost, a.warranty_expiry, u.display_name AS holder
-                                  FROM opsh_assets a LEFT JOIN opsh_users u ON u.id = a.assigned_to WHERE a.status NOT IN ('retired','lost','disposed') ORDER BY a.purchase_date, a.asset_tag")->fetchAll(PDO::FETCH_ASSOC); } catch (Throwable $e) {}
+                                  FROM itops_assets a LEFT JOIN itops_users u ON u.id = a.assigned_to WHERE a.status NOT IN ('retired','lost','disposed') ORDER BY a.purchase_date, a.asset_tag")->fetchAll(PDO::FETCH_ASSOC); } catch (Throwable $e) {}
         // prices
         $paid = []; $since = date('Y-m-d', strtotime('-3 years'));
-        try { foreach ($db->query("SELECT LOWER(TRIM(category)) AS cat, purchase_date, purchase_cost FROM opsh_assets WHERE purchase_cost > 0")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        try { foreach ($db->query("SELECT LOWER(TRIM(category)) AS cat, purchase_date, purchase_cost FROM itops_assets WHERE purchase_cost > 0")->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $paid[$r['cat']]['all'][] = (float)$r['purchase_cost']; if ($r['purchase_date'] && $r['purchase_date'] >= $since) $paid[$r['cat']]['recent'][] = (float)$r['purchase_cost']; } } catch (Throwable $e) {}
         $price = function (string $c) use ($cfg, $paid): array {
             if (!empty($cfg['replace_price'][$c])) return [(float)$cfg['replace_price'][$c], 'saved', 0];
             foreach (['recent', 'all'] as $k) if (!empty($paid[$c][$k])) return [round(array_sum($paid[$c][$k]) / count($paid[$c][$k]), 2), $k === 'recent' ? 'average_recent' : 'average', count($paid[$c][$k])];
             return [0.0, 'none', 0];
         };
-        $C = []; foreach ($cats as $c) { [$p, $pf, $pn] = $price($c); $C[$c] = ['key' => $c, 'label' => opsh_budget_cat_label($c, true), 'cycle' => (int)($cfg['refresh'][$c] ?? 0), 'items' => 0, 'dated' => 0, 'due' => 0, 'overdue' => 0, 'unknown' => 0, 'price' => $p, 'price_from' => $pf, 'price_n' => $pn, 'cost' => 0.0, 'saved_price' => $cfg['replace_price'][$c] ?? null]; }
+        $C = []; foreach ($cats as $c) { [$p, $pf, $pn] = $price($c); $C[$c] = ['key' => $c, 'label' => itops_budget_cat_label($c, true), 'cycle' => (int)($cfg['refresh'][$c] ?? 0), 'items' => 0, 'dated' => 0, 'due' => 0, 'overdue' => 0, 'unknown' => 0, 'price' => $p, 'price_from' => $pf, 'price_n' => $pn, 'cost' => 0.0, 'saved_price' => $cfg['replace_price'][$c] ?? null]; }
         $items = []; $groups = []; $unknownItems = [];
         foreach ($rows as $a) {
-            $c = (string)($a['cat'] ?: 'other'); if (!isset($C[$c])) { [$p, $pf, $pn] = $price($c); $C[$c] = ['key' => $c, 'label' => opsh_budget_cat_label($c, true), 'cycle' => (int)($cfg['refresh'][$c] ?? 0), 'items' => 0, 'dated' => 0, 'due' => 0, 'overdue' => 0, 'unknown' => 0, 'price' => $p, 'price_from' => $pf, 'price_n' => $pn, 'cost' => 0.0, 'saved_price' => null]; }
+            $c = (string)($a['cat'] ?: 'other'); if (!isset($C[$c])) { [$p, $pf, $pn] = $price($c); $C[$c] = ['key' => $c, 'label' => itops_budget_cat_label($c, true), 'cycle' => (int)($cfg['refresh'][$c] ?? 0), 'items' => 0, 'dated' => 0, 'due' => 0, 'overdue' => 0, 'unknown' => 0, 'price' => $p, 'price_from' => $pf, 'price_n' => $pn, 'cost' => 0.0, 'saved_price' => null]; }
             $C[$c]['items']++; $cyc = $C[$c]['cycle'];
-            $sid = opsh_budget_site_for($sites, (string)$a['location']);
+            $sid = itops_budget_site_for($sites, (string)$a['location']);
             if (empty($a['purchase_date'])) { $C[$c]['unknown']++; if ($cyc > 0) $unknownItems[] = ['id' => (int)$a['id'], 'tag' => (string)$a['asset_tag'], 'cat' => $c, 'item' => trim($a['make'] . ' ' . $a['model']), 'location' => (string)$a['location'], 'holder' => (string)($a['holder'] ?? '')]; continue; }
             $C[$c]['dated']++;
             if ($cyc <= 0) continue;
@@ -448,11 +448,11 @@ if (!function_exists('opsh_budget_cfg')) {
             $tags = array_map(fn($i) => $i['tag'] . ' (' . substr((string)$i['purchased'], 0, 4) . ')', array_slice($its, 0, 12));
             $pTxt = $cc['price_from'] === 'saved' ? 'replacement price saved in Settings' : ($cc['price_from'] === 'average_recent' ? 'average paid for ' . $cc['price_n'] . ' in Equipment over the last three years'
                   : ($cc['price_from'] === 'average' ? 'average paid for ' . $cc['price_n'] . ' in Equipment' : 'no price in Equipment yet — enter it'));
-            $lines[] = ['name' => opsh_budget_cat_label($c) . ' replacement' . ($sid ? ' — ' . ($siteName[$sid] ?? '') : ' — location not matched'), 'pool' => 'hardware',
+            $lines[] = ['name' => itops_budget_cat_label($c) . ' replacement' . ($sid ? ' — ' . ($siteName[$sid] ?? '') : ' — location not matched'), 'pool' => 'hardware',
                 'tower' => in_array($c, ['phone'], true) ? 'telecom' : 'end_user', 'nature' => 'run', 'cost_type' => 'capex', 'billing' => 'one_time', 'unit_cost' => $cc['price'], 'qty' => $n, 'months' => 12,
                 'site_id' => $sid ?: null, 'source' => 'equipment', 'source_ref' => $c . ':' . $sid, 'renewal_date' => null, 'needs_price' => $cc['price'] > 0 ? 0 : 1, 'vendor_id' => null, 'contract_id' => null,
                 'cat' => $c, 'items' => array_map(fn($i) => $i['id'], $its),
-                'why' => $n . ' ' . mb_strtolower(opsh_budget_cat_label($c, $n !== 1)) . ' reach ' . $cc['cycle'] . ' years by ' . $fyd['end'] . ': ' . implode(', ', $tags) . ($n > 12 ? ' and ' . ($n - 12) . ' more' : '') . '. Price: ' . $pTxt . '.'];
+                'why' => $n . ' ' . mb_strtolower(itops_budget_cat_label($c, $n !== 1)) . ' reach ' . $cc['cycle'] . ' years by ' . $fyd['end'] . ': ' . implode(', ', $tags) . ($n > 12 ? ' and ' . ($n - 12) . ' more' : '') . '. Price: ' . $pTxt . '.'];
         }
         usort($lines, fn($a, $b) => strcmp($a['name'], $b['name']));
         foreach ($C as &$cc) $cc['cost'] = round($cc['cost'], 2); unset($cc);
@@ -469,10 +469,10 @@ if (!function_exists('opsh_budget_cfg')) {
      * A contract term and the term in force now: a renewed term points to the next one (renewed_to_id), which is
      * followed so a line made against last year's term shows this year's. Returns null when the id is unknown.
      */
-    function opsh_budget_contract(PDO $db, ?int $id): ?array {
+    function itops_budget_contract(PDO $db, ?int $id): ?array {
         if (!$id) return null;
         $st = $db->prepare('SELECT c.id, c.title, c.vendor_id, c.contract_type, c.status, c.start_date, c.end_date, c.auto_renew, c.payment_frequency, c.payment_amount, c.total_value, c.series_id, c.term_no, c.renewed_to_id, c.ended_at, v.name AS vendor_name
-            FROM opsh_contracts c LEFT JOIN opsh_vendors v ON v.id = c.vendor_id WHERE c.id = ?');
+            FROM itops_contracts c LEFT JOIN itops_vendors v ON v.id = c.vendor_id WHERE c.id = ?');
         $st->execute([$id]); $r = $st->fetch(PDO::FETCH_ASSOC); if (!$r) return null;
         $first = $r; $n = 0;
         while (!empty($r['renewed_to_id']) && $n++ < 20) { $st->execute([(int)$r['renewed_to_id']]); $nx = $st->fetch(PDO::FETCH_ASSOC); if (!$nx) break; $r = $nx; }
@@ -485,7 +485,7 @@ if (!function_exists('opsh_budget_cfg')) {
     }
 
     /** What a line still lacks to be complete: 'vendor', 'contract'. IT staff (Internal labor) and cut lines need neither. */
-    function opsh_budget_line_missing(array $l, array $cfg): array {
+    function itops_budget_line_missing(array $l, array $cfg): array {
         if (($l['status'] ?? '') === 'cut' || ($l['pool'] ?? '') === 'internal_labor') return [];
         $m = [];
         if (!empty($cfg['require_vendor']) && empty($l['vendor_id'])) $m[] = 'vendor';
@@ -493,7 +493,7 @@ if (!function_exists('opsh_budget_cfg')) {
         if (empty($l['contract_id']) && ($rc === 'all' || ($rc === 'recurring' && ($l['billing'] ?? '') !== 'one_time'))) $m[] = 'contract';
         return $m;
     }
-    function opsh_budget_missing_text(array $m): string {
+    function itops_budget_missing_text(array $m): string {
         if ($m === ['vendor']) return 'Choose the vendor (or add a new one) before saving.';
         if ($m === ['contract']) return 'Choose the contract or agreement this cost is paid under (or add a new one) before saving.';
         return 'Choose the vendor and the contract or agreement (or add new ones) before saving.';
@@ -504,7 +504,7 @@ if (!function_exists('opsh_budget_cfg')) {
      * renew or replace it), 'ended' (ended before the year starts), 'closed' (terminated or archived), and whether the
      * line's price differs from the contract's payment for the same billing.
      */
-    function opsh_budget_contract_flags(?array $c, array $l, array $fyd): array {
+    function itops_budget_contract_flags(?array $c, array $l, array $fyd): array {
         if (!$c) return ['state' => 'none'];
         $state = 'ok';
         if ($c['closed'] && !$c['renewed']) $state = 'closed';
@@ -517,22 +517,22 @@ if (!function_exists('opsh_budget_cfg')) {
 
     // ── Lines ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
-    function opsh_budget_line_clean(PDO $db, array $in, ?array $cur): array {
+    function itops_budget_line_clean(PDO $db, array $in, ?array $cur): array {
         $o = $cur ?? ['fy' => null, 'name' => '', 'pool' => 'other', 'tower' => '', 'nature' => 'run', 'cost_type' => 'opex', 'billing' => 'annual',
                       'unit_cost' => 0, 'qty' => 1, 'months' => 12, 'site_id' => null, 'vendor_id' => null, 'department_id' => null, 'owner_id' => null,
                       'renewal_date' => null, 'status' => 'planned', 'needs_price' => 0, 'notes' => '', 'contract_id' => null];
         $bad = fn($m) => throw new InvalidArgumentException($m);
         if (array_key_exists('fy', $in)) { if (!is_numeric($in['fy']) || (int)$in['fy'] < 2000 || (int)$in['fy'] > 2100) $bad('Choose the fiscal year.'); $o['fy'] = (int)$in['fy']; }
         if (array_key_exists('name', $in)) { if (!is_string($in['name'])) $bad('The name is text.'); $o['name'] = mb_substr(trim(preg_replace('/\s+/u', ' ', $in['name']) ?? ''), 0, 160); }
-        if (array_key_exists('pool', $in)) { if (!isset(opsh_budget_pools()[$in['pool']])) $bad('Choose a category.'); $o['pool'] = $in['pool']; }
-        if (array_key_exists('tower', $in)) { if ($in['tower'] !== '' && !isset(opsh_budget_towers()[$in['tower']])) $bad('Choose what it supports, or leave it empty.'); $o['tower'] = (string)$in['tower']; }
-        if (array_key_exists('nature', $in)) { if (!isset(opsh_budget_natures()[$in['nature']])) $bad('Run, Grow or Transform.'); $o['nature'] = $in['nature']; }
+        if (array_key_exists('pool', $in)) { if (!isset(itops_budget_pools()[$in['pool']])) $bad('Choose a category.'); $o['pool'] = $in['pool']; }
+        if (array_key_exists('tower', $in)) { if ($in['tower'] !== '' && !isset(itops_budget_towers()[$in['tower']])) $bad('Choose what it supports, or leave it empty.'); $o['tower'] = (string)$in['tower']; }
+        if (array_key_exists('nature', $in)) { if (!isset(itops_budget_natures()[$in['nature']])) $bad('Run, Grow or Transform.'); $o['nature'] = $in['nature']; }
         if (array_key_exists('cost_type', $in)) { if (!in_array($in['cost_type'], ['opex', 'capex'], true)) $bad('Operating (OpEx) or capital (CapEx).'); $o['cost_type'] = $in['cost_type']; }
-        if (array_key_exists('billing', $in)) { if (!isset(opsh_budget_billings()[$in['billing']])) $bad('Choose how often it is billed.'); $o['billing'] = $in['billing']; }
+        if (array_key_exists('billing', $in)) { if (!isset(itops_budget_billings()[$in['billing']])) $bad('Choose how often it is billed.'); $o['billing'] = $in['billing']; }
         foreach (['unit_cost' => [0, 1e9, 'The price is an amount of 0 or more.'], 'qty' => [0, 1e6, 'The quantity is 0 or more.']] as $k => [$lo, $hi, $m])
             if (array_key_exists($k, $in)) { if (!is_numeric($in[$k]) || (float)$in[$k] < $lo || (float)$in[$k] > $hi) $bad($m); $o[$k] = round((float)$in[$k], 2); }
         if (array_key_exists('months', $in)) { if (!is_numeric($in['months']) || (int)$in['months'] < 1 || (int)$in['months'] > 12) $bad('Months in the year: 1 to 12.'); $o['months'] = (int)$in['months']; }
-        foreach (['site_id' => 'opsh_budget_sites', 'vendor_id' => 'opsh_vendors', 'department_id' => 'opsh_departments', 'owner_id' => 'opsh_users'] as $k => $tbl) if (array_key_exists($k, $in)) {
+        foreach (['site_id' => 'itops_budget_sites', 'vendor_id' => 'itops_vendors', 'department_id' => 'itops_departments', 'owner_id' => 'itops_users'] as $k => $tbl) if (array_key_exists($k, $in)) {
             $v = $in[$k]; if ($v === null || $v === '' || $v === 0 || $v === '0') { $o[$k] = null; continue; }
             if (!is_numeric($v)) $bad('That choice is not in the list.');
             $st = $db->prepare("SELECT COUNT(*) FROM $tbl WHERE id=?"); $st->execute([(int)$v]); if (!$st->fetchColumn()) $bad('That choice is not in the list any more. Reload the page.');
@@ -542,14 +542,14 @@ if (!function_exists('opsh_budget_cfg')) {
             if ($v === null || $v === '' || $v === 0 || $v === '0') $o['contract_id'] = null;
             else {
                 if (!is_numeric($v)) $bad('That contract is not in the list.');
-                $c = opsh_budget_contract($db, (int)$v); if (!$c) $bad('That contract does not exist any more. Reload the page.');
+                $c = itops_budget_contract($db, (int)$v); if (!$c) $bad('That contract does not exist any more. Reload the page.');
                 if ($c['status'] === 'archived') $bad('That contract is archived. Choose a current one.');
                 if (empty($o['vendor_id']) && $c['vendor_id']) $o['vendor_id'] = $c['vendor_id'];
                 if ($c['vendor_id'] && (int)$o['vendor_id'] !== $c['vendor_id']) $bad('The contract "' . $c['title'] . '" is with ' . ($c['vendor_name'] ?: 'another vendor') . ', not with the vendor chosen. Choose one of this vendor\'s contracts.');
                 $o['contract_id'] = (int)$v;
             }
         } elseif (!empty($o['contract_id']) && array_key_exists('vendor_id', $in)) {
-            $c = opsh_budget_contract($db, (int)$o['contract_id']);
+            $c = itops_budget_contract($db, (int)$o['contract_id']);
             if ($c && $c['vendor_id'] && (int)$o['vendor_id'] !== $c['vendor_id']) $bad('The line\'s contract is with ' . ($c['vendor_name'] ?: 'another vendor') . '. Choose a contract of the new vendor too.');
         }
         if (array_key_exists('renewal_date', $in)) { $v = $in['renewal_date']; if ($v === null || $v === '') $o['renewal_date'] = null; elseif (!is_string($v) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) || !strtotime($v)) $bad('The renewal date is a date.'); else $o['renewal_date'] = $v; }
@@ -561,11 +561,11 @@ if (!function_exists('opsh_budget_cfg')) {
         // a price typed clears "needs a price"; a line whose price is still 0 with a quantity keeps it
         if (array_key_exists('unit_cost', $in)) $o['needs_price'] = ((float)$o['unit_cost'] <= 0 && (float)$o['qty'] > 0 && !empty($cur['needs_price'])) ? 1 : 0;
         $o['needs_price'] = !empty($o['needs_price']) ? 1 : 0;   // a flag read back from the table arrives as bool
-        $o['amount'] = opsh_budget_amount($o);
+        $o['amount'] = itops_budget_amount($o);
         return $o;
     }
 
-    function opsh_budget_line_row(array $r): array {
+    function itops_budget_line_row(array $r): array {
         foreach (['id', 'fy', 'months'] as $k) $r[$k] = (int)$r[$k];
         foreach (['site_id', 'vendor_id', 'contract_id', 'department_id', 'owner_id', 'created_by', 'updated_by'] as $k) $r[$k] = ($r[$k] ?? null) === null ? null : (int)$r[$k];
         foreach (['unit_cost', 'qty', 'amount'] as $k) $r[$k] = (float)$r[$k];
@@ -574,20 +574,20 @@ if (!function_exists('opsh_budget_cfg')) {
     }
 
     /** What the Audit Log keeps of a line: the same labels before and after. */
-    function opsh_budget_line_view(PDO $db, array $l): array {
+    function itops_budget_line_view(PDO $db, array $l): array {
         static $sites = null, $vend = [];
-        if ($sites === null) { $sites = []; try { foreach (opsh_budget_sites($db) as $s) $sites[$s['id']] = $s['name']; } catch (Throwable $e) {} }
+        if ($sites === null) { $sites = []; try { foreach (itops_budget_sites($db) as $s) $sites[$s['id']] = $s['name']; } catch (Throwable $e) {} }
         $vn = '';
-        if (!empty($l['vendor_id'])) { if (!isset($vend[$l['vendor_id']])) { $st = $db->prepare('SELECT name FROM opsh_vendors WHERE id=?'); $st->execute([(int)$l['vendor_id']]); $vend[$l['vendor_id']] = (string)$st->fetchColumn(); } $vn = $vend[$l['vendor_id']]; }
-        return ['Year' => (string)$l['fy'], 'Name' => (string)$l['name'], 'Category' => opsh_budget_pools()[$l['pool']][0] ?? $l['pool'],
-                'Supports' => $l['tower'] ? (opsh_budget_towers()[$l['tower']] ?? $l['tower']) : '', 'Kind' => (opsh_budget_natures()[$l['nature']] ?? $l['nature']) . ' · ' . strtoupper($l['cost_type']),
-                'Billing' => opsh_budget_billings()[$l['billing']] ?? $l['billing'], 'Price' => number_format((float)$l['unit_cost'], 2, '.', ''), 'Quantity' => rtrim(rtrim(number_format((float)$l['qty'], 2, '.', ''), '0'), '.'),
+        if (!empty($l['vendor_id'])) { if (!isset($vend[$l['vendor_id']])) { $st = $db->prepare('SELECT name FROM itops_vendors WHERE id=?'); $st->execute([(int)$l['vendor_id']]); $vend[$l['vendor_id']] = (string)$st->fetchColumn(); } $vn = $vend[$l['vendor_id']]; }
+        return ['Year' => (string)$l['fy'], 'Name' => (string)$l['name'], 'Category' => itops_budget_pools()[$l['pool']][0] ?? $l['pool'],
+                'Supports' => $l['tower'] ? (itops_budget_towers()[$l['tower']] ?? $l['tower']) : '', 'Kind' => (itops_budget_natures()[$l['nature']] ?? $l['nature']) . ' · ' . strtoupper($l['cost_type']),
+                'Billing' => itops_budget_billings()[$l['billing']] ?? $l['billing'], 'Price' => number_format((float)$l['unit_cost'], 2, '.', ''), 'Quantity' => rtrim(rtrim(number_format((float)$l['qty'], 2, '.', ''), '0'), '.'),
                 'Months' => (string)$l['months'], 'Planned' => number_format((float)$l['amount'], 2, '.', ''), 'Site' => $l['site_id'] ? ($sites[$l['site_id']] ?? ('#' . $l['site_id'])) : 'Whole organization',
-                'Vendor' => $vn, 'Contract' => !empty($l['contract_id']) ? (($cc = opsh_budget_contract($db, (int)$l['contract_id'])) ? $cc['linked_ref'] . ' ' . $cc['title'] : '#' . $l['contract_id']) : '',
+                'Vendor' => $vn, 'Contract' => !empty($l['contract_id']) ? (($cc = itops_budget_contract($db, (int)$l['contract_id'])) ? $cc['linked_ref'] . ' ' . $cc['title'] : '#' . $l['contract_id']) : '',
                 'Renews' => (string)($l['renewal_date'] ?? ''), 'Status' => (string)$l['status'], 'Notes' => (string)($l['notes'] ?? '')];
     }
 
-    function opsh_budget_diff(array $a, array $b): array {
+    function itops_budget_diff(array $a, array $b): array {
         $o = []; $n = [];
         foreach ($b as $k => $v) if (($a[$k] ?? null) !== $v) { $o[$k] = $a[$k] ?? ''; $n[$k] = $v; }
         return [$o, $n];
@@ -596,9 +596,9 @@ if (!function_exists('opsh_budget_cfg')) {
     // ── Imports (preview, then apply) ────────────────────────────────────────────────────────────────────────────────
 
     /** Lines proposed from Microsoft 365: one per paid license with seats. Existing lines of that year are updated. */
-    function opsh_budget_from_m365(PDO $db, int $fy): array {
-        $m = opsh_budget_m365($db); $cfg = opsh_budget_cfg($db); $fyd = opsh_budget_fy($cfg, $fy);
-        $link = opsh_budget_m365_link($db);
+    function itops_budget_from_m365(PDO $db, int $fy): array {
+        $m = itops_budget_m365($db); $cfg = itops_budget_cfg($db); $fyd = itops_budget_fy($cfg, $fy);
+        $link = itops_budget_m365_link($db);
         $out = [];
         foreach ($m['rows'] as $r) {
             if ($r['seats'] <= 0 || $r['free']) continue;
@@ -613,15 +613,15 @@ if (!function_exists('opsh_budget_cfg')) {
     }
 
     /** Lines proposed from Contracts: active terms with a payment amount that run into the year. */
-    function opsh_budget_from_contracts(PDO $db, int $fy): array {
-        $cfg = opsh_budget_cfg($db); $fyd = opsh_budget_fy($cfg, $fy);
+    function itops_budget_from_contracts(PDO $db, int $fy): array {
+        $cfg = itops_budget_cfg($db); $fyd = itops_budget_fy($cfg, $fy);
         $st = $db->prepare("SELECT c.id, c.title, c.vendor_id, c.contract_type, c.status, c.start_date, c.end_date, c.auto_renew, c.payment_frequency, c.payment_amount, c.total_value, v.category AS vcat, v.name AS vname
-            FROM opsh_contracts c LEFT JOIN opsh_vendors v ON v.id = c.vendor_id
+            FROM itops_contracts c LEFT JOIN itops_vendors v ON v.id = c.vendor_id
             WHERE c.status IN ('active','expiring') AND (c.start_date IS NULL OR c.start_date <= ?) AND (c.end_date IS NULL OR c.end_date >= ? OR c.auto_renew = 1)");
         $st->execute([$fyd['end'], $fyd['start']]);
         $out = [];
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $c) {
-            $freq = (string)($c['payment_frequency'] ?: 'annual'); if (!isset(opsh_budget_billings()[$freq])) $freq = 'annual';
+            $freq = (string)($c['payment_frequency'] ?: 'annual'); if (!isset(itops_budget_billings()[$freq])) $freq = 'annual';
             $amt = (float)($c['payment_amount'] ?? 0);
             if ($amt <= 0 && $freq === 'annual') {   // review OPS-27: the whole contract value spread over its years
                 $amt = (float)($c['total_value'] ?? 0);
@@ -639,38 +639,38 @@ if (!function_exists('opsh_budget_cfg')) {
             $out[] = ['name' => (string)$c['title'] . ($c['vname'] ? ' — ' . $c['vname'] : ''), 'pool' => $pool, 'tower' => $tower, 'nature' => 'run', 'cost_type' => 'opex',
                 'billing' => $freq, 'unit_cost' => round($amt, 2), 'qty' => 1, 'months' => $months, 'vendor_id' => $c['vendor_id'] ? (int)$c['vendor_id'] : null, 'contract_id' => (int)$c['id'],
                 'source' => 'contract', 'source_ref' => (string)$c['id'], 'renewal_date' => $c['end_date'] ?: null, 'needs_price' => $amt > 0 ? 0 : 1,
-                'why' => 'Contract ' . ($c['end_date'] ? 'ends ' . $c['end_date'] . ($c['auto_renew'] ? ' (renews by itself)' : '') : 'with no end date') . '; ' . (opsh_budget_billings()[$freq] ?? $freq) . ' payment ' . ($amt > 0 ? number_format($amt, 2) : 'not recorded') . '.'];
+                'why' => 'Contract ' . ($c['end_date'] ? 'ends ' . $c['end_date'] . ($c['auto_renew'] ? ' (renews by itself)' : '') : 'with no end date') . '; ' . (itops_budget_billings()[$freq] ?? $freq) . ' payment ' . ($amt > 0 ? number_format($amt, 2) : 'not recorded') . '.'];
         }
         return $out;
     }
 
     /** Apply proposed lines: insert, or update the line of the same year and source (only price, quantity, months, renewal). */
-    function opsh_budget_apply(PDO $db, int $fy, array $lines, array $user, string $label): array {
+    function itops_budget_apply(PDO $db, int $fy, array $lines, array $user, string $label): array {
         $res = ['created' => 0, 'updated' => 0, 'unchanged' => 0];
-        $find = $db->prepare('SELECT * FROM opsh_budget_lines WHERE fy=? AND source=? AND source_ref=? AND site_id <=> ? LIMIT 1');
+        $find = $db->prepare('SELECT * FROM itops_budget_lines WHERE fy=? AND source=? AND source_ref=? AND site_id <=> ? LIMIT 1');
         foreach ($lines as $p) {
-            $p['fy'] = $fy; $p['amount'] = opsh_budget_amount($p + ['months' => 12]);
+            $p['fy'] = $fy; $p['amount'] = itops_budget_amount($p + ['months' => 12]);
             $find->execute([$fy, $p['source'], $p['source_ref'], $p['site_id'] ?? null]); $cur = $find->fetch(PDO::FETCH_ASSOC);
             if ($cur) {
-                $cur = opsh_budget_line_row($cur);
+                $cur = itops_budget_line_row($cur);
                 $new = array_merge($cur, ['unit_cost' => (float)$p['unit_cost'], 'qty' => (float)$p['qty'], 'months' => (int)($p['months'] ?? 12), 'renewal_date' => $p['renewal_date'] ?? $cur['renewal_date'],
                                           'vendor_id' => $cur['vendor_id'] ?: ($p['vendor_id'] ?? null), 'contract_id' => $cur['contract_id'] ?: ($p['contract_id'] ?? null)]);   // a vendor / contract chosen by a person stays
                 if ($cur['needs_price'] && (float)$p['unit_cost'] <= 0) $new['unit_cost'] = $cur['unit_cost'];   // a price typed by a person is not wiped by an unknown one
-                $new['amount'] = opsh_budget_amount($new); $new['needs_price'] = ((float)$new['unit_cost'] <= 0 && (float)$new['qty'] > 0) ? 1 : 0;
+                $new['amount'] = itops_budget_amount($new); $new['needs_price'] = ((float)$new['unit_cost'] <= 0 && (float)$new['qty'] > 0) ? 1 : 0;
                 // BT124 (code review OPS-5): an import that changes the amount of an approved line sends it back to planned
                 if (($cur['status'] ?? '') === 'approved' && abs((float)$new['amount'] - (float)$cur['amount']) >= 0.01) $new['status'] = 'planned';
-                [$o, $n] = opsh_budget_diff(opsh_budget_line_view($db, $cur), opsh_budget_line_view($db, $new));
+                [$o, $n] = itops_budget_diff(itops_budget_line_view($db, $cur), itops_budget_line_view($db, $new));
                 if (!$n) { $res['unchanged']++; continue; }
-                $db->prepare('UPDATE opsh_budget_lines SET unit_cost=?, qty=?, months=?, renewal_date=?, amount=?, needs_price=?, vendor_id=?, contract_id=?, status=?, updated_by=? WHERE id=?')
+                $db->prepare('UPDATE itops_budget_lines SET unit_cost=?, qty=?, months=?, renewal_date=?, amount=?, needs_price=?, vendor_id=?, contract_id=?, status=?, updated_by=? WHERE id=?')
                    ->execute([$new['unit_cost'], $new['qty'], $new['months'], $new['renewal_date'], $new['amount'], $new['needs_price'], $new['vendor_id'], $new['contract_id'], $new['status'], (int)$user['id'], $cur['id']]);
                 audit_log('budget_line_save', 'budget', $cur['id'], $cur['name'] . ' (' . $label . ')', $o, $n);
                 $res['updated']++;
             } else {
-                $db->prepare('INSERT INTO opsh_budget_lines (fy,name,pool,tower,nature,cost_type,billing,unit_cost,qty,months,amount,site_id,vendor_id,contract_id,source,source_ref,renewal_date,needs_price,notes,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+                $db->prepare('INSERT INTO itops_budget_lines (fy,name,pool,tower,nature,cost_type,billing,unit_cost,qty,months,amount,site_id,vendor_id,contract_id,source,source_ref,renewal_date,needs_price,notes,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
                    ->execute([$fy, $p['name'], $p['pool'], $p['tower'], $p['nature'], $p['cost_type'], $p['billing'], (float)$p['unit_cost'], (float)$p['qty'], (int)($p['months'] ?? 12), $p['amount'],
                               $p['site_id'] ?? null, $p['vendor_id'] ?? null, $p['contract_id'] ?? null, $p['source'], $p['source_ref'], $p['renewal_date'] ?? null, (int)($p['needs_price'] ?? 0), (string)($p['why'] ?? ''), (int)$user['id']]);
                 $id = (int)$db->lastInsertId();
-                audit_log('budget_line_add', 'budget', $id, $p['name'] . ' (' . $label . ')', null, opsh_budget_line_view($db, $p + ['site_id' => $p['site_id'] ?? null, 'vendor_id' => $p['vendor_id'] ?? null, 'contract_id' => $p['contract_id'] ?? null, 'status' => 'planned', 'notes' => (string)($p['why'] ?? '')]));
+                audit_log('budget_line_add', 'budget', $id, $p['name'] . ' (' . $label . ')', null, itops_budget_line_view($db, $p + ['site_id' => $p['site_id'] ?? null, 'vendor_id' => $p['vendor_id'] ?? null, 'contract_id' => $p['contract_id'] ?? null, 'status' => 'planned', 'notes' => (string)($p['why'] ?? '')]));
                 $res['created']++;
             }
         }
@@ -683,7 +683,7 @@ if (!function_exists('opsh_budget_cfg')) {
      * Reference figures shown next to the organization's own. Each with its source and what it does and does not
      * count — a benchmark is a question to ask, not a target.
      */
-    function opsh_budget_benchmarks(): array {
+    function itops_budget_benchmarks(): array {
         return [
             ['key' => 'np_pct', 'label' => 'Nonprofits: IT as a share of the operating budget', 'value' => 'median about 1.1% (middle half 0.5%–2.1%, organizations of $3M–$50M)',
              'note' => 'From IRS Form 990 filings (tax year 2023). That IT line excludes IT staff pay, telecom and depreciation, so compare it with your budget without Internal labor and Telecom.',
@@ -708,19 +708,19 @@ if (!function_exists('opsh_budget_cfg')) {
         ];
     }
 
-    function opsh_budget_summary(PDO $db, int $fy): array {
-        $cfg = opsh_budget_cfg($db); $fyd = opsh_budget_fy($cfg, $fy);
-        $st = $db->prepare('SELECT * FROM opsh_budget_lines WHERE fy=?'); $st->execute([$fy]);
-        $lines = array_map('opsh_budget_line_row', $st->fetchAll(PDO::FETCH_ASSOC));
+    function itops_budget_summary(PDO $db, int $fy): array {
+        $cfg = itops_budget_cfg($db); $fyd = itops_budget_fy($cfg, $fy);
+        $st = $db->prepare('SELECT * FROM itops_budget_lines WHERE fy=?'); $st->execute([$fy]);
+        $lines = array_map('itops_budget_line_row', $st->fetchAll(PDO::FETCH_ASSOC));
         $live = array_values(array_filter($lines, fn($l) => $l['status'] !== 'cut'));
         $sum = fn(array $ls) => round(array_sum(array_column($ls, 'amount')), 2);
         $by = function (string $k, array $names) use ($live) { $o = []; foreach ($live as $l) { $kk = (string)($l[$k] ?? ''); $o[$kk] = ($o[$kk] ?? 0) + $l['amount']; }
             $r = []; foreach ($o as $kk => $v) $r[] = ['key' => $kk, 'label' => $names[$kk] ?? ($kk === '' ? 'Not set' : $kk), 'amount' => round($v, 2)]; usort($r, fn($a, $b) => $b['amount'] <=> $a['amount']); return $r; };
-        $pools = array_map(fn($p) => $p[0], opsh_budget_pools());
-        $siteNames = ['' => 'Whole organization']; foreach (opsh_budget_sites($db) as $s) $siteNames[(string)$s['id']] = $s['name'];
+        $pools = array_map(fn($p) => $p[0], itops_budget_pools());
+        $siteNames = ['' => 'Whole organization']; foreach (itops_budget_sites($db) as $s) $siteNames[(string)$s['id']] = $s['name'];
         $planned = $sum($live); $cont = round($planned * (float)$cfg['contingency_pct'] / 100, 2);
         // actuals
-        $sa = $db->prepare('SELECT * FROM opsh_budget_actuals WHERE fy=?'); $sa->execute([$fy]); $acts = $sa->fetchAll(PDO::FETCH_ASSOC);
+        $sa = $db->prepare('SELECT * FROM itops_budget_actuals WHERE fy=?'); $sa->execute([$fy]); $acts = $sa->fetchAll(PDO::FETCH_ASSOC);
         $actTotal = round(array_sum(array_map(fn($a) => (float)$a['amount'], $acts)), 2);
         $actPool = []; foreach ($acts as $a) $actPool[$a['pool']] = ($actPool[$a['pool']] ?? 0) + (float)$a['amount'];
         $byPool = $by('pool', $pools); $seen = array_column($byPool, 'key');
@@ -748,17 +748,17 @@ if (!function_exists('opsh_budget_cfg')) {
             'pct_operating' => $ob ? round($total / $ob * 100, 2) : null,
             'pct_operating_comparable' => $ob ? round(($total - $labor - $tele) / $ob * 100, 2) : null,
             'lines' => count($lines), 'cut' => count($lines) - count($live), 'needs_price' => count(array_filter($live, fn($l) => $l['needs_price'])),
-            'incomplete' => count(array_filter($live, fn($l) => opsh_budget_line_missing($l, $cfg))),
+            'incomplete' => count(array_filter($live, fn($l) => itops_budget_line_missing($l, $cfg))),
         ];
         // renewals inside the year
         $ren = array_values(array_filter($live, fn($l) => $l['renewal_date'] && $l['renewal_date'] >= $fyd['start'] && $l['renewal_date'] <= $fyd['end']));
         usort($ren, fn($a, $b) => strcmp($a['renewal_date'], $b['renewal_date']));
         // the year before, for the change
-        $sp = $db->prepare("SELECT COALESCE(SUM(amount),0) FROM opsh_budget_lines WHERE fy=? AND status<>'cut'"); $sp->execute([$fy - 1]); $prev = (float)$sp->fetchColumn();
+        $sp = $db->prepare("SELECT COALESCE(SUM(amount),0) FROM itops_budget_lines WHERE fy=? AND status<>'cut'"); $sp->execute([$fy - 1]); $prev = (float)$sp->fetchColumn();
         return ['fy' => $fyd, 'cfg' => $cfg, 'kpi' => $kpi, 'prev_planned' => $prev ?: null,
-                'by_pool' => $byPool, 'by_tower' => $by('tower', opsh_budget_towers()), 'by_nature' => $by('nature', opsh_budget_natures()),
+                'by_pool' => $byPool, 'by_tower' => $by('tower', itops_budget_towers()), 'by_nature' => $by('nature', itops_budget_natures()),
                 'by_site' => $by('site_id', $siteNames), 'by_month' => array_map(fn($k, $v) => ['month' => $k, 'actual' => round($v, 2)], array_keys($monthly), $monthly),
                 'renewals' => array_map(fn($l) => ['id' => $l['id'], 'name' => $l['name'], 'date' => $l['renewal_date'], 'amount' => $l['amount']], $ren),
-                'benchmarks' => opsh_budget_benchmarks()];
+                'benchmarks' => itops_budget_benchmarks()];
     }
 }

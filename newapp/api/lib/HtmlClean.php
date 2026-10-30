@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — HTML cleaned when it is saved (BT91, code audit M-29).
+ * ITOps — HTML cleaned when it is saved (BT91, code audit M-29).
  *
  * Knowledge Base articles, SOPs and job descriptions keep rich text. The app cleans it again when it shows it
  * (DOMPurify), but other readers of the same text (the public help portal, signing pages, documents made from it,
@@ -15,9 +15,9 @@
  * Text that has no markup at all is returned as it was.
  */
 
-if (!function_exists('opsh_html_clean')) {
+if (!function_exists('itops_html_clean')) {
 
-    function opsh_html_clean($html, bool $filter = true): string {   // $filter false: only parsed and written back (to compare)
+    function itops_html_clean($html, bool $filter = true): string {   // $filter false: only parsed and written back (to compare)
         $html = (string)($html ?? '');
         if ($html === '' || strpos($html, '<') === false) return $html;
         if (!class_exists('DOMDocument')) return htmlspecialchars(strip_tags($html), ENT_QUOTES, 'UTF-8');   // no DOM extension: keep the text only
@@ -33,10 +33,10 @@ if (!function_exists('opsh_html_clean')) {
 
         $doc = new DOMDocument('1.0', 'UTF-8');
         $prev = libxml_use_internal_errors(true);
-        $doc->loadHTML('<?xml encoding="UTF-8"?><!DOCTYPE html><html><body><div id="opsh-clean-root">' . $html . '</div></body></html>', LIBXML_NONET);
+        $doc->loadHTML('<?xml encoding="UTF-8"?><!DOCTYPE html><html><body><div id="itops-clean-root">' . $html . '</div></body></html>', LIBXML_NONET);
         libxml_clear_errors(); libxml_use_internal_errors($prev);
         $root = null;
-        foreach ($doc->getElementsByTagName('div') as $d) { if ($d->getAttribute('id') === 'opsh-clean-root') { $root = $d; break; } }
+        foreach ($doc->getElementsByTagName('div') as $d) { if ($d->getAttribute('id') === 'itops-clean-root') { $root = $d; break; } }
         if (!$root) return htmlspecialchars(strip_tags($html), ENT_QUOTES, 'UTF-8');
 
         $urlOk = function (string $u, bool $img): bool {
@@ -100,7 +100,7 @@ if (!function_exists('opsh_html_clean')) {
     }
 
     /** Clean the 'content' of a request body when it is there (KB, SOPs, job descriptions). */
-    function opsh_html_clean_body(array &$body, string $field = 'content'): void {
-        if (array_key_exists($field, $body) && $body[$field] !== null && !is_array($body[$field])) $body[$field] = opsh_html_clean((string)$body[$field]);
+    function itops_html_clean_body(array &$body, string $field = 'content'): void {
+        if (array_key_exists($field, $body) && $body[$field] !== null && !is_array($body[$field])) $body[$field] = itops_html_clean((string)$body[$field]);
     }
 }

@@ -5,7 +5,7 @@
 # Env: DB_SOCKET (default /run/mysqld/mysqld.sock), DB_USER/DB_PASS (the app's database user, created here), APP_NAME.
 set -e
 HERE=$(cd "$(dirname "$0")/.." && pwd); RUN=$1; PORT=$2; DB=$3
-SOCK=${DB_SOCKET:-/run/mysqld/mysqld.sock}; U=${DB_USER:-appdev}; PW=${DB_PASS:-appdevpw}; NAME=${APP_NAME:-NewApp}
+SOCK=${DB_SOCKET:-/run/mysqld/mysqld.sock}; U=${DB_USER:-appdev}; PW=${DB_PASS:-appdevpw}; NAME=${APP_NAME:-ITOps}
 rm -rf "$RUN"; mkdir -p "$RUN"; (cd "$HERE" && tar --exclude=./dev --exclude=./docs --exclude=./node_modules --exclude=./CLAUDE.md -cf - .) | (cd "$RUN" && tar -xf -)
 mysql -uroot --socket=$SOCK -e "DROP DATABASE IF EXISTS \`$DB\`; CREATE DATABASE \`$DB\` CHARACTER SET utf8mb4; CREATE USER IF NOT EXISTS '$U'@'127.0.0.1' IDENTIFIED BY '$PW'; GRANT ALL ON \`$DB\`.* TO '$U'@'127.0.0.1';"
 (cd "$RUN" && php -S 127.0.0.1:$PORT -t "$RUN" "$HERE/dev/router.php" > /tmp/php_$PORT.log 2>&1 &); sleep 1

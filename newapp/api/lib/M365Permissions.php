@@ -1,7 +1,7 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — BT125: every permission the Microsoft 365 app registration needs, in one list, with what each one is for.
+ * ITOps — BT125: every permission the Microsoft 365 app registration needs, in one list, with what each one is for.
  * Shown in Settings → Company systems → Microsoft 365 → Permissions, with whether the tenant granted it (read from the
  * app's token). Kept current by the tests (perm125.php): every permission named anywhere in the code, the screens or the
  * help guide must be in this list — except the lists of risky permissions the app looks for on other apps (BT137).
@@ -11,8 +11,8 @@
  *         Exchange (Office 365 Exchange Online API) · Entra role (a directory role given to the app) · Billing role (Azure)
  *   need  core (the Microsoft 365 area needs it) · feature (only that feature) · optional (nice to have)
  */
-if (!function_exists('opsh_m365_permission_catalog')) {
-    function opsh_m365_permission_catalog(): array {
+if (!function_exists('itops_m365_permission_catalog')) {
+    function itops_m365_permission_catalog(): array {
         $A = 'Application';
         return [
             // ── Directory: people, groups, licenses
@@ -95,10 +95,10 @@ if (!function_exists('opsh_m365_permission_catalog')) {
      * The catalog with what the tenant granted. $roles = the application roles in the app's token (null = not known).
      * Rows of types other than Application cannot be read from the token: granted = null.
      */
-    function opsh_m365_permission_status(?array $roles): array {
+    function itops_m365_permission_status(?array $roles): array {
         $have = $roles === null ? null : array_map('strtolower', $roles);
         $out = [];
-        foreach (opsh_m365_permission_catalog() as [$perm, $type, $area, $for, $need, $note]) {
+        foreach (itops_m365_permission_catalog() as [$perm, $type, $area, $for, $need, $note]) {
             $any = explode('|', $perm); $granted = null;
             if ($type === 'Application' && $have !== null) { $granted = false; foreach ($any as $p) if (in_array(strtolower($p), $have, true)) { $granted = true; break; } }
             $out[] = ['permission' => $any[0], 'alternatives' => array_slice($any, 1), 'type' => $type, 'area' => $area, 'for' => $for, 'need' => $need, 'note' => $note, 'granted' => $granted];
@@ -107,8 +107,8 @@ if (!function_exists('opsh_m365_permission_catalog')) {
     }
 
     /** Every single permission name in the catalog (for the tests that keep it current). */
-    function opsh_m365_permission_names(): array {
-        $n = []; foreach (opsh_m365_permission_catalog() as $r) foreach (explode('|', $r[0]) as $p) $n[strtolower($p)] = true;
+    function itops_m365_permission_names(): array {
+        $n = []; foreach (itops_m365_permission_catalog() as $r) foreach (explode('|', $r[0]) as $p) $n[strtolower($p)] = true;
         return array_keys($n);
     }
     /* ── BT145: side by side — what the app needs (this list) against what Microsoft 365 has for this app registration ──
@@ -118,25 +118,25 @@ if (!function_exists('opsh_m365_permission_catalog')) {
      * needed row gets one state and the next step; whatever the app holds but does not use is listed apart (least privilege).
      * Reads need Application.Read.All (+ RoleManagement.Read.Directory, DelegatedPermissionGrant.Read.All); a read that is
      * refused leaves its part "unknown" and says why. */
-    function opsh_m365_resource_apps(): array {
+    function itops_m365_resource_apps(): array {
         return ['00000003-0000-0000-c000-000000000000' => 'Microsoft Graph', '00000002-0000-0ff1-ce00-000000000000' => 'Office 365 Exchange Online'];
     }
-    function opsh_m365_permission_compare(?array $tokenRoles, string $clientId): array {
-        if (!function_exists('opsh_graph_get')) require_once __DIR__ . '/Graph.php';
+    function itops_m365_permission_compare(?array $tokenRoles, string $clientId): array {
+        if (!function_exists('itops_graph_get')) require_once __DIR__ . '/Graph.php';
         $why = []; $low = fn(array $a) => array_values(array_unique(array_map('strtolower', $a)));
         $tok = $tokenRoles === null ? null : $low($tokenRoles);
         $denied = fn(Throwable $e) => (bool)preg_match('/authoriz|privilege|forbidden|403|denied|permission/i', $e->getMessage());
         $q = fn(string $s) => rawurlencode($s);
         // the app's service principal and app registration
         $sp = null; $app = null;
-        try { $sp = (opsh_graph_get('servicePrincipals?$filter=' . $q("appId eq '" . $clientId . "'") . '&$select=id,appId,displayName')['value'] ?? [])[0] ?? null; }
+        try { $sp = (itops_graph_get('servicePrincipals?$filter=' . $q("appId eq '" . $clientId . "'") . '&$select=id,appId,displayName')['value'] ?? [])[0] ?? null; }
         catch (Throwable $e) { $why['consent'] = $denied($e) ? 'Needs Application.Read.All to read what has admin consent.' : 'Could not read the app: ' . mb_substr($e->getMessage(), 0, 160); }
-        try { $app = (opsh_graph_get('applications?$filter=' . $q("appId eq '" . $clientId . "'") . '&$select=id,displayName,requiredResourceAccess')['value'] ?? [])[0] ?? null; }
+        try { $app = (itops_graph_get('applications?$filter=' . $q("appId eq '" . $clientId . "'") . '&$select=id,displayName,requiredResourceAccess')['value'] ?? [])[0] ?? null; }
         catch (Throwable $e) { $why['requested'] = $denied($e) ? 'Needs Application.Read.All to read the app registration.' : 'Could not read the app registration: ' . mb_substr($e->getMessage(), 0, 160); }
         // names of each resource's app roles and delegated scopes
         $res = [];
-        foreach (opsh_m365_resource_apps() as $rid => $rname) {
-            try { $r = (opsh_graph_get('servicePrincipals?$filter=' . $q("appId eq '" . $rid . "'") . '&$select=id,appId,displayName,appRoles,oauth2PermissionScopes')['value'] ?? [])[0] ?? null; }
+        foreach (itops_m365_resource_apps() as $rid => $rname) {
+            try { $r = (itops_graph_get('servicePrincipals?$filter=' . $q("appId eq '" . $rid . "'") . '&$select=id,appId,displayName,appRoles,oauth2PermissionScopes')['value'] ?? [])[0] ?? null; }
             catch (Throwable $e) { $r = null; }
             if (!$r) continue;
             $roles = []; foreach (($r['appRoles'] ?? []) as $x) $roles[strtolower((string)($x['id'] ?? ''))] = (string)($x['value'] ?? '');
@@ -148,7 +148,7 @@ if (!function_exists('opsh_m365_permission_catalog')) {
         $consented = null; $consentedRes = [];
         if ($sp) {
             try { $consented = [];
-                foreach (opsh_graph_paged('servicePrincipals/' . rawurlencode((string)$sp['id']) . '/appRoleAssignments?$top=999', 5) as $a) {
+                foreach (itops_graph_paged('servicePrincipals/' . rawurlencode((string)$sp['id']) . '/appRoleAssignments?$top=999', 5) as $a) {
                     $rid = $resBySp[strtolower((string)($a['resourceId'] ?? ''))] ?? null; if (!$rid) continue;
                     $n = $res[$rid]['roles'][strtolower((string)($a['appRoleId'] ?? ''))] ?? ''; if ($n === '') continue;
                     $consented[] = strtolower($n); $consentedRes[strtolower($n)] = $res[$rid]['name'];
@@ -166,18 +166,18 @@ if (!function_exists('opsh_m365_permission_catalog')) {
         // admin consent for delegated (sign-in) permissions
         $granted = null;
         if ($sp) { try { $granted = [];
-                foreach (opsh_graph_paged('oauth2PermissionGrants?$filter=' . $q("clientId eq '" . $sp['id'] . "'"), 2) as $g) if (($g['consentType'] ?? '') === 'AllPrincipals') foreach (preg_split('/\s+/', trim((string)($g['scope'] ?? ''))) as $sc) if ($sc !== '') $granted[] = strtolower($sc); }
+                foreach (itops_graph_paged('oauth2PermissionGrants?$filter=' . $q("clientId eq '" . $sp['id'] . "'"), 2) as $g) if (($g['consentType'] ?? '') === 'AllPrincipals') foreach (preg_split('/\s+/', trim((string)($g['scope'] ?? ''))) as $sc) if ($sc !== '') $granted[] = strtolower($sc); }
             catch (Throwable $e) { $granted = null; $why['signin'] = $denied($e) ? 'Needs DelegatedPermissionGrant.Read.All to see the admin consent of the sign-in permissions.' : 'Could not read the sign-in consent.'; } }
         // directory roles given to the app
         $dirRoles = null;
         if ($sp) { try { $dirRoles = [];
-                foreach ((opsh_graph_get('roleManagement/directory/roleAssignments?$filter=' . $q("principalId eq '" . $sp['id'] . "'") . '&$expand=roleDefinition')['value'] ?? []) as $a)
+                foreach ((itops_graph_get('roleManagement/directory/roleAssignments?$filter=' . $q("principalId eq '" . $sp['id'] . "'") . '&$expand=roleDefinition')['value'] ?? []) as $a)
                     if (strcasecmp((string)($a['principalId'] ?? ''), (string)$sp['id']) === 0 && !empty($a['roleDefinition']['displayName'])) $dirRoles[] = strtolower((string)$a['roleDefinition']['displayName']); }
             catch (Throwable $e) { $dirRoles = null; $why['roles'] = $denied($e) ? 'Needs RoleManagement.Read.Directory to see the directory roles given to the app.' : 'Could not read the directory roles.'; } }
 
         $rows = []; $used = [];
         $nextAdd = 'Add it: App registrations → the app → API permissions → Add a permission → Microsoft Graph → Application permissions; then Grant admin consent.';
-        foreach (opsh_m365_permission_catalog() as [$perm, $type, $area, $for, $need, $note]) {
+        foreach (itops_m365_permission_catalog() as [$perm, $type, $area, $for, $need, $note]) {
             $any = explode('|', $perm); $anyL = array_map('strtolower', $any); foreach ($anyL as $x) $used[$x] = true;
             $state = 'manual'; $holds = ''; $next = $note;
             if ($type === 'Application' || $type === 'Exchange') {
@@ -205,7 +205,7 @@ if (!function_exists('opsh_m365_permission_catalog')) {
             $rows[] = ['permission' => $any[0], 'alternatives' => array_slice($any, 1), 'type' => $type, 'area' => $area, 'for' => $for, 'need' => $need, 'state' => $state, 'holds' => $holds, 'next' => $next];
         }
         // held (consented or requested) but not used by the app
-        $hi = class_exists('OpshM365') && defined('OpshM365::HIGH_APP_PERMISSIONS') ? array_map('strtolower', OpshM365::HIGH_APP_PERMISSIONS) : [];
+        $hi = class_exists('ItopsM365') && defined('ItopsM365::HIGH_APP_PERMISSIONS') ? array_map('strtolower', ItopsM365::HIGH_APP_PERMISSIONS) : [];
         $extra = [];
         foreach (array_unique(array_merge($consented ?? [], $reqRoles ?? [])) as $n) {
             if (isset($used[$n])) continue;

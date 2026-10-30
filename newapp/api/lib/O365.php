@@ -1,8 +1,8 @@
 <?php
 // © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 /**
- * OpsHub — Microsoft 365 / Graph integration
- * Configuration lives in opsh_settings (set in the admin area). One Azure AD
+ * ITOps — Microsoft 365 / Graph integration
+ * Configuration lives in itops_settings (set in the admin area). One Azure AD
  * app registration powers both:
  *   • SSO sign-in (delegated, User.Read) — used by auth.php
  *   • Mailbox send/read (application, Mail.Send + Mail.ReadWrite) — used here
@@ -11,7 +11,7 @@
 
 if (!function_exists('o365_cfg')) {
     function o365_cfg(): array {
-        $rows = getDB()->query("SELECT skey,sval FROM opsh_settings WHERE skey LIKE 'o365_%'")->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+        $rows = getDB()->query("SELECT skey,sval FROM itops_settings WHERE skey LIKE 'o365_%'")->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
         return [
             'enabled'   => ($rows['o365_enabled'] ?? '0') === '1',
             // BT14: one app configuration shared with Graph (tenant keys kept in sync; one encrypted secret).
@@ -151,13 +151,13 @@ if (!function_exists('graph_poll')) {
             }
             $raw = $m['body']['content'] ?? ($m['bodyPreview'] ?? '');
             // Review DESK-24: lines and paragraphs are kept (same reading as the Outlook calendar sync).
-            if (!function_exists('opsh_os_body_text')) require_once __DIR__ . '/OutlookSync.php';
-            $text = isset($m['body']['content']) ? trim(mb_substr(opsh_os_body_text((array)$m['body']), 0, 8000)) : trim(mb_substr((string)$raw, 0, 8000));
+            if (!function_exists('itops_os_body_text')) require_once __DIR__ . '/OutlookSync.php';
+            $text = isset($m['body']['content']) ? trim(mb_substr(itops_os_body_text((array)$m['body']), 0, 8000)) : trim(mb_substr((string)$raw, 0, 8000));
             $hdrG = mail_auth_headers_from_graph((array)($m['internetMessageHeaders'] ?? []));
             try { $res = mail_ingest_message($db, $cfg, $subject, $fromEmail, $fromName, $text, mail_auth_verdict($hdrG, $fromEmail), mail_is_automatic($hdrG)); }
             catch (\Throwable $e) {   // not taken in: left unread for the next check
                 graph_call('PATCH', "https://graph.microsoft.com/v1.0/users/{$mbx}/messages/" . rawurlencode($m['id']), $tok, ['isRead' => false]);
-                if (function_exists('opsh_log')) { try { opsh_log('error', 'mail', 'An email could not be taken in: ' . $e->getMessage()); } catch (\Throwable $x) {} }
+                if (function_exists('itops_log')) { try { itops_log('error', 'mail', 'An email could not be taken in: ' . $e->getMessage()); } catch (\Throwable $x) {} }
                 continue;
             }
             if ($res === 'created') $created++; elseif ($res === 'appended') $appended++;
