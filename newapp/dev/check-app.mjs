@@ -72,7 +72,7 @@ try {
   { const g = await (await fetch(B + 'guide.js')).text(); const i = g.indexOf('const CONTENT ='); let t = g.slice(i + 15, g.indexOf('\n', i)).trim().replace(/;$/, ''); const C = JSON.parse(t);
     const cats = C.categories.map(c => c.cat); const titles = C.categories.flatMap(c => c.topics.map(x => x.title));
     ok('Help Center: only this product\'s categories (' + cats.join(', ') + ')', cats.length === 4 && !titles.some(x => /Tickets?\b|SLA|vTiger|Company systems|Knowledge Base|IT Budget|Announcements/.test(x)), titles.filter(x => /Tickets?\b|SLA|vTiger|Company systems|Knowledge Base|IT Budget|Announcements/.test(x)).join(' | ')); }
-  for (const c of ['cron-sla.php', 'cron-mail.php', 'cron-audit.php', 'cron-uptime.php']) { let out = ''; try { out = execFileSync('php', [c], { cwd: RUN, timeout: 120000 }).toString(); } catch (e) { out = 'EXIT ' + e.status + ' ' + String(e.stdout || '') + String(e.stderr || ''); }
+  for (const c of ['cron-sla.php']) { let out = ''; try { out = execFileSync('php', [c], { cwd: RUN, timeout: 120000 }).toString(); } catch (e) { out = 'EXIT ' + e.status + ' ' + String(e.stdout || '') + String(e.stderr || ''); }
     ok('scheduled job ' + c + ' runs without a PHP error', !/Fatal|EXIT [1-9]|Uncaught/.test(out), out.slice(-300)); }
 } catch (e) { ok('ran to the end', false, e.message.split('\n')[0]); }
 await br.close(); try { for (const l of execFileSync('pgrep', ['-a', 'php']).toString().split('\n')) if (l.includes('127.0.0.1:' + PORT)) process.kill(+l.split(' ')[0]); } catch (e) {}

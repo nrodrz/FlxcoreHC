@@ -65,10 +65,6 @@ if ($what === '' && $method === 'GET') {
     $cronPhp = (string)($db->query("SELECT php FROM itops_cron_runs WHERE via='cli' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: '');
     $lines = [
         ['job' => 'sla', 'when' => '*/15 * * * *', 'cmd' => $bin . ' ' . $root . '/cron-sla.php >/dev/null 2>&1', 'note' => 'Every 15 minutes'],
-        ['job' => 'uptime', 'when' => '* * * * *', 'cmd' => $bin . ' ' . $root . '/cron-uptime.php >/dev/null 2>&1', 'note' => 'Every minute (each monitor and backup keeps its own schedule)'],
-        ['job' => 'mail', 'when' => '*/5 * * * *', 'cmd' => $bin . ' ' . $root . '/cron-mail.php >/dev/null 2>&1', 'note' => 'Every 5 minutes, when email intake is on'],
-        ['job' => 'digest', 'when' => '0 8 * * 1', 'cmd' => $bin . ' ' . $root . '/cron-sla.php digest >/dev/null 2>&1', 'note' => 'Mondays at 8:00 AM'],
-        ['job' => 'audit', 'when' => '* * * * *', 'cmd' => $bin . ' ' . $root . '/cron-audit.php >/dev/null 2>&1', 'note' => 'Every minute, only after an Integration Audit collector is approved'],
     ];
     $mon = (string)($db->query("SELECT sval FROM itops_settings WHERE skey='cron_monitor_key'")->fetchColumn() ?: '');
     $monAt = (string)($db->query("SELECT sval FROM itops_settings WHERE skey='cron_monitor_key_at'")->fetchColumn() ?: '');
@@ -129,10 +125,9 @@ if ($what === 'settings' && $method === 'PUT') {
 if ($what === 'run' && $method === 'POST') {
     $job = (string)($body['job'] ?? '');
     $need('edit', 'Run a scheduled job now');
-    $script = ['sla' => 'cron-sla.php', 'mail' => 'cron-mail.php'][$job] ?? null;
-    if ($script === null) error_response('Only the main scheduler and the email intake can be run from here.', 400);
-    $tok = (string)($db->query("SELECT sval FROM itops_settings WHERE skey='mail_cron_token'")->fetchColumn() ?: '');
-    if ($tok === '') error_response('There is no cron token yet: save the Email settings once (Settings → Connection → Email), then try again.', 409);
+    $script = ['sla' => 'cron-sla.php'][$job] ?? null;
+    if ($script === null) error_response('Only the main scheduler can be run from here.', 400);
+    $tok = itops_cron_token($db);
     if (!function_exists('curl_init')) error_response('This server cannot call itself (PHP curl is missing). Run the job from cron instead.', 501);
     $b = $base(); if ($b === '') error_response('The address of the app is not known (APP_URL).', 500);
     $before = (int)$db->query('SELECT COALESCE(MAX(id),0) FROM itops_cron_runs')->fetchColumn();

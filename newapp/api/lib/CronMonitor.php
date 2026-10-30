@@ -32,22 +32,22 @@ if (!function_exists('itops_cron_php_bin')) {
     function itops_cron_cmd(string $script): string { return itops_cron_php_bin() . ' ' . itops_install_root() . '/' . $script . ' >/dev/null 2>&1'; }
 }
 if (!function_exists('itops_cron_jobs')) {
+    /** 0001-A004: the token the web call of cron-sla.php needs (setting mail_cron_token), made the first time it is needed.
+     *  Before, only saving the Email settings made it, so the in-app scheduler could not start the main job on a new installation. */
+    function itops_cron_token(PDO $db): string {
+        $q = function () use ($db) { return (string)($db->query("SELECT sval FROM itops_settings WHERE skey='mail_cron_token'")->fetchColumn() ?: ''); };
+        $t = $q(); if ($t !== '') return $t;
+        $db->prepare("INSERT IGNORE INTO itops_settings (skey, sval) VALUES ('mail_cron_token', ?)")->execute([bin2hex(random_bytes(24))]);
+        return $q();   // the one saved (another request may have made it first)
+    }
 
     /** The scheduled jobs, what they do and how often they are expected to run (minutes). */
     function itops_cron_jobs(): array {
         return [
             'sla'    => ['label' => 'Main scheduler', 'script' => 'cron-sla.php', 'every' => 15, 'alert' => true,
-                         'does' => 'SLA alerts, renewal and calendar reminders, announcements, Teams notifications, scheduled offboarding, webhook retries, device inventory, company systems, Microsoft 365 background reads, digests and database cleanup.'],
-            'uptime' => ['label' => 'Uptime and backup checks', 'script' => 'cron-uptime.php', 'every' => 5, 'alert' => true,
-                         'does' => 'Checks the websites and WHM/cPanel accounts on IT Operations → Uptime and records outages; reads the WHM backups hourly and marks late backups (IT Operations → Backups). Run it every minute; each monitor and backup keeps its own schedule.'],
-            'mail'   => ['label' => 'Email to ticket', 'script' => 'cron-mail.php', 'every' => 5, 'alert' => true,
-                         'does' => 'Reads the help desk mailbox and turns new emails into tickets or replies.'],
-            'digest' => ['label' => 'Weekly SLA digest', 'script' => 'cron-sla.php digest', 'every' => 10080, 'alert' => true,
-                         'does' => 'Emails administrators the SLA summary of the last 7 days (once a week).'],
-            'audit'  => ['label' => 'Integration audit collectors', 'script' => 'cron-audit.php', 'every' => 1, 'alert' => true,
-                         'does' => 'Runs the approved Integration Audit collectors and the evidence retention policy.'],
+                         'does' => 'Scheduled offboarding, onboarding reminders, the monthly access re-check, alerts and digests, Teams notifications, the security assessment, device inventory, Microsoft 365 background reads, License Hub check-in, webhook retries and clean-up.'],
             'tick'   => ['label' => 'In-app scheduler (no cron)', 'script' => 'POST /api/tick', 'every' => 3, 'alert' => false,
-                         'does' => 'While someone has the app open, runs email intake and the main scheduler every 3 minutes. A fallback: it stops when nobody is signed in, so set up the cron jobs.'],
+                         'does' => 'While someone has the app open, runs the main scheduler every 3 minutes. A fallback: it stops when nobody is signed in, so set up the cron job.'],
         ];
     }
     function itops_cron_ready(PDO $db): bool {
@@ -68,15 +68,7 @@ if (!function_exists('itops_cron_jobs')) {
     function itops_cron_needed(PDO $db, string $job): bool {
         $get = function (string $k, string $d) use ($db): string { try { $s = $db->prepare('SELECT sval FROM itops_settings WHERE skey=?'); $s->execute([$k]); $v = $s->fetchColumn(); return $v === false ? $d : (string)$v; } catch (Throwable $e) { return $d; } };
         switch ($job) {
-            case 'mail': return $get('mail_enabled', '0') === '1';
-            case 'digest': return $get('sla_digest_enabled', '1') === '1';
             case 'tick': return $get('mail_auto_tick', '1') === '1';
-            case 'uptime':
-                try { if ((int)$db->query('SELECT COUNT(*) FROM itops_uptime_monitors WHERE active=1')->fetchColumn() > 0) return true; } catch (Throwable $e) {}
-                try { return (int)$db->query('SELECT COUNT(*) FROM itops_backup_jobs WHERE active=1')->fetchColumn() > 0; } catch (Throwable $e) { return false; }
-            case 'audit':
-                try { @require_once __DIR__ . '/IntegrationCollectors.php'; if (function_exists('itops_ic_state')) { foreach (itops_ic_state($db) as $s) if (!empty($s['enabled'])) return true; } } catch (Throwable $e) {}
-                return false;
             default: return true;
         }
     }

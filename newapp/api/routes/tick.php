@@ -16,10 +16,8 @@
  *     (litespeed_finish_request / fastcgi_finish_request).
  *   - Returns no data; nothing sensitive is exposed to the caller.
  *   - Can be switched off (setting mail_auto_tick = 0) when a real cron is configured.
- *   - The weekly SLA digest is NOT run here — schedule `cron-sla.php digest` for that.
  */
 if ($method !== 'POST') error_response('Method not allowed', 405);
-require_once __DIR__ . '/../lib/MailIntake.php';
 
 const ITOPS_TICK_INTERVAL = 180;   // seconds between runs
 
@@ -53,35 +51,13 @@ elseif (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
 else { while (ob_get_level() > 0) @ob_end_flush(); @flush(); }
 
 $summary = [];
-// BT60: this run is recorded (Logs → Scheduled jobs); the email intake is recorded as a "mail" run too
+// BT60: this run is recorded (Logs → Scheduled jobs)
 require_once __DIR__ . '/../lib/CronMonitor.php';
 itops_cron_begin($db, 'tick', 'tick');
-itops_cron_step('Email intake');
-$mailT0 = microtime(true);
-
-// 1) Email-to-ticket intake
-try {
-    if ($get('mail_enabled', '0') === '1') {
-        $r = mail_intake_poll();
-        $mailMs = (int)round((microtime(true) - $mailT0) * 1000);
-        if (!empty($r['ok'])) itops_cron_record($db, 'mail', 'tick', 'ok', (int)($r['created'] ?? 0) . ' ticket(s) created, ' . (int)($r['appended'] ?? 0) . ' reply(ies) added.', $mailMs, [['name' => 'Read the help desk mailbox', 'status' => 'ok', 'ms' => $mailMs, 'msg' => '']]);
-        else { itops_cron_fail((string)($r['error'] ?? 'unknown')); itops_cron_record($db, 'mail', 'tick', 'failed', 'Mailbox not read: ' . ($r['error'] ?? 'unknown'), $mailMs, [['name' => 'Read the help desk mailbox', 'status' => 'failed', 'ms' => $mailMs, 'msg' => (string)($r['error'] ?? '')]]); }
-        $summary['mail'] = !empty($r['ok'])
-            ? ('ok: ' . (int)($r['created'] ?? 0) . ' created, ' . (int)($r['appended'] ?? 0) . ' threaded')
-            : ('error: ' . ($r['error'] ?? 'unknown'));
-    } else {
-        $summary['mail'] = 'intake disabled';
-    }
-} catch (Throwable $e) {
-    itops_cron_fail($e);
-    $summary['mail'] = 'error: ' . $e->getMessage();
-    error_log('[ITOps tick] mail: ' . $e->getMessage());
-}
-
-// 2) SLA scan — reuse cron-sla.php (single source of truth) via a loopback call with its token.
+// The main scheduler — reuse cron-sla.php (single source of truth) via a loopback call with its token.
 itops_cron_step('Main scheduler (cron-sla.php over loopback)');
 try {
-    $tok = $get('mail_cron_token', '');
+    $tok = itops_cron_token($db);   // 0001-A004: made when missing
     if ($tok && function_exists('curl_init')) {
         $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
         $host  = $_SERVER['HTTP_HOST'] ?? '';
@@ -100,7 +76,7 @@ try {
             if ($code !== 200) itops_cron_fail('cron-sla.php answered HTTP ' . $code);
         }
     } else {
-        $summary['sla'] = 'skipped (no cron token yet — save the Email settings once)';
+        $summary['sla'] = 'skipped (no cron token yet — open Logs & Integrations → Scheduled jobs once)';
     }
 } catch (Throwable $e) {
     itops_cron_fail($e);
@@ -108,18 +84,9 @@ try {
     error_log('[ITOps tick] sla: ' . $e->getMessage());
 }
 
-// BT61: uptime checks that are due
-itops_cron_step('Uptime checks');
-try { require_once __DIR__ . '/../lib/Brand.php'; require_once __DIR__ . '/../lib/EmailTemplates.php'; require_once __DIR__ . '/../lib/Uptime.php'; $upR = itops_uptime_run($db); $summary['uptime'] = $upR['checked'] . ' checked'; } catch (Throwable $e) { itops_cron_fail($e); }
-// BT62: backup checks (WHM hourly, late backups)
-itops_cron_step('Backup checks');
-try { require_once __DIR__ . '/../lib/Backups.php'; $bkR = itops_bk_run($db); $summary['backups'] = $bkR['jobs'] . ' backup(s), ' . $bkR['late'] . ' late'; } catch (Throwable $e) { itops_cron_fail($e); }
-// BT66: Outlook / Teams calendar sync (spaced to ~3 minutes inside; off until an admin turns it on)
-itops_cron_step('Outlook calendar sync');
-try { require_once __DIR__ . '/../lib/OutlookSync.php'; $osR = itops_os_run($db); if (!empty($osR['ran'])) $summary['outlook'] = $osR['created'] . ' added, ' . $osR['updated'] . ' updated, ' . $osR['removed'] . ' removed, ' . $osR['from_outlook'] . ' from Outlook'; } catch (Throwable $e) { itops_cron_fail($e, 'warning'); }
 itops_cron_step('Check the scheduled jobs');
 try { itops_cron_watch($db); } catch (Throwable $e) {}
-itops_cron_end(null, 'Email: ' . ($summary['mail'] ?? '—') . ' · Main scheduler: ' . ($summary['sla'] ?? '—'));
+itops_cron_end(null, 'Main scheduler: ' . ($summary['sla'] ?? '—'));
 // Record the outcome so admins can see the scheduler is alive.
 try {
     $db->prepare("INSERT INTO itops_settings (skey, sval) VALUES ('auto_tick_last', ?) ON DUPLICATE KEY UPDATE sval=VALUES(sval)")

@@ -3126,18 +3126,12 @@ function MhAccounts({go,toast}){
 
 /* "A, B, C and 14 more": what a folded list holds, in one line */
 function mhFew(names){ const a=(names||[]).filter(Boolean); if(!a.length) return 'none'; return a.slice(0,3).join(', ')+(a.length>3?' and '+(a.length-3)+' more':''); }
-/* BT47: every system the person has an account in, on the account itself (this replaced the Access overview).
-   Microsoft 365 and vTiger come with the account; the other company systems are read from /access/person when the
-   role may see them (user.systems is null otherwise, which is "not shown", not "none"). */
-function MhUserSystems({user,onChanged,hs,hsReload}){
-  const vt=user.vtiger; const may=Array.isArray(user.systems); const vtOn=vt&&String(vt.status||'').toLowerCase()==='active';
+/* BT47: the systems the person has an account in, on the account itself. 0001-A004: this product has Microsoft 365 only
+   (the reference app also listed vTiger, HubSpot and the other company systems). */
+function MhUserSystems({user}){
   return <div data-acc-systems="1"><div className="mh-eyebrow" style={{color:'var(--t4)'}}>Systems</div>
     <div className="mh-sysrow" data-acc-sys="m365"><div style={{fontWeight:600}}>Microsoft 365</div>
       <div style={{fontSize:13.5}}><span style={{color:user.enabled?'var(--green)':'var(--red)',fontWeight:600}}>{user.enabled?'Sign-in enabled':'Sign-in blocked'}</span><span className="mh-mut">{' · '+(user.licenses||[]).length+' license(s) · '+(user.groups||[]).length+' group(s)'}</span></div></div>
-    <div className="mh-sysrow" data-acc-sys="vtiger"><div style={{fontWeight:600}}>vTiger</div>
-      <div style={{fontSize:13.5}}>{vt?<span><span className="mh-chip-s">{vt.username}</span> <span style={{color:vtOn?(user.enabled?'var(--green)':'var(--red)'):'var(--t4)',fontWeight:600}}>{vt.status||'unknown'}</span>{!user.enabled&&vtOn&&<span style={{color:'var(--red)'}}> · still active while Microsoft 365 is blocked</span>}{vt.matched_by==='username'&&<span className="mh-mut"> · matched by user name</span>}</span>:<span className="mh-mut">no vTiger user with this email</span>}</div></div>
-    {may&&<MhHubspotRow hs={hs} onReload={hsReload} onChanged={onChanged}/>}
-    {may&&<AccessPersonBody embedded skip={hs&&hs.connected!==false&&hs.ok?['hubspot']:[]} row={{email:user.upn,mail:user.mail,name:user.display_name||user.upn,m365:user.enabled?'enabled':'disabled'}} onChanged={onChanged}/>}
   </div>;
 }
 /* BT133: the person's HubSpot user, found by email (nothing shows when HubSpot is not connected). Adding people to
@@ -3216,12 +3210,6 @@ function MhUserPanel({user,onChanged,go,start,guard}){
   const [methods,setMethods]=React.useState(null); const [tap,setTap]=React.useState(null); const [tapH,setTapH]=React.useState('1');
   React.useEffect(()=>{ if(!tap)return; const t=setTimeout(()=>setTap(null),120000); return ()=>clearTimeout(t); },[tap]);   /* review UI1-14: a new secret is hidden after 2 minutes */
   const name=user.display_name||user.upn;
-  /* BT133: the HubSpot user, when HubSpot is connected and the role may see the company systems */
-  const [hs,setHs]=React.useState(null); const [obHs,setObHs]=React.useState(true);
-  const hsReload=React.useCallback(()=>{ if(!Array.isArray(user.systems)){ setHs(null); return; }
-    api('GET','/access/hubspot?email='+encodeURIComponent(user.upn)+(user.mail?'&mail='+encodeURIComponent(user.mail):'')).then(setHs).catch(e=>setHs({connected:true,ok:false,error:e.message})); },[user.upn,user.mail,Array.isArray(user.systems)]);
-  React.useEffect(()=>{ hsReload(); },[hsReload]);
-  const hsU=hs&&hs.ok&&hs.found?hs.user:null; const hsCan=!!(hsU&&hs.can_edit&&!hsU.super_admin);
   /* BT38: contact information — full edit page, the organization's own fields, and what was changed here */
   const [edit,setEdit]=React.useState(start==='edit'&&C.users); const [hOpen,setHOpen]=React.useState(false); const [hTick,setHTick]=React.useState(0); const cfd=mhCfLoad(user); const P=user.profile||{};
   const editLock=React.useRef(false);   /* BT41: true while a save is in flight, so the page cannot be closed under it */
@@ -3242,7 +3230,7 @@ function MhUserPanel({user,onChanged,go,start,guard}){
   const openP=k=>{ setOpen(k); setBanner(null); setTempPw(null); if(k==='offboard')setObSteps(null); };
   const runOffboard=async()=>{ setBusy('offboard'); setOpen(null); setBanner(null); setObSteps(null);
     try{ const d=await mhPost('m365-user-offboard',Object.assign({id:user.id},obOpts)); const steps=(d.steps||[]).slice();
-      if(hsCan&&obHs){ try{ await api('POST','/access/hubspot/'+hsU.id+'/remove',{confirm:'REMOVE',email:hsU.email,why:'offboarding'}); steps.push({ok:true,step:'Remove HubSpot user'}); }catch(e){ steps.push({ok:false,step:'Remove HubSpot user',error:e.message}); } hsReload(); }
+      
       
       setObSteps(steps); onChanged(); }
     catch(e){ setBanner({tone:'warn',text:e.message||'Offboard failed.'}); } setBusy(null); };
@@ -3302,8 +3290,8 @@ function MhUserPanel({user,onChanged,go,start,guard}){
             <MhCheck checked={obOpts.revokeSessions} onChange={v=>setObOpts(o=>Object.assign({},o,{revokeSessions:v}))}>Revoke active sessions</MhCheck>
             <MhCheck checked={obOpts.removeLicenses} onChange={v=>setObOpts(o=>Object.assign({},o,{removeLicenses:v}))}>Remove all licenses</MhCheck>
             <MhCheck checked={obOpts.removeFromGroups} onChange={v=>setObOpts(o=>Object.assign({},o,{removeFromGroups:v}))}>Remove from all groups</MhCheck>
-            {hsCan&&<span data-ob-hs="1"><MhCheck checked={obHs} onChange={setObHs}>Remove HubSpot user <b>{hsU.email}</b></MhCheck></span>}
-            {hsU&&hsU.super_admin&&<div data-ob-hs-super="1" style={{fontSize:12,color:'var(--red)'}}>HubSpot user <b>{hsU.email}</b> is a Super Admin there: another HubSpot Super Admin removes them in HubSpot.</div>}
+            
+            
             
             
             
@@ -3340,7 +3328,7 @@ function MhUserPanel({user,onChanged,go,start,guard}){
       {cfs.map(f=><MhField key={f.slot} label={f.label} value={P['ext'+f.slot]}/>)}
       <MhField label="Usage location" value={user.usage_location}/><MhField label="Last sign-in" value={mhDateTime(user.last_sign_in,'unknown')}/>
     </div>
-    <MhUserSystems user={user} onChanged={onChanged} hs={hs} hsReload={hsReload}/>
+    <MhUserSystems user={user}/>
     <div className="mh-grid2">
       <div data-acc-lic={(user.licenses||[]).length}><button type="button" className="mh-link mh-eyebrow" data-acc-lic-toggle="1" aria-expanded={licShow} onClick={()=>setLicShow(o=>!o)}>{(licShow?'− Hide licenses':'+ Licenses')+' ('+(user.licenses||[]).length+')'}</button>
         {!licShow&&<div className="mh-mut" style={{fontSize:13,marginTop:2}}>{mhFew((user.licenses||[]).map(l=>l.name))}</div>}
@@ -4659,12 +4647,9 @@ function MhReclaim(){
 }
 
 /* ═══ Microsoft 365 → Licenses → Reconcile ═══ */
-const MH_RECON=[
-  ['status_mismatch','Status mismatch','clay','Matched by email but one side is active and the other is not.'],
-  ['m365_only','M365 only · no active vTiger','clay','Enabled Microsoft 365 account with no active vTiger user — they cannot sign into vTiger.'],
-  ['vtiger_only','vTiger only · no enabled M365','clay','Active vTiger user with no enabled Microsoft 365 account.'],
+const MH_RECON=[   /* 0001-A004: Microsoft 365 ↔ this app (the reference app also matched vTiger) */
   ['licensed_disabled','Reclaimable licenses','forest','Disabled Microsoft 365 accounts that still hold licenses — seats you can reclaim.'],
-  ['access_never_used','Access, never used','muted','Active on both sides but no recorded sign-in to '+'{app} yet.']];
+  ['app_without_m365','Can sign in here, no enabled Microsoft 365 account','clay','Active users of {app} whose email matches no enabled Microsoft 365 account — often someone who left. Check them under Administration → Users.']];
 function MhReconcile(){
   const can=usePerm(); const canLic=can('m365_licenses','edit');
   const [sum,setSum]=React.useState(()=>mhPeek('recon-directory',{mode:'summary'})); const [busy,setBusy]=React.useState(false); const [err,setErr]=React.useState(null);
@@ -4683,30 +4668,27 @@ function MhReconcile(){
     catch(e){ setMsg(e.message||'Bulk reclaim failed.'); } setRBusy(false); };
   const csv=async()=>{ try{ const d=await mhApi('recon-directory'); const cat=d.categories||{}; const rows=['section,name,email,detail1,detail2'];
       MH_RECON.forEach(([k])=>(cat[k]||[]).forEach(it=>rows.push([k,it.display_name||it.user_name||'',it.email||it.upn||'',
-        k==='status_mismatch'?('m365:'+(it.m365_enabled?'enabled':'disabled')):(it.licenses!=null?it.licenses+'lic':(it.status||'')),
-        k==='status_mismatch'?('vtiger:'+it.vtiger_status):(it.vtiger_user||it.last_sign_in||'')].map(mhC).join(','))));
+        it.licenses!=null?it.licenses+'lic':(it.auth_provider||''),
+        it.last_login_at||''].map(mhC).join(','))));
       mhCsv('recon-'+mhToday()+'.csv',rows); }catch(e){ setErr(e.message||'Export failed.'); } };
   const tone=(t,n)=>!n?{color:'var(--t4)',opacity:.5}:{color:t==='forest'?'var(--green)':t==='clay'?'var(--amber)':'var(--t4)'};
   const row=(k,it,i)=>{
-    if(k==='status_mismatch')return <tr key={i}><td>{it.display_name||it.email}</td><td className="mh-mono" style={{fontSize:12}}>{it.email}</td><td>{it.m365_enabled?'enabled':'disabled'}</td><td>{it.vtiger_status} <span className="mh-mut">({it.vtiger_user})</span></td></tr>;
-    if(k==='m365_only')return <tr key={i}><td>{it.display_name||it.email}</td><td className="mh-mono" style={{fontSize:12}}>{it.upn||it.email}</td><td className="mh-mono" style={{fontSize:12}}>{it.licenses} lic</td><td className="mh-mut">{mhDate(it.last_sign_in)}</td></tr>;
-    if(k==='vtiger_only')return <tr key={i}><td>{it.user_name}{it.is_admin?' ★':''}</td><td className="mh-mono" style={{fontSize:12}}>{it.email||'—'}</td><td>{it.status}</td><td className="mh-mono" style={{fontSize:12}}>id {it.id}{it._note?' · '+it._note:''}</td></tr>;
     if(k==='licensed_disabled')return <tr key={i}>{canLic&&<td style={{width:30}}>{it.id&&<input type="checkbox" checked={!!sel[it.id]} onChange={()=>setSel(s=>{ const n=Object.assign({},s); if(n[it.id])delete n[it.id]; else n[it.id]=1; return n; })}/>}</td>}
       <td>{it.display_name||it.email}</td><td className="mh-mono" style={{fontSize:12}}>{it.upn||it.email}</td><td className="mh-mono" style={{fontSize:12,color:'var(--green)'}}>{it.licenses} reclaimable</td><td/></tr>;
-    return <tr key={i}><td>{it.display_name||it.email}</td><td className="mh-mono" style={{fontSize:12}}>{it.email}</td><td className="mh-mono" style={{fontSize:12}}>{it.vtiger_user}</td><td/></tr>; };
+    return <tr key={i}><td>{it.display_name||it.email}</td><td className="mh-mono" style={{fontSize:12}}>{it.email}</td><td style={{fontSize:12.5}}>{it.auth_provider==='local'?'password':'Microsoft sign-in'}</td><td className="mh-mut">{it.last_login_at?'last here '+mhDate(it.last_login_at):'never signed in here'}</td></tr>; };
   return <div>
-    <MhHead eyebrow="Microsoft 365 · vTiger" title="Reconcile" desc={'A cross-check of your Microsoft 365 directory, your vTiger users, and '+appName()+' sign-ins — so accounts that drift out of sync, mismatched statuses, and reclaimable licenses are easy to spot. Reading changes nothing; reclaiming licenses asks first.'}
+    <MhHead eyebrow="Microsoft 365" title="Reconcile" desc={'A cross-check of your Microsoft 365 directory and the people who can sign in to '+appName()+' — disabled accounts that still hold licenses, and users here without an enabled Microsoft 365 account. Reading changes nothing; reclaiming licenses asks first.'}
       right={<>{sum&&sum.cached_at&&<span className="mh-mono mh-mut mh-hide-sm" style={{fontSize:11}}>{(sum.cached?'cached ':'updated ')+mhTime(sum.cached_at)}</span>}
         {sum&&<button className="btn btn-g btn-sm" onClick={csv}>Export CSV</button>}
         <button className="btn btn-p btn-sm" disabled={busy} onClick={()=>load(true)}>{busy?'Running…':'Refresh'}</button></>}/>
     {err&&<MhErr msg={err}/>}
-    {busy&&!sum&&<div className="mh-mut" style={{fontSize:14}}>Reading both directories… the first load pulls your full Microsoft 365 directory and can take a moment; it's cached after that.</div>}
+    {busy&&!sum&&<div className="mh-mut" style={{fontSize:14}}>Reading the directory… the first load pulls your full Microsoft 365 directory and can take a moment; it's cached after that.</div>}
     {sum&&<div style={{display:'flex',flexDirection:'column',gap:18}}>
-      {sum.errors&&(sum.errors.m365||sum.errors.vtiger)&&<div className="mh-err" style={{fontFamily:'inherit'}}>{sum.errors.m365&&<div>Microsoft 365: {sum.errors.m365}</div>}{sum.errors.vtiger&&<div>vTiger: {sum.errors.vtiger}</div>}</div>}
+      {sum.errors&&sum.errors.m365&&<div className="mh-err" style={{fontFamily:'inherit'}}><div>Microsoft 365: {sum.errors.m365}</div></div>}
       <div className="mh-tiles4">
         <span data-rec-tile="m365"><MhTile label="M365 members →" value={c.m365_total||0} onClick={()=>mhGo('m365_accounts','console')}/></span>
-        <span data-rec-tile="vtiger"><MhTile label="vTiger users →" value={c.vtiger_total||0} onClick={()=>mhGo('vtiger_users',null)}/></span>
-        <MhTile label="Status mismatch →" value={c.status_mismatch||0} accent={c.status_mismatch>0?MHC.clay:undefined} onClick={()=>toggle('status_mismatch',true)}/>
+        <span data-rec-tile="app"><MhTile label={appName()+' users →'} value={c.app_total||0} onClick={()=>{ try{ window.__itopsSetPg&&window.__itopsSetPg('users'); }catch(_){ } }}/></span>
+        <MhTile label="No Microsoft 365 account →" value={c.app_without_m365||0} accent={c.app_without_m365>0?MHC.clay:undefined} onClick={()=>toggle('app_without_m365',true)}/>
         <MhTile label="Reclaimable licenses →" value={c.licensed_disabled||0} accent={c.licensed_disabled>0?MHC.forest:undefined} onClick={()=>toggle('licensed_disabled',true)}/>
       </div>
       {!sum.has_sign_in&&<div className="mh-mut" style={{fontSize:12}}>Last sign-in dates are unavailable (requires Entra ID P1) — the report still runs on account status and licenses.</div>}
@@ -4723,7 +4705,7 @@ function MhReconcile(){
               <div className="mh-tw"><table className="tbl mh-t"><tbody>{(its||[]).map((it,i)=>row(k,it,i))}</tbody></table></div></>}
           </div>}
         </div>; })}
-      <div className="mh-mut" style={{fontSize:12}}>Generated {mhDateTime(sum.generated_at,'')}. Matching is by email (M365 mail/UPN ↔ vTiger primary email).</div>
+      <div className="mh-mut" style={{fontSize:12}}>Generated {mhDateTime(sum.generated_at,'')}. Matching is by email (Microsoft 365 mail or sign-in name ↔ the user's email here).</div>
     </div>}
   </div>;
 }
