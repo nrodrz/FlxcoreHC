@@ -1,0 +1,5 @@
+dev/node_modules/
+dev/package.json
+dev/package-lock.json
+config.php
+*-license.php

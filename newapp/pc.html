@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. -->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex"/>
+<title>Protect your computer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231D4D7A'/%3E%3Cpath d='M16 6l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V9z' fill='%23fff'/%3E%3C/svg%3E"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#F4F7FA;--bg2:#fff;--b1:#C7D2DE;--t1:#1D2A35;--t2:#2E3A44;--t3:#46535F;--t4:#8895A2;--accent:#1D4D7A;--ok:#1E7B4E;--warn:#B45309;--bad:#C0392B}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'DM Sans',Arial,sans-serif;background:var(--bg);color:var(--t2);line-height:1.6}
+  .wrap{max-width:780px;margin:0 auto;padding:26px 16px 70px}
+  .card{background:var(--bg2);border:1px solid var(--b1);border-radius:14px;padding:22px 22px 24px;box-shadow:0 1px 3px rgba(20,40,60,.06);margin-bottom:16px}
+  h1{font-size:22px;margin:0 0 4px;color:var(--t1)}
+  h2{font-size:17px;margin:0 0 8px;color:var(--t1)}
+  .sub{color:var(--t4);font-size:13px;margin-bottom:14px}
+  .step{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+  .doc{border:1px solid var(--b1);border-radius:10px;padding:14px 16px;max-height:48vh;overflow:auto;background:#fff;font-size:14px;white-space:pre-wrap}
+  .agree{display:flex;gap:9px;align-items:flex-start;margin:14px 0;font-size:14px}
+  input[type=text],textarea{font:inherit;font-size:15px;padding:9px 12px;border:1px solid var(--b1);border-radius:8px;width:100%;max-width:420px}
+  .btn{font:inherit;font-size:15px;font-weight:600;padding:10px 18px;border-radius:9px;border:none;background:var(--accent);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.ghost{background:#fff;color:var(--t3);border:1px solid var(--b1);font-weight:500}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  code.cmd{display:block;background:#0F1B26;color:#E6EDF3;padding:12px 14px;border-radius:9px;font-size:13px;word-break:break-all;margin:8px 0}
+  pre.script{background:#F1F5F9;border:1px solid var(--b1);border-radius:9px;padding:10px 12px;font-size:12px;white-space:pre-wrap;word-break:break-word;max-height:300px;overflow:auto}
+  ol{padding-left:20px;margin:6px 0}
+  li{margin:4px 0}
+  .ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}.warn{color:var(--warn);font-weight:600}
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 16px;font-size:14px;margin:8px 0}
+  .note{background:#F1F5F9;border:1px solid var(--b1);border-radius:9px;padding:10px 13px;font-size:13.5px;color:var(--t3);margin:10px 0}
+  .state{text-align:center;padding:40px 20px}
+  .state .big{font-size:40px;margin-bottom:8px}
+  .foot{text-align:center;color:var(--t4);font-size:12px;margin-top:22px}
+  .err{color:var(--bad);font-size:13.5px;margin-top:8px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="app"><div class="card"><div class="state"><div class="sub">Loading…</div></div></div></div>
+  <div class="foot">Your personal link. Please do not forward it.</div>
+</div>
+<script src="pc.js?v=3087f982ae"></script>
+</body>
+</html>

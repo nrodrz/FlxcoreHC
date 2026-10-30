@@ -1,0 +1,18 @@
+OpsHub — Install / Update notes (short version — details in READ-ME-FIRST.txt)
+=================================================================================
+FRESH INSTALL
+  1. Upload the zip into your app folder (e.g. /itops/) and Extract it there.
+  2. Open https://YOUR-SITE/path-to-opshub/install/ and complete the wizard. It writes config.php
+     from config.sample.php, creates the tables and runs all database updates.
+     Have the License Hub link code ready if you were given one (optional; it can be added later).
+     Only the main installation (License Hub, run by Indisse-BTS) uses install/hub.php instead.
+  3. Sign in with the admin account you created, then delete / deny the install/ folder.
+
+UPDATE (same full zip)
+  1. Upload + Extract over the existing folder. config.php and your uploads are never
+     included in the package, so nothing of yours is overwritten.
+  2. If the CHANGELOG says "DB UPDATE REQUIRED", run https://YOUR-SITE/path-to-opshub/db-update.php once
+     (or Connection → Maintenance → Database update).
+  3. If it says a new vTiger bridge build is needed, upload vtiger-bridge/opsh-bridge.php to the
+     vTiger web root.
+  4. Hard-refresh; check the build stamp under Connection → General.

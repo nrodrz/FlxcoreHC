@@ -1,0 +1,7 @@
+# OpsHub — API .htaccess
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Deny directory listing
+Options -Indexes

@@ -1,0 +1,173 @@
+<?php
+// © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
+/**
+ * OpsHub — BT138: one table for the simple category lists and one for the access logs.
+ *
+ *   opsh_categories  (kind = kb | doc | sop | cred) replaces opsh_kb_categories, opsh_doc_categories,
+ *                    opsh_sop_categories and opsh_cred_categories. Ticket categories stay in their own table
+ *                    (they carry service levels, routing and ticket types).
+ *   opsh_access_log  (kind = cred | doc) replaces opsh_cred_access_log and opsh_doc_access_log.
+ *   opsh_notification_prefs (never used by any code) is removed.
+ *
+ * The database update (opsh_bt138_merge) moves the rows. It runs on every installation, new or old: the first
+ * installation steps (schema.sql, seed.sql) still create the old lists, and older update steps still write to them,
+ * so the move is always the same path. It can be run again after an interruption: each list's move and the change of
+ * its records' category numbers are recorded together, in one transaction, before the old table is removed.
+ */
+if (!function_exists('opsh_cat_kinds')) {
+    /** kind => [old table, the table whose rows point at it, label] */
+    function opsh_cat_kinds(): array {
+        return [
+            'kb'   => ['opsh_kb_categories',   'opsh_kb_articles', 'Knowledge Base'],
+            'doc'  => ['opsh_doc_categories',  'opsh_documents',   'Documents'],
+            'sop'  => ['opsh_sop_categories',  'opsh_sops',        'SOPs'],
+            'cred' => ['opsh_cred_categories', 'opsh_credentials', 'Credentials'],
+        ];
+    }
+
+    /**
+     * A record's category must be a category of its own list (the database cannot check the kind of a shared table).
+     * $body['category_id'] empty → null. Refusals are in the Audit Log.
+     */
+    function opsh_cat_check(PDO $db, string $kind, array &$body, string $entity, ?int $id = null): void {
+        if (!array_key_exists('category_id', $body)) return;
+        $v = $body['category_id'];
+        if ($v === '' || $v === null || $v === 0 || $v === '0') { $body['category_id'] = null; return; }
+        if (!is_numeric($v) || (int)$v <= 0) { $body['category_id'] = null; return; }
+        $q = $db->prepare('SELECT kind FROM opsh_categories WHERE id = ?'); $q->execute([(int)$v]); $k = $q->fetchColumn();
+        if ($k === $kind) { $body['category_id'] = (int)$v; return; }
+        $lab = opsh_cat_kinds()[$kind][2] ?? $kind;
+        if (function_exists('audit_log')) audit_log('category_refused', $entity, $id, 'Category #' . (int)$v, null, ['why' => $k === false ? 'no such category' : 'not a ' . $lab . ' category']);
+        error_response('That category is not one of the ' . $lab . ' categories.', 400);
+    }
+
+    /** One line in the access log (who opened, copied, rotated … what). Never the value itself. */
+    function opsh_access_log_add(PDO $db, string $kind, int $itemId, int $userId, string $action, string $ip = ''): void {
+        $db->prepare('INSERT INTO opsh_access_log (kind, item_id, user_id, action, ip_address) VALUES (?,?,?,?,?)')
+           ->execute([$kind, $itemId, $userId, mb_substr($action, 0, 20), mb_substr($ip, 0, 45)]);
+    }
+
+    function opsh_bt138_table(PDO $db, string $t): bool {
+        $q = $db->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?'); $q->execute([$t]);
+        return (int)$q->fetchColumn() > 0;
+    }
+    function opsh_bt138_col(PDO $db, string $t, string $c): bool {
+        $q = $db->prepare('SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'); $q->execute([$t, $c]);
+        return (int)$q->fetchColumn() > 0;
+    }
+    /** The foreign keys of $child.category_id that point at $parent (their names differ between installations). */
+    function opsh_bt138_fks(PDO $db, string $child, string $parent): array {
+        $q = $db->prepare('SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? AND REFERENCED_TABLE_NAME = ?');
+        $q->execute([$child, 'category_id', $parent]);
+        return array_values(array_unique($q->fetchAll(PDO::FETCH_COLUMN)));
+    }
+    function opsh_bt138_done(PDO $db, string $key): bool {
+        $q = $db->prepare('SELECT COUNT(*) FROM opsh_settings WHERE skey = ?'); $q->execute(['bt138_' . $key]);
+        return (int)$q->fetchColumn() > 0;
+    }
+
+    /** The database update. Returns what it did, in words. */
+    function opsh_bt138_merge(PDO $db): string {
+        $said = [];
+        $db->exec("CREATE TABLE IF NOT EXISTS opsh_categories (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            kind ENUM('kb','doc','sop','cred') NOT NULL,
+            name VARCHAR(150) NOT NULL,
+            slug VARCHAR(150) NOT NULL DEFAULT '',
+            parent_id INT UNSIGNED DEFAULT NULL,
+            department_id INT UNSIGNED DEFAULT NULL,
+            icon VARCHAR(50) DEFAULT '',
+            color VARCHAR(7) DEFAULT '',
+            retention_days INT DEFAULT NULL,
+            sort_order INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            old_id INT UNSIGNED DEFAULT NULL,
+            old_parent INT UNSIGNED DEFAULT NULL,
+            KEY idx_cat_kind (kind, sort_order),
+            KEY idx_cat_slug (kind, slug),
+            UNIQUE KEY uq_cat_old (kind, old_id),
+            CONSTRAINT fk_categories_department FOREIGN KEY (department_id) REFERENCES opsh_departments(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $db->exec("CREATE TABLE IF NOT EXISTS opsh_access_log (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            kind ENUM('cred','doc') NOT NULL,
+            item_id INT UNSIGNED NOT NULL,
+            user_id INT UNSIGNED NOT NULL,
+            action VARCHAR(20) NOT NULL,
+            ip_address VARCHAR(45) DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_access_item (kind, item_id, created_at),
+            KEY idx_access_when (created_at),
+            CONSTRAINT fk_access_log_user FOREIGN KEY (user_id) REFERENCES opsh_users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // ── the four category lists
+        $hasOld = opsh_bt138_col($db, 'opsh_categories', 'old_id');
+        foreach (opsh_cat_kinds() as $kind => [$old, $child, $label]) {
+            if (!opsh_bt138_table($db, $old)) continue;
+            if (!$hasOld) throw new RuntimeException('opsh_categories has no old_id column while ' . $old . ' still exists — restore the backup and run the update again.');
+            $c = fn($n) => opsh_bt138_col($db, $old, $n);
+            $sel = 'SELECT ?, o.name, ' . ($c('slug') ? 'o.slug' : "''") . ', ' . ($c('department_id') ? 'o.department_id' : 'NULL') . ', ' . ($c('icon') ? "COALESCE(o.icon,'')" : "''") . ', '
+                 . ($c('color') ? "COALESCE(o.color,'')" : "''") . ', ' . ($c('retention_days') ? 'o.retention_days' : 'NULL') . ', COALESCE(o.sort_order,0), '
+                 . ($c('created_at') ? 'COALESCE(o.created_at, NOW())' : 'NOW()') . ', o.id, ' . ($c('parent_id') ? 'o.parent_id' : 'NULL');
+            // 1. copy the rows not copied yet (an earlier, interrupted run may have copied some)
+            $q = $db->prepare("INSERT INTO opsh_categories (kind, name, slug, department_id, icon, color, retention_days, sort_order, created_at, old_id, old_parent) $sel
+                               FROM `$old` o WHERE NOT EXISTS (SELECT 1 FROM opsh_categories n WHERE n.kind = ? AND n.old_id = o.id)");
+            $q->execute([$kind, $kind]); $copied = $q->rowCount();
+            // 2. the records stop pointing at the old table
+            if (opsh_bt138_table($db, $child)) foreach (opsh_bt138_fks($db, $child, $old) as $fk) $db->exec("ALTER TABLE `$child` DROP FOREIGN KEY `$fk`");
+            // 3. new numbers for the records' categories and the parents — once, recorded in the same transaction
+            if (!opsh_bt138_done($db, $kind)) {
+                $db->beginTransaction();
+                try {
+                    $moved = 0;
+                    if (opsh_bt138_table($db, $child) && opsh_bt138_col($db, $child, 'category_id')) {
+                        $u = $db->prepare("UPDATE `$child` r LEFT JOIN opsh_categories n ON n.kind = ? AND n.old_id = r.category_id SET r.category_id = n.id WHERE r.category_id IS NOT NULL");
+                        $u->execute([$kind]); $moved = $u->rowCount();
+                    }
+                    $db->prepare('UPDATE opsh_categories c LEFT JOIN opsh_categories p ON p.kind = c.kind AND p.old_id = c.old_parent SET c.parent_id = p.id WHERE c.kind = ? AND c.old_parent IS NOT NULL')->execute([$kind]);
+                    $db->prepare('INSERT INTO opsh_settings (skey, sval) VALUES (?, ?)')->execute(['bt138_' . $kind, date('Y-m-d H:i:s')]);
+                    $db->commit();
+                } catch (Throwable $e) { if ($db->inTransaction()) $db->rollBack(); throw $e; }
+                $said[] = $label . ': ' . $copied . ' categor' . ($copied === 1 ? 'y' : 'ies') . ', ' . $moved . ' record' . ($moved === 1 ? '' : 's') . ' renumbered';
+            }
+            // 4. the records point at the new table; the old list goes
+            if (opsh_bt138_table($db, $child) && !opsh_bt138_fks($db, $child, 'opsh_categories'))
+                $db->exec("ALTER TABLE `$child` ADD CONSTRAINT `fk_{$kind}_category` FOREIGN KEY (category_id) REFERENCES opsh_categories(id) ON DELETE SET NULL");
+            $db->exec("DROP TABLE `$old`");
+        }
+        // the numbers of the old lists are no longer needed once every list has moved
+        $left = array_filter(opsh_cat_kinds(), fn($k) => opsh_bt138_table($db, $k[0]));
+        if (!$left && $hasOld) {
+            $db->exec('ALTER TABLE opsh_categories DROP INDEX uq_cat_old, DROP COLUMN old_id, DROP COLUMN old_parent');
+            $db->exec("DELETE FROM opsh_settings WHERE skey IN ('bt138_kb','bt138_doc','bt138_sop','bt138_cred')");
+        }
+
+        // ── the two access logs (rows kept: they are history; nothing else points at them)
+        foreach (['cred' => ['opsh_cred_access_log', 'credential_id'], 'doc' => ['opsh_doc_access_log', 'document_id']] as $kind => [$old, $col]) {
+            if (!opsh_bt138_table($db, $old)) continue;
+            if (!opsh_bt138_done($db, 'log_' . $kind)) {
+                $db->beginTransaction();
+                try {
+                    $q = $db->prepare("INSERT INTO opsh_access_log (kind, item_id, user_id, action, ip_address, created_at)
+                                       SELECT ?, o.`$col`, o.user_id, o.action, COALESCE(o.ip_address,''), o.created_at FROM `$old` o ORDER BY o.id");
+                    $q->execute([$kind]); $n = $q->rowCount();
+                    $db->prepare('INSERT INTO opsh_settings (skey, sval) VALUES (?, ?)')->execute(['bt138_log_' . $kind, date('Y-m-d H:i:s')]);
+                    $db->commit();
+                } catch (Throwable $e) { if ($db->inTransaction()) $db->rollBack(); throw $e; }
+                $said[] = ($kind === 'cred' ? 'Credential' : 'Document') . ' access log: ' . $n . ' line' . ($n === 1 ? '' : 's');
+            }
+            $db->exec("DROP TABLE `$old`");
+            $db->prepare('DELETE FROM opsh_settings WHERE skey = ?')->execute(['bt138_log_' . $kind]);
+        }
+
+        // ── never used by any code
+        if (opsh_bt138_table($db, 'opsh_notification_prefs')) { $db->exec('DROP TABLE opsh_notification_prefs'); $said[] = 'unused table opsh_notification_prefs removed'; }
+
+        // Recorded on an installation that already has a history; during a new installation (before "system installed")
+        // there is nothing of the organization's to account for, and its history starts with the installation.
+        $hasHistory = false; try { $hasHistory = (int)$db->query("SELECT COUNT(*) FROM opsh_audit_log WHERE action = 'system_installed'")->fetchColumn() > 0; } catch (Throwable $e) {}
+        if ($said && $hasHistory && function_exists('audit_log')) { try { audit_log('database_merge', 'database', null, 'Tables merged (database update BT138)', null, ['Done' => implode('; ', $said)]); } catch (Throwable $e) {} }
+        return $said ? 'Tables merged: ' . implode('; ', $said) . '.' : 'Tables already merged.';
+    }
+}

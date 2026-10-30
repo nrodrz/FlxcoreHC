@@ -1,0 +1,72 @@
+# OpsHub — Root .htaccess (works at domain root OR in a subfolder like /itops/)
+Options -Indexes
+DirectoryIndex index.html index.php
+
+# --- Never cache the app shell / HTML entry files ---
+# Without this, cPanel/LiteSpeed or a CDN can keep serving an OLD index.html
+# after you upload an update, making fixes look like they "didn't take."
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+<IfModule LiteSpeed>
+  # Disable LiteSpeed cache for the WHOLE app, including the /itops/ directory
+  # request (which has no .html in the URL). This is what stops old builds from
+  # being served after an update — no Cache Manager access needed.
+  RewriteEngine On
+  CacheLookup public off
+  RewriteRule .* - [E=Cache-Control:no-cache,E=cache-control:no-cache]
+</IfModule>
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# --- Pass the Authorization header through to PHP ---
+# cPanel/LiteSpeed/FastCGI often strip "Authorization"; without this the API
+# never sees the login token and returns "Authentication required".
+RewriteCond %{HTTP:Authorization} ^(.+)$
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
+
+# Force HTTPS (uncomment in production once your certificate is active)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# API: send non-file /api/... requests to the front controller
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^api/ api/index.php [QSA,L]
+
+# Serve real files and directories as-is (assets, uploads, installer)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# SPA fallback: client-side routes load the app shell
+RewriteRule ^ index.html [L]
+</IfModule>
+
+# Some FastCGI setups need this form instead/also (harmless if unused)
+<IfModule mod_setenvif.c>
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    # Always load the app HTML fresh so updates aren't masked by browser cache
+    <FilesMatch "\.html?$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+# Deny access to sensitive files
+<FilesMatch "\.(sql|md|env|log|sh)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^config(\.sample)?\.php$">
+    Require all denied
+</FilesMatch>

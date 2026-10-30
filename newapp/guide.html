@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<!-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. -->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Help Center</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231D4D7A'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#FFFFFF;--panel:#FFFFFF;--t1:#2E3A44;--t2:#56636E;--t3:#7A8696;--t4:#9AA6B2;--div:#ECEFF3;--accent:#1D4D7A;--accentD:#0B2A4A;--accentL:#EAF1F6;--amber:#C8932B;--font:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg)}
+body{font-family:var(--font);color:var(--t1);-webkit-font-smoothing:antialiased;line-height:1.5}
+.wrap{max-width:920px;margin:0 auto;min-height:100vh;background:var(--panel)}
+.hero{background:linear-gradient(135deg,#1D4D7A,#8FB3C7);color:#fff;padding:22px 20px 40px}
+.hero img.logo{max-height:30px;max-width:150px;object-fit:contain;margin-bottom:10px;display:block}
+.hero h1{font-size:21px;font-weight:800;letter-spacing:-.2px}
+.hero .sub{font-size:13px;opacity:.88;margin-top:5px;max-width:90%}
+.searchwrap{padding:0 16px;margin-top:-22px;position:relative;z-index:2}
+.search{position:relative}
+.search input{width:100%;padding:13px 14px 13px 42px;border:1px solid #E3E8EE;border-radius:11px;font-family:var(--font);font-size:14.5px;outline:none;background:#fff;box-shadow:0 6px 18px rgba(20,40,70,.10)}
+.search input:focus{border-color:var(--accent)}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.45}
+.catlist{margin-top:6px}
+.catrow{width:100%;display:flex;align-items:center;gap:10px;background:#fff;border:0;border-bottom:1px solid var(--div);padding:16px 16px;cursor:pointer;font-family:var(--font);text-align:left;box-shadow:inset 0 0 0 0 var(--accent);transition:background .12s,box-shadow .12s}
+.catrow:hover{background:#F7F9FC}
+.catrow .catname{flex:1;font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--t1)}
+.catrow .cnt{min-width:26px;height:22px;display:inline-flex;align-items:center;justify-content:center;padding:0 8px;border:1.5px solid #D3DBE4;border-radius:999px;font-size:12px;font-weight:600;color:var(--t3)}
+.catrow .chev{color:#B7C0CB;font-size:20px;line-height:1;transition:transform .16s;transform:rotate(0deg)}
+.catrow.open{background:var(--accentL);box-shadow:inset 3px 0 0 var(--accent)}
+.catrow.open .catname{color:var(--accent)}
+.catrow.open .cnt{border-color:#BcD4F2;color:var(--accent)}
+.catrow.open .chev{transform:rotate(90deg);color:var(--accent)}
+.topics{background:#fff;border-bottom:1px solid var(--div)}
+.toprow{width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #F2F5F8;padding:12px 16px 12px 24px;font-family:var(--font);font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:8px}
+.toprow:hover{background:#F7F9FC}
+.toprow:before{content:'';width:6px;height:6px;border-radius:50%;background:#C6D0DB;flex:0 0 auto}
+.toprow.open{color:var(--accent)}
+.toprow.open:before{background:var(--accent)}
+.tag{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--accent);background:var(--accentL);padding:2px 7px;border-radius:6px}
+.topbody{padding:2px 18px 15px 30px}
+.topbody p{font-size:13px;color:var(--t2);margin:7px 0}
+.topbody h4{font-size:13px;font-weight:700;color:var(--t1);margin-top:9px}
+.topbody ul,.topbody ol{margin:7px 0 7px 18px}
+.topbody li{font-size:13px;color:var(--t2);margin:5px 0}
+.topbody .tip{font-size:12px;color:#6b541a;background:#fbf3e0;border:1px solid #efe0bd;border-radius:9px;padding:9px 11px;margin-top:9px}
+.topbody .tip b{color:#5a4615}
+.topbody .warn,.rcard .warn{font-size:12px;color:#7a2b21;background:#fdecea;border:1px solid #f3c6c0;border-radius:9px;padding:9px 11px;margin-top:9px}
+.topbody .warn b,.rcard .warn b{color:#6b1f17}
+.topbody .qa,.rcard .qa{margin-top:10px;border:1px solid var(--b1,#dfe5ea);border-radius:9px;padding:9px 11px;background:#f6f8fa}
+.qa .qah{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#697785;margin-bottom:4px}
+.qa .qai{padding:6px 0;border-top:1px dashed #d8dee4}.qa .qai:first-of-type{border-top:none}
+.qa .q{font-size:12.5px;font-weight:600;color:#1f2a33}.qa .a{font-size:12.5px;color:#46525c;margin-top:2px}
+.topbody .shot{font-size:12px;font-style:italic;color:var(--t4);background:#eef2f6;border:1px dashed #aab4be;border-radius:9px;padding:13px;margin:9px 0;text-align:center}
+.results{padding:6px 0}
+.rcard{padding:14px 16px;border-bottom:1px solid var(--div)}
+.rcat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t4);margin-bottom:3px}
+.rtitle{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.rcard p{font-size:13px;color:var(--t2);margin:6px 0}
+.rcard ul,.rcard ol{margin:6px 0 6px 18px}.rcard li{font-size:13px;color:var(--t2);margin:4px 0}
+.rcard .tip{font-size:12px;color:#6b541a;background:#fbf3e0;border:1px solid #efe0bd;border-radius:9px;padding:8px 10px;margin-top:8px}
+.rcard .shot{font-size:12px;font-style:italic;color:var(--t4);background:#eef2f6;border:1px dashed #aab4be;border-radius:8px;padding:11px;margin:8px 0;text-align:center}
+.rolenote{padding:0 16px 4px;font-size:12px;color:var(--t3)}.rolenote:empty{display:none}.rolenote a{color:var(--accent);font-weight:600}
+/* BT50: visual guides given to a role or a person, and the viewer they open in */.vis{margin:4px 16px 12px;border:1px solid var(--div);border-radius:12px;padding:12px 14px;background:linear-gradient(180deg,#F4F8FC,#fff)}.vis[hidden]{display:none}.vish{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}.vish b{font-size:14px;color:var(--t1)}.vish span{font-size:12px;color:var(--t3)}.vish a{margin-left:auto;font-size:12px;color:var(--accent);font-weight:600}.visl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}.visc{display:flex;flex-direction:column;gap:4px;text-align:left;border:1px solid var(--div);border-radius:10px;background:#fff;padding:10px 12px;cursor:pointer;font:inherit}.visc:hover{border-color:var(--accent)}.visc b{font-size:13.5px;color:var(--t1)}.visc span{font-size:12px;color:var(--t2);line-height:1.45}.visc i{font-style:normal;font-size:11.5px;font-weight:700;color:var(--accent)}.vview{position:fixed;inset:0;z-index:50;background:rgba(10,24,40,.55);display:flex;flex-direction:column;padding:14px}.vview[hidden]{display:none}.vbar{display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px 12px 0 0;padding:9px 14px;border-bottom:1px solid var(--div)}.vbar b{flex:1;font-size:14px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vbar button{border:1px solid var(--div);background:#fff;border-radius:8px;padding:6px 11px;font:600 12.5px inherit;cursor:pointer;color:var(--t1)}.vframe{flex:1;width:100%;border:0;background:#fff;border-radius:0 0 12px 12px}.vframe.dark{background:#0F1720}.vtheme{display:inline-flex;border:1px solid var(--div);border-radius:8px;overflow:hidden;margin-left:auto}.vtheme button{border:0;border-radius:0;margin:0;padding:5px 11px;background:transparent;font:inherit;font-size:13px;cursor:pointer}.vtheme button[aria-pressed="true"]{background:#2F6FAE;color:#fff}.vmsg{background:#fff;border-radius:0 0 12px 12px;padding:22px;color:var(--t2);font-size:14px}@media(max-width:600px){.vview{padding:0}.vbar{border-radius:0}.vframe,.vmsg{border-radius:0}}
+.rnone{padding:26px 16px;text-align:center;color:var(--t3);font-size:14px}
+.foot{padding:16px;font-size:12px;color:var(--t4)}
+.foot a{color:var(--accent);font-weight:600;text-decoration:none}
+.tabs{display:flex;gap:8px;margin-bottom:14px}.tab{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.85);background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.20)}.tab:hover{background:rgba(255,255,255,.26)}.tab.active{background:#fff;color:var(--accent)}.tab.active:hover{background:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero"><div class="tabs"><a class="tab active" href="guide.html">Help Center</a><a class="tab" href="help.html">Knowledge Base</a></div><img id="logo" class="logo" style="display:none"/><h1 id="appname">IT Help Center</h1><div class="sub">Find answers, learn features, and get the most from the app.</div></div>
+  <div class="searchwrap"><div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="q" placeholder="Search help topics..." autocomplete="off"/></div></div>
+  <div id="rolenote" class="rolenote"></div>
+  <div class="vis" id="vis" hidden><div class="vish"><b>Visual guides</b><span>Interactive pages given to your role or to you.</span><a href="#" id="vismanage" hidden>Who sees them…</a></div><div class="visl" id="visl"></div></div>
+  <div class="vview" id="vview" hidden role="dialog" aria-modal="true" aria-labelledby="vtitle"><div class="vbar"><b id="vtitle"></b><span class="vtheme" role="group" aria-label="Theme of the page"><button type="button" data-vtheme="light" aria-pressed="true">Light</button><button type="button" data-vtheme="dark" aria-pressed="false">Dark</button></span><button type="button" id="vfull">Full screen</button><button type="button" id="vclose">✕ Close</button></div><div id="vbody" style="flex:1;display:flex;flex-direction:column;min-height:0"></div></div>
+  <div class="catlist" id="list"></div>
+  <div class="results" id="results" style="display:none"></div>
+  <div class="foot" id="foot"></div>
+</div>
+<script src="guide.js?v=cff86d7fda"></script>
+</body>
+</html>

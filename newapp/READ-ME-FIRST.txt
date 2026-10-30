@@ -1,0 +1,84 @@
+OpsHub — READ ME FIRST
+======================
+OpsHub is a self-hosted IT Operations & Knowledge platform:
+service desk, knowledge base, SOPs, credential vault, contracts & vendors, equipment,
+onboarding / offboarding with Microsoft 365 + vTiger, standards & audits, monitoring.
+Stack: PHP 8.2 + MySQL / MariaDB on cPanel (LiteSpeed/Apache). The whole UI is index.html.
+
+ONE PACKAGE FOR INSTALL AND UPDATE
+  Every release ships as a FULL install zip. The same zip is used for a brand-new
+  install AND for updating an existing one:
+    • It never contains config.php (only config.sample.php), so unzipping over a live
+      install can't overwrite your configuration.
+    • It never contains files inside public/uploads/*/, so uploads are never touched.
+
+WHAT'S INSIDE
+  index.html            The app (React, compiled in the browser)
+  guide.html / help.html Help Center + public Knowledge Base
+  form.html submit.html sign.html   Public form, request page and e-signature page
+  api/                  REST API — api/index.php routes to api/routes/<name>.php; helpers in api/lib/
+  cron-sla.php          Scheduled work (SLA, reminders, digests, scheduled offboarding, access re-check…)
+  cron-mail.php         Mailbox → tickets
+  db-update.php         Applies database updates (also: Connection → Maintenance → Database update)
+  install/              Web installer (locks itself once installed): index.php for an organization,
+                        hub.php for the main installation (License Hub)
+  vtiger-bridge/        Bridge file to deploy on the vTiger server (see its READ-ME.txt)
+  sql/                  schema.sql + seed.sql (used by the installer)
+  config.sample.php     Template the installer turns into config.php
+  CHANGELOG.txt         What changed in every build (newest first)
+  API-INTEGRATION-GUIDE.md  For external systems (API keys, webhooks); opened from the app
+
+  Guides, references and graphics are NOT in this package: they are in the support files pack
+  (…-Support-Files-<date>-<build>.zip): the Word guides, the data dictionary, the infographics, and
+  under Reference/ the architecture & audit reference (OPSHUB-AUDIT.md), the Intune & Defender setup,
+  the security validation, the License Hub runbook and the owner's standards.
+
+FRESH INSTALL (about 5 minutes)
+  1. cPanel: create the folder/subdomain (with SSL) and an EMPTY MySQL database + user.
+  2. Upload the zip into the app folder and Extract (files must sit at the folder root).
+  3. Open https://YOUR-SITE/install/ and follow the wizard (database → admin → optional
+     Microsoft 365 sign-in → branding → optional License Hub link code → finalize). It writes
+     config.php, creates the tables and runs every database update.
+     The MAIN installation (the License Hub, only one, run by Indisse-BTS) uses
+     https://YOUR-SITE/install/hub.php instead: the same steps plus the hub's public address,
+     its two keys (download both backups on the last page) and its own license.
+     A licensed installation removes install/hub.php when its installer finishes; updates never put it back.
+  4. Sign in. Then delete (or deny) the install/ folder — it is locked anyway once installed.
+  5. Check https://YOUR-SITE/api/health → {"status":"ok","database":true}
+
+UPDATE AN EXISTING INSTALL
+  1. Upload the new zip into the SAME folder and Extract, overwriting files.
+  2. If the CHANGELOG entry says "DB UPDATE REQUIRED": open https://YOUR-SITE/db-update.php
+     once (signed in as a Super Admin) — or Connection → Maintenance → Database update.
+     It is safe to run any number of times; it only applies what is missing.
+  3. If the CHANGELOG says a new vTiger bridge build is needed, upload
+     vtiger-bridge/opsh-bridge.php to the vTiger web root (same secret, same URL).
+  4. Hard-refresh the browser. The build stamp (Connection → General → Version) must match
+     the CHANGELOG entry.
+
+SCHEDULED JOBS (cPanel → Cron Jobs) — recommended
+  */5 * * * *  php /home/USER/public_html/itops/cron-mail.php
+  */5 * * * *  php /home/USER/public_html/itops/cron-sla.php
+  0 7 * * 1    php /home/USER/public_html/itops/cron-sla.php digest
+  Integration Audit (BT16) — ONLY after a collector has been approved and enabled in the app:
+  * * * * *    php /home/USER/public_html/itops/cron-audit.php
+  Without cron, the in-app scheduler does the same work every few minutes — but only while
+  someone has OpsHub open. Scheduled offboarding at an exact time needs cron.
+
+SECURITY CHECKLIST
+  - https://YOUR-SITE/config.php and https://YOUR-SITE/sql/ must return 403.
+  - Delete / deny install/ after setup (the installer refuses to run once installed).
+  - Uploads can't execute PHP (public/uploads/.htaccess).
+  - Keep the vTiger bridge secret in opsh-bridge.secret (600, web access denied) and rotate
+    it with "Rotate secret…" (People Ops → OB Templates → vTiger provisioning).
+
+WORKING WITH AI ASSISTANTS (ChatGPT, Claude Code)
+  Claude (in the IT Ops project) is the only one who changes the code. Suggestions from
+  ChatGPT or Claude Code are welcome and are reviewed before they're built. When you ask
+  either of them for help:
+    1. Give them OPSHUB-AUDIT.md (support files pack, Reference/) first (architecture, data model, permissions, conventions,
+       "gotchas", processes) and the relevant CHANGELOG entries.
+    2. Ask for findings or proposals, not edits — with the file / line, the scenario that
+       breaks, and the suggested fix.
+    3. Bring the suggestions back here; they are verified, implemented, tested and shipped
+       as the next full install zip with a CHANGELOG entry.

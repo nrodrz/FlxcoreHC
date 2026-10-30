@@ -1,0 +1,11 @@
+NewApp — CHANGELOG
+Microsoft 365 Administration. Newest first.
+Build IDs match the stamp shown under the app and in the browser console.
+
+========================================================================
+0001-A001 — Starting code (10/30/2026), made by make-ms-app.py from the reference app's install package
+            [Fresh installation only. Press Ctrl+F5 after uploading.]
+  - Modules of this product: Microsoft 365, Onboarding & offboarding, Security assessment, Teams app; the platform (sign-in, users, roles, settings,
+    Audit Log, Event Log, scheduled jobs, Help, About & ownership, Terms of Use, licensing, updates, data dictionary,
+    Deleted items, API keys) as in the reference app.
+  - See docs/NEW-APP-SPEC.md for what comes next.

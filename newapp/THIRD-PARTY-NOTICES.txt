@@ -1,0 +1,24 @@
+OpsHub — third-party components
+================================
+OpsHub is proprietary software (see LICENSE.txt). It ships with the open-source
+components below, each under its own license. The full license texts are in
+vendor/LICENSES.txt and public/teams/TEAMS-JS-LICENSE.txt. Each component remains the property of its authors.
+
+Component              Version     License                  Files
+---------------------  ----------  -----------------------  -------------------------------------------
+React                  18.3.1      MIT                      vendor/react.production.min.js
+ReactDOM               18.3.1      MIT                      vendor/react-dom.production.min.js
+DOMPurify              3.0.11      Apache-2.0 or MPL-2.0    vendor/purify.min.js
+QRCode.js              1.0.0       MIT                      vendor/qrcode.min.js
+html2canvas            1.4.1       MIT                      vendor/html2canvas.min.js
+PDF.js (pdfjs-dist)    3.11.174    Apache-2.0               vendor/pdfjs/
+three.js               r128        MIT                      vendor/three.min.js
+Microsoft Teams JS     2.57.0      MIT                      public/teams/MicrosoftTeams.min.js
+  (@microsoft/teams-js)                                     (license: public/teams/TEAMS-JS-LICENSE.txt)
+World map shapes       2.0.2       ISC (data: public        app.js (SP_WORLD: country outlines of the
+  (world-atlas, Natural            domain, Natural Earth)    Server performance map, converted to SVG paths)
+  Earth 1:110m)
+Country names          7.11.0      MIT                      api/lib/Countries.php (English names by code)
+  (i18n-iso-countries)
+
+The same list is shown in the app under Administration → About & ownership.
