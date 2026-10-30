@@ -3,6 +3,36 @@ Microsoft 365 Administration. Newest first.
 Build IDs match the stamp shown under the app and in the browser console.
 
 ========================================================================
+0001-A003 — Screens of this product only (10/30/2026)
+            [DB update: no. Press Ctrl+F5 after uploading.]
+  - Menu: Dashboard, Microsoft 365, Administration, Logs & Integrations. The 31 pages of the removed modules (tickets,
+    cases, calendar, knowledge base, SOPs, equipment, credentials, contracts, vendors, invoices, servers, budget, vTiger
+    users, announcements, scorecard, standards, integration audit…) are gone from the screens, with their titles, icons
+    and links. An old link to one of them opens without an error.
+  - Dashboard: onboarding at a glance (active, overdue) and a tile for each Microsoft 365 area the person may open.
+  - Top search: pages, users and onboarding templates (it searched tickets, KB, SOPs, vendors and contracts).
+  - Settings: "Company systems" became "Microsoft 365" (connection, permissions, sign-in with Microsoft, Teams app, all
+    on the tab itself). "SLA & Hours" removed; Business hours moved to General (they decide when Microsoft 365 pages are
+    read ahead of time). Email: outgoing mail only (the email-to-ticket intake and the ticket emails removed); the
+    in-app scheduler switch is explained for what it does. Help visuals tab removed (both visuals were about removed
+    modules).
+  - Roles & Permissions: only this product's permissions; new presets for a Microsoft 365 team (Read-only, Service desk
+    (Microsoft 365), Manager, Auditor, IT Administrator).
+  - Onboarding and offboarding: no vTiger user on the Onboard form or in templates; no equipment check-in step; the
+    vTiger record no longer shows on a person. Security incidents and risky people no longer make tickets; the posture
+    plan has no "Make it a task" choice (it made a ticket). Integrations: API key scopes and webhook events of this
+    product only. Bulk Import: users. Teams activity feed: no announcement or ticket switches.
+  - Help Center: 97 topics in 4 categories (was 233 in 11): the topics of the removed modules taken out.
+  - The "not connected" message points to Settings → Microsoft 365 → Connection (it named the old place).
+  - Found along the way: the business hours editor lived on the SLA tab; the server allowed it only with the SLA
+    permission. It is now Settings · General.
+  - Left for 0001-A004 (with the server): the onboarding engine's vTiger task types and reconcile columns, the server
+    side of the removed features (routes, libraries, cron steps, email templates), the Help visual files.
+    Left for the Help Center build: the three quick starts (end user, agent, admin) still describe tickets.
+  - Tests: dev/check-app.mjs 27 checks (was 15): Roles lists and presets, dashboard, every Settings tab, search, a
+    user record, the Help Center categories, old links.
+
+========================================================================
 0001-A002 — Name ITOps, itops_ prefix, root-folder package (10/30/2026)
             [Fresh installation only (no installation exists yet). Press Ctrl+F5 after uploading.]
   - Product name ITOps (was the placeholder NewApp): About & ownership, page titles, installer, emails.

@@ -40,6 +40,38 @@ try {
   for (const p of pages) { const b = errs.length; await pg.evaluate(x => { location.hash = x; }, p); await pg.waitForTimeout(600); if (errs.length > b) bad.push(p + ': ' + errs.slice(b).join(' | ').slice(0, 160)); }
   ok('every page id opened (' + pages.length + '): no script error', bad.length === 0, bad.join(' || '));
   ok('no server error (5xx) while opening them, except the reference app\'s known "Microsoft 365 is not connected" answers', s5.length === 0, s5.slice(0, 8).join(' | ')); console.log('known (reference app answers 500 when Microsoft 365 is not connected):', [...known].join(', '));
+  // 0001-A003: the screens hold only this product
+  const goneTxt = /Tickets?\b|Knowledge Base|SOPs?\b|Credentials? vault|Contracts?\b|Vendors?\b|Equipment|vTiger|Announcements?\b|SLA\b|Company systems|Server Guardian|IT Budget|Scorecard|Integration Audit/;
+  const shape = await pg.evaluate(() => ({ perms: PERM_GROUPS.map(g => g.label + ': ' + g.mods.map(m => m[0] + ' ' + m[1]).join(', ')).join(' | '),
+    presets: JSON.stringify(PERM_PRESETS.map(p => [p.name, p.desc, Object.keys(p.perms)])) }));
+  ok('Roles editor: only this product\'s permissions', !goneTxt.test(shape.perms) && !/\b(tickets|kb|sops|creds|contracts|vendors|assets|vtiger_users|categories|forms|sla_cfg|access|announcements|guardian)\b/.test(shape.perms), shape.perms.slice(0, 300));
+  ok('Roles editor: the presets name only this product\'s permissions', !/"(tickets|kb|kb_assist|sops|creds|contracts|vendors|assets|calendar|reports|scorecard|standards|categories|forms|guardian|provision_onboard|vtiger_users|sla_cfg|integration_audit)"/.test(shape.presets), shape.presets.slice(0, 300));
+  await pg.evaluate(() => { location.hash = 'dashboard'; }); await pg.waitForTimeout(900);
+  const dash = await pg.evaluate(() => ({ areas: document.querySelectorAll('[data-dash-area]').length, text: (document.querySelector('[data-dashboard]') || document.body).innerText }));
+  ok('dashboard: the Microsoft 365 areas (' + dash.areas + '), nothing of the removed modules', dash.areas >= 8 && !goneTxt.test(dash.text), dash.text.slice(0, 200));
+  await pg.evaluate(() => { location.hash = 'settings'; }); await pg.waitForTimeout(900);
+  const tabs = await pg.evaluate(() => [...document.querySelectorAll('[data-set-tab]')].map(t => [t.getAttribute('data-set-tab'), t.innerText]));
+  const tabErr = [], tabText = {};
+  for (const [id] of tabs) { const b = errs.length; await pg.click('[data-set-tab="' + id + '"]'); await pg.waitForTimeout(700); tabText[id] = await pg.evaluate(() => document.querySelector('.conn-grid').innerText); if (errs.length > b) tabErr.push(id + ': ' + errs.slice(b).join(' | ').slice(0, 160)); }
+  ok('Settings: every tab opens (' + tabs.map(t => t[1]).join(', ') + ') with no script error', tabs.length >= 8 && tabErr.length === 0, tabErr.join(' || '));
+  ok('Settings: a Microsoft 365 tab, no SLA & Hours or Company systems tab', tabs.some(t => t[0] === 'systems' && t[1] === 'Microsoft 365') && !tabs.some(t => /SLA|Company systems/.test(t[1])), JSON.stringify(tabs));
+  ok('Settings → Microsoft 365: connection, permissions, sign-in and Teams app', /Connection/.test(tabText.systems || '') && /Permissions/.test(tabText.systems || '') && /Teams app/.test(tabText.systems || ''), (tabText.systems || '').slice(0, 200));
+  const badTab = Object.entries(tabText).filter(([k, v]) => /Email-to-Ticket|help-desk mailbox|SLA clock|Priority targets|vTiger/.test(v)).map(([k]) => k);
+  ok('Settings: no card of a removed module (ticket intake, SLA, vTiger)', badTab.length === 0, badTab.join(', '));
+  ok('Settings → General: business hours', /Business hours/.test(tabText.general || ''), (tabText.general || '').slice(0, 120));
+  await pg.fill('input.topsearch', 'Ada'); await pg.waitForTimeout(1200);
+  const sr = await pg.evaluate(() => [...document.querySelectorAll('.searchdd > div')].map(d => d.innerText.replace(/\s+/g, ' ')));
+  await pg.fill('input.topsearch', 'Settings'); await pg.waitForTimeout(1200);
+  const sr2 = await pg.evaluate(() => [...document.querySelectorAll('.searchdd > div')].map(d => d.innerText.replace(/\s+/g, ' ')));
+  await pg.fill('input.topsearch', '');
+  ok('search: finds a user and a page', sr.some(x => /user/i.test(x) && /Ada Admin/.test(x)) && sr2.some(x => /page/i.test(x) && /Settings/.test(x)), JSON.stringify([sr, sr2]).slice(0, 300));
+  { const b = errs.length; await pg.evaluate(() => { location.hash = 'users'; }); await pg.waitForTimeout(1200); await pg.click('table tbody tr'); await pg.waitForTimeout(900);
+    const v = await pg.evaluate(() => document.body.innerText); ok('Users: a user opens with its details', errs.length === b && /admin@example\.com/.test(v), errs.slice(b).join(' | ').slice(0, 200)); }
+  { const b = errs.length; const seen = {}; for (const h of ['tickets', 'kb', 'announcements', 'vtiger_users', 'access']) { await pg.evaluate(x => { location.hash = x; }, h); await pg.waitForTimeout(600); seen[h] = await pg.evaluate(() => (document.querySelector('.main') || document.body).innerText.replace(/\s+/g, ' ').slice(0, 80)); }
+    ok('old links to removed pages (#tickets, #kb, …) open without a script error', errs.length === b, errs.slice(b).join(' | ').slice(0, 200) + ' ' + JSON.stringify(seen)); }
+  { const g = await (await fetch(B + 'guide.js')).text(); const i = g.indexOf('const CONTENT ='); let t = g.slice(i + 15, g.indexOf('\n', i)).trim().replace(/;$/, ''); const C = JSON.parse(t);
+    const cats = C.categories.map(c => c.cat); const titles = C.categories.flatMap(c => c.topics.map(x => x.title));
+    ok('Help Center: only this product\'s categories (' + cats.join(', ') + ')', cats.length === 4 && !titles.some(x => /Tickets?\b|SLA|vTiger|Company systems|Knowledge Base|IT Budget|Announcements/.test(x)), titles.filter(x => /Tickets?\b|SLA|vTiger|Company systems|Knowledge Base|IT Budget|Announcements/.test(x)).join(' | ')); }
   for (const c of ['cron-sla.php', 'cron-mail.php', 'cron-audit.php', 'cron-uptime.php']) { let out = ''; try { out = execFileSync('php', [c], { cwd: RUN, timeout: 120000 }).toString(); } catch (e) { out = 'EXIT ' + e.status + ' ' + String(e.stdout || '') + String(e.stderr || ''); }
     ok('scheduled job ' + c + ' runs without a PHP error', !/Fatal|EXIT [1-9]|Uncaught/.test(out), out.slice(-300)); }
 } catch (e) { ok('ran to the end', false, e.message.split('\n')[0]); }

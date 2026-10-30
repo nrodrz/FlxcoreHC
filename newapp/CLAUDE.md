@@ -46,7 +46,7 @@ and are binding.
 | `sql/schema.sql`, `seed.sql`, `sample.sql`, `content-library.sql` | Fresh-install database; `api/lib/Migrations.php` / `db-update.php` for updates |
 | `install/index.php`, `install/hub.php` | Installer for every organization; installer of this app's own License Hub |
 | `cron-*.php` | Scheduled jobs (command line); steps of an off module are skipped |
-| `dev/` | Not shipped: `make-ms-app.py`, `fresh-install.sh`, `check-app.mjs`, `router.php` |
+| `dev/` | Not shipped: `make-ms-app.py`, `fresh-install.sh`, `check-app.mjs`, `router.php`, `package.sh`, `unused.js` (unused top-level declarations of `app.jsx`: list or `--remove`), `prune-guide.js` (0001-A003, run once) |
 | `docs/` | Not shipped: spec, standards, reference documents |
 
 Code identifiers use the `itops_` prefix (functions, tables, settings; `ITOPS_` constants; `Itops` classes; headers such
@@ -66,7 +66,7 @@ NODE_PATH=dev/node_modules node src/build.js
 # every PHP file parses
 find . -name '*.php' -not -path './vendor/*' -not -path './dev/node_modules/*' -print0 | xargs -0 -n1 php -l | grep -v '^No syntax errors'
 
-# fresh local install (MariaDB/MySQL with root over the socket; PHP 8.1+) and the starter check (15 checks)
+# fresh local install (MariaDB/MySQL with root over the socket; PHP 8.1+) and the starter check (27 checks)
 DB_USER=appdev DB_PASS=appdevpw dev/fresh-install.sh /tmp/app-run 8301 app_dev
 PLAYWRIGHT=$PWD/dev/node_modules/playwright node dev/check-app.mjs   # or the system Playwright: $(npm root -g)/playwright
 ```
@@ -75,17 +75,19 @@ PLAYWRIGHT=$PWD/dev/node_modules/playwright node dev/check-app.mjs   # or the sy
 About & ownership shows the product and the owner; the removed modules' APIs answer 404; product and platform APIs
 answer; the Modules screen lists the product modules and plans; the menu has no removed module; every page opens with
 no script error and no server error; every scheduled job runs; every table uses the `itops_` prefix; the installer
-applied every database update. Extend it as features are added; add a test per feature
+applied every database update; the Roles lists and presets, the dashboard, every Settings tab, the search, a user record, the
+Help Center categories and old links hold only this product. Extend it as features are added; add a test per feature
 (server answers, refusals, Audit Log entries, screens).
 
 ## Each build
 
-1. Change the build id in **both** `api/lib/Build.php` (`ITOPS_BUILD`) and `src/app.jsx` (`APP_BUILD`): `0001-A003`, …
+1. Change the build id in **both** `api/lib/Build.php` (`ITOPS_BUILD`) and `src/app.jsx` (`APP_BUILD`): `0001-A004`, …
 2. `CHANGELOG.txt` entry (format in `docs/standards/03-DEVELOPMENT-PROCESS.md`), the Help Center (`guide.js`) and
    `docs/APP-AUDIT.md` (the technical entry: files, functions, routes, tests and counts) updated with the change.
 3. Database changes only as a new update step (never edit an installation's data by hand); a fresh install and an
    update must reach the same structure.
-4. Build, php -l, `dev/check-app.mjs` and the feature tests; then package:
+4. Build, php -l, `NODE_PATH=dev/node_modules node dev/unused.js` (should list nothing new), `dev/check-app.mjs` and the
+   feature tests; then package:
    `zip -qr -X ../ITOps-<build>-Full-Install.zip . -x 'dev/*' 'docs/*' 'CLAUDE.md' 'STARTER-REPORT.md' 'config.php' '*-license.php' '.gitignore'`
    (`dev/package.sh` does this and names the zip), and install that zip fresh once before delivering it. The zip is
    extracted at the root of the web folder (see INSTALL-FIRST.txt).

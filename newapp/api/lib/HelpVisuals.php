@@ -16,12 +16,8 @@ if (!function_exists('itops_help_visuals')) {
 
     /** The visuals this build carries: id => [title, description]. The id is also the file name. */
     function itops_help_visuals(): array {
-        return [
-            'systems-process' => ['Company systems: the whole process',
-                'How every company system goes through the same steps: switched on, connected or answered by hand, onboarding, offboarding and the check that the access is gone.'],
-            'integration-map' => ['Integration map',
-                'What connects to what: Microsoft 365, vTiger and the other systems, which way the data goes and what each connection is allowed to do.'],
-        ];
+        // 0001-A003: none in this product yet (the reference app's two — company systems, integration map — were about removed modules)
+        return [];
     }
 
     /** The saved access, cleaned: only known visuals, role slugs as strings, user ids as positive whole numbers. */

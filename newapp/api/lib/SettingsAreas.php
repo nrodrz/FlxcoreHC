@@ -14,7 +14,8 @@ if (!function_exists('itops_setting_area')) {
         $k = strtolower($key);
         if (preg_match('/^(app_name|app_tagline|signin_default|app_logo_url|app_favicon_url|app_install_enabled|app_short_name|app_theme_color|app_wipe_signout|nav_emoji|org_name|org_|doc_)/', $k)) return 'branding';
         if (preg_match('/^(mail_|email_|smtp_|imap_|tpl_|auto_tick)/', $k)) return 'email_cfg';
-        if (preg_match('/^(sla_|business_hours)/', $k)) return 'sla_cfg';
+        if (preg_match('/^sla_/', $k)) return 'sla_cfg';
+        if ($k === 'business_hours') return 'settings';   // 0001-A003: Settings → General → Business hours
         return 'settings';
     }
     function itops_setting_area_label(string $area): string {

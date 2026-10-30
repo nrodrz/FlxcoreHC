@@ -33,7 +33,7 @@ final class ItopsM365
     {
         if (!function_exists('itops_graph_configured') || !itops_graph_configured()) {
             throw new ItopsM365Exception(
-                'Microsoft 365 is not connected. Open Settings → Sign-in & AI → Microsoft 365 connection and save the Azure app first.'
+                'Microsoft 365 is not connected. Open Settings → Microsoft 365 → Connection and save the app registration first.'
             );
         }
         return new self(new ItopsGraphClient());
