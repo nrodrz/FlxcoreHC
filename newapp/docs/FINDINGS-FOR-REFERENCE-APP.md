@@ -7,6 +7,8 @@ Names are the reference app's (`opsh_…`, `X-OpsHub-…`, `api/lib/…`). Line 
 ITOps copy, where the prefix was renamed in 0001-A002. Each entry: where, what breaks, suggested fix, and whether ITOps
 has fixed it in its own code.
 
+**Paste-ready version for Claude.ai:** `MESSAGE_FOR_CLAUDE_AI_reference-fixes.md` (same items, numbered 1–12 = R-01…R-12); refresh it when items are added.
+
 **How to use this list:** add a new finding at the end of its section with the next number, the ITOps build it was
 found in, and the same four parts. When the reference app ships a fix, mark the entry *Fixed in <reference build>* —
 do not delete it.
