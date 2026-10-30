@@ -8,7 +8,7 @@ HERE=$(cd "$(dirname "$0")/.." && pwd); RUN=$1; PORT=$2; DB=$3
 SOCK=${DB_SOCKET:-/run/mysqld/mysqld.sock}; U=${DB_USER:-appdev}; PW=${DB_PASS:-appdevpw}; NAME=${APP_NAME:-ITOps}
 rm -rf "$RUN"; mkdir -p "$RUN"; (cd "$HERE" && tar --exclude=./dev --exclude=./docs --exclude=./node_modules --exclude=./CLAUDE.md -cf - .) | (cd "$RUN" && tar -xf -)
 mysql -uroot --socket=$SOCK -e "DROP DATABASE IF EXISTS \`$DB\`; CREATE DATABASE \`$DB\` CHARACTER SET utf8mb4; CREATE USER IF NOT EXISTS '$U'@'127.0.0.1' IDENTIFIED BY '$PW'; GRANT ALL ON \`$DB\`.* TO '$U'@'127.0.0.1';"
-(cd "$RUN" && php -S 127.0.0.1:$PORT -t "$RUN" "$HERE/dev/router.php" > /tmp/php_$PORT.log 2>&1 &); sleep 1
+(cd "$RUN" && PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:$PORT -t "$RUN" "$HERE/dev/router.php" > /tmp/php_$PORT.log 2>&1 &); sleep 1
 J=/tmp/cj_$PORT; rm -f $J; B=http://127.0.0.1:$PORT/install/
 curl -s -c $J -b $J "$B?step=welcome" >/dev/null
 curl -s -c $J -b $J -d step=database -d db_host=127.0.0.1 -d db_port=3306 -d db_name=$DB -d db_user=$U -d db_pass=$PW -d sample=1 $B | grep -o 'class="err[^<]*<[^<]*' | head -3 || true

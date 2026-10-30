@@ -3,19 +3,17 @@
 /**
  * ITOps — Alerts
  *
- * Turns the read-only Guardian + M365 signals into edge-triggered alerts:
+ * Turns the read-only Microsoft 365 signals (licenses running out, …) into edge-triggered alerts:
  *   - a condition that starts breaching  -> raise  (Event Log + admin notification + webhook)
  *   - a condition that stops breaching   -> clear  (Event Log + admin notification + webhook)
  * An ongoing condition is NOT re-notified every run; only the transitions fire.
  *
- * State lives in itops_alerts (one row per stable alert_key). Guardian severity is
- * taken as-is from the package (it already encodes the disk/load/imunify/imap thresholds).
+ * State lives in itops_alerts (one row per stable alert_key).
  *
  * Called from cron-sla.php. Read-only with respect to the tenant/server.
  */
 
 require_once __DIR__ . '/EventLog.php';
-require_once __DIR__ . '/Guardian.php';
 
 if (!function_exists('itops_alerts_reconcile')) {
 
@@ -99,26 +97,10 @@ function itops_alerts_reconcile(PDO $db, array $current): array {
 }
 
 /**
- * Build the current breach set from Guardian (+ M365 if configured) and reconcile.
+ * Build the current breach set from Microsoft 365 (when it is connected) and reconcile. 0001-A004: no Guardian (servers).
  */
 function itops_alerts_evaluate(PDO $db): array {
     $current = [];
-
-    // Guardian — severity is already computed by the package.
-    try {
-        foreach (itops_guardian_run_cached($db, 600) as $sec) {   // BT124 (review OPS-9): one full scan per ten minutes at most
-            $lvl = $sec['level'] ?? 'ok';
-            if ($lvl === 'warning' || $lvl === 'error') {
-                $bad = null;
-                foreach (($sec['findings'] ?? []) as $f) {
-                    if (($f['severity'] ?? '') === 'error') { $bad = $f; break; }
-                    if (($f['severity'] ?? '') === 'warning' && !$bad) $bad = $f;
-                }
-                $msg = ($sec['title'] ?? $sec['name']) . ': ' . trim(($bad['label'] ?? '') . ' ' . ($bad['value'] ?? $lvl));
-                $current['guardian:' . $sec['name']] = ['level' => $lvl, 'channel' => 'guardian', 'message' => trim($msg)];
-            }
-        }
-    } catch (\Throwable $e) {}
 
     // M365 — best-effort, only when Graph is configured.
     $gf = __DIR__ . '/Graph.php';

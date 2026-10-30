@@ -16,60 +16,17 @@ $out['departments'] = $db->query(
     "SELECT id, name, slug, color FROM itops_departments ORDER BY name"
 )->fetchAll();
 
-// Ticket categories (hierarchical: parent_id groups children)
-try {
-    $out['ticket_categories'] = $db->query(
-        "SELECT id, name, slug, department_id, parent_id, sla_hours, sla_response_hours, icon, sort_order, default_assignee_id, backup_assignee_id
-         FROM itops_ticket_categories WHERE status='active'
-         ORDER BY (SELECT COALESCE(g.sort_order,0) FROM itops_ticket_categories g WHERE g.id=COALESCE(itops_ticket_categories.parent_id,itops_ticket_categories.id)), COALESCE(itops_ticket_categories.parent_id,itops_ticket_categories.id), parent_id IS NOT NULL, sort_order, name"
-    )->fetchAll();
-} catch (Throwable $e) {
-  try {   // BT17 columns not there yet (database update not run)
-    $out['ticket_categories'] = $db->query(
-        "SELECT id, name, slug, department_id, parent_id, sla_hours, sla_response_hours, icon, sort_order
-         FROM itops_ticket_categories WHERE status='active'
-         ORDER BY (SELECT COALESCE(g.sort_order,0) FROM itops_ticket_categories g WHERE g.id=COALESCE(itops_ticket_categories.parent_id,itops_ticket_categories.id)), COALESCE(itops_ticket_categories.parent_id,itops_ticket_categories.id), parent_id IS NOT NULL, sort_order, name"
-    )->fetchAll();
-  } catch (Throwable $e2) {
-    // sla_response_hours may not exist yet (run the in-app Database Update). Fall back gracefully.
-    $out['ticket_categories'] = $db->query(
-        "SELECT id, name, slug, department_id, parent_id, sla_hours, icon, sort_order
-         FROM itops_ticket_categories WHERE status='active'
-         ORDER BY (SELECT COALESCE(g.sort_order,0) FROM itops_ticket_categories g WHERE g.id=COALESCE(itops_ticket_categories.parent_id,itops_ticket_categories.id)), COALESCE(itops_ticket_categories.parent_id,itops_ticket_categories.id), parent_id IS NOT NULL, sort_order, name"
-    )->fetchAll();
-  }
-}
-
-// BT138: the four simple category lists are one table (kind). Until the database update has run, the old lists are read.
-$catRows = function (string $kind, string $old, string $cols) use ($db): array {
-    try { return $db->query("SELECT $cols FROM itops_categories WHERE kind = '$kind' ORDER BY sort_order, name")->fetchAll(); }
-    catch (Throwable $e) { try { return $db->query("SELECT $cols FROM $old ORDER BY sort_order, name")->fetchAll(); } catch (Throwable $e2) { return []; } }
-};
-$out['kb_categories']   = $catRows('kb',   'itops_kb_categories',   'id, name, slug, department_id, icon, sort_order');
-$out['cred_categories'] = $catRows('cred', 'itops_cred_categories', 'id, name, icon, sort_order');
-$out['doc_categories']  = $catRows('doc',  'itops_doc_categories',  'id, name, slug, department_id, sort_order');
-$out['sop_categories']  = $catRows('sop',  'itops_sop_categories',  'id, name, slug, department_id, sort_order');
-
 // Roles
 $out['roles'] = $db->query(
     "SELECT id, name, slug, description FROM itops_roles ORDER BY id"
 )->fetchAll();
 
-// Review CORE-9: an API key, or someone who has not finished the required 2FA yet, gets no directory and no vendor list.
+// Review CORE-9: an API key, or someone who has not finished the required 2FA yet, gets no directory.
 $__limited = !empty($currentUser['is_api_key']) || (function_exists('itops_mfa_pending') && itops_mfa_pending($db, $currentUser));
-// Vendors (used as a lookup for contracts)
-$out['vendors'] = $__limited ? [] : $db->query(
-    "SELECT id, name, category, risk_tier FROM itops_vendors WHERE status='active' ORDER BY name"
-)->fetchAll();
-
 // Active users (for assignee pickers)
 $out['users'] = $__limited ? [] : $db->query(
     "SELECT id, display_name, email, role_id, department_id FROM itops_users WHERE status='active' ORDER BY display_name"
 )->fetchAll();
-// BT52: tk = 1 when the person can work tickets (role may edit tickets) — owner and backup pickers offer only them
-require_once __DIR__ . '/../lib/TicketRouting.php';
-foreach ($out['users'] as &$__u) { $__u['tk'] = itops_tr_can_work($db, (int)$__u['id']) ? 1 : 0; }
-unset($__u);
 
 // Cast integer ids for clean JSON
 foreach ($out as $k => $rows) {

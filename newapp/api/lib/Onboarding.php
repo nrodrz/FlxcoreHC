@@ -84,7 +84,6 @@ if (!function_exists('itops_ob_skus')) {
         $types = array_unique(array_map(fn($t) => $t['task_type'], $pending));
         $upn = (string)(($run['subject_upn'] ?? '') ?: ($run['subject_email'] ?? ''));
         $needsM365 = (bool)array_filter($types, fn($x) => strpos($x, 'm365_') === 0);
-        $needsVt = (bool)array_filter($types, fn($x) => strpos($x, 'vtiger_') === 0);
 
         // ── Microsoft 365 ──
         $graphOk = false; $roles = null; $userState = null;   // null = unknown, false = not found, array = found
@@ -113,21 +112,6 @@ if (!function_exists('itops_ob_skus')) {
         }
         $createInRun = (bool)array_filter($pending, fn($t) => $t['task_type'] === 'm365_create');
         $willExist = $createInRun || is_array($userState);
-
-        // ── vTiger ──
-        $vtUser = null; $vtRoles = null; $vtOk = false;
-        if ($needsVt) {
-            $ping = itops_vt_call($db, 'ping');
-            if (empty($ping['ok'])) $add(null, 'error', 'vTiger bridge: ' . ($ping['error'] ?? 'not reachable'));
-            else {
-                $vtOk = true;
-                if (!in_array('find_user', $ping['actions'] ?? [], true)) { $add(null, 'error', 'The vTiger bridge is build ' . ($ping['build'] ?? '?') . ' — upload itops-bridge.php build o5.'); $vtOk = false; }
-            }
-            if ($vtOk && !empty($run['subject_email'])) {
-                $f = itops_vt_call($db, 'find_user', ['email' => (string)$run['subject_email']]);
-                $vtUser = !empty($f['ok']) ? ($f['user'] ?? false) : null;
-            }
-        }
 
         foreach ($pending as $t) {
             $cfg = json_decode($t['config'] ?? '{}', true) ?: [];
@@ -178,31 +162,6 @@ if (!function_exists('itops_ob_skus')) {
                     elseif (is_array($userState)) $add($t, 'ok', 'Account found.');
                     if (in_array($t['task_type'], ['m365_forward', 'm365_delegate_onedrive'], true) && !filter_var((string)($cfg['to'] ?? ''), FILTER_VALIDATE_EMAIL)) $add($t, 'error', 'No valid "to" address in the template.');
                     if ($t['task_type'] === 'm365_disable' && strcasecmp($upn, (string)($GLOBALS['currentUser']['email'] ?? '')) === 0) $add($t, 'error', 'This is your own account — it cannot be disabled from here.');
-                    break;
-                case 'vtiger_create':
-                    if (!$vtOk) break;
-                    if (empty($run['subject_email'])) { $add($t, 'error', 'No email on this process.'); break; }
-                    if (is_array($vtUser)) $add($t, 'warn', 'A vTiger user with ' . $run['subject_email'] . ' already exists (' . ($vtUser['status'] ?? '') . ') — it will be linked, no new password.');
-                    else $add($t, 'ok', 'No vTiger user with ' . $run['subject_email'] . ' yet.');
-                    $rid = (string)($cfg['roleid'] ?? '');
-                    if ($rid === '') $rid = (string)(itops_vtiger_cfg($db)['prov']['default_roleid'] ?? '');
-                    if ($rid === '') { $add($t, 'error', 'No vTiger role in the template and no default role configured.'); break; }
-                    if ($vtRoles === null) { $lr = itops_vt_call($db, 'list_roles'); $vtRoles = array_column($lr['roles'] ?? [], 'rolename', 'roleid'); }
-                    if ($vtRoles) $add($t, isset($vtRoles[$rid]) ? 'ok' : 'error', isset($vtRoles[$rid]) ? 'Role ' . $vtRoles[$rid] . ' (' . $rid . ').' : 'Role ' . $rid . ' does not exist in vTiger — pick another in the template.');
-                    break;
-                case 'vtiger_reassign': case 'vtiger_deactivate':
-                    if (!$vtOk) break;
-                    if ($vtUser === false) { $add($t, 'warn', 'No vTiger user with ' . $run['subject_email'] . ' — nothing to do.'); break; }
-                    if (!is_array($vtUser)) break;
-                    $pv = itops_vt_call($db, 'reassign_preview', ['from' => (string)$vtUser['id']]);
-                    $n = (int)($pv['total'] ?? 0);
-                    if ($t['task_type'] === 'vtiger_reassign') $add($t, 'ok', $n . ' record(s) to reassign' . ($n ? ' (' . itops_vt_mods_text($pv['modules'] ?? []) . ')' : '') . (!empty($cfg['to_email']) ? ' → ' . $cfg['to_email'] : ' — you will choose the new owner'));
-                    else $add($t, $n && !array_filter($pending, fn($x) => $x['task_type'] === 'vtiger_reassign') ? 'warn' : 'ok', $n ? $n . ' record(s) still owned — reassign first or deactivation will ask for an override reason.' : 'Nothing owned — safe to deactivate.');
-                    break;
-                case 'assign_reading':
-                    if (empty($run['subject_email'])) $add($t, 'error', 'No email on this process to send the documents to.');
-                    elseif (empty($cfg['docs'])) $add($t, 'warn', 'No documents chosen in the template.');
-                    else $add($t, 'ok', count($cfg['docs']) . ' document(s) will be sent to ' . $run['subject_email'] . '.');
                     break;
                 case 'send_welcome':
                     $wt = trim((string)(($cfg['to'] ?? '') ?: ($run['subject_email'] ?? '')));

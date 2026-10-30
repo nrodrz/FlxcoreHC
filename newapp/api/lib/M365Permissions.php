@@ -106,11 +106,6 @@ if (!function_exists('itops_m365_permission_catalog')) {
         return $out;
     }
 
-    /** Every single permission name in the catalog (for the tests that keep it current). */
-    function itops_m365_permission_names(): array {
-        $n = []; foreach (itops_m365_permission_catalog() as $r) foreach (explode('|', $r[0]) as $p) $n[strtolower($p)] = true;
-        return array_keys($n);
-    }
     /* ── BT145: side by side — what the app needs (this list) against what Microsoft 365 has for this app registration ──
      * Read from Microsoft, not only from the token: the app's service principal's appRoleAssignments (application
      * permissions with admin consent), the app registration's requiredResourceAccess (added but maybe not consented),

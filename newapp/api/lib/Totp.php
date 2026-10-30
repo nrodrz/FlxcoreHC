@@ -61,15 +61,6 @@ function totp_match_step(string $secret, string $code, int $window = 1): ?int {
     return null;
 }
 
-function totp_verify(string $secret, string $code, int $window = 1): bool {
-    $code = preg_replace('/\D/', '', $code);
-    if (strlen($code) < 6) return false;
-    $ts = time();
-    for ($i = -$window; $i <= $window; $i++) {
-        if (hash_equals(totp_code($secret, $ts + $i * 30), $code)) return true;
-    }
-    return false;
-}
 
 function totp_uri(string $secret, string $label, string $issuer = 'ITOps'): string {
     return 'otpauth://totp/' . rawurlencode($issuer . ':' . $label)

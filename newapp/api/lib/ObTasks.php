@@ -36,15 +36,11 @@ if (!function_exists('itops_ob_fail')) {
         return 'm365_users';   // create, disable, revoke sessions, auto-reply, forwarding, OneDrive handover
     }
     function itops_ob_type_perm_label(string $type): string {
-        if ($type === 'vtiger_create') return 'Provisioning · Onboard to vTiger';
-        if ($type === 'vtiger_reassign' || $type === 'vtiger_deactivate') return 'Provisioning · Offboard from vTiger';
         return ['m365_licenses' => 'Microsoft 365 · Licenses', 'm365_groups' => 'Microsoft 365 · Groups', 'm365_users' => 'Microsoft 365 · Accounts'][itops_ob_type_module($type)];
     }
     /** BT89 (H-11): a vTiger step needs the vTiger provisioning permission, not only Onboarding · Edit (same split as the Offboard wizard). */
     function itops_ob_type_allowed(array $user, string $type): bool {
         if (!function_exists('itops_can')) return true;
-        if ($type === 'vtiger_create') return itops_can($user, 'provision_onboard', 'edit');
-        if ($type === 'vtiger_reassign' || $type === 'vtiger_deactivate') return itops_can($user, 'provision_offboard', 'edit');
         if (strpos($type, 'm365_') !== 0) return true;
         return itops_can($user, itops_ob_type_module($type), 'edit') || itops_can($user, 'm365_admin', 'edit');
     }
@@ -153,31 +149,6 @@ if (!function_exists('itops_ob_fail')) {
             try { audit_log('ob_task_refused', 'onboarding', $id, mb_substr((string)$task['title'], 0, 250), null, ['Step' => (string)$task['title'], 'Type' => (string)$task['task_type'], 'Wanted' => $action, 'Why' => $why, 'Result' => 'Nothing was changed'] + $more); } catch (\Throwable $e) {}
             throw new ItopsObError($msg, $code);
         };
-        $isVt = in_array($task['task_type'], ['vtiger_create', 'vtiger_reassign', 'vtiger_deactivate'], true);
-
-        if ($action === 'preview') {
-            // Read-only: what the vTiger user owns + who can receive it. Nothing changes.
-            if (!in_array($task['task_type'], ['vtiger_reassign', 'vtiger_deactivate'], true)) itops_ob_fail('Preview is only available for vTiger offboarding steps', 400);
-            if (!itops_ob_type_allowed($currentUser, $task['task_type'])) $refuse('Looking at the vTiger records of this person needs the ' . itops_ob_type_perm_label($task['task_type']) . ' permission.', 403, 'needs ' . itops_ob_type_perm_label($task['task_type']));
-            $vu = itops_vt_run_user($db, $run);
-            if (empty($vu['ok'])) itops_ob_fail($vu['error'] ?? 'Could not reach the vTiger bridge', 502);
-            if (empty($vu['user'])) return ['preview' => ['user' => null, 'note' => 'No vTiger user found with ' . ($run['subject_email'] ?: 'this email') . '.']];
-            $pv = itops_vt_call($db, 'reassign_preview', ['from' => (string)$vu['user']['id']]);
-            if (empty($pv['ok'])) itops_ob_fail($pv['error'] ?? 'Could not count records', 502);
-            $out = ['user' => $vu['user'], 'modules' => $pv['modules'] ?? [], 'total' => (int)($pv['total'] ?? 0)];
-            if ($task['task_type'] === 'vtiger_reassign') {
-                $lu = itops_vt_call($db, 'list_users', ['status' => 'Active']);
-                $out['targets'] = array_values(array_filter($lu['users'] ?? [], fn($u) => (string)$u['id'] !== (string)$vu['user']['id']));
-                // BT89: the new owner set on the step (by the Offboard wizard, the template, or the first run) is fixed.
-                if (trim((string)($cfg['to_id'] ?? '')) !== '') { $out['default_target'] = (string)$cfg['to_id']; $out['fixed_target'] = true; }
-                elseif (!empty($cfg['to_email'])) {
-                    foreach ($out['targets'] as $t) if (strcasecmp($t['email'], (string)$cfg['to_email']) === 0) { $out['default_target'] = (string)$t['id']; $out['fixed_target'] = true; break; }
-                }
-                $out['can_change_target'] = $isSuper;
-                $out['left_remind_days'] = function_exists('itops_ob_vt_left_days') ? itops_ob_vt_left_days($db) : 14;   // BT93
-            }
-            return ['preview' => $out];
-        }
 
         // BT89 (M-35): only a process in progress has steps to work, and a step that is done or skipped stays that way.
         if ($run['status'] !== 'in_progress') $refuse('This ' . ($run['kind'] === 'offboard' ? 'offboarding' : 'onboarding') . ' is ' . str_replace('_', ' ', (string)$run['status']) . ': its steps cannot change any more.', 409, 'the process is ' . $run['status']);
@@ -185,38 +156,11 @@ if (!function_exists('itops_ob_fail')) {
         if ($action === 'skip' && (int)$task['required'] === 1) $refuse('This step is required: do it, or mark it done with a note that says what happened.', 409, 'required step');
         // BT124 (code review SEC-22): marking an automated Microsoft 365 or vTiger step done (or skipping it) needs the same
         // permission as running it — otherwise "Disable account" could be closed by someone who may not disable accounts
-        if ((in_array($action, ['run', 'done', 'skip'], true) && ($isVt || (strpos($task['task_type'], 'm365_') === 0 && $task['task_type'] !== 'm365_exchange_manual'))) && !itops_ob_type_allowed($currentUser, $task['task_type'])
-            && ($isVt || (function_exists('itops_can') && empty($currentUser['_scheduler']))))
+        if ((in_array($action, ['run', 'done', 'skip'], true) && (strpos($task['task_type'], 'm365_') === 0 && $task['task_type'] !== 'm365_exchange_manual')) && !itops_ob_type_allowed($currentUser, $task['task_type'])
+            && (function_exists('itops_can') && empty($currentUser['_scheduler'])))
             $refuse('Insufficient permissions — this step needs the ' . itops_ob_type_perm_label($task['task_type']) . ' permission', 403, 'needs ' . itops_ob_type_perm_label($task['task_type']));
 
-        // BT44: a company-system step is finished by saying what was done in that system (removed, handed over, no account
-        // there; or set up, not needed). A bare "mark done" would close the step and leave the account open in the records.
-        if ($task['task_type'] === 'system_access' && $action !== 'run' && $action !== 'skip') itops_ob_fail('Say what was done in the system: use the buttons on the step (reload the page if it shows none).', 400);
-
-        if ($action === 'leave') {
-            // BT93 (decision 10/17/2026): the records stay with the person who left, to be moved by hand later. The step is
-            // finished as "left for later" (a decision, written down with its reason); deactivation then does not ask again,
-            // and the scheduler reminds the process owner until the records are moved.
-            if ($task['task_type'] !== 'vtiger_reassign') itops_ob_fail('Only the "Reassign vTiger records" step can leave the records for later.', 400);
-            if (!itops_ob_type_allowed($currentUser, $task['task_type'])) $refuse('Leaving the vTiger records for later needs the ' . itops_ob_type_perm_label($task['task_type']) . ' permission.', 403, 'needs ' . itops_ob_type_perm_label($task['task_type']));
-            $why = mb_substr(trim((string)($body['reason'] ?? '')), 0, 300);
-            if (mb_strlen($why) < 3) itops_ob_fail('Say why the records stay for now and who will move them (for example "Sales will split them by region").', 400);
-            $vu = itops_vt_run_user($db, $run);
-            if (empty($vu['ok'])) itops_ob_fail($vu['error'] ?? 'Could not reach the vTiger bridge', 502);
-            $n = 0; $mods = [];
-            if (!empty($vu['user'])) {
-                $pv = itops_vt_call($db, 'reassign_preview', ['from' => (string)$vu['user']['id']]);
-                if (empty($pv['ok'])) itops_ob_fail($pv['error'] ?? 'Could not count records', 502);
-                $n = (int)($pv['total'] ?? 0); $mods = (array)($pv['modules'] ?? []);
-            }
-            $cfg['left_for_later'] = ['count' => $n, 'modules' => $mods, 'reason' => $why, 'at' => date('Y-m-d H:i:s'), 'by' => (int)$currentUser['id'],
-                                      'vtiger_id' => !empty($vu['user']['id']) ? (string)$vu['user']['id'] : null];
-            $db->prepare('UPDATE itops_ob_run_tasks SET config=? WHERE id=?')->execute([json_encode($cfg), $sid]);
-            $result = empty($vu['user']) ? 'Left for later — no vTiger user found with ' . $run['subject_email'] . ' (nothing to move). Reason: ' . $why
-                    : 'Left for later: ' . $n . ' record(s)' . ($mods ? ' (' . itops_vt_mods_text($mods) . ')' : '') . ' stay with ' . itops_vt_user_label($vu['user']) . ' to be moved by hand. Reason: ' . $why;
-            $detail = ['left_for_later' => $n, 'reason' => $why];
-            try { audit_log('ob_vtiger_records_left', 'onboarding', $id, mb_substr((string)$task['title'], 0, 250), null, ['Records' => $n, 'Modules' => $mods ? itops_vt_mods_text($mods) : '', 'Reason' => $why, 'Person' => (string)$run['subject_name']]); } catch (\Throwable $e) {}
-        } elseif ($action === 'skip') {
+        if ($action === 'skip') {
             $status = 'skipped';
         } elseif ($action === 'run') {
             $isM365 = strpos($task['task_type'], 'm365_') === 0;
@@ -359,134 +303,6 @@ if (!function_exists('itops_ob_fail')) {
                         $result = 'All sign-in sessions & refresh tokens revoked';
                         break;
                     }
-                    case 'assign_reading': {
-                        $docs = $cfg['docs'] ?? [];
-                        $email = $run['subject_email'];
-                        if (!$email) itops_ob_fail('This run has no email to send the reading sign-off to');
-                        $made = 0;
-                        foreach ($docs as $d) {
-                            $dtype = $d['type'] ?? ''; $did = (int)($d['id'] ?? 0); $dtitle = $d['title'] ?? 'Document';
-                            if (!$dtype || !$did) continue;
-                            $db->prepare("INSERT INTO itops_signature_requests (doc_type,doc_id,doc_title,message,status,requested_by,created_at) VALUES (?,?,?,?, 'open', ?, NOW())")
-                               ->execute([$dtype, $did, substr($dtitle, 0, 255), 'Required reading for onboarding — please review and sign.', (int)$currentUser['id']]);
-                            $reqId = (int)$db->lastInsertId();
-                            $tok = bin2hex(random_bytes(24));
-                            $db->prepare("INSERT INTO itops_signature_signers (request_id,user_id,signer_name,signer_email,sign_token,status) VALUES (?, NULL, ?, ?, ?, 'pending')")
-                               ->execute([$reqId, $run['subject_name'], $email, $tok]);
-                            if (defined('APP_URL')) {
-                                require_once __DIR__ . '/MailIntake.php';
-                                $link = rtrim(APP_URL, '/') . '/sign.html?token=' . $tok;
-                                try { itops_email('onboarding_sign', $email, ['person_name' => (string)$run['subject_name'], 'document' => (string)$dtitle, 'sign_link' => $link,
-                                    'recipient_name' => (string)$run['subject_name']]); } catch (\Throwable $e) {}
-                            }
-                            $made++;
-                        }
-                        $result = $made . ' document(s) sent for signature to ' . $email;
-                        break;
-                    }
-                    case 'vtiger_create': {
-                        require_once __DIR__ . '/VTigerProvision.php';
-                        if (!$run['subject_email']) itops_ob_fail('This run has no email for the vTiger user');
-                        if (!itops_vtiger_url_secure((string)(itops_vtiger_cfg($db)['prov']['bridge_url'] ?? ''))) $refuse('The vTiger bridge address is not HTTPS: ' . itops_app_name() . ' does not send a new password over it. Use https:// in Settings → Company systems → vTiger.', 409, 'bridge address is not HTTPS');
-                        $nm = trim($run['subject_name']); $sp = strpos($nm, ' ');
-                        $first = ($run['first_name'] ?? '') ?: ($sp !== false ? substr($nm, 0, $sp) : $nm);
-                        $last  = ($run['last_name'] ?? '') ?: ($sp !== false ? trim(substr($nm, $sp + 1)) : $nm);
-                        $vres = itops_vtiger_create_user($db, [
-                            'email' => $run['subject_email'], 'first_name' => $first, 'last_name' => $last,
-                            'roleid' => $cfg['roleid'] ?? '',
-                        ]);
-                        if (empty($vres['ok']) && ($vres['code'] ?? '') === 'already_exists') {
-                            $vu = itops_vt_run_user($db, $run);   // links vtiger_id on the run
-                            $result = 'vTiger user already exists' . (!empty($vu['user']) ? ' (' . itops_vt_user_label($vu['user']) . ', ' . $vu['user']['status'] . ')' : '') . ' — linked, no new password generated';
-                            break;
-                        }
-                        if (empty($vres['ok'])) throw new \RuntimeException($vres['error'] ?? 'vTiger create failed');
-                        if (!empty($vres['id'])) $db->prepare('UPDATE itops_ob_runs SET vtiger_id=? WHERE id=?')->execute([(string)$vres['id'], $id]);
-                        $result = 'vTiger user created (via ' . ($vres['via'] ?? 'bridge') . ')'
-                                . (!empty($vres['password']) ? ' — temporary password generated and shown once to ' . $who . ' (not stored)' : '');
-                        if (!empty($vres['password'])) $secret = ['label' => 'vTiger temporary password', 'account' => strstr((string)$run['subject_email'], '@', true) ?: (string)$run['subject_email'], 'value' => $vres['password']];
-                        break;
-                    }
-                    case 'vtiger_reassign': {
-                        // BT40: a user found by user name only is never acted on until a person confirmed it (vtiger_id sent with this click, or stored on the step).
-                        $vtUser = itops_vt_run_user_to_change($db, $run, is_scalar($body['vtiger_id'] ?? null) ? trim((string)$body['vtiger_id']) : '', 'Reassign vTiger records');
-                        if (!$vtUser) { $result = 'No vTiger user with ' . $run['subject_email'] . ' — nothing to reassign'; break; }
-                        $vu = ['ok' => true, 'user' => $vtUser];
-                        // BT89 (H-11): the records of a vTiger admin are moved by a Super Admin only.
-                        if (!empty($vtUser['is_admin']) && !$isSuper) $refuse('"' . itops_vt_user_label($vtUser) . '" is a vTiger admin: only a Super Admin can move their records.', 403, 'vTiger admin target', ['vTiger user' => (string)($vtUser['user_name'] ?? '')]);
-                        // BT89 (H-11): the new owner is the one set on the step (Offboard wizard, template, or the first run of the step).
-                        $fixed = trim((string)($cfg['to_id'] ?? ''));   // BT21: the Offboard wizard stores the new owner on the step (also used when scheduled)
-                        if ($fixed === '' && !empty($cfg['to_email'])) {
-                            $tu = itops_vt_call($db, 'find_user', ['email' => (string)$cfg['to_email']]);
-                            if (!empty($tu['user']['id'])) $fixed = (string)$tu['user']['id'];
-                            elseif (empty($tu['ok'])) throw new \RuntimeException($tu['error'] ?? 'Could not find the new owner in vTiger');
-                            else itops_ob_fail('The new owner set on this step (' . $cfg['to_email'] . ') is not a vTiger user. Nothing was moved.', 409);
-                        }
-                        $sent = is_scalar($body['to_id'] ?? null) ? trim((string)$body['to_id']) : '';
-                        if ($sent !== '' && !ctype_digit($sent)) itops_ob_fail('The new owner is not a vTiger user id', 400);
-                        if ($fixed !== '' && $sent !== '' && $sent !== $fixed) {
-                            if (!$isSuper) $refuse('The new owner of these records is set on this step and cannot be changed here. Only a Super Admin can change it. Nothing was moved.', 409, 'different new owner', ['Owner on the step' => $fixed, 'Owner sent' => mb_substr($sent, 0, 32)]);
-                            try { audit_log('ob_vtiger_owner_changed', 'onboarding', $id, mb_substr((string)$task['title'], 0, 250), ['New owner' => $fixed], ['New owner' => $sent]); } catch (\Throwable $e) {}
-                            $fixed = '';
-                        }
-                        $to = $fixed !== '' ? $fixed : $sent;
-                        if ($to === '') itops_ob_fail('Choose who receives the records (new owner)', 400);
-                        if ($to === (string)$vtUser['id']) itops_ob_fail('The new owner cannot be the person who is leaving', 400);
-                        if ($fixed === '') {   // first choice: written on the step, so a retry or the scheduler uses the same owner
-                            $cfg['to_id'] = $to; unset($cfg['to_email']);
-                            $db->prepare('UPDATE itops_ob_run_tasks SET config=? WHERE id=?')->execute([json_encode($cfg), $sid]);
-                            try { audit_log('ob_vtiger_owner_set', 'onboarding', $id, mb_substr((string)$task['title'], 0, 250), null, ['New owner' => $to]); } catch (\Throwable $e) {}
-                        }
-                        $mods = isset($body['modules']) && is_array($body['modules']) ? array_values(array_filter(array_map('strval', $body['modules'])))
-                              : (isset($cfg['modules']) && is_array($cfg['modules']) ? array_values(array_filter(array_map('strval', $cfg['modules']))) : []);
-                        // BT89: bridge o8 moves records in rounds of about 15 seconds; keep going while it makes progress.
-                        @set_time_limit(180);
-                        $movedAll = []; $movedN = 0; $rr = null;
-                        for ($round = 0; $round < 8; $round++) {
-                            $rr = itops_vt_call($db, 'reassign', ['from' => (string)$vu['user']['id'], 'to' => $to] + ($mods ? ['modules' => $mods] : []));
-                            if (empty($rr['ok'])) { if ($movedN) throw new \RuntimeException('Moved ' . $movedN . ' record(s), then: ' . ($rr['error'] ?? 'Reassign failed') . '. Run the step again to move the rest.'); throw new \RuntimeException($rr['error'] ?? 'Reassign failed'); }
-                            foreach ((array)($rr['moved'] ?? []) as $m => $c) $movedAll[$m] = ($movedAll[$m] ?? 0) + (int)$c;
-                            $movedN += (int)($rr['moved_total'] ?? 0);
-                            if (empty($rr['more']) || (int)($rr['moved_total'] ?? 0) === 0) break;
-                        }
-                        $rr['moved'] = $movedAll; $rr['moved_total'] = $movedN;
-                        $left = $mods ? array_sum(array_map(fn($m) => (int)(($rr['remaining'] ?? [])[$m] ?? 0), $mods)) : (int)($rr['remaining_total'] ?? 0);
-                        if ($left > 0) throw new \RuntimeException('Moved ' . $movedN . ' record(s) (' . itops_vt_mods_text($movedAll) . '); ' . $left . ' still to move. Run the step again to continue.');
-                        $tl = itops_vt_call($db, 'find_user', ['id' => $to]);
-                        $result = 'Reassigned ' . (int)($rr['moved_total'] ?? 0) . ' record(s) (' . itops_vt_mods_text($rr['moved'] ?? []) . ') to ' . itops_vt_user_label($tl['user'] ?? null)
-                                . ((int)($rr['remaining_total'] ?? 0) ? ' — ' . (int)$rr['remaining_total'] . ' still owned (' . itops_vt_mods_text($rr['remaining'] ?? []) . ')' : '');
-                        $detail = ['from' => (string)$vu['user']['id'], 'to' => $to, 'moved' => $rr['moved'] ?? [], 'remaining_total' => (int)($rr['remaining_total'] ?? 0), 'modules' => $mods];
-                        break;
-                    }
-                    case 'vtiger_deactivate': {
-                        $vtUser = itops_vt_run_user_to_change($db, $run, is_scalar($body['vtiger_id'] ?? null) ? trim((string)$body['vtiger_id']) : '', 'Deactivate vTiger user');   // BT40, as above
-                        if (!$vtUser) { $result = 'No vTiger user with ' . $run['subject_email'] . ' — nothing to deactivate'; break; }
-                        $vu = ['ok' => true, 'user' => $vtUser];
-                        if (strcasecmp((string)$vu['user']['email'], (string)($currentUser['email'] ?? '')) === 0) itops_ob_fail('You cannot deactivate your own vTiger account from here', 400);
-                        // BT89 (H-11): a vTiger admin is deactivated by a Super Admin only.
-                        if (!empty($vtUser['is_admin']) && !$isSuper) $refuse('"' . itops_vt_user_label($vtUser) . '" is a vTiger admin: only a Super Admin can deactivate them.', 403, 'vTiger admin target', ['vTiger user' => (string)($vtUser['user_name'] ?? '')]);
-                        // Order matters: reassign first, so records aren't stranded under an inactive owner.
-                        $pv = itops_vt_call($db, 'reassign_preview', ['from' => (string)$vu['user']['id']]);
-                        if (empty($pv['ok'])) throw new \RuntimeException($pv['error'] ?? 'Could not count records');
-                        $owned = (int)($pv['total'] ?? 0);
-                        $why = trim((string)($body['override_reason'] ?? ''));
-                        if ($owned > 0 && $why === '') {   // BT93: records left for later on the reassign step are that step's decision
-                            $lq = $db->prepare("SELECT config FROM itops_ob_run_tasks WHERE run_id=? AND task_type='vtiger_reassign' AND status='done'"); $lq->execute([$id]);
-                            foreach ($lq->fetchAll(PDO::FETCH_COLUMN) as $lc) { $lj = json_decode((string)$lc, true); if (!empty($lj['left_for_later']['reason'])) { $why = 'left for later on the reassign step: ' . $lj['left_for_later']['reason']; break; } }
-                        }
-                        if ($owned > 0 && $why === '') {
-                            throw new ItopsObError(itops_vt_user_label($vu['user']) . ' still owns ' . $owned . ' record(s) (' . itops_vt_mods_text($pv['modules'] ?? []) . '). Run "Reassign vTiger records" first, or give a reason to deactivate anyway.', 409,
-                                ['needs_override' => true, 'total' => $owned, 'modules' => $pv['modules'] ?? []]);
-                        }
-                        if (($vu['user']['status'] ?? '') !== 'Inactive') {
-                            $sr = itops_vt_call($db, 'set_status', ['id' => (string)$vu['user']['id'], 'status' => 'Inactive']);
-                            if (empty($sr['ok'])) throw new \RuntimeException($sr['error'] ?? 'Deactivation failed');
-                        }
-                        $result = 'vTiger user ' . itops_vt_user_label($vu['user']) . ' deactivated'
-                                . ($owned > 0 ? (strpos($why, 'left for later on the reassign step') === 0 ? ' — ' . $owned . ' record(s) stay with this owner, ' . $why : ' — OVERRIDE: ' . $owned . ' record(s) left with this owner. Reason: ' . $why) : ' (no records left with this owner)');
-                        $detail = ['vtiger_id' => (string)$vu['user']['id'], 'owned_at_deactivation' => $owned, 'override_reason' => $why ?: null];
-                        break;
-                    }
                     case 'm365_autoreply': {
                         $upn = $run['subject_upn'] ?: $run['subject_email'];
                         $msg = trim((string)($cfg['message'] ?? '')) !== '' ? $cfg['message'] : ('This mailbox is no longer actively monitored. Your message has been received; please contact the appropriate team for assistance.');
@@ -518,35 +334,10 @@ if (!function_exists('itops_ob_fail')) {
                         $result = 'OneDrive shared with ' . $to . ' (write access)';
                         break;
                     }
-                    case 'equipment_return': {
-                        // Check a loaned item back in (same as Equipment → Return).
-                        if (function_exists('itops_can') && empty($currentUser['_scheduler']) && !itops_can($currentUser, 'assets', 'edit')) itops_ob_fail('Checking equipment in needs the Equipment (edit) permission', 403);
-                        $lid = (int)($cfg['loan_id'] ?? 0);
-                        $lq = $db->prepare("SELECT l.*, a.asset_tag FROM itops_asset_loans l JOIN itops_assets a ON a.id=l.asset_id WHERE l.id=?"); $lq->execute([$lid]); $loan = $lq->fetch();
-                        if (!$loan) itops_ob_fail('That loan no longer exists', 404);
-                        if ($loan['status'] !== 'out') { $result = $loan['asset_tag'] . ' was already returned' . (!empty($loan['returned_at']) ? ' on ' . substr($loan['returned_at'], 0, 10) : ''); break; }
-                        $cond = in_array(($body['condition_in'] ?? ''), ['new', 'good', 'fair', 'poor', 'damaged'], true) ? $body['condition_in'] : 'good';
-                        $newSt = in_array(($body['asset_status'] ?? ''), ['available', 'maintenance', 'lost'], true) ? $body['asset_status'] : ($cond === 'damaged' ? 'maintenance' : 'available');
-                        $note = trim((string)($body['note'] ?? ''));
-                        $db->prepare("UPDATE itops_asset_loans SET status='returned', returned_at=NOW(), condition_in=?, notes=CONCAT(COALESCE(notes,''), ?) WHERE id=?")
-                           ->execute([$cond, "\nReturned during offboarding of " . $run['subject_name'] . ($note !== '' ? ': ' . $note : ''), $lid]);
-                        $db->prepare("UPDATE itops_assets SET status=?, assigned_to=NULL, cond=? WHERE id=?")->execute([$newSt, $cond, (int)$loan['asset_id']]);
-                        audit_log('asset_returned', 'assets', (int)$loan['asset_id'], 'condition: ' . $cond . ' (offboarding ' . $run['subject_name'] . ')');
-                        $result = $loan['asset_tag'] . ' checked in (' . $cond . ($newSt === 'lost' ? ', marked lost' : '') . ')' . ($note !== '' ? ' — ' . $note : '');
-                        break;
-                    }
-                    case 'system_access': {
-                        // BT44: done by a person in the other system; here the outcome is recorded and the person's
-                        // account in that system is closed, handed over or opened in ITOps's records.
-                        require_once __DIR__ . '/Systems.php';
-                        $sr = itops_sys_step_run($db, $run, $task, $cfg, $body, $currentUser);
-                        $result = (string)$sr['result']; $detail = (array)$sr['detail'];
-                        break;
-                    }
                     case 'send_welcome': {
                         $to = trim((string)(($cfg['to'] ?? '') ?: $run['subject_email']));
                         if (!filter_var($to, FILTER_VALIDATE_EMAIL)) itops_ob_fail('No valid address to send the welcome email to', 400);
-                        require_once __DIR__ . '/MailIntake.php';
+                        require_once __DIR__ . '/Mail.php';
                         $mgrName = '';
                         if (!empty($run['manager_upn'])) { $mq = $db->prepare('SELECT display_name FROM itops_users WHERE email=?'); $mq->execute([$run['manager_upn']]); $mgrName = (string)($mq->fetchColumn() ?: $run['manager_upn']); }
                         $r = itops_email('onboarding_welcome', $to, [
@@ -558,16 +349,10 @@ if (!function_exists('itops_ob_fail')) {
                         $result = 'Welcome email sent to ' . $to;
                         break;
                     }
-                    case 'assign_equipment': {
-                        if (($body['action'] ?? '') === 'run') itops_ob_fail('This is a manual step: issue the equipment under Equipment (with the signed acceptance), then click Mark done.', 400);
-                        $cat = trim((string)($cfg['category'] ?? 'device'));
-                        $result = 'Issue equipment (' . $cat . ')' . (!empty($cfg['note']) ? ' — ' . $cfg['note'] : '') . '. Record it under Equipment, capture the signature, then mark this done.';
-                        break;
-                    }
                     case 'notify': {
                         $msg = $cfg['message'] ?? ('Onboarding task: ' . $task['title']);
                         $to  = $cfg['email'] ?? '';
-                        if ($to) { try { require_once __DIR__ . '/MailIntake.php';
+                        if ($to) { try { require_once __DIR__ . '/Mail.php';
                             itops_email('onboarding_notice', $to, ['person_name' => (string)$run['subject_name'], 'task' => (string)($task['title'] ?? ''), 'message' => (string)$msg]); } catch (\Throwable $e) {} }
                         // in-app notification to admins as a fallback
                         try {
@@ -604,31 +389,6 @@ if (!function_exists('itops_ob_fail')) {
         $fin = null;
         if ($pend === 0) { $fin = $db->prepare("UPDATE itops_ob_runs SET status='completed', completed_at=NOW() WHERE id=? AND status='in_progress'"); $fin->execute([$id]); }
         if ($fin && $fin->rowCount() === 1) {   // BT89 (M-35): completed once — the evidence, the check and the summary happen one time
-            // Onboarding completion -> evidence: link the configured requirement(s) to the reading docs.
-            $stdIds = json_decode($run['std_req_ids'] ?? '[]', true) ?: [];
-            if ($stdIds) {
-                $docs = [];
-                try {
-                    foreach ($db->query("SELECT config FROM itops_ob_run_tasks WHERE run_id=" . (int)$id . " AND task_type='assign_reading'")->fetchAll(PDO::FETCH_COLUMN) as $cj) {
-                        $c = json_decode($cj, true) ?: [];
-                        foreach (($c['docs'] ?? []) as $d) if (!empty($d['type']) && !empty($d['id'])) $docs[] = [(string)$d['type'], (int)$d['id']];
-                    }
-                } catch (\Throwable $e) {}
-                $linked = 0;
-                foreach ($stdIds as $rid) { $rid = (int)$rid;
-                    foreach ($docs as $d) { list($dt, $di) = $d;
-                        try {
-                            $ex = $db->prepare("SELECT COUNT(*) FROM itops_links WHERE (a_type='std_req' AND a_id=? AND b_type=? AND b_id=?) OR (a_type=? AND a_id=? AND b_type='std_req' AND b_id=?)");
-                            $ex->execute([$rid, $dt, $di, $dt, $di, $rid]);
-                            if ((int)$ex->fetchColumn() === 0) {
-                                $db->prepare("INSERT INTO itops_links (a_type,a_id,b_type,b_id,created_by,created_at) VALUES ('std_req',?,?,?,?,NOW())")->execute([$rid, $dt, $di, (int)$currentUser['id']]);
-                                $linked++;
-                            }
-                        } catch (\Throwable $e) {}
-                    }
-                }
-                if ($linked > 0) { audit_log('onboarding_std_evidence', 'onboarding', (int)$id, $linked . ' evidence link(s)'); itops_log('info', 'onboarding', 'Onboarding completion linked ' . $linked . ' reading doc(s) as evidence', ['run' => $id]); }
-            }
             itops_log('info', 'onboarding', ($run['kind'] === 'offboard' ? 'Offboarding' : 'Onboarding') . ' completed: ' . $run['subject_name'], ['run' => $id]);
             if ($run['kind'] === 'offboard') {   // close the loop: verify both systems right away, then tell the requester/manager
                 try { $rr = $db->prepare('SELECT * FROM itops_ob_runs WHERE id=?'); $rr->execute([$id]); $verifyRes = itops_ob_verify($db, $rr->fetch() ?: $run, true, 'on completion'); } catch (\Throwable $e) {}
@@ -639,42 +399,8 @@ if (!function_exists('itops_ob_fail')) {
         return ['ok' => true, 'status' => $status, 'result' => $result] + ($secret ? ['secret' => $secret] : []) + (isset($verifyRes) ? ['verify' => $verifyRes] : []);
     }
 
-    /** Open equipment loans for the person in a run (by ITOps user or borrower email). */
-    function itops_ob_open_loans(PDO $db, array $run): array {
-        $email = trim((string)($run['subject_email'] ?? ''));
-        if ($email === '') return [];
-        try {
-            $st = $db->prepare("SELECT l.id AS loan_id, l.asset_id, l.issued_at, l.due_date, a.asset_tag, a.make, a.model, a.category
-                                FROM itops_asset_loans l JOIN itops_assets a ON a.id=l.asset_id
-                                LEFT JOIN itops_users u ON u.id=l.user_id
-                                WHERE l.status='out' AND (LOWER(l.borrower_email)=LOWER(?) OR LOWER(u.email)=LOWER(?)) ORDER BY l.issued_at");
-            $st->execute([$email, $email]);
-            return $st->fetchAll();
-        } catch (\Throwable $e) { return []; }
-    }
-
-    /** Add an "equipment_return" step for every open loan not yet covered by one. Returns how many were added. */
-    function itops_ob_add_equipment_tasks(PDO $db, int $runId): int {
-        $rq = $db->prepare('SELECT * FROM itops_ob_runs WHERE id=?'); $rq->execute([$runId]); $run = $rq->fetch();
-        if (!$run || $run['kind'] !== 'offboard') return 0;
-        $have = [];
-        foreach ($db->query("SELECT config FROM itops_ob_run_tasks WHERE run_id=" . $runId . " AND task_type='equipment_return'")->fetchAll(PDO::FETCH_COLUMN) as $c) { $j = json_decode((string)$c, true) ?: []; $have[(int)($j['loan_id'] ?? 0)] = 1; }
-        $max = (int)$db->query("SELECT COALESCE(MAX(sort_order),0) FROM itops_ob_run_tasks WHERE run_id=" . $runId)->fetchColumn();
-        $ins = $db->prepare("INSERT INTO itops_ob_run_tasks (run_id,sort_order,title,task_type,config,assignee_role,required,due_date,status) VALUES (?,?,?,?,?,?,1,?,'pending')");
-        $n = 0;
-        foreach (itops_ob_open_loans($db, $run) as $l) {
-            if (isset($have[(int)$l['loan_id']])) continue;
-            $name = trim(($l['make'] ?? '') . ' ' . ($l['model'] ?? ''));
-            $ins->execute([$runId, $max + 1 + $n, 'Return ' . $l['asset_tag'] . ($name !== '' ? ' (' . $name . ')' : ''), 'equipment_return',
-                json_encode(['loan_id' => (int)$l['loan_id'], 'asset_id' => (int)$l['asset_id'], 'asset_tag' => $l['asset_tag'], 'asset_name' => $name]), 'it', $run['start_date'] ?: null]);
-            $n++;
-        }
-        return $n;
-    }
-
-    /** Email a summary of an offboarding (completed or after a scheduled run) to whoever started it + the manager. */
     function itops_ob_send_summary(PDO $db, int $runId, string $status, ?array $verify = null): void {
-        require_once __DIR__ . '/MailIntake.php';
+        require_once __DIR__ . '/Mail.php';
         $rq = $db->prepare('SELECT * FROM itops_ob_runs WHERE id=?'); $rq->execute([$runId]); $run = $rq->fetch(); if (!$run) return;
         $lines = [];
         foreach ($db->query("SELECT title, status, result FROM itops_ob_run_tasks WHERE run_id=" . $runId . " ORDER BY sort_order, id")->fetchAll() as $t) {
@@ -703,7 +429,7 @@ if (!function_exists('itops_ob_fail')) {
      * Returns ['status'=>'completed'|'partial', 'log'=>[...]].
      */
     function itops_ob_run_automated(PDO $db, int $runId, array $actor): array {
-        $manual = ['manual', 'assign_equipment', 'equipment_return', 'm365_exchange_manual', 'm365_create', 'vtiger_create', 'system_access'];   // creates need someone to see the password; a company-system step is done by a person in that system
+        $manual = ['manual', 'm365_exchange_manual', 'm365_create'];   // creates need someone to see the password; a company-system step is done by a person in that system
         $log = [];
         $tq = $db->prepare("SELECT * FROM itops_ob_run_tasks WHERE run_id=? AND status IN ('pending','failed') ORDER BY sort_order, id"); $tq->execute([$runId]);
         // BT124 (code review SEC-16): the Microsoft 365 steps of an offboarding run in a fixed order whatever the template
@@ -721,48 +447,5 @@ if (!function_exists('itops_ob_fail')) {
         }
         $pend = (int)$db->query("SELECT COUNT(*) FROM itops_ob_run_tasks WHERE run_id=" . $runId . " AND status IN ('pending','failed')")->fetchColumn();
         return ['status' => $pend ? 'partial' : 'completed', 'log' => $log];
-    }
-}
-
-if (!function_exists('itops_ob_vt_left_run')) {
-    /**
-     * BT93: records left for later on a "Reassign vTiger records" step. Daily (cron-sla.php): count what the person still owns
-     * in vTiger; none left → the step says they were moved (ob_vtiger_records_moved); still there after the reminder period
-     * (setting vtiger_left_remind_days, default 14 days; 0 = no reminders) → a bell to whoever started the process and whoever
-     * left the records, again every period. Returns [checked, reminded, moved].
-     */
-    function itops_ob_vt_left_days(PDO $db): int {
-        try { $v = $db->query("SELECT sval FROM itops_settings WHERE skey='vtiger_left_remind_days'")->fetchColumn(); } catch (Throwable $e) { $v = false; }
-        return ($v === false || $v === null || $v === '') ? 14 : max(0, min(90, (int)$v));
-    }
-    function itops_ob_vt_left_run(PDO $db): array {
-        $days = itops_ob_vt_left_days($db); $checked = 0; $reminded = 0; $moved = 0;
-        $rows = $db->query("SELECT rt.id, rt.run_id, rt.title, rt.config, r.subject_name, r.created_by, r.status AS run_status FROM itops_ob_run_tasks rt JOIN itops_ob_runs r ON r.id=rt.run_id
-                            WHERE rt.task_type='vtiger_reassign' AND rt.status='done' AND rt.config LIKE '%left_for_later%' AND r.status<>'cancelled' LIMIT 200")->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($rows as $r) {
-            $cfg = json_decode((string)$r['config'], true) ?: []; $lf = $cfg['left_for_later'] ?? null;
-            if (!is_array($lf) || !empty($lf['moved_at']) || empty($lf['vtiger_id'])) continue;
-            $checked++;
-            $pv = itops_vt_call($db, 'reassign_preview', ['from' => (string)$lf['vtiger_id']]);
-            if (empty($pv['ok'])) continue;   // the bridge may be away: try again tomorrow
-            $n = (int)($pv['total'] ?? 0);
-            if ($n === 0) {
-                $lf['moved_at'] = date('Y-m-d H:i:s'); $lf['count_now'] = 0; $cfg['left_for_later'] = $lf;
-                $db->prepare('UPDATE itops_ob_run_tasks SET config=?, result=CONCAT(result, ?) WHERE id=?')->execute([json_encode($cfg), ' — moved by ' . date('m/d/Y'), (int)$r['id']]);
-                try { $_SERVER['ITOPS_USER_NAME'] = 'System (scheduler)'; audit_log('ob_vtiger_records_moved', 'onboarding', (int)$r['run_id'], mb_substr((string)$r['title'], 0, 250), ['Records' => (int)$lf['count']], ['Records' => 0, 'Person' => (string)$r['subject_name']]); } catch (Throwable $e) {}
-                $moved++; continue;
-            }
-            $lf['count_now'] = $n; $lf['checked_at'] = date('Y-m-d H:i:s');
-            $since = strtotime((string)($lf['reminded_at'] ?? $lf['at'] ?? 'now'));
-            if ($days > 0 && $since && $since <= time() - $days * 86400) {
-                $msg = $r['subject_name'] . ' still owns ' . $n . ' vTiger record(s) left for later on ' . date('m/d/Y', strtotime((string)$lf['at'])) . '. Reason given: ' . mb_substr((string)$lf['reason'], 0, 120);
-                $ni = $db->prepare("INSERT INTO itops_notifications (user_id,title,body,type,link) VALUES (?,?,?,?,?)");
-                foreach (array_unique(array_filter([(int)$r['created_by'], (int)($lf['by'] ?? 0)])) as $uid) { try { $ni->execute([$uid, 'vTiger records still to move', $msg, 'onboarding', '#onboarding_runs']); } catch (Throwable $e) {} }
-                $lf['reminded_at'] = date('Y-m-d H:i:s'); $reminded++;
-            }
-            $cfg['left_for_later'] = $lf;
-            $db->prepare('UPDATE itops_ob_run_tasks SET config=? WHERE id=?')->execute([json_encode($cfg), (int)$r['id']]);
-        }
-        return [$checked, $reminded, $moved];
     }
 }

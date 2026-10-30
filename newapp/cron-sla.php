@@ -19,7 +19,7 @@ if (is_file(__DIR__ . '/data/updates/maintenance.json') && time() - (int)@filemt
 }
 require_once __DIR__ . '/api/lib/TimeZone.php'; try { itops_tz_apply(getDB()); } catch (Throwable $e) { itops_tz_boot(); }   // BT131: the installation's own zone
 require_once __DIR__ . '/api/lib/BusinessHours.php'; try { itops_db_clock_sync(getDB()); } catch (Throwable $e) {}   // BT52: the database clock follows PHP's (due times vs NOW())
-require __DIR__ . '/api/lib/MailIntake.php';
+require __DIR__ . '/api/lib/Mail.php';
 
 $cli = (php_sapi_name() === 'cli');
 if (!$cli) {
@@ -101,25 +101,6 @@ function itops_admins(PDO $db): array {
 function itops_notify_row(PDO $db, $uid, $title, $body, $type, $link) {
     $db->prepare("INSERT INTO itops_notifications (user_id,title,body,type,link) VALUES (?,?,?,?,?)")
        ->execute([(int)$uid, $title, $body, $type, $link]);
-}
-function itops_send_reminder(PDO $db, $ownerId, string $title, string $body, string $type, string $link, string $tplKey = '', array $vars = []) {
-    $targets = [];
-    if ($ownerId) {
-        $u = $db->prepare("SELECT id,email,display_name FROM itops_users WHERE id=? AND status='active'");
-        $u->execute([(int)$ownerId]); $row = $u->fetch(); if ($row) $targets[] = $row;
-    }
-    if (!$targets) $targets = itops_admins($db);
-    foreach ($targets as $r) {
-        itops_notify_row($db, $r['id'], $title, $body, $type, $link);
-        if ($tplKey !== '' && !empty($r['email'])) { try { itops_email($tplKey, $r['email'], $vars + ['recipient_name' => $r['display_name'] ?? '',
-            'link' => defined('APP_URL') ? rtrim(APP_URL, '/') . '/#' . $link : ''], ['user_id' => (int)$r['id']]); } catch (\Throwable $e) {} }
-    }
-}
-function itops_rem_once(PDO $db, string $key): bool {
-    $key = substr(preg_replace('/[^A-Za-z0-9_]/', '', $key), 0, 180);
-    // BT124 (review DESK-13): claimed in one statement — only the run whose INSERT goes in sends it
-    $s = $db->prepare("INSERT IGNORE INTO itops_settings (skey,sval) VALUES (?,?)"); $s->execute([$key, date('Y-m-d')]);
-    return $s->rowCount() === 1;
 }
 /* ---------------- Scheduled offboarding (e.g. 5:00 pm on the last day) ---------------- */
 itops_cron_step('Scheduled offboarding'); $OFF = itops_cron_off('onboarding');

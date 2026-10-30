@@ -86,42 +86,10 @@ if (!function_exists('itops_so_classes')) {
         $text = trim($text); if (mb_strlen($text) < 2) throw new InvalidArgumentException('Write the comment.');
         itops_graph_send('POST', 'security/incidents/' . itops_so_inc_id($id) . '/comments', ['@odata.type' => 'microsoft.graph.security.alertComment', 'comment' => mb_substr($text, 0, 1000)]);
     }
-    /** A ticket for the incident (once per incident). Returns [ticket number, ticket id, made now]. */
-    function itops_so_inc_ticket(PDO $db, array $inc, int $catId, ?int $owner, array $user): array {
-        $q = $db->prepare('SELECT l.ticket_id, t.ticket_number FROM itops_m365_incident_tickets l LEFT JOIN itops_tickets t ON t.id=l.ticket_id WHERE l.incident_id=?'); $q->execute([$inc['id']]);
-        if ($r = $q->fetch(PDO::FETCH_ASSOC)) return [(string)$r['ticket_number'], (int)$r['ticket_id'], false];
-        if (!$catId) throw new InvalidArgumentException('Choose the ticket category.');
-        // Review M365B-19: claim the incident first (ticket 0 = being made), so two clicks at once make one ticket
-        $cl = $db->prepare('INSERT IGNORE INTO itops_m365_incident_tickets (incident_id, ticket_id, created_by, created_at) VALUES (?,0,?,NOW())'); $cl->execute([$inc['id'], (int)$user['id']]);
-        if ($cl->rowCount() === 0) { $q->execute([$inc['id']]); $r = $q->fetch(PDO::FETCH_ASSOC); if ($r && (int)$r['ticket_id'] > 0) return [(string)$r['ticket_number'], (int)$r['ticket_id'], false]; throw new InvalidArgumentException('A ticket for this incident is being made right now. Reload in a moment.'); }
-        try {
-            require_once __DIR__ . '/TicketNumbers.php';
-            $lines = array_map(fn($a) => '- ' . $a['title'] . ' (' . $a['severity'] . ($a['users'] ? ', ' . implode(', ', $a['users']) : '') . ($a['devices'] ? ', ' . implode(', ', $a['devices']) : '') . ')', $inc['alerts']);
-            $desc = 'Microsoft Defender incident ' . $inc['id'] . ': ' . $inc['name'] . "\nSeverity: " . $inc['severity'] . "\nStatus: " . $inc['status'] . ($inc['assigned'] ? "\nAssigned in Defender to: " . $inc['assigned'] : '')
-                  . ($lines ? "\n\nAlerts:\n" . implode("\n", $lines) : '') . ($inc['url'] ? "\n\nIn Defender: " . $inc['url'] : '');
-            $subj = mb_substr('Security incident: ' . $inc['name'], 0, 250); $pri = ['high' => 'p2_high', 'medium' => 'p3_medium'][$inc['severity']] ?? 'p4_low'; $req = (int)$user['id'];
-            [$tn, $tid] = itops_ticket_create_numbered($db, function (string $tn) use ($db, $subj, $desc, $catId, $pri, $req) {
-                $db->prepare("INSERT INTO itops_tickets (ticket_number,subject,description,category_id,priority,status,ticket_type,requester_id) VALUES (?,?,?,?,?,'open','incident',?)")
-                   ->execute([$tn, $subj, $desc, $catId, $pri, $req]);
-                return [$tn, (int)$db->lastInsertId()];
-            });
-            if (!function_exists('itops_ticket_sla_fill')) require_once __DIR__ . '/BusinessHours.php';
-            try { itops_ticket_sla_fill($db, $tid); } catch (Throwable $e) {}
-            try { require_once __DIR__ . '/TicketRouting.php'; itops_tr_on_created($db, $tid, null, 'security_incident'); } catch (Throwable $e) {}
-            if ($owner) $db->prepare('UPDATE itops_tickets SET assignee_id=? WHERE id=?')->execute([$owner, $tid]);
-        } catch (Throwable $e) { $db->prepare('DELETE FROM itops_m365_incident_tickets WHERE incident_id=? AND ticket_id=0')->execute([$inc['id']]); throw $e; }
-        $db->prepare('UPDATE itops_m365_incident_tickets SET ticket_id=? WHERE incident_id=?')->execute([$tid, $inc['id']]);
-        if (function_exists('audit_log')) audit_log('ticket_created', 'ticket', $tid, $tn, null, ['from' => 'Microsoft Defender incident ' . $inc['id']]);
-        return [$tn, $tid, true];
-    }
 
     /* ─────────── admin roles ─────────── */
 
     if (!defined('ITOPS_SO_GA')) define('ITOPS_SO_GA', '62e90394-69f5-4237-9190-012177145e10');
-    function itops_so_guid(string $s, string $what): string {
-        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $s)) throw new InvalidArgumentException('Not a ' . $what . '.');
-        return strtolower($s);
-    }
     /** role definition id => [name, high] (built-in and custom). */
     function itops_so_role_defs(): array {
         require_once __DIR__ . '/M365Guard.php';

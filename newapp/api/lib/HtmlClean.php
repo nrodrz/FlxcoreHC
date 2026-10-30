@@ -99,8 +99,4 @@ if (!function_exists('itops_html_clean')) {
         return $out;
     }
 
-    /** Clean the 'content' of a request body when it is there (KB, SOPs, job descriptions). */
-    function itops_html_clean_body(array &$body, string $field = 'content'): void {
-        if (array_key_exists($field, $body) && $body[$field] !== null && !is_array($body[$field])) $body[$field] = itops_html_clean((string)$body[$field]);
-    }
 }

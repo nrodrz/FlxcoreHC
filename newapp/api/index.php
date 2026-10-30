@@ -177,13 +177,13 @@ $id = $segments[1] ?? null;
 $sub = $segments[2] ?? null;
 
 // Auth middleware — skip for login, o365 callback, and install check
-$publicRoutes = ['terms/text', 'auth/login', 'auth/mfa_login', 'auth/o365/callback', 'auth/o365/url', 'auth/teams', 'health', 'install/check', 'jobs/monitor', 'backups/checkin', 'hub/checkin', 'hub/release', 'app/manifest', 'app/icon', 'app/offline', 'app/shortcut'];   // BT147: installing the app (no data in them)   // hub/checkin (BT127): checks the installation's own token;   // backups/checkin (BT62): checks its own key;   // jobs/monitor (BT60): checks its own key   // auth/teams (BT29): the token it carries is verified in the route
+$publicRoutes = ['terms/text', 'auth/login', 'auth/mfa_login', 'auth/o365/callback', 'auth/o365/url', 'auth/teams', 'health', 'install/check', 'jobs/monitor', 'hub/checkin', 'hub/release', 'app/manifest', 'app/icon', 'app/offline', 'app/shortcut'];   // BT147: installing the app (no data in them)   // hub/checkin (BT127): checks the installation's own token;   // backups/checkin (BT62): checks its own key;   // jobs/monitor (BT60): checks its own key   // auth/teams (BT29): the token it carries is verified in the route
 // Match against BOTH a 2-segment and a 3-segment key so 3-part public routes
 // (auth/o365/url, auth/o365/callback) are recognized — a 2-segment key alone
 // would read as "auth/o365" and never match, forcing a 401 before login.
 $routeKey  = implode('/', array_slice($segments, 0, 2));
 $routeKey3 = implode('/', array_slice($segments, 0, 3));
-$isPublicRoute = in_array($routeKey, $publicRoutes, true) || in_array($routeKey3, $publicRoutes, true) || $resource === 'help_script';   // BT90: the Help Center visuals' scripts (no data in them)
+$isPublicRoute = in_array($routeKey, $publicRoutes, true) || in_array($routeKey3, $publicRoutes, true);
 
 // BT125: while an update is being installed (Settings → Updates) every request but signing in and the update itself waits.
 // The flag ends by itself after 15 minutes so a stopped install cannot lock the app.

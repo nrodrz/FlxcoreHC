@@ -11,7 +11,6 @@
  *   · Capabilities map to ITOps permission modules (see $CAPS) — reads need
  *     "Microsoft 365" (view); each kind of change has its own module.
  *   · Onboarding templates live in the table itops_m365_templates (earlier: an app config file).
- *   · vTiger is reached through ITOps's read-only DB or its bridge (lib/HubVtiger.php).
  *   · "Your own account" = your Microsoft sign-in id (o365_oid) or your email.
  *   · Offboard wizard steps run through ITOps's offboarding engine, so every departure keeps a
  *     record with verification, recertification and the ITOps extras (offboard-start / -step / -verify).
@@ -126,10 +125,10 @@ $audit = function (array $e) use ($currentUser) {
     $rid = (string)($e['record_id'] ?? '');
     $det = $e['detail'] ?? null;
     $name = $rid . (!$ok ? ' — failed: ' . mb_substr((string)($e['error'] ?? ''), 0, 160) : '');
-    audit_log($act, (string)($e['system'] ?? 'm365') === 'vtiger' ? 'vtiger' : 'm365', null, mb_substr($name, 0, 250), null,
+    audit_log($act, 'm365', null, mb_substr($name, 0, 250), null,
               ['result' => $ok ? 'success' : 'error', 'error' => $e['error'] ?? null, 'detail' => $det, 'linked' => $e['linked_record_id'] ?? null]);
     if (function_exists('itops_log')) {
-        try { itops_log($ok ? 'info' : 'warning', (string)($e['system'] ?? 'm365') === 'vtiger' ? 'vtiger' : 'm365', $act . ' ' . $rid . ($ok ? '' : ' (failed)'), ['by' => $currentUser['display_name'] ?? '', 'error' => $e['error'] ?? null]); } catch (Throwable $x) {}
+        try { itops_log($ok ? 'info' : 'warning', 'm365', $act . ' ' . $rid . ($ok ? '' : ' (failed)'), ['by' => $currentUser['display_name'] ?? '', 'error' => $e['error'] ?? null]); } catch (Throwable $x) {}
     }
 };
 
@@ -249,8 +248,7 @@ if (strpos($action, 'm365-') === 0) {
     // ---- BT48: the Accounts grid. Every account, one row each, with the values a column can show. ----
     // The read of the directory is kept for five minutes (any account change made here drops it; ?refresh=1 reads again).
     // ?signin=1 adds the last sign-in (from the directory report, ten minutes), ?manager=1 the manager: each costs
-    // Microsoft several requests, so the screen asks only when that column is shown. vTiger and the company systems
-    // are matched at every call, from this server's own data.
+    // Microsoft several requests, so the screen asks only when that column is shown.
     // ---- BT54: the background refresh — what it keeps, when it last ran, run it now, its settings ----
     if ($action === 'm365-bg-status' || $action === 'm365-bg-run' || $action === 'm365-bg-config') {
         $cap('m365.view');
@@ -339,7 +337,6 @@ if (strpos($action, 'm365-') === 0) {
             foreach (array_keys($u['profile']) as $pk) if (preg_match('/^ext\d+$/', (string)$pk) && !isset($named[$pk])) unset($rows[$i]['profile'][$pk]);
             $rows[$i]['is_self'] = $me && (in_array(strtolower($u['id']), $me, true) || in_array(strtolower($u['upn']), $me, true) || in_array(strtolower($u['mail']), $me, true));
         }
-        $rows = ItopsM365::attachVtiger($rows);
         $out = ['users' => $rows, 'at' => $at, 'custom' => $customDefs,
                 'signin' => null, 'manager' => null, 'pending_new' => $pendingNew];
         if (!empty($_GET['signin'])) {
@@ -378,7 +375,6 @@ if (strpos($action, 'm365-') === 0) {
                 (string)($_GET['domain'] ?? '')
             );
         } catch (Throwable $e) { error_response($e->getMessage(), 400); }
-        $res['users'] = ItopsM365::attachVtiger($res['users']);
         json_response($res);
     }
 
@@ -397,7 +393,6 @@ if (strpos($action, 'm365-') === 0) {
             $svc = ItopsM365::fromConfig();
             $user = $svc->getUser($id, $svc->skus()['map'] ?? []);
         } catch (Throwable $e) { error_response($e->getMessage(), 400); }
-        [$user] = ItopsM365::attachVtiger([$user]);
         $user['is_self'] = $isSelf((string)($user['id'] ?? $id));   // ITOps: UI lock-out guards
         try { $user['manager'] = $svc->getManager((string)($user['id'] ?? $id)); $user['manager_known'] = true; }   // BT38
         catch (Throwable $e) { $user['manager'] = null; $user['manager_known'] = false; }
@@ -946,7 +941,6 @@ if (strpos($action, 'm365-') === 0) {
             $row = ItopsM365::gridRow(['id' => $created['id'], 'displayName' => $created['displayName'], 'userPrincipalName' => $created['userPrincipalName'],
                 'accountEnabled' => true, 'userType' => 'Member', 'createdDateTime' => gmdate('c'), 'usageLocation' => $usage]);
         if ($row['id'] !== '') { $nl = array_values(array_filter($newAccGet(), fn($r) => ($r['id'] ?? '') !== $row['id'])); $row['_at'] = time(); $nl[] = $row; $newAccPut($nl); }
-        [$created] = ItopsM365::attachVtiger([$created + ['upn' => $created['userPrincipalName'], 'mail' => '']]);
         $audit([
             'action' => 'm365.user.create', 'system' => 'm365', 'object_type' => 'user',
             'record_id' => $created['id'], 'result' => 'success',
@@ -1874,9 +1868,9 @@ if ($action === 'recon-directory') {
 // ═════════════════════ Offboarding verification ═════════════════════
 if ($action === 'provision-verify') {
     if (!$can('provision.offboard') && !$can('m365.users')) $cap('provision.offboard');
-    $email = trim((string)($body['email'] ?? '')); $m365Id = trim((string)($body['m365_id'] ?? '')); $vtigerId = trim((string)($body['vtiger_id'] ?? ''));
+    $email = trim((string)($body['email'] ?? '')); $m365Id = trim((string)($body['m365_id'] ?? ''));
     if ($m365Id !== '' && !preg_match('/^[A-Za-z0-9\-]{1,64}$/', $m365Id)) error_response('That Microsoft 365 account id is not valid.', 400);   // review M365B-15
-    if ($email === '' && $m365Id === '' && $vtigerId === '') error_response('An email, an M365 id, or a vTiger id is required.', 400);
+    if ($email === '' && $m365Id === '') error_response('An email or a Microsoft 365 id is required.', 400);
     $checks = []; $issues = [];
     $add = function (string $system, string $label, ?bool $ok, string $detail = '') use (&$checks, &$issues) {
         $checks[] = ['system' => $system, 'label' => $label, 'status' => $ok === null ? 'skip' : ($ok ? 'pass' : 'fail'), 'detail' => $detail];
@@ -1899,39 +1893,17 @@ if ($action === 'provision-verify') {
             $add('M365', 'Licenses removed', count($lics) === 0, count($lics) === 0 ? 'no licenses assigned' : (count($lics) . ' license(s) still assigned'));
         }
     } catch (Throwable $e) { $add('M365', 'Checked', null, 'Microsoft 365 not configured or unreachable: ' . $e->getMessage()); }
-    if (itops_hub_vtiger_available()) {
-        try {
-            // BT40: an id that is sent is that user or nobody. Without an id: by email, then by user name — and a user
-            // found by user name only is said to be a guess, so a result is never read as being about the wrong person.
-            $vu = null; $guess = false;
-            if ($vtigerId !== '') { foreach (itops_hub_vtiger_all_users() as $x) if ((string)$x['id'] === $vtigerId) { $vu = $x; break; } }
-            elseif ($email !== '') { $vu = itops_hub_vtiger_find_by_email($email); $guess = $vu !== null && ($vu['matched_by'] ?? '') === 'username'; }
-            if ($vu === null) $add('vTiger', 'Account located', null, 'No vTiger user matched — nothing to verify.');
-            else {
-                $inactive = strcasecmp((string)($vu['status'] ?? ''), 'Inactive') === 0;
-                $note = $guess ? ' — vTiger user "' . $vu['user_name'] . '" was found by user name only (its email is ' . (($vu['email'] ?? '') !== '' ? $vu['email'] : 'empty') . '); it may be somebody else' : '';
-                $add('vTiger', 'User deactivated', $inactive, ($inactive ? 'status = Inactive' : ('status = ' . (($vu['status'] ?? '') ?: 'unknown'))) . $note);
-                if ($vtigerId === '') $vtigerId = (string)$vu['id'];
-            }
-        } catch (Throwable $e) { $add('vTiger', 'Checked', null, 'vTiger lookup failed: ' . $e->getMessage()); }
-    } else $add('vTiger', 'Checked', null, 'vTiger database not connected.');
-    if ($vtigerId !== '' && itops_hub_bridge_ready()) {
-        try { $pv = itops_hub_vtiger_preview($vtigerId); $owned = array_sum(array_column($pv['modules'], 'count'));
-              $add('vTiger', 'Records reassigned', $owned === 0, $owned === 0 ? 'no live records owned' : "$owned record(s) still owned"); }
-        catch (Throwable $e) { $add('vTiger', 'Records reassigned', null, 'Could not read record ownership from the bridge: ' . $e->getMessage()); }
-    } elseif ($vtigerId !== '') $add('vTiger', 'Records reassigned', null, 'Bridge not configured — cannot count owned records.');
-    $clean = count($issues) === 0;
-    $audit(['action' => 'provision.verify', 'system' => 'm365', 'record_id' => $email !== '' ? $email : ($vtigerId ?: $m365Id),
+    $audit(['action' => 'provision.verify', 'system' => 'm365', 'record_id' => $email !== '' ? $email : $m365Id,
             'result' => $clean ? 'success' : 'error', 'detail' => ['clean' => $clean, 'issues' => $issues, 'checks' => $checks]]);
-    json_response(['ok' => true, 'clean' => $clean, 'checks' => $checks, 'issues' => $issues, 'subject' => ['email' => $email, 'm365_id' => $m365Id, 'vtiger_id' => $vtigerId]]);
+    json_response(['ok' => true, 'clean' => $clean, 'checks' => $checks, 'issues' => $issues, 'subject' => ['email' => $email, 'm365_id' => $m365Id]]);
 }
 
 // ═════════════════════ Onboarding templates ═════════════════════
 $tplRow = function (array $r): array {
-    $m = json_decode((string)$r['m365_json'], true) ?: []; $v = json_decode((string)$r['vtiger_json'], true) ?: [];
+    $m = json_decode((string)$r['m365_json'], true) ?: [];
     // BT47: the default password never leaves the server through a template. A screen is told only that one is saved.
     $m['has_password'] = !empty($m['password_enc']); unset($m['password_enc']);
-    return ['id' => (string)$r['id'], 'name' => (string)$r['name'], 'description' => (string)($r['description'] ?? ''), 'm365' => $m, 'vtiger' => $v,
+    return ['id' => (string)$r['id'], 'name' => (string)$r['name'], 'description' => (string)($r['description'] ?? ''), 'm365' => $m,
             'updated_at' => $r['updated_at'] ?? null];
 };
 $tplList = function () use ($db, $tplRow): array {
@@ -1956,7 +1928,6 @@ if ($action === 'onboard-template-save' || $action === 'onboard-template-delete'
     $name = trim((string)($body['name'] ?? ''));
     if ($name === '') error_response('A template name is required.', 400);
     $m365In = is_array($body['m365'] ?? null) ? $body['m365'] : [];
-    $vtigerIn = is_array($body['vtiger'] ?? null) ? $body['vtiger'] : [];
     $licenses = array_values(array_filter(array_map('strval', (array)($m365In['licenses'] ?? [])), fn($s) => $s !== ''));
     $groups = [];
     foreach ((array)($m365In['groups'] ?? []) as $g) { $gid = trim((string)($g['id'] ?? '')); if ($gid !== '') $groups[] = ['id' => $gid, 'name' => trim((string)($g['name'] ?? $gid))]; }
@@ -1971,14 +1942,8 @@ if ($action === 'onboard-template-save' || $action === 'onboard-template-delete'
     $mgrIn = is_array($m365In['manager'] ?? null) ? $m365In['manager'] : [];
     $manager = trim((string)($mgrIn['id'] ?? '')) !== ''
         ? ['id' => trim((string)$mgrIn['id']), 'upn' => trim((string)($mgrIn['upn'] ?? '')), 'name' => trim((string)($mgrIn['name'] ?? ''))] : null;
-    // BT44: the company systems a new person of this template gets (keys of systems; unknown ones are dropped)
-    require_once __DIR__ . '/../lib/Systems.php';
-    $sysKnown = array_column(array_filter(itops_sys_all($db), fn($s) => empty($s['company'])), 'key'); $tplSystems = [];   // BT57: no company tools in a template
-    foreach ((array)($m365In['systems'] ?? []) as $sk) if (is_string($sk) && in_array($sk, $sysKnown, true) && !in_array($sk, $tplSystems, true)) $tplSystems[] = $sk;
     $m365 = ['licenses' => $licenses, 'groups' => $groups, 'usage_location' => $usage, 'fields' => $fields, 'manager' => $manager,
-             'department' => $fields['department'] ?? '', 'job_title' => $fields['jobTitle'] ?? '', 'systems' => $tplSystems];
-    $vtiger = ['create' => !empty($vtigerIn['create']), 'roleid' => trim((string)($vtigerIn['roleid'] ?? '')),
-               'status' => ((string)($vtigerIn['status'] ?? 'Active')) === 'Inactive' ? 'Inactive' : 'Active'];
+             'department' => $fields['department'] ?? '', 'job_title' => $fields['jobTitle'] ?? ''];
     $desc = trim((string)($body['description'] ?? ''));
     $id = (int)($body['id'] ?? 0);
     // BT47: the default password. Sent only when it is set or replaced ('password'); 'password_clear' removes it; otherwise
@@ -2005,10 +1970,10 @@ if ($action === 'onboard-template-save' || $action === 'onboard-template-delete'
         if ($id > 0) { $q = $db->prepare("SELECT 1 FROM itops_m365_templates WHERE id=?"); $q->execute([$id]); $exists = (bool)$q->fetchColumn(); }
         if ($exists) {
             $db->prepare("UPDATE itops_m365_templates SET name=?, description=?, m365_json=?, vtiger_json=?, updated_by=?, updated_at=NOW() WHERE id=?")
-               ->execute([$name, $desc, json_encode($m365), json_encode($vtiger), (int)$currentUser['id'], $id]);
+               ->execute([$name, $desc, json_encode($m365), '{}', (int)$currentUser['id'], $id]);
         } else {
             $db->prepare("INSERT INTO itops_m365_templates (name, description, m365_json, vtiger_json, created_by, created_at, updated_at) VALUES (?,?,?,?,?,NOW(),NOW())")
-               ->execute([$name, $desc, json_encode($m365), json_encode($vtiger), (int)$currentUser['id']]);
+               ->execute([$name, $desc, json_encode($m365), '{}', (int)$currentUser['id']]);
             $id = (int)$db->lastInsertId();
         }
     } catch (Throwable $e) { error_response('Run db-update.php once to install the onboarding templates table.', 409); }
@@ -2022,14 +1987,11 @@ if ($action === 'onboard-template-save' || $action === 'onboard-template-delete'
 // The wizard's steps run through ITOps's offboarding engine so each departure keeps a
 // record (History), stored verification, monthly recertification and the extra steps.
 $STEP_LABEL = [
-    'vtiger_reassign' => 'Reassign vTiger records', 'm365_disable' => 'M365 · Block sign-in', 'm365_revoke_sessions' => 'M365 · Revoke sessions',
+    'm365_disable' => 'M365 · Block sign-in', 'm365_revoke_sessions' => 'M365 · Revoke sessions',
     'm365_autoreply' => 'M365 · Auto-reply (out of office)', 'm365_forward' => 'M365 · Forward new email', 'm365_delegate_onedrive' => 'M365 · Share OneDrive for handover',
     'm365_license_remove_all' => 'M365 · Remove licenses', 'm365_groups_remove_all' => 'M365 · Remove from groups',
-    'vtiger_deactivate' => 'Deactivate vTiger user', 'equipment_return' => 'Equipment check-in',
 ];
 $stepAllowed = function (string $type) use ($can, $currentUser): bool {
-    if (strpos($type, 'vtiger_') === 0) return $can('provision.offboard');
-    if ($type === 'equipment_return') return itops_can($currentUser, 'assets', 'edit');
     return itops_ob_type_allowed($currentUser, $type);
 };
 $runRow = function (int $rid) use ($db, $currentUser) {
@@ -2061,8 +2023,6 @@ if ($action === 'offboard-start') {
     $o = is_array($body['options'] ?? null) ? $body['options'] : [];
     $email = trim((string)($body['mail'] ?? '')) ?: $upn;
     $tasks = [];
-    $re = is_array($o['reassign'] ?? null) ? $o['reassign'] : null;
-    if ($re && trim((string)($re['to_id'] ?? '')) !== '') $tasks[] = ['vtiger_reassign', ['to_id' => (string)$re['to_id'], 'modules' => array_values(array_map('strval', (array)($re['modules'] ?? [])))]];
     $tasks[] = ['m365_disable', []];
     if (!empty($o['revokeSessions'])) $tasks[] = ['m365_revoke_sessions', []];
     if (!empty($o['autoreply']['on'])) $tasks[] = ['m365_autoreply', ['message' => mb_substr(trim((string)($o['autoreply']['message'] ?? '')), 0, 2000)]];
@@ -2076,34 +2036,7 @@ if ($action === 'offboard-start') {
     }
     if (!empty($o['removeLicenses'])) $tasks[] = ['m365_license_remove_all', []];
     if (!empty($o['removeFromGroups'])) $tasks[] = ['m365_groups_remove_all', []];
-    if (!empty($o['deactivateVtiger'])) $tasks[] = ['vtiger_deactivate', []];
-    // BT44: the other company systems the person has an account in. Checked before anything is created.
-    require_once __DIR__ . '/../lib/Systems.php';
-    // A screen that says nothing about them (a page of an older build still open in a browser) gets the steps the screen
-    // would have ticked: an account is recorded, or the system asks every time. Saying "none" takes an empty list.
-    if (array_key_exists('systems', $o)) { try { $sysKeys = itops_sys_check_keys($db, 'offboard', $o['systems']); } catch (InvalidArgumentException $e) { error_response($e->getMessage(), 400); } }
-    else $sysKeys = array_column(array_filter(itops_sys_for_person($db, 'offboard', [$email, $upn]), fn($sy) => $sy['suggest']), 'key');
     foreach ($tasks as [$t]) if (!$stepAllowed($t)) error_response('"' . ($STEP_LABEL[$t] ?? $t) . '" needs a permission you do not have.', 403);
-    // BT40: the vTiger id the screen shows is taken as "a person looked at this user and chose these steps" — but only
-    // when it is the user this server links to the person (by email, or by user name). Any other id is refused before
-    // anything is created: it would mean the screen was showing somebody else.
-    $vtPin = is_scalar($body['vtiger_id'] ?? null) ? trim((string)$body['vtiger_id']) : '';
-    if ($vtPin !== '' && !ctype_digit($vtPin)) $vtPin = '';
-    $hasVtStep = (bool)array_filter($tasks, fn($x) => in_array($x[0], ['vtiger_reassign', 'vtiger_deactivate'], true));
-    if ($vtPin !== '') {
-        $cand = null; $candErr = null;
-        try { if (itops_hub_vtiger_available()) $cand = itops_hub_vtiger_match([$email, $upn], strpos($upn, '#') === false ? $upn : '#'); else $candErr = 'vTiger is not connected'; }
-        catch (Throwable $e) { $cand = null; $candErr = $e->getMessage(); }
-        if ($candErr !== null && $hasVtStep) error_response('The vTiger user of this person could not be checked just now (' . $candErr . '). Nothing was started. Try again, or untick the vTiger steps.', 502);
-        if (!$cand || (string)$cand['id'] !== $vtPin) {
-            if ($hasVtStep) {
-                try { audit_log('offboarding_vtiger_refused', 'onboarding', null, mb_substr($name . ' - offboarding not started: the vTiger user shown on the screen is not the one linked to this person', 0, 250), null,
-                    ['Person' => $name, 'Sign-in name' => $upn, 'vTiger id sent by the screen' => $vtPin, 'vTiger user linked now' => $cand ? $cand['id'] . ' "' . $cand['user_name'] . '"' : 'none found', 'Result' => 'Nothing was created or changed']); } catch (Throwable $e) {}
-                error_response('The vTiger user shown on the screen is not the one linked to this person now. Reload the page, look again and start over. Nothing was changed.', 409);
-            }
-            $vtPin = '';   // no vTiger step: nothing to protect, simply not remembered
-        }
-    }
     $at = trim((string)($body['schedule_at_utc'] ?? ''));
     $ts = false;   // BT89: a time without a zone is read as UTC
     if ($at !== '') { try { $ts = (new DateTime($at, new DateTimeZone('UTC')))->getTimestamp(); } catch (Throwable $e) { $ts = false; } }
@@ -2114,22 +2047,10 @@ if ($action === 'offboard-start') {
            ->execute([$name, $email, $upn, 'Started from Microsoft 365 → Accounts → Offboard', (int)$currentUser['id'], $mid]);
     } catch (Throwable $e) { error_response('Could not start the offboarding record: ' . $e->getMessage(), 500); }
     $runId = (int)$db->lastInsertId();
-    // BT36: the screen already shows which vTiger user is linked — pin that id on the run so every step acts on the same user.
-    // BT40: and store it on the vTiger steps: that is the record that a person saw this user when choosing them.
-    if ($vtPin !== '') { try { $db->prepare('UPDATE itops_ob_runs SET vtiger_id=? WHERE id=?')->execute([$vtPin, $runId]); } catch (Throwable $e) {} }
     $ins = $db->prepare("INSERT INTO itops_ob_run_tasks (run_id,sort_order,title,task_type,config,assignee_role,required,due_date,status) VALUES (?,?,?,?,?,NULL,1,NULL,'pending')");
     $i = 0;
     foreach ($tasks as [$t, $cfg]) {
-        if ($vtPin !== '' && in_array($t, ['vtiger_reassign', 'vtiger_deactivate'], true)) $cfg['vtiger_id'] = $vtPin;
         $ins->execute([$runId, ($i += 10), $STEP_LABEL[$t] ?? $t, $t, json_encode($cfg ?: new stdClass())]);
-    }
-    if ($sysKeys) itops_sys_add_steps($db, $runId, 'offboard', $sysKeys, $i);   // BT44: one step per company system, done by a person in that system
-    $loans = [];
-    if (!empty($o['equipment'])) {   // one check-in reminder per item still on loan (checked in by hand, with its condition)
-        foreach (itops_ob_open_loans($db, ['subject_email' => $email, 'subject_name' => $name, 'id' => $runId]) as $l) {
-            $ins->execute([$runId, ($i += 10), 'Equipment check-in · ' . ($l['asset_tag'] ?? ''), 'equipment_return', json_encode(['loan_id' => (int)$l['loan_id']])]);
-            $loans[] = $l;
-        }
     }
     if ($ts) {
         $db->prepare("UPDATE itops_ob_runs SET auto_run_at=?, auto_run_status='scheduled', auto_run_by=? WHERE id=?")->execute([gmdate('Y-m-d H:i:s', $ts), (int)$currentUser['id'], $runId]);
@@ -2137,7 +2058,7 @@ if ($action === 'offboard-start') {
     }
     audit_log('offboarding_started', 'onboarding', $runId, $name . ' (Microsoft 365 → Offboard)');
     $tk = $db->prepare("SELECT id, task_type, title, status FROM itops_ob_run_tasks WHERE run_id=? ORDER BY sort_order, id"); $tk->execute([$runId]);
-    json_response(['ok' => true, 'run_id' => $runId, 'tasks' => $tk->fetchAll(), 'loans' => $loans, 'scheduled' => $ts ? gmdate('Y-m-d H:i:s', $ts) : null]);
+    json_response(['ok' => true, 'run_id' => $runId, 'tasks' => $tk->fetchAll(), 'scheduled' => $ts ? gmdate('Y-m-d H:i:s', $ts) : null]);
 }
 
 if ($action === 'offboard-step') {
@@ -2146,18 +2067,15 @@ if ($action === 'offboard-step') {
     $run = $runRow((int)($body['run_id'] ?? 0));
     $tq = $db->prepare("SELECT * FROM itops_ob_run_tasks WHERE id=? AND run_id=?"); $tq->execute([(int)($body['task_id'] ?? 0), (int)$run['id']]); $task = $tq->fetch();
     if (!$task) error_response('Step not found.', 404);
-    if ($task['task_type'] === 'equipment_return') error_response('Equipment is checked in by hand once it is back.', 400);
-    if ($task['task_type'] === 'system_access') error_response('This step is done by a person in that system. Record what was done on the step.', 400);
     if (!$stepAllowed($task['task_type'])) error_response('"' . $task['title'] . '" needs a permission you do not have.', 403);
     try {
         $why = trim((string)($body['override_reason'] ?? ''));
-        $sameId = is_scalar($body['vtiger_id'] ?? null) ? trim((string)$body['vtiger_id']) : '';   // BT40: "it is the same person", for a vTiger user found by user name
-        $r = itops_ob_task_action($db, (int)$run['id'], (int)$task['id'], ['action' => 'run'] + ($why !== '' ? ['override_reason' => mb_substr($why, 0, 500)] : []) + ($sameId !== '' ? ['vtiger_id' => mb_substr($sameId, 0, 32)] : []), $currentUser);
+   // BT40: "it is the same person", for a vTiger user found by user name
+        $r = itops_ob_task_action($db, (int)$run['id'], (int)$task['id'], ['action' => 'run'] + ($why !== '' ? ['override_reason' => mb_substr($why, 0, 500)] : []), $currentUser);
         $dirty();
         json_response(['ok' => true, 'step' => $task['title'], 'type' => $task['task_type'], 'detail' => (string)($r['result'] ?? '')]);
     } catch (ItopsObError $e) {
-        json_response(['ok' => false, 'step' => $task['title'], 'type' => $task['task_type'], 'error' => $e->getMessage(), 'needs_override' => !empty($e->extra['needs_override']),
-                       'needs_vtiger_confirm' => !empty($e->extra['needs_vtiger_confirm']), 'vtiger_user' => $e->extra['vtiger_user'] ?? null]);
+        json_response(['ok' => false, 'step' => $task['title'], 'type' => $task['task_type'], 'error' => $e->getMessage(), 'needs_override' => !empty($e->extra['needs_override'])]);
     } catch (Throwable $e) {
         try { $db->prepare("UPDATE itops_ob_run_tasks SET status='failed', result=? WHERE id=?")->execute([mb_substr($e->getMessage(), 0, 500), (int)$task['id']]); } catch (Throwable $x) {}
         json_response(['ok' => false, 'step' => $task['title'], 'type' => $task['task_type'], 'error' => $e->getMessage()]);
@@ -2177,33 +2095,23 @@ if ($action === 'onboard-record') {
     $cap('m365.users');
     $name = trim((string)($body['display_name'] ?? '')); $upn = trim((string)($body['upn'] ?? ''));
     if ($name === '' || $upn === '') error_response('Nothing to record.', 400);
-    // BT44: company systems to set up for the new person. With any of them the record stays open until each is answered.
-    require_once __DIR__ . '/../lib/Systems.php';
-    $sysKeys = [];
-    if (array_key_exists('systems', $body)) { try { $sysKeys = itops_sys_check_keys($db, 'onboard', $body['systems']); } catch (InvalidArgumentException $e) { $sysKeys = []; $sysNote = $e->getMessage(); } }
     try {
         $db->prepare("INSERT INTO itops_ob_runs (template_id,kind,subject_name,subject_email,subject_upn,status,notes,created_by,created_at,completed_at,m365_id,vtiger_id,first_name,last_name,job_title,department)
-                      VALUES (NULL,'onboard',?,?,?," . ($sysKeys ? "'in_progress'" : "'completed'") . ",?,?,NOW()," . ($sysKeys ? 'NULL' : 'NOW()') . ",?,?,?,?,?,?)")
+                      VALUES (NULL,'onboard',?,?,?,'completed',?,?,NOW(),NOW(),?,?,?,?,?,?)")
            ->execute([$name, $upn, $upn, mb_substr('Onboarded from Microsoft 365 → Accounts → Onboard' . (($body['template'] ?? '') !== '' ? ' · template "' . $body['template'] . '"' : ''), 0, 1000),
-                      (int)$currentUser['id'], (string)($body['m365_id'] ?? '') ?: null, (string)($body['vtiger_id'] ?? '') ?: null,
+                      (int)$currentUser['id'], (string)($body['m365_id'] ?? '') ?: null, null,
                       mb_substr((string)($body['first_name'] ?? ''), 0, 80) ?: null, mb_substr((string)($body['last_name'] ?? ''), 0, 80) ?: null,
                       mb_substr((string)($body['job_title'] ?? ''), 0, 120) ?: null, mb_substr((string)($body['department'] ?? ''), 0, 120) ?: null]);
     } catch (Throwable $e) { json_response(['ok' => false]); }
     $runId = (int)$db->lastInsertId();
     // BT44: these lines are the record of what the wizard already did ("recorded"). One that failed is kept for the reader
-    // and does not hold the record open: only the company-system steps added below do.
     $ins = $db->prepare("INSERT INTO itops_ob_run_tasks (run_id,sort_order,title,task_type,config,assignee_role,required,due_date,status,result,completed_by,completed_at) VALUES (?,?,?,?,'{\"recorded\":true}',NULL,1,NULL,?,?,?,NOW())");
     $i = 0;
     foreach ((array)($body['steps'] ?? []) as $s) {
         $ins->execute([$runId, ($i += 10), mb_substr((string)($s['step'] ?? ''), 0, 190), 'manual', !empty($s['ok']) ? 'done' : 'failed', mb_substr((string)($s['detail'] ?? ($s['error'] ?? '')), 0, 500), (int)$currentUser['id']]);
     }
-    $sysTasks = [];
-    if ($sysKeys) {
-        itops_sys_add_steps($db, $runId, 'onboard', $sysKeys, $i);
-        $tk = $db->prepare("SELECT id, title, status FROM itops_ob_run_tasks WHERE run_id=? AND task_type='system_access' ORDER BY sort_order, id"); $tk->execute([$runId]); $sysTasks = $tk->fetchAll();
-    }
-    audit_log($sysKeys ? 'onboarding_started' : 'onboarding_completed', 'onboarding', $runId, $name . ' (Microsoft 365 → Onboard)' . ($sysKeys ? ' - ' . count($sysTasks) . ' company system(s) to set up' : ''));
-    json_response(['ok' => true, 'run_id' => $runId, 'system_tasks' => $sysTasks, 'systems_note' => $sysNote ?? null]);
+    audit_log('onboarding_completed', 'onboarding', $runId, $name . ' (Microsoft 365 → Onboard)');
+    json_response(['ok' => true, 'run_id' => $runId]);
 }
 
 

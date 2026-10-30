@@ -16,7 +16,7 @@
  * Defaults live in code (api/lib/EmailTemplates.php); only edits are stored (itops_email_templates).
  * Permission: Connection (settings) — view to read, edit to change.
  */
-require_once __DIR__ . '/../lib/MailIntake.php';
+require_once __DIR__ . '/../lib/Mail.php';
 require_once __DIR__ . '/../lib/EmailTemplates.php';
 
 // Reading and PREVIEWING (renders sample data, sends nothing) need view; everything else needs edit.

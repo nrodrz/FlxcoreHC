@@ -9,7 +9,7 @@ function detectBase(){
   return (p||'') + '/api';
 }
 let API_BASE = detectBase();
-const APP_BUILD='0001-A003';
+const APP_BUILD='0001-A004';
 /* BT96: the product and its owner — fixed, not a setting (the name people see is appName()). */
 const ITOPS_PRODUCT='ITOps', ITOPS_OWNER='Indisse-BTS', ITOPS_YEARS='2026';   /* BT100: the owner is named as the business */
 /* BT20: the product is sold as "ITOps", but each client can rename it (Settings → Branding → App name).
@@ -2615,7 +2615,7 @@ function mhTzName(){ try{ const p=new Intl.DateTimeFormat('en-US',{timeZone:MH_T
  * background. Identical requests in flight are shared. Any change (mhPost) drops the directory/license
  * reads it can affect. The server keeps its own 10-minute report cache; "Refresh" still forces Microsoft. */
 const MH_FRESH=60000; const MH_C={}; const MH_INF={};
-const MH_DIRTY=['m365-users','m365-user','m365-skus','m365-sku-users','license-report','recon-directory','m365-user-roles','m365-user-signins','m365-groups-overview','m365-guests','m365-user-history','m365-custom-fields','systems-for','onboard-templates-get','m365-accounts-grid','m365-user-fields'];   /* BT44: a template saved a moment ago is on the Onboard screen at once */
+const MH_DIRTY=['m365-users','m365-user','m365-skus','m365-sku-users','license-report','recon-directory','m365-user-roles','m365-user-signins','m365-groups-overview','m365-guests','m365-user-history','m365-custom-fields','onboard-templates-get','m365-accounts-grid','m365-user-fields'];   /* BT44: a template saved a moment ago is on the Onboard screen at once */
 function mhQs(params){ return params?Object.keys(params).filter(k=>params[k]!==null&&params[k]!==undefined&&params[k]!=='').sort().map(k=>encodeURIComponent(k)+'='+encodeURIComponent(params[k])).join('&'):''; }
 function mhKey(action,params){ const p=Object.assign({},params||{}); delete p.refresh; return action+'?'+mhQs(p); }
 function mhPeek(action,params){ const c=MH_C[mhKey(action,params)]; return c?c.d:null; }
@@ -2737,16 +2737,7 @@ function MhInlineConfirm({text,busy,onConfirm,onCancel,label,busyLabel,children,
 const MhLbl=({label,hint,children,style})=><label className="mh-lbl" style={style}><span className="mh-eyebrow" style={{color:'var(--t4)',display:'block',marginBottom:4}}>{label}{hint&&<span className="mh-hint"> · {hint}</span>}</span>{children}</label>;
 const MhCheck=({checked,onChange,disabled,children,small})=><label className={'mh-check'+(disabled?' dis':'')+(small?' sm':'')}><input type="checkbox" checked={!!checked} disabled={disabled} onChange={e=>onChange&&onChange(e.target.checked)}/><span>{children}</span></label>;
 /* vTiger link badge in the account list */
-function MhVtBadge({vt,avail}){
-  if(!avail) return null;
-  if(!vt) return <MhBadge tone="warn">no vTiger</MhBadge>;
-  const inactive=String(vt.status||'').toLowerCase()!=='active';
-  return <span title={mhVtHow(vt)} style={{display:'inline-flex'}}><MhBadge tone={inactive?'warn':'ok'}>{'vTiger: '+vt.username+(vt.is_admin?' ★':'')+(inactive?' ('+vt.status+')':'')+(vt.matched_by==='username'?' · by user name':'')}</MhBadge></span>;
-}
 /* BT36: how a Microsoft 365 account was linked to its vTiger user. */
-function mhVtHow(vt){ if(!vt) return '';
-  return vt.matched_by==='username'?('Matched by user name: the vTiger user "'+vt.username+'" is the part of the sign-in name before the @. The email on the vTiger record is '+(vt.email||'empty')+', which is not this account\'s address.')
-    :('Matched by email: the vTiger user "'+vt.username+'" has this account\'s address ('+(vt.email||'')+').'); }
 /* BT36: domain filter for Accounts, remembered on this browser. */
 /* BT48: null = never chosen (the organization's default domain is then the view); '' = "All domains", chosen */
 /* BT167: Settings → Company systems — which domain Microsoft 365 → People opens on, for everyone */
@@ -2808,11 +2799,6 @@ function mhAccCols(custom,sysShown){
     P('employeeId','Employee ID'),P('employeeType','Employee type'),
     P('streetAddress','Street address'),P('city','City'),P('state','State or province'),P('postalCode','ZIP or postal code'),P('country','Country or region'),
     P('usageLocation','Usage location'),P('preferredLanguage','Preferred language'),
-    {k:'vtiger',l:'vTiger',get:u=>u.vtiger?(u.vtiger.username+' · '+(u.vtiger.status||'')):'',on:true,
-      tok:u=>u.vtiger?(String(u.vtiger.status||'').toLowerCase()==='active'?'Active':'Inactive'):'No vTiger user',pick:['Active','Inactive','No vTiger user']}])
-   .concat(sysShown?[{k:'systems',l:'Other systems',get:u=>u.open_systems?String(u.open_systems):'',num:true,on:true,
-      tok:u=>u.open_systems?'With an account':'None',pick:['With an account','None']}]:[])
-   .concat([
     {k:'licenses',l:'Licenses',get:u=>(u.licenses||[]).join(', '),many:u=>u.licenses||[],on:true},
     {k:'type',l:'Type',get:u=>u.user_type||''},
     {k:'created',l:'Created',get:u=>u.created||'',date:true},
@@ -2821,7 +2807,7 @@ function mhAccCols(custom,sysShown){
 const MH_EMPTY='(empty)';
 function MhAccounts({go,toast}){
   const can=usePerm(); const C=mhCaps(can);
-  const [rows,setRows]=React.useState(()=>{ const d=mhPeek('m365-accounts-grid',{}); return d?d.users||[]:[]; }); const [meta,setMeta]=React.useState({custom:[],vtAvail:false,vtErr:'',sys:false,at:null,signin:null,manager:null,pendingNew:0});
+  const [rows,setRows]=React.useState(()=>{ const d=mhPeek('m365-accounts-grid',{}); return d?d.users||[]:[]; }); const [meta,setMeta]=React.useState({custom:[],at:null,signin:null,manager:null,pendingNew:0});
   const [loading,setLoading]=React.useState(true); const [err,setErr]=React.useState(null); const [got,setGot]=React.useState(false);
   const [q,setQ]=React.useState(''); const [flt,setFlt]=React.useState({}); const [sort,setSort]=React.useState(['name',1]);
   const [page,setPage]=React.useState(0); const [size,setSize]=React.useState(()=>{ const n=+mhAccStore(MH_ACC_SIZE_KEY,50); return [25,50,100,250].indexOf(n)>=0?n:50; });
@@ -2860,7 +2846,7 @@ function MhAccounts({go,toast}){
   const reqNo=React.useRef(0);
   const load=refresh=>{ const p={}; if(needS)p.signin=1; if(needM)p.manager=1; if(refresh)p.refresh=1; const n=++reqNo.current; setLoading(true); setErr(null);
     return mhApi('m365-accounts-grid',p).then(d=>{ if(!live.current||n!==reqNo.current)return; setRows(d.users||[]); setGot(true);
-        setMeta({custom:d.custom||[],vtAvail:!!d.vtiger_available,vtErr:d.vtiger_error||'',sys:!!d.systems_shown,at:d.at||null,signin:d.signin||null,manager:d.manager||null,pendingNew:+d.pending_new||0}); })
+        setMeta({custom:d.custom||[],at:d.at||null,signin:d.signin||null,manager:d.manager||null,pendingNew:+d.pending_new||0}); })
       .catch(e=>{ if(live.current&&n===reqNo.current)setErr(e.message||'Could not load the accounts.'); }).finally(()=>{ if(live.current&&n===reqNo.current)setLoading(false); }); };
   React.useEffect(()=>{ load(false); },[needS,needM]);
   /* BT53: an account created on Onboard appears here at once — the list is read again when one is created, and while
@@ -3003,7 +2989,6 @@ function MhAccounts({go,toast}){
     else if(c.lazy==='manager'&&!meta.manager) body=<span className="mh-mut">…</span>;
     else if(c.lazy==='manager'&&meta.manager&&!meta.manager.ok) body=<span className="mh-mut" title={meta.manager.error||''}>not read</span>;
     else if(c.k==='status') body=<span style={{color:u.enabled?'var(--green)':'var(--red)',fontWeight:600}}>{v}</span>;
-    else if(c.k==='vtiger') body=meta.vtAvail?<MhVtBadge vt={u.vtiger} avail={true}/>:<span className="mh-mut">—</span>;
     else if(c.k==='systems') body=u.open_systems>0?<span className="mh-chip-s" data-acc-open={u.open_systems} title={u.open_systems+' account(s) in the other company systems'+(u.enabled?'':' — still open while sign-in is blocked')} style={u.enabled?{fontSize:11}:{fontSize:11,color:'var(--red)',borderColor:'var(--red)'}}>{'+'+u.open_systems+(u.open_systems===1?' system account':' system accounts')+(u.enabled?'':' · still open')}</span>:<span className="mh-mut">—</span>;
     else if(c.k==='licenses') body=(u.licenses||[]).length?<span title={(u.licenses||[]).join('\n')}>{u.licenses.slice(0,2).join(', ')+(u.licenses.length>2?' +'+(u.licenses.length-2):'')}</span>:<span className="mh-mut">—</span>;
     else if(c.date) body=v?<span className="mh-mono" style={{fontSize:12.5}}>{c.time?mhDateTime(v):mhDate(v)}</span>:<span className="mh-mut">{c.k==='lastSignIn'&&meta.signin&&!meta.signin.available?'not available':'—'}</span>;
@@ -3069,7 +3054,6 @@ function MhAccounts({go,toast}){
         <div style={{fontSize:13,marginTop:r.secret?4:0}}>{r.text}</div></div>
       <button type="button" className="mh-x" title="Remove this message" aria-label="Remove this message" onClick={()=>setResults(rs=>rs.filter(x=>x.id!==r.id))}>✕</button></div>)}</div>}
     {err&&<div style={{marginBottom:8}}><MhErr msg={err} onRetry={()=>load(false)}/></div>}
-    {meta.vtErr&&<div data-acc-vterr="1" style={{marginBottom:8,padding:'8px 10px',fontSize:12.5,lineHeight:1.45,borderRadius:8,background:'rgba(245,158,11,.12)',borderLeft:'3px solid var(--amber)',color:'var(--t1)'}}><b>vTiger users are not shown.</b> {meta.vtErr}</div>}
     {needS&&meta.signin&&(!meta.signin.ok||!meta.signin.available)&&<div className="mh-mut" data-acc-nosignin="1" style={{fontSize:12.5,marginBottom:8}}>{!meta.signin.ok?('The sign-in dates could not be read ('+(meta.signin.error||'no reason given')+').'):'Microsoft 365 gave no sign-in dates: they need Entra ID P1 and the permission AuditLog.Read.All.'}</div>}
     {needM&&meta.manager&&!meta.manager.ok&&<div className="mh-mut" data-acc-nomanager="1" style={{fontSize:12.5,marginBottom:8}}>{'The managers could not be read ('+(meta.manager.error||'no reason given')+'). The manager of one account is on its panel.'}</div>}
     {!got&&loading?<MhLoading/>:<div className={'mh-xl-wrap'+(C.users?'':' nock')} data-acc-grid={shown.length}>
@@ -3136,58 +3120,6 @@ function MhUserSystems({user}){
 }
 /* BT133: the person's HubSpot user, found by email (nothing shows when HubSpot is not connected). Adding people to
    HubSpot stays in HubSpot; once a user has the person's email, it shows here and is recorded on the person. */
-function MhHubspotRow({hs,onReload,onChanged}){
-  const [edit,setEdit]=React.useState(false); const [f,setF]=React.useState(null); const [busy,setBusy]=React.useState(''); const [msg,setMsg]=React.useState(null);
-  const [rm,setRm]=React.useState(false); const [typed,setTyped]=React.useState('');
-  if(!hs||hs.connected===false) return null;
-  const head=<div style={{fontWeight:600}}>HubSpot</div>;
-  if(!hs.ok) return <div className="mh-sysrow" data-acc-sys="hubspot" data-hs-state="error">{head}<div style={{fontSize:13}}><span className="mh-mut">{hs.error||'HubSpot could not be asked.'}</span> <button type="button" className="mh-link" onClick={onReload}>retry</button></div></div>;
-  if(!hs.found) return <div className="mh-sysrow" data-acc-sys="hubspot" data-hs-state="none">{head}<div style={{fontSize:13.5}}><span className="mh-mut" title={hs.note||''}>No HubSpot user with this email</span></div></div>;
-  const u=hs.user; const full=(u.first_name+' '+u.last_name).trim()||u.email;
-  const open=()=>{ setMsg(null); setRm(false); setF({first_name:u.first_name,last_name:u.last_name,role_id:u.role_id,primary_team_id:u.primary_team_id,secondary_team_ids:u.secondary_team_ids.slice()}); setEdit(true); };
-  const changed=f?['first_name','last_name','role_id','primary_team_id'].filter(k=>String(f[k]||'')!==String(u[k]||'')):[];
-  const secChanged=f?JSON.stringify(f.secondary_team_ids.filter(t=>t!==f.primary_team_id).slice().sort())!==JSON.stringify(u.secondary_team_ids.slice().sort()):false;
-  const save=async()=>{ setBusy('save'); setMsg(null);
-    try{ const fields={}; changed.forEach(k=>fields[k]=f[k]); if(secChanged) fields.secondary_team_ids=f.secondary_team_ids.filter(t=>t!==f.primary_team_id);
-      await api('PUT','/access/hubspot/'+u.id,{fields,expect:{first_name:u.first_name,last_name:u.last_name,role_id:u.role_id,primary_team_id:u.primary_team_id}});
-      setEdit(false); setMsg({tone:'ok',text:'Saved in HubSpot.'}); onReload(); }
-    catch(e){ setMsg({tone:'err',text:e.message}); } setBusy(''); };
-  const remove=async()=>{ setBusy('rm'); setMsg(null);
-    try{ const r=await api('POST','/access/hubspot/'+u.id+'/remove',{confirm:'REMOVE',email:u.email}); setRm(false); setTyped('');
-      setMsg({tone:'ok',text:'Removed from HubSpot.'+(r.record_closed?' The account is closed on the person.':'')}); onReload(); onChanged&&onChanged(); }
-    catch(e){ setMsg({tone:'err',text:e.message}); } setBusy(''); };
-  const roleOpts=(hs.roles||[]).map(r=>[r.id,r.name+(r.paid?' (paid seat)':'')]);
-  const teamOpts=[['','(no team)']].concat((hs.teams||[]).map(t=>[t.id,t.name]));
-  return <div data-acc-sys="hubspot" data-hs-state="found" data-hs-id={u.id}>
-    <div className="mh-sysrow">{head}
-      <div style={{fontSize:13.5}}><span className="mh-chip-s">{full}</span> <span className="mh-mut">{[u.super_admin?'Super Admin':(u.role||'no role'),u.primary_team&&('team '+u.primary_team),u.seats.length&&('seat: '+u.seats.join(', '))].filter(Boolean).join(' · ')}</span>
-        {!hs.recorded&&<span className="mh-mut" title="HubSpot has this user, but it is not recorded on the person yet (it is at HubSpot's next reading)"> · not recorded yet</span>}
-        {hs.can_edit&&!edit&&!rm&&<span style={{marginLeft:8,display:'inline-flex',gap:6}}>
-          <button type="button" className="btn btn-g btn-sm" data-hs-edit="1" onClick={open}>Edit HubSpot info</button>
-          <button type="button" className="btn btn-g btn-sm mh-dang" data-hs-remove="1" disabled={u.super_admin} title={u.super_admin?'A HubSpot Super Admin is removed in HubSpot itself, by another Super Admin':'Remove this user from HubSpot'} onClick={()=>{ setMsg(null); setRm(true); setTyped(''); }}>Remove from HubSpot…</button></span>}
-      </div></div>
-    {edit&&f&&<div className="mh-box" data-hs-form="1" style={{maxWidth:640,display:'flex',flexDirection:'column',gap:10,margin:'6px 0 10px'}}>
-      <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-        <MhLbl label="First name"><input className="mh-in" data-hs-first="1" maxLength={80} value={f.first_name} onChange={e=>setF({...f,first_name:e.target.value})}/></MhLbl>
-        <MhLbl label="Last name"><input className="mh-in" data-hs-last="1" maxLength={80} value={f.last_name} onChange={e=>setF({...f,last_name:e.target.value})}/></MhLbl></div>
-      <MhLbl label="Role" hint={u.super_admin?'Super Admin: changed in HubSpot':(roleOpts.some(o=>/paid seat/.test(o[1]))?'a role with a paid seat needs billing-write on the key':'')}>
-        {u.super_admin?<div className="mh-mut" style={{fontSize:13}}>Super Admin</div>:<Sel value={f.role_id} options={roleOpts.length?roleOpts:[[f.role_id,u.role||'(none)']]} onChange={v=>setF({...f,role_id:v})} placeholder="Choose a role"/>}</MhLbl>
-      {hs.teams_ok?<><MhLbl label="Primary team"><Sel value={f.primary_team_id} options={teamOpts} onChange={v=>setF({...f,primary_team_id:v,secondary_team_ids:f.secondary_team_ids.filter(t=>t!==v)})}/></MhLbl>
-        {(hs.teams||[]).length>1&&<div data-hs-teams="1"><div className="mh-eyebrow" style={{color:'var(--t4)',marginBottom:4}}>Other teams</div>
-          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>{(hs.teams||[]).filter(t=>t.id!==f.primary_team_id).map(t=><MhCheck key={t.id} small checked={f.secondary_team_ids.indexOf(t.id)>=0} onChange={v=>setF({...f,secondary_team_ids:v?f.secondary_team_ids.concat([t.id]):f.secondary_team_ids.filter(x=>x!==t.id)})}>{t.name}</MhCheck>)}</div></div>}</>
-        :<div className="mh-mut" style={{fontSize:12.5}}>Teams cannot be read with this key (it needs settings.users.teams.read), so they are not changed here.</div>}
-      <div style={{display:'flex',gap:8}}><button type="button" className="btn btn-p btn-sm" data-hs-save="1" disabled={!!busy||(!changed.length&&!secChanged)||!f.first_name.trim()||!f.last_name.trim()} onClick={save}>{busy==='save'?'Saving…':'Save in HubSpot'}</button>
-        <button type="button" className="btn btn-g btn-sm" onClick={()=>{ setEdit(false); setMsg(null); }}>Cancel</button></div>
-      <div className="mh-mut" style={{fontSize:12}}>The email of a HubSpot user cannot be changed through HubSpot's API; the key needs settings.users.write.</div>
-    </div>}
-    {rm&&<div className="mh-confirm mh-warnbox" data-hs-rmbox="1" style={{maxWidth:640,margin:'6px 0 10px'}}>
-      <div style={{fontSize:13.5}}>Remove <b>{u.email}</b> from HubSpot? They can no longer sign in to HubSpot and their seat is freed. Their records (contacts, deals) stay in HubSpot.</div>
-      <MhLbl label="Type REMOVE to confirm"><input className="mh-in" data-hs-typed="1" style={{width:160}} value={typed} onChange={e=>setTyped(e.target.value)}/></MhLbl>
-      <div style={{display:'flex',gap:8}}><button type="button" className="btn btn-p btn-sm" data-hs-rmgo="1" disabled={!!busy||typed!=='REMOVE'} onClick={remove}>{busy==='rm'?'Removing…':'Remove from HubSpot'}</button><button type="button" className="btn btn-g btn-sm" onClick={()=>setRm(false)}>Cancel</button></div>
-    </div>}
-    {msg&&<div className={msg.tone==='ok'?'mh-okbox':'mh-err'} data-hs-msg={msg.tone} style={{fontSize:13,margin:'4px 0 8px',fontFamily:'inherit'}}>{msg.text}</div>}
-  </div>;
-}
 function MhUserPanel({user,onChanged,go,start,guard}){
   const can=usePerm(); const C=mhCaps(can);
   const [isSelf,setIsSelf]=React.useState(!!user.is_self);
@@ -3870,7 +3802,6 @@ function MhOnboard({go}){
   const [busy,setBusy]=React.useState(false); const [cErr,setCErr]=React.useState(null); const [result,setResult]=React.useState(null);
   React.useEffect(()=>{ if(!(result&&(result.password||(result.vt&&result.vt.password))))return; const t=setTimeout(()=>setResult(r=>r?({...r,password:r.password?'(hidden after 2 minutes)':r.password,vt:r.vt?{...r.vt,password:null}:r.vt}):r),120000); return ()=>clearTimeout(t); },[result]);   /* review UI1-14: a new secret is hidden after 2 minutes */
   const [sysList,setSysList]=React.useState([]); const [sysOn,setSysOn]=React.useState({});   /* BT44: the other company systems to set up for the new person */
-  React.useEffect(()=>{ mhApi('systems-for',{kind:'onboard',refresh:1}).then(d=>setSysList(d.systems||[])).catch(()=>setSysList([])); },[]);
   React.useEffect(()=>{
     Promise.all([mhApi('m365-domains'),mhApi('m365-skus')]).then(([d,s])=>{ const ds=d.domains||[]; setDomains(ds); const def=ds.find(x=>x.isDefault)||ds[0]; setDomain(def?def.id:''); setSkus(s.list||s||[]); })
       .catch(e=>setPageErr(e.message||'Could not load domains/licenses. Is Microsoft 365 connected?')).finally(()=>setMetaLoading(false));
@@ -3910,8 +3841,7 @@ function MhOnboard({go}){
     const tp=templates.find(x=>String(x.id)===String(f.tpl));
     const steps=[{step:'Create Microsoft 365 account',ok:true,detail:upn}].concat((cr.warnings||[]).map(w=>({step:w,ok:false}))).concat(gr.map(g=>({step:'Add to group '+g.name,ok:g.ok,error:g.error})))
       .concat(vr?[{step:'Create vTiger user',ok:vr.ok,detail:vr.ok?(vr.user_name+' · id '+vr.id):'',error:vr.error}]:[]);
-    /* BT44: with company systems ticked, the record stays open in History until each one is answered (here, or there later) */
-    const sysKeys=sysList.filter(sy=>sysOn[sy.key]).map(sy=>sy.key); let rec=null;
+    const sysKeys=[]; let rec=null;   /* 0001-A004: no company systems */
     try{ rec=await mhPost('onboard-record',{display_name:dn,upn:upn,m365_id:cr.user&&cr.user.id,vtiger_id:vr&&vr.ok?vr.id:'',first_name:f.first,last_name:f.last,job_title:f.job,department:f.dept,template:tp?tp.name:'',steps:steps,systems:sysKeys}); }catch(e){ rec=null; }
     setResult(Object.assign({},cr,{groupResults:gr,vt:vr,runId:rec&&rec.run_id,sysTasks:(rec&&rec.system_tasks)||[],sysWanted:sysKeys.length,sysNote:rec&&rec.systems_note})); setBusy(false);
     try{ window.dispatchEvent(new CustomEvent('itops-m365-accounts-changed')); }catch(_){}   /* BT53: the Accounts list reads again */ };
@@ -3922,22 +3852,13 @@ function MhOnboard({go}){
     <MhHead eyebrow="Microsoft 365" title="Onboard a new account" desc="Creates the Entra / Microsoft 365 account. If a vTiger user already exists with the same email, it links automatically. Tick “Also create a vTiger user” (or use a template that does) to create the matching vTiger user in the same step."/>
     {pageErr&&<div className="mh-err" style={{marginBottom:14}}>{pageErr}</div>}
     {result?<div className="mh-form">
-      <div className="mh-okbox"><div><b>{result.user.displayName}</b> created.</div><div className="mh-mono mh-mut" style={{fontSize:12}}>{result.user.userPrincipalName||result.user.upn}</div>
-        {result.user.vtiger?<div style={{fontSize:12,color:'var(--green)'}}>Linked to vTiger user {result.user.vtiger.username}.</div>
-          :(result.vt&&result.vt.ok)?null:result.vtiger_available?<div style={{fontSize:12,color:'var(--red)'}}>No vTiger user matches this email yet — create one in vTiger to link them.</div>:null}</div>
+      <div className="mh-okbox"><div><b>{result.user.displayName}</b> created.</div><div className="mh-mono mh-mut" style={{fontSize:12}}>{result.user.userPrincipalName||result.user.upn}</div></div>
       <div className="mh-okbox" data-on-pw={result.password_from||''}><div className="mh-eyebrow" style={{color:'var(--green)'}}>{result.password_from==='template'?'The template’s default password — give it to the person':'Temporary password — copy it now, it won\'t be shown again'}</div>
         <div style={{display:'flex',gap:8,alignItems:'center',marginTop:6,flexWrap:'wrap'}}>{result.password?<><code className="mh-secret">{result.password}</code><button className="btn btn-g btn-sm" onClick={()=>copy(result.password)}>Copy</button></>:<span className="mh-mut" style={{fontSize:13}}>The template’s default password (ask whoever manages onboarding templates).</span>}</div>
         <div className="mh-mut" style={{fontSize:12,marginTop:6}}>{result.force_change?'Microsoft 365 asks for a new one at first sign-in.':'Permanent password.'}</div></div>
       {(result.warnings||[]).length>0&&<div className="mh-warnbox mh-confirm">{result.warnings.map((w,i)=><div key={i} style={{fontSize:13.5}}>⚠ {w}</div>)}</div>}
-      {result.vt&&(result.vt.ok?<div className="mh-okbox" style={{fontSize:13.5}} data-on-vtpw={result.vt.password?'1':'0'}>vTiger user created — <span className="mh-mono">{result.vt.user_name}</span> · id <span className="mh-mono">{result.vt.id}</span>
-          {result.vt.password&&<><div style={{marginTop:6}}>Its own first password (vTiger does not ask for a change: tell the person to change it after signing in):</div><div style={{display:'flex',gap:8,alignItems:'center',marginTop:4,flexWrap:'wrap'}}><code className="mh-secret">{result.vt.password}</code><button className="btn btn-g btn-sm" onClick={()=>copy(result.vt.password)}>Copy</button></div></>}</div>
-        :<div className="mh-err" style={{fontFamily:'inherit'}}>vTiger user not created: {result.vt.error}</div>)}
       {result.groupResults.length>0&&<div className="mh-box" style={{maxWidth:'none'}}><div className="mh-eyebrow" style={{color:'var(--t4)'}}>Group membership</div>
         {result.groupResults.map((g,i)=><div key={i} style={{fontSize:13.5,color:g.ok?'var(--green)':'var(--red)'}}>{g.ok?'✓ '+g.name:'✕ '+g.name+(g.error?' — '+g.error:'')}</div>)}</div>}
-      {result.sysWanted>0&&<div className="mh-box" data-on-systems="1" style={{maxWidth:'none'}}><div className="mh-eyebrow" style={{color:'var(--t4)'}}>Other company systems to set up</div>
-        {result.sysTasks.length?<React.Fragment><div className="mh-mut" style={{fontSize:13,marginBottom:4}}>Do each one in that system, then answer here. What is left stays open on this person’s record in History.</div>
-            {result.sysTasks.map(t=><SysStep key={t.id} runId={result.runId} taskId={t.id} via="hub"/>)}</React.Fragment>
-          :<div className="mh-err" style={{fontFamily:'inherit'}}>{result.sysNote||'The steps for the company systems could not be added to the record. Set the accounts up by hand and record them on the person, under Microsoft 365 → People.'}</div>}</div>}
       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button className="btn btn-p" onClick={reset}>Onboard another</button><button className="btn btn-g" onClick={()=>go('m365_accounts','console')}>Go to Accounts</button><button className="btn btn-g" onClick={()=>go('m365_accounts','history')}>See History</button></div>
     </div>:<div className="mh-form mh-on-form">
       {cErr&&<div className="mh-err">{cErr}</div>}
@@ -3982,10 +3903,6 @@ function MhOnboard({go}){
         {!f.grpShow&&<div className="mh-mut" style={{fontSize:13,marginTop:2}}>{mhFew(f.groups.map(g=>g.name))}</div>}
         {f.grpShow&&<div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:8}}>{f.groups.map(g=><span key={g.id} className="mh-chip-s">{g.name}</span>)}</div>}
         <div className="mh-mut" style={{fontSize:12,marginTop:4}}>Added right after the account is created{C.groups?'':' — you need the “Microsoft 365 · Groups” permission for this'}.</div></div>}
-      {sysList.length>0&&<div className="mh-sec" data-on-pick="1"><div className="mh-eyebrow" style={{color:'var(--t4)'}}>Other company systems</div>
-        {sysList.map(sy=><MhCheck key={sy.key} checked={!!sysOn[sy.key]} onChange={v=>setSysOn(o=>Object.assign({},o,{[sy.key]:v}))}><span data-on-sys={sy.key}>{sy.name}</span></MhCheck>)}
-        <div className="mh-mut" style={{fontSize:12}}>Set up by hand in each system. Each ticked one becomes a step on this person’s record, with what to do there; a template can tick them for you. A connected system is read to confirm the user is there.</div>
-      </div>}
       <div className="mh-sec" data-on-pwsec={pwFrom}>
         <div className="mh-eyebrow" style={{color:'var(--t4)'}}>First password</div>
         <div role="radiogroup" aria-label="First password" style={{display:'flex',flexDirection:'column',gap:4}}>
@@ -4021,7 +3938,6 @@ function MhTemplates({toast}){
   const closeCf=()=>{ setCfOpen(false); mhForget(); mhApi('m365-user-fields',{refresh:1}).then(d=>setCatalog(d.fields||[])).catch(()=>{}); };
   const [mRes,setMRes]=useMhUserSearch(mq,!!ed&&!(ed&&ed.m365.manager),8);
   const [sysAll,setSysAll]=React.useState([]);   /* BT44: company systems that can be part of a template */
-  React.useEffect(()=>{ api('GET','/access/systems').then(d=>setSysAll((d.systems||[]).filter(sy=>sy.mode!=='off'&&sy.onboard))).catch(()=>setSysAll([])); },[]);
   React.useEffect(()=>{
     Promise.all([mhApi('onboard-templates-get').then(d=>setList(d.templates||[])),
       mhApi('m365-skus').then(d=>setSkus(d.list||d||[])).catch(()=>setSkus([])),
@@ -4158,12 +4074,6 @@ function MhTemplates({toast}){
               :'When this template is picked on the Onboard screen, this is the first password unless the person creating the account chooses another. At least 8 characters with three of: lower-case, capital, digit, symbol. It is stored encrypted and never shown here again. An account created with it must change it at first sign-in.'}</div>
           </div>
             </div>
-        {sysAll.length>0&&<div className="mh-sec" data-tpl-systems="1">
-          <div className="mh-eyebrow" style={{color:'var(--accent)'}}>Other company systems</div>
-          {sysAll.map(sy=>{ const cur=Array.isArray(ed.m365.systems)?ed.m365.systems:[]; const on=cur.indexOf(sy.key)>=0;
-            return <MhCheck key={sy.key} checked={on} onChange={v=>setM({systems:v?cur.concat([sy.key]):cur.filter(k=>k!==sy.key)})}><span data-tpl-sys={sy.key}>{sy.name}</span></MhCheck>; })}
-          <div className="mh-mut" style={{fontSize:12}}>Ticked systems are pre-ticked on the Onboard screen for a new person of this template. Each becomes a step done by hand in that system.</div>
-        </div>}
           </div>
         </div>
             </div></div>
@@ -4199,12 +4109,11 @@ function MhOffboard({go,arg}){
      then B could leave A's account (and A's vTiger user) on screen under B, and the run would mix the two. */
   const wantRef=React.useRef(null);
   const prepVt=(usr,id)=>{ setRe(false); setDeact(true); setTarget(''); setMods([]); setPm({}); setAll(true); setFromId(''); setPvErr(null);
-    if(usr.vtiger&&C.pOff){ mhApi('vtiger-provision-users').then(d=>{ if(wantRef.current===id)setTargets(d.users||[]); }).catch(()=>{ if(wantRef.current===id)setTargets([]); });
-      mhPost('vtiger-provision-reassign-preview',usr.vtiger.id?{vtiger_id:usr.vtiger.id}:{email:usr.upn}).then(d=>{ if(wantRef.current!==id)return; setMods(d.modules||[]); setFromId(String(d.from_id||'')); }).catch(e=>{ if(wantRef.current!==id)return; setMods([]); setPvErr(e.message||'Could not read the records this user owns.'); }); } };
+  };
   const pick=(id,label)=>{ wantRef.current=id; setPicked(id); setRes([]); setQ(label||''); setU(null); setUErr(null); setULoad(true); setDone(false); setSteps([]); setRun(null); setVer(null); setVErr(null); setRunErr(null); setPause(null);
     setSysList([]); setSysOn({});
     mhApi('m365-user',{id:id}).then(d=>{ if(wantRef.current!==id)return; setU(d.user); prepVt(d.user,id);
-      if(d.user)mhApi('systems-for',{kind:'offboard',upn:d.user.upn||'',mail:d.user.mail||'',refresh:1}).then(sd=>{ if(wantRef.current!==id)return; const l=sd.systems||[]; setSysList(l); const on={}; l.forEach(sy=>{ on[sy.key]=!!sy.suggest; }); setSysOn(on); }).catch(()=>{ if(wantRef.current===id){ setSysList([]); setSysOn({}); } }); setDeact(!(d.user&&d.user.vtiger&&d.user.vtiger.matched_by==='username')); if(d.user){ setx({fwTo:'',odTo:'',arMsg:'Thank you for your message. '+(d.user.display_name||'')+' is no longer with the company. For assistance, please contact us at our main line.'}); } })
+      setDeact(!(d.user&&d.user.vtiger&&d.user.vtiger.matched_by==='username')); if(d.user){ setx({fwTo:'',odTo:'',arMsg:'Thank you for your message. '+(d.user.display_name||'')+' is no longer with the company. For assistance, please contact us at our main line.'}); } })
       .catch(e=>{ if(wantRef.current===id)setUErr(e.message||'Could not load the account.'); }).finally(()=>{ if(wantRef.current===id)setULoad(false); }); };
   React.useEffect(()=>{ if(arg&&arg.id)pick(arg.id,''); },[arg&&arg.id]);
   const reset=()=>{ wantRef.current=null; setPicked(null); setU(null); setQ(''); setRes([]); setSteps([]); setDone(false); setRun(null); setVer(null); setVErr(null); setRunErr(null); setPause(null); setSysList([]); setSysOn({});
@@ -4284,10 +4193,6 @@ function MhOffboard({go,arg}){
         </div>
         
         
-        {sysList.length>0&&<div className="mh-sec" data-ob-systems="1"><div className="mh-eyebrow" style={{color:'var(--t4)'}}>Other company systems</div>
-          {sysList.map(sy=><MhCheck key={sy.key} checked={!!sysOn[sy.key]} onChange={v=>setSysOn(o=>Object.assign({},o,{[sy.key]:v}))}><span data-ob-sys={sy.key}>{sy.name} <span className="mh-mut">{sy.links.length?'('+sy.links.map(l=>sysAcc(l.account)).join(', ')+')':(sy.connected?'(no user at the last reading)':'(no account recorded)')}</span></span></MhCheck>)}
-          <div className="mh-mut" style={{fontSize:12}}>These are done by hand in each system. The run adds a step for each ticked one and shows what to do there. A system tracked by hand keeps your answer; a connected one is read, and its step is done when the system no longer lists the person. “Verify offboarding” fails while one is open.</div>
-        </div>}
         <div className="mh-sec"><div className="mh-eyebrow" style={{color:'var(--t4)'}}>When</div>
           <label className="mh-check"><input type="radio" checked={x.when==='now'} onChange={()=>setx({when:'now'})}/><span>Run now</span></label>
           <label className="mh-check"><input type="radio" checked={x.when==='later'} onChange={()=>setx({when:'later'})}/><span>Schedule for their last day</span></label>
@@ -4305,7 +4210,7 @@ function MhOffboard({go,arg}){
         <div className="mh-eyebrow" data-ob-state="1" style={{color:'var(--t4)'}}>{run&&run.scheduled?'Offboarding scheduled':done?(steps.some(s=>s.sys)?'Automatic steps done · answer the company systems below':'Offboarding complete'):'Running…'}</div>
         {run&&run.scheduled&&<div style={{fontSize:13.5,marginBottom:6}}>Runs automatically on <b>{mhDateTime(String(run.scheduled).replace(' ','T')+'Z')}</b> (New York time). These steps are waiting:</div>}
         {steps.map((s,i)=><div key={i} style={{fontSize:13.5}}><span style={{color:s.ok===null?'var(--t4)':s.ok?'var(--green)':'var(--red)'}}>{s.ok===null?'•':s.ok?'✓':'✗'}</span> {s.step}{s.detail?' — '+s.detail:''}{s.error?' — '+s.error:''}
-          {s.sys&&<SysStep runId={s.rid} taskId={s.sys} via="hub" onDone={text=>setSteps(l=>l.map((y,j)=>j===i?{ok:true,step:y.step,detail:text}:y))}/>}</div>)}
+          </div>)}
         {pause&&<div className="mh-confirm mh-warnbox" style={{marginTop:8}}>
           <div style={{fontSize:13.5}}><b>{pause.step}</b> stopped: {pause.error}</div>
           {pause.vt?<div data-vt-confirm="1">
@@ -4336,88 +4241,8 @@ function MhOffboard({go,arg}){
  * A system is tracked by hand in this build: a step in onboarding / offboarding, done by a person in that system and
  * answered here. SysStep is that answer; the wizards use it with via="hub", History with via="history".
  * Nothing on these screens changes another system: they are the app's own records. */
-const sysAcc=a=>a?a:'name not recorded';
 /* An account without an email in a connected system is kept under a stand-in address: show words, not the stand-in */
 /* The numbers of the accounts read from a connected system, as one line */
-function sysNums(links){ const o=[]; (links||[]).forEach(l=>{ const d=l.detail||{}; (d.owned_numbers||[]).forEach(n=>{ if(o.indexOf(n)<0)o.push(n); }); }); return o.join(', '); }
-function SysStep({runId,taskId,via,onDone}){
-  const [d,setD]=React.useState(null); const [err,setErr]=React.useState(null); const [busy,setBusy]=React.useState(false);
-  const [hand,setHand]=React.useState(false); const [acc,setAcc]=React.useState(''); const [to,setTo]=React.useState(''); const [note,setNote]=React.useState(''); const [ans,setAns]=React.useState(null);
-  React.useEffect(()=>{ let live=true; setD(null); setErr(null);
-    api('GET','/access/step/'+taskId).then(x=>{ if(live)setD(x); }).catch(e=>{ if(live)setErr(e.message||'Could not load this step.'); });
-    return ()=>{ live=false; }; },[taskId]);
-  const send=async(outcome,extra)=>{ setBusy(true); setErr(null);
-    const body=Object.assign({outcome:outcome,account:acc.trim(),note:note.trim(),to_email:to.trim()},extra||{});
-    try{ const r=via==='history'?await api('POST','/onboarding/runs/'+runId+'/tasks/'+taskId,Object.assign({action:'run'},body)):await mhPost('system-step',Object.assign({run_id:runId,task_id:taskId},body));
-      const text=r.detail||r.result||'Recorded.'; setAns(text); if(onDone)onDone(text,r); }
-    catch(e){ setErr(e.message||'Could not record this.');
-      /* a connected system was just read by the server: show what it listed, under the refusal */
-      if(d&&d.system&&d.system.connected){ try{ const x=await api('GET','/access/step/'+taskId); setD(x); }catch(_){} } }
-    setBusy(false); };
-  if(ans) return <div data-sys-step={taskId} data-sys-done="1" style={{fontSize:13.5,color:'var(--green)',marginTop:6}}>✓ {ans}</div>;
-  if(!d) return <div data-sys-step={taskId} className={err?'mh-err':'mh-mut'} style={{fontSize:13,marginTop:6}}>{err||'Loading…'}</div>;
-  const s=d.system; const links=d.links||[]; const grant=d.op==='grant';
-  if(s.connected){ const rd=d.read||{}; const un=d.unmatched||[];
-    return <div data-sys-step={taskId} data-sys-op={d.op} data-sys-conn="1" className="mh-box" style={{maxWidth:'none',marginTop:8}}>
-      <div style={{display:'flex',justifyContent:'space-between',gap:10,flexWrap:'wrap',alignItems:'baseline'}}>
-        <div style={{fontWeight:700}}>{s.name}<span className="mh-mut" style={{fontWeight:400}}> · done by hand in {s.name}, checked by reading it</span></div>
-        {s.url&&<a href={safeHref(s.url)} target="_blank" rel="noopener noreferrer" className="mh-link" data-sys-open="1">{'Open '+s.name+' ↗'}</a>}
-      </div>
-      {s.text&&<div data-sys-text="1" style={{fontSize:13.5,whiteSpace:'pre-wrap',margin:'6px 0',lineHeight:1.5}}>{s.text}</div>}
-      {rd.ok===false&&<div className="mh-box mh-warnbox" data-sys-readerr="1" style={{maxWidth:'none',margin:'6px 0'}}><b>{s.name} could not be read</b> ({rd.error||'no answer'}). The step stays open until it can be read.</div>}
-      {rd.ok!==false&&<div data-sys-links={links.length} style={{fontSize:13.5,margin:'6px 0'}}>{links.length
-        ?<span>{s.name} lists for {d.person}: {links.map(l=><span key={l.id} className="mh-chip-s" style={{marginRight:6}}>{sysAcc(l.account)}</span>)}{sysNums(links)&&<span className="mh-mut">{' · numbers: '+sysNums(links)}</span>}</span>
-        :<span>{s.name} lists <b>no user</b> with {(d.emails||[]).join(' or ')||'this person’s email'}.</span>}
-        {rd.at&&<span className="mh-mut">{' Read '+mhDateTime(rd.at)+'.'}</span>}</div>}
-      {!grant&&d.forms===null&&<div className="mh-box mh-warnbox" data-sys-forms="unknown" style={{maxWidth:'none',margin:'6px 0',fontSize:13}}>The forms {d.person} owns in {s.name} could not be read. Look in {s.name} before removing them: forms they own must be moved to a colleague first.</div>}
-      {!grant&&(d.forms||[]).length>0&&<div className="mh-box mh-warnbox" data-sys-forms={d.forms.length} style={{maxWidth:'none',margin:'6px 0',fontSize:13}}><b>{d.person} owns {d.forms.length} form(s) in {s.name}.</b> Move them to a colleague before removing the member, so their submissions keep arriving: {d.forms.slice(0,8).map(f=>f.title+(f.status==='DISABLED'?' (disabled)':'')+' · '+f.count+' submission(s)').join('; ')}{d.forms.length>8?'…':''}</div>}
-      {un.length>0&&!links.length&&<div className="mh-box mh-warnbox" data-sys-unmatched={un.length} style={{maxWidth:'none',margin:'6px 0',fontSize:13}}>{un.length} user(s) in {s.name} are matched to nobody: {un.slice(0,6).join(', ')}{un.length>6?'…':''}. If one of them is {d.person}, assign it on the {s.name} tab of Company systems first.</div>}
-      <input className="mh-in" data-sys-note="1" style={{width:'100%',margin:'4px 0'}} value={note} disabled={busy} maxLength={300} onChange={e=>setNote(e.target.value)} placeholder="Optional note for the record" aria-label="Note for the record"/>
-      {err&&<div className="mh-err" data-sys-err="1" style={{fontFamily:'inherit',margin:'6px 0'}}>{err}</div>}
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:6}}>
-        {grant?<React.Fragment>
-          {s.key==='pbx'&&!links.length&&d.pbx_new&&<PbxStepCreate info={d.pbx_new} person={d.person} email={(d.emails||[])[0]||''} busy={busy} onCreate={(ext,perm)=>send('create_now',{account:ext,permission:perm})}/>}
-          <button className="btn btn-p btn-sm" data-sys-do="granted" disabled={busy} onClick={()=>send('granted')}>{busy?'Reading '+s.name+'…':(links.length?'Confirm: the user is there':'Check '+s.name+' for the user')}</button>
-          <button className="btn btn-g btn-sm" data-sys-do="not_needed" disabled={busy} onClick={()=>send('not_needed')}>Not needed for this person</button>
-        </React.Fragment>
-        :<React.Fragment>
-          {/* BT133: HubSpot users are removed from the step itself (never a HubSpot Super Admin) */}
-          {s.key==='pbx'&&links.length>0&&<button className="btn btn-p btn-sm mh-dang" data-sys-do="remove_now" disabled={busy} onClick={async()=>{ if(!await itopsConfirm('Take '+links.map(l=>'extension '+l.ext_id).join(', ')+' out of service now?\n\nIt can no longer make or take calls, and its call forwarding is cleared. Its voicemail and settings stay; nothing is deleted. It can be put back in service on the phone system tab.',{okText:'Take out of service'}))return; send('remove_now'); }}>{busy?'Changing…':'Take the extension out of service now'}</button>}
-          {s.key==='hubspot'&&links.length>0&&<button className="btn btn-p btn-sm mh-dang" data-sys-do="remove_now" disabled={busy} onClick={async()=>{ if(!await itopsConfirm('Remove '+links.map(l=>l.account).join(', ')+' from HubSpot now?\n\nThe user can no longer sign in to HubSpot. Their records stay in HubSpot. A HubSpot Super Admin is never removed from here.',{okText:'Remove from HubSpot'}))return; send('remove_now'); }}>{busy?'Removing…':'Remove from HubSpot now'}</button>}
-          <button className={'btn btn-sm '+((s.key==='hubspot'||s.key==='pbx')&&links.length?'btn-g':'btn-p')} data-sys-do="removed" disabled={busy} onClick={()=>send('removed')}>{busy?'Reading '+s.name+'…':(links.length?'I removed the user: check '+s.name+' again':'Confirm: no user in '+s.name)}</button>
-        </React.Fragment>}
-      </div>
-      <div className="mh-mut" style={{fontSize:12,marginTop:6}}>{s.key==='hubspot'?<>{appName()} removes the HubSpot user when you ask, or you remove it in HubSpot.</>:s.key==='pbx'?(grant?<>{appName()} creates the extension when you ask, or you create it on the PBX.</>:<>{appName()} takes the extension out of service when you ask; it is deleted only later, from the phone system tab.</>):<>{appName()} only reads {s.name}; it changes nothing there.</>} The step is done when {s.name} itself shows it{grant?'.':', and “Verify offboarding” reads it again.'}</div>
-    </div>; }
-  return <div data-sys-step={taskId} data-sys-op={d.op} className="mh-box" style={{maxWidth:'none',marginTop:8}}>
-    <div style={{display:'flex',justifyContent:'space-between',gap:10,flexWrap:'wrap',alignItems:'baseline'}}>
-      <div style={{fontWeight:700}}>{s.name}<span className="mh-mut" style={{fontWeight:400}}> · done by hand in {s.name}</span></div>
-      {s.url&&<a href={safeHref(s.url)} target="_blank" rel="noopener noreferrer" className="mh-link" data-sys-open="1">{'Open '+s.name+' ↗'}</a>}
-    </div>
-    {s.text&&<div data-sys-text="1" style={{fontSize:13.5,whiteSpace:'pre-wrap',margin:'6px 0',lineHeight:1.5}}>{s.text}</div>}
-    {!s.known&&<div className="mh-err" style={{fontFamily:'inherit',margin:'6px 0'}}>This system is no longer in the list of company systems. Skip the step in History, or add the system again.</div>}
-    {!grant&&<div data-sys-links={links.length} style={{fontSize:13.5,margin:'6px 0'}}>{links.length?<span>Recorded for {d.person}: {links.map(l=><span key={l.id} className="mh-chip-s" style={{marginRight:6}}>{sysAcc(l.account)}</span>)}</span>
-      :<span className="mh-mut">No account is recorded for {d.person} in {s.name}. Look in {s.name} anyway: the records may be incomplete.</span>}</div>}
-    {grant&&<input className="mh-in" data-sys-account="1" style={{width:'100%',maxWidth:380,margin:'4px 0'}} value={acc} disabled={busy} maxLength={190} onChange={e=>setAcc(e.target.value)} placeholder={'Optional: '+s.account_hint} aria-label={'Account in '+s.name}/>}
-    {hand&&<div style={{margin:'4px 0'}}><input className="mh-in" data-sys-to="1" style={{width:'100%',maxWidth:380}} value={to} disabled={busy} onChange={e=>setTo(e.target.value)} placeholder="Work email of the colleague who takes it over" aria-label="Work email of the colleague who takes the account over"/></div>}
-    <input className="mh-in" data-sys-note="1" style={{width:'100%',margin:'4px 0'}} value={note} disabled={busy} maxLength={300} onChange={e=>setNote(e.target.value)} placeholder="Optional note for the record" aria-label="Note for the record"/>
-    {err&&<div className="mh-err" data-sys-err="1" style={{fontFamily:'inherit',margin:'6px 0'}}>{err}</div>}
-    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:6}}>
-      {grant?<React.Fragment>
-        <button className="btn btn-p btn-sm" data-sys-do="granted" disabled={busy||!s.known} onClick={()=>send('granted')}>The account is set up</button>
-        <button className="btn btn-g btn-sm" data-sys-do="not_needed" disabled={busy||!s.known} onClick={()=>send('not_needed')}>Not needed for this person</button>
-      </React.Fragment>:hand?<React.Fragment>
-        <button className="btn btn-p btn-sm" data-sys-do="moved" disabled={busy||!to.trim()} onClick={()=>send('moved')}>Record the hand-over</button>
-        <button className="btn btn-g btn-sm" disabled={busy} onClick={()=>setHand(false)}>Back</button>
-      </React.Fragment>:<React.Fragment>
-        <button className="btn btn-p btn-sm" data-sys-do="removed" disabled={busy||!s.known} onClick={()=>send('removed')}>Removed there</button>
-        {links.length>0&&<button className="btn btn-g btn-sm" data-sys-do="hand" disabled={busy||!s.known} onClick={()=>setHand(true)}>Handed over to a colleague…</button>}
-        <button className="btn btn-g btn-sm" data-sys-do="none" disabled={busy||!s.known} onClick={()=>send('none')}>Checked: no account there</button>
-      </React.Fragment>}
-    </div>
-    <div className="mh-mut" style={{fontSize:12,marginTop:6}}>{appName()} does not change {s.name}. Your answer is kept on this record and in the Audit Log{grant?'.':', and “Verify offboarding” reads it.'}</div>
-  </div>;
-}
 
 /* Administration → Settings → Company systems: the overview (people × systems) and the list of systems */
 /* BT148: CallTrackingMetrics — its users (like every connected system), its tracking numbers, the calls of a period and the
@@ -4432,17 +4257,6 @@ function SysStep({runId,taskId,via,onDone}){
    with its status and the PBX's own status, and taking an extension out of service or back (typed confirmation). */
 /* BT153: a new extension from the phone system tab (the onboarding step does the same for a new person). */
 /* BT153: the onboarding step of the phone system, for a person with no extension yet: create it from here. */
-function PbxStepCreate({info,person,email,busy,onCreate}){
-  const [ext,setExt]=React.useState(info.next||''); const [perm,setPerm]=React.useState(info.permission);
-  return <div className="mh-box" style={{maxWidth:'none',margin:'6px 0',flex:'1 1 100%'}} data-pbx-step-create="1">
-    <div style={{fontSize:13.5,marginBottom:6}}>Create the extension for {person}{email?' ('+email+')':''} on the phone system now:</div>
-    <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
-      <label style={{fontSize:13}} htmlFor="pbx-step-ext">Extension</label><input id="pbx-step-ext" className="mh-in mh-mono" style={{width:100}} inputMode="numeric" maxLength={6} value={ext} disabled={busy} onChange={e=>setExt(e.target.value.replace(/\D/g,''))} data-pbx-step-ext="1"/>
-      <span style={{minWidth:260}}><Sel value={perm} disabled={busy} onChange={setPerm} options={Object.keys(info.permissions).map(k=>[k,info.permissions[k]])}/></span>
-      <button className="btn btn-p btn-sm" data-sys-do="create_now" disabled={busy||!ext} onClick={()=>onCreate(ext,perm)}>{busy?'Creating…':'Create the extension now'}</button></div>
-    <div className="mh-mut" style={{fontSize:12,marginTop:4}}>Its passwords are made by {appName()} and never kept. Afterwards, the phone system tab gives the Wave QR code and a voicemail PIN.</div>
-  </div>;
-}
 /* BT153: the PBX's set-up, read only: status and warnings, trunks, departments, the extensions in numbers, and the two
    settings of extension management. */
 /* BT149: Jotform — its team members (like every connected system), its forms with who owns each, and the forms whose
@@ -4455,67 +4269,6 @@ function PbxStepCreate({info,person,email,busy,onCreate}){
 /* One person's accounts in the company systems, open and closed. Two places show it: the account panel on Microsoft 365
    → Accounts (embedded: a row per system, the box to record an account opens on request) and a full page for a person
    who is not on Accounts (opened from "Needs attention"). */
-function AccessPersonBody({row,embedded,onChanged,skip}){   /* BT133: skip = systems the panel shows live (HubSpot) */
-  const [d,setD]=React.useState(null); const [err,setErr]=React.useState(null); const [busy,setBusy]=React.useState(false); const [msg,setMsg]=React.useState(null);
-  const [add,setAdd]=React.useState({}); const [ed,setEd]=React.useState(null); const [closed,setClosed]=React.useState(false); const [addOpen,setAddOpen]=React.useState({});
-  const load=()=>api('GET','/access/person?email='+encodeURIComponent(row.email)+(row.mail&&row.mail!==row.email?'&mail='+encodeURIComponent(row.mail):'')).then(x=>setD(x)).catch(e=>setErr(e.message||'Could not load the company systems.'));
-  React.useEffect(()=>{ load(); },[row.email,row.mail]);
-  const act=async(fn,ok)=>{ setBusy(true); setMsg(null); try{ const r=await fn(); setMsg({tone:'ok',text:(r&&r.message)||ok}); await load(); mhForget(); if(onChanged)onChanged(); }catch(e){ setMsg({tone:'err',text:e.message||'That did not work.'}); } setBusy(false); };
-  const setA=(k,o)=>setAdd(a=>Object.assign({},a,{[k]:Object.assign({account:'',note:''},a[k]||{},o)}));
-  const record=s=>act(async()=>{ const v=add[s.key]||{}; const r=await api('POST','/access/links',{system:s.key,email:row.email,account:(v.account||'').trim(),note:(v.note||'').trim(),person_name:row.name||''}); setAdd(a=>Object.assign({},a,{[s.key]:{account:'',note:''}})); setAddOpen(o=>Object.assign({},o,{[s.key]:false})); return r; },'Recorded.');
-  const saveEd=()=>act(async()=>{ const r=await api('PUT','/access/links/'+ed.id,{account:ed.account.trim(),note:ed.note.trim()}); setEd(null); return r; },'Saved.');
-  const close=async l=>{ if(!await itopsConfirm('Close this account in the records?\n\n'+sysAcc(l.account)+'\n\nDo this after the account was removed in the other system. '+appName()+' does not remove it there.'))return; act(()=>api('POST','/access/links/'+l.id+'/remove',{}),'Closed.'); };
-  const reopen=l=>act(()=>api('POST','/access/links/'+l.id+'/restore',{}),'Open again.');
-  const links=(d&&d.links)||[]; const systems=(d&&d.systems)||[]; const may=!!(d&&d.can_edit);
-  const known={}; const conn={}; systems.forEach(s=>{ known[s.key]=1; if(s.connected)conn[s.key]=1; });
-  const others=links.filter(l=>!known[l.system]);
-  const line=l=>ed&&ed.id===l.id?<div key={l.id} data-acs-edit={l.id} style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',padding:'6px 0'}}>
-      <input className="mh-in" style={{flex:'1 1 200px'}} value={ed.account} maxLength={190} disabled={busy} onChange={e=>setEd(Object.assign({},ed,{account:e.target.value}))} aria-label="Account"/>
-      <input className="mh-in" style={{flex:'2 1 240px'}} value={ed.note} maxLength={500} disabled={busy} onChange={e=>setEd(Object.assign({},ed,{note:e.target.value}))} placeholder="Note" aria-label="Note"/>
-      <button className="btn btn-p btn-sm" disabled={busy} onClick={saveEd}>Save</button><button className="btn btn-g btn-sm" disabled={busy} onClick={()=>setEd(null)}>Cancel</button></div>
-    :<div key={l.id} data-acs-link={l.id} data-acs-status={l.status} style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',padding:embedded?'2px 0':'6px 0',borderTop:embedded?0:'1px dashed var(--b1)'}}>
-      <span className="mh-chip-s" style={l.status==='removed'?{opacity:.6,textDecoration:'line-through'}:undefined}>{sysAcc(l.account)}</span>
-      <span className="mh-mut" style={{fontSize:12.5,flex:1,minWidth:160}}>{l.note?l.note+' · ':''}{conn[l.system]&&l.ext_id
-        ?(l.status==='removed'?('no longer listed since '+mhDate(l.removed_at,'')):('read from the system'+(l.seen_at?' '+mhDateTime(String(l.seen_at).replace(' ','T')):'')+(sysNums([l])?' · numbers: '+sysNums([l]):'')+(l.pinned?' · assigned by hand':'')))
-        :(l.status==='removed'?('closed '+mhDate(l.removed_at,'')+(l.removed_by?' by '+l.removed_by:'')+(l.removed_run?' · offboarding #'+l.removed_run:'')):('recorded '+mhDate(l.created_at,'')+(l.created_by?' by '+l.created_by:'')))}</span>
-      {conn[l.system]&&l.ext_id?null:<>{may&&l.status==='active'&&<><button className="btn btn-g btn-sm" disabled={busy} onClick={()=>setEd({id:l.id,account:l.account,note:l.note||''})}>Edit</button><button className="btn btn-g btn-sm" data-acs-close={l.id} disabled={busy} onClick={()=>close(l)}>Close</button></>}
-      {may&&l.status==='removed'&&!conn[l.system]&&<button className="btn btn-g btn-sm" data-acs-reopen={l.id} disabled={busy} onClick={()=>reopen(l)}>Open again</button>}</>}</div>;
-  const addForm=(s,v)=><div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginTop:embedded?4:8}}>
-    <input className="mh-in" data-acs-add={s.key} style={{flex:'1 1 200px'}} value={v.account} maxLength={190} disabled={busy} onChange={e=>setA(s.key,{account:e.target.value})} placeholder={s.account_hint} aria-label={'Account in '+s.name}/>
-    <input className="mh-in" style={{flex:'2 1 240px'}} value={v.note} maxLength={500} disabled={busy} onChange={e=>setA(s.key,{note:e.target.value})} placeholder="Note (optional)" aria-label={'Note for the account in '+s.name}/>
-    <button className="btn btn-p btn-sm" data-acs-record={s.key} disabled={busy} onClick={()=>record(s)}>Record an account</button>
-    {embedded&&<button className="btn btn-g btn-sm" disabled={busy} onClick={()=>setAddOpen(o=>Object.assign({},o,{[s.key]:false}))}>Cancel</button>}</div>;
-  const none=s=>s.connected?(s.name+' listed no user with this email at its last reading.'):'No open account recorded.';
-  return <div data-acs-person={row.email} style={embedded?undefined:{maxWidth:900}}>
-    {err&&<div className={embedded?'mh-mut':'mh-err'} style={embedded?{fontSize:12.5,padding:'6px 0'}:undefined}>{err}</div>}
-    {!d&&!err&&(embedded?<div className="mh-mut mh-mono" style={{fontSize:12,padding:'6px 0'}}>loading the other systems…</div>:<MhLoading/>)}
-    {msg&&<div data-acs-msg={msg.tone} className={msg.tone==='ok'?'mh-okbox':'mh-err'} style={{margin:embedded?'6px 0':'0 0 12px',fontFamily:'inherit'}}>{msg.text}</div>}
-    {d&&embedded&&systems.filter(s=>!(skip||[]).includes(s.key)).map(s=>{ const mine=links.filter(l=>l.system===s.key); const open=mine.filter(l=>l.status==='active'); const gone=mine.filter(l=>l.status==='removed'); const v=add[s.key]||{account:'',note:''};
-      return <div key={s.key} className="mh-sysrow" data-acs-sys={s.key} data-acc-sys={s.key}>
-        <div><div style={{fontWeight:600}}>{s.name}</div>{s.url&&<a href={safeHref(s.url)} target="_blank" rel="noopener noreferrer" className="mh-link" style={{fontSize:12}}>{'Open ↗'}</a>}</div>
-        <div style={{minWidth:0}}>
-          {!open.length&&<div className="mh-mut" style={{fontSize:13.5}}>{none(s)}</div>}
-          {open.map(line)}
-          {closed&&gone.map(line)}
-          {s.connected&&open.length>0&&<div className="mh-mut" data-acs-readonly={s.key} style={{fontSize:12}}>Read from {s.name}: change it there.</div>}
-          {may&&!s.connected&&(addOpen[s.key]?addForm(s,v):<button type="button" className="mh-link" data-acs-addopen={s.key} style={{fontSize:12.5}} disabled={busy} onClick={()=>setAddOpen(o=>Object.assign({},o,{[s.key]:true}))}>+ Record an account</button>)}
-        </div></div>; })}
-    {d&&embedded&&!systems.length&&<div className="mh-mut" data-acs-nosys="1" style={{fontSize:12.5,padding:'6px 0',borderTop:'1px dashed var(--b1)'}}>No other company system is switched on. A Super Admin, or a role with Integrations · Edit, switches them on under Administration → Settings → Company systems.</div>}
-    {d&&!embedded&&systems.map(s=>{ const mine=links.filter(l=>l.system===s.key); const open=mine.filter(l=>l.status==='active'); const gone=mine.filter(l=>l.status==='removed'); const v=add[s.key]||{account:'',note:''};
-      return <div key={s.key} className="mh-pf-sec" data-acs-sys={s.key} style={{marginBottom:16}}>
-        <div style={{display:'flex',justifyContent:'space-between',gap:10,flexWrap:'wrap',alignItems:'baseline'}}><div style={{fontSize:15.5,fontWeight:700}}>{s.name}</div>
-          {s.url&&<a href={safeHref(s.url)} target="_blank" rel="noopener noreferrer" className="mh-link">{'Open '+s.name+' ↗'}</a>}</div>
-        {!open.length&&<div className="mh-mut" style={{fontSize:13.5,padding:'6px 0'}}>{none(s)}</div>}
-        {open.map(line)}
-        {closed&&gone.map(line)}
-        {s.connected&&<div className="mh-mut" data-acs-readonly={s.key} style={{fontSize:12,marginTop:6}}>Read from {s.name}: add, change or remove the user there. To say whose account it is, use “Assign…” on the {s.name} tab.</div>}
-        {may&&!s.connected&&addForm(s,v)}
-      </div>; })}
-    {d&&others.length>0&&(closed||others.some(l=>l.status==='active'))&&<div className={embedded?'mh-sysrow':'mh-pf-sec'} style={embedded?undefined:{marginBottom:16}}><div style={{fontSize:embedded?14:15.5,fontWeight:embedded?600:700}}>Systems no longer in use</div><div>{others.filter(l=>closed||l.status==='active').map(line)}</div></div>}
-    {d&&links.some(l=>l.status==='removed')&&<button type="button" className="mh-link" data-acs-closed="1" style={embedded?{fontSize:12.5}:undefined} onClick={()=>setClosed(c=>!c)}>{closed?'− Hide closed accounts':'+ Show closed accounts ('+links.filter(l=>l.status==='removed').length+')'}</button>}
-    {(!embedded||may)&&d&&systems.length>0&&<div className="mh-mut" style={{fontSize:12,marginTop:embedded?4:14}}>Recording, changing and closing an account is written to the Audit Log with your name. Closing does not remove the account in the other system.</div>}
-  </div>;
-}
 
 /* Record many accounts of one system from a pasted list (a full page): preview first, then a typed confirmation */
 
@@ -8229,41 +7982,6 @@ function SecretOnce({secret,onClose}){
   </div></div>;
 }
 /* vTiger "reassign records" step: preview what the person owns, choose the new owner (and modules), then move. */
-function ObVtReassign({run,task,toast,onDone,onCancel}){
-  const [pv,setPv]=React.useState(null); const [err,setErr]=React.useState(''); const [to,setTo]=React.useState(''); const [mods,setMods]=React.useState({}); const [busy,setBusy]=React.useState(false);
-  const [same,setSame]=React.useState(false);   /* BT40: a user not found by email must be confirmed as the same person before anything is moved */
-  const [leave,setLeave]=React.useState(false); const [why,setWhy]=React.useState('');   /* BT93: leave the records with the person for now */
-  const leaveGo=async()=>{ if(why.trim().length<3)return toast('Say why the records stay for now and who will move them'); setBusy(true);
-    try{ const r=await api('POST','/onboarding/runs/'+run.id+'/tasks/'+task.id,{action:'leave',reason:why.trim()}); toast(r.result||'Left for later','ok'); onDone(); }catch(e){ toast(e.message); } setBusy(false); };
-  React.useEffect(()=>{ (async()=>{ try{ const r=await api('POST','/onboarding/runs/'+run.id+'/tasks/'+task.id,{action:'preview'}); setPv(r); setTo(r.default_target||''); const m={}; Object.keys(r.modules||{}).forEach(k=>{m[k]=true;}); setMods(m); }catch(e){ setErr(e.message); } })(); },[]);
-  const chosen=Object.keys(mods).filter(k=>mods[k]); const all=chosen.length===Object.keys(mods).length;
-  const n=chosen.reduce((a,k)=>a+((pv&&pv.modules&&pv.modules[k])||0),0);
-  const go=async()=>{ if(!to)return toast('Choose the new owner'); const tgt=(pv.targets||[]).find(u=>u.id===to);
-    if(!await itopsConfirm('Move '+n+' record(s) from '+(pv.user.first_name+' '+pv.user.last_name).trim()+' to '+(tgt?(tgt.first_name+' '+tgt.last_name).trim():'the selected user')+' in vTiger?'))return;
-    setBusy(true); try{ const r=await api('POST','/onboarding/runs/'+run.id+'/tasks/'+task.id,Object.assign({action:'run',to_id:to,modules:all?[]:chosen},needSame&&same?{vtiger_id:String(pv.user.id)}:{})); toast(r.result||'Done','ok'); onDone(); }catch(e){ toast(e.message); } setBusy(false); };
-  const needSame=!!(pv&&pv.user&&pv.user.confirmed===false);
-  const box={marginTop:10,padding:'11px 12px',border:'1px solid var(--b1)',borderRadius:9,background:'var(--s1)'};
-  if(err) return <div style={box}><div style={{fontSize:13.5,color:'var(--red)',marginBottom:8}}>{err}</div><button className="btn btn-g btn-sm" onClick={onCancel}>Close</button></div>;
-  if(!pv) return <div style={box}><span style={{fontSize:13.5,color:'var(--t4)'}}>Counting records in vTiger…</span></div>;
-  if(!pv.user) return <div style={box}><div style={{fontSize:13.5,marginBottom:8}}>{pv.note}</div><div style={{display:'flex',gap:6}}><button className="btn btn-p btn-sm" onClick={async()=>{ try{ await api('POST','/onboarding/runs/'+run.id+'/tasks/'+task.id,{action:'done',note:'No vTiger user — nothing to reassign'}); onDone(); }catch(e){toast(e.message);} }}>Mark done</button><button className="btn btn-g btn-sm" onClick={onCancel}>Close</button></div></div>;
-  return <div style={box}>
-    <div style={{fontSize:13.5,marginBottom:8}}><b>{(pv.user.first_name+' '+pv.user.last_name).trim()||pv.user.user_name}</b> <span style={{color:'var(--t4)'}}>({pv.user.email||'no email'} · {pv.user.status})</span> owns <b>{pv.total}</b> live record(s).{(pv.user.matched_by==='username'||pv.user.matched_by==='id')&&<div data-vt-byname="1" style={{fontSize:12.5,marginTop:5,color:'var(--t2)'}}>{pv.user.matched_by==='username'?'Found by vTiger user name “'+pv.user.user_name+'” (the part of the sign-in name before the @) because no vTiger user has this person’s email.':'Linked by an id kept on this record: its email is not this person’s.'} {pv.user.confirmed?'Already confirmed as the same person.':'A person on another domain can have the same user name, so nothing is moved until you confirm.'}</div>}
-      {needSame&&<label data-vt-same-ck="1" style={{display:'flex',gap:7,alignItems:'flex-start',fontSize:13,marginTop:7,cursor:'pointer'}}><input type="checkbox" checked={same} onChange={e=>setSame(e.target.checked)} style={{accentColor:'var(--accent)',marginTop:2}}/><span>I checked: this vTiger user is <b>{run.subject_name||'the person leaving'}</b>. (Written to the Audit Log.)</span></label>}</div>
-    {pv.total>0?<React.Fragment>
-      <table className="tbl" style={{margin:'0 0 10px',fontSize:13.5}}><thead><tr><th style={{width:34}}></th><th>Module</th><th style={{textAlign:'right'}}>Records</th></tr></thead><tbody>
-        {Object.keys(pv.modules).map(k=><tr key={k}><td><input type="checkbox" checked={!!mods[k]} onChange={e=>setMods(m=>Object.assign({},m,{[k]:e.target.checked}))} style={{accentColor:'var(--accent)'}}/></td><td>{k}</td><td style={{textAlign:'right',fontWeight:600}}>{pv.modules[k]}</td></tr>)}
-      </tbody></table>
-      <div className="fld" data-vt-owner-fixed={pv.fixed_target?'1':'0'}><label>New owner (active vTiger user)</label><DSel value={to} disabled={!!pv.fixed_target&&!pv.can_change_target} onChange={e=>setTo(e.target.value)}><option value="">— choose —</option>{(pv.targets||[]).map(u=><option key={u.id} value={u.id}>{((u.first_name||'')+' '+(u.last_name||'')).trim()||u.user_name} · {u.email}</option>)}</DSel>
-        <div style={{fontSize:12.5,color:'var(--t4)',marginTop:4}}>{pv.fixed_target?(pv.can_change_target?'Set on this step. As a Super Admin you can change it (written to the Audit Log).':'Set on this step: it cannot be changed here.'):'Your choice is kept on this step: a retry or a scheduled run uses the same owner.'}</div></div>
-      {!leave&&<div style={{display:'flex',gap:6,flexWrap:'wrap'}}><button className="btn btn-p btn-sm" disabled={busy||!to||!n||(needSame&&!same)} onClick={go}>{busy?'Moving…':'Reassign '+n+' record(s)'}</button><button className="btn btn-g btn-sm" data-vt-leave="1" onClick={()=>setLeave(true)}>Leave them with {(pv.user.first_name||'this person')} for now…</button><button className="btn btn-g btn-sm" onClick={onCancel}>Cancel</button></div>}
-      {leave&&<div data-vt-leave-box="1" style={{borderTop:'1px solid var(--b1)',paddingTop:10,marginTop:4}}>
-        <div style={{fontSize:13.5,marginBottom:6}}>The {pv.total} record(s) stay with {(pv.user.first_name+' '+pv.user.last_name).trim()||pv.user.user_name} in vTiger, to be moved by hand later (in vTiger, or with "Reassign vTiger records" on the Microsoft 365 page). Deactivating the user keeps them. Until they are moved, the process owner is reminded{pv.left_remind_days?' every '+pv.left_remind_days+' days':''}.</div>
-        <div className="fld"><label>Why, and who will move them</label><input value={why} onChange={e=>setWhy(e.target.value)} placeholder="For example: Sales will split them by region next week" style={{width:'100%'}}/></div>
-        <div style={{display:'flex',gap:6}}><button className="btn btn-p btn-sm" disabled={busy||why.trim().length<3} onClick={leaveGo}>{busy?'Saving…':'Leave the records for now'}</button><button className="btn btn-g btn-sm" onClick={()=>setLeave(false)}>Back</button></div>
-      </div>}
-    </React.Fragment>:<div style={{display:'flex',gap:6}}><button className="btn btn-p btn-sm" onClick={async()=>{ try{ await api('POST','/onboarding/runs/'+run.id+'/tasks/'+task.id,{action:'done',note:'Nothing to reassign — 0 records owned'}); onDone(); }catch(e){toast(e.message);} }}>Mark done — nothing to move</button><button className="btn btn-g btn-sm" onClick={onCancel}>Close</button></div>}
-  </div>;
-}
 /* "Verify offboarding" checklist: re-reads Microsoft 365 + vTiger and shows pass / fail per check. */
 function ObVerify({run,toast,onChanged}){
   const [busy,setBusy]=React.useState(false);
@@ -8385,8 +8103,6 @@ function OnboardingRuns({toast,history}){   /* BT21: shown as Microsoft 365 → 
         {t.result&&<div style={{fontSize:13,color:t.status==='failed'?'var(--red)':'var(--t4)',marginTop:6,wordBreak:'break-word'}}>{t.result}</div>}
         {t.task_type==='m365_exchange_manual'&&t.status==='pending'&&<ObExoSteps run={view} task={t} toast={toast}/>}
         {t.task_type==='equipment_return'&&(t.status==='pending'||t.status==='failed')&&<ObReturn run={view} task={t} toast={toast} onDone={reloadView}/>}
-        {t.task_type==='system_access'&&(t.status==='pending'||t.status==='failed')&&<SysStep runId={view.id} taskId={t.id} via="history" onDone={(text,r)=>{ if(r&&r.verify&&!r.verify.clean)toast('Offboarding finished, but the access check found '+r.verify.issues.length+' issue(s) — see Access verification'); reloadView(); }}/>}
-        {reassign===t.id&&<ObVtReassign run={view} task={t} toast={toast} onCancel={()=>setReassign(null)} onDone={()=>{ setReassign(null); reloadView(); }}/>}
       </div>; })}
     </div>;
   }

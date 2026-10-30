@@ -86,19 +86,6 @@ if (!function_exists('itops_conn_defs')) {
         return $out;
     }
 
-    /** What a screen may know about a connection: no secret, not even its length. */
-    function itops_conn_public(PDO $db, string $key): ?array {
-        $def = itops_conn_defs()[$key] ?? null; if (!$def) return null;
-        $st = itops_conn_state($db, $key);
-        $fields = []; $all = true;
-        foreach ($def['fields'] as $fd) { [$f, $label] = $fd; $has = ($st['fields'][$f] ?? '') !== ''; $all = $all && ($has || !empty($fd[2])); $fields[] = ['key' => $f, 'label' => $label, 'saved' => $has, 'optional' => !empty($fd[2])]; }
-        return ['key' => $key, 'name' => $def['name'], 'where' => $def['where'], 'reads' => $def['reads'], 'cannot' => $def['cannot'], 'fields' => $fields, 'configured' => $all,
-                'saved_at' => $st['saved_at'] ?? null, 'saved_by' => $st['saved_by'] ?? null,
-                'tested_at' => $st['tested_at'] ?? null, 'tested_ok' => !empty($st['tested_ok']), 'test_note' => (string)($st['test_note'] ?? ''),
-                'last_sync_at' => $st['last_sync_at'] ?? null, 'last_sync_ok' => array_key_exists('last_sync_ok', $st) ? (bool)$st['last_sync_ok'] : null,
-                'last_error' => (string)($st['last_error'] ?? ''), 'last_error_at' => $st['last_error_at'] ?? null,
-                'counts' => is_array($st['counts'] ?? null) ? $st['counts'] : null, 'held' => is_array($st['held'] ?? null) ? $st['held'] : []];
-    }
 
     /** Are the columns of this build there (db-update.php has run)? Without them nothing can be read into the table. */
     function itops_conn_ready(PDO $db): bool {
@@ -107,8 +94,6 @@ if (!function_exists('itops_conn_defs')) {
 
     function itops_conn_now(): string { return gmdate('Y-m-d\TH:i:s\Z'); }
 
-    /** "Oct 8, 2026 10:05 AM EDT" from a stored reading time (BT61: 12-hour; BT131: the installation's zone). */
-    function itops_conn_when(?string $iso): string { $t = $iso ? strtotime($iso) : false; return $t ? date('m/d/Y g:i A T', $t) : 'an unknown time'; }
 
     /** A message that may be stored or shown: the key and the secret are taken out of it, whoever put them there. */
     function itops_conn_scrub(string $msg, array $creds): string {
@@ -116,59 +101,12 @@ if (!function_exists('itops_conn_defs')) {
         return mb_substr($msg, 0, 400);
     }
 
-    /** The person behind the current request, for the Audit Log line of a reading (nobody = the scheduled job). */
-    function itops_conn_actor(): array {
-        $id = (int)($_SERVER['ITOPS_USER_ID'] ?? 0);
-        return $id ? ['id' => $id, 'display_name' => (string)($_SERVER['ITOPS_USER_NAME'] ?? 'a person')] : [];
-    }
 
     /** The stand-in "email" of an account that has none in the system: it matches nobody until a person assigns it. */
     function itops_conn_placeholder(string $key, string $extId): string {
         return 'no-email-' . (preg_replace('/[^a-z0-9]/', '', strtolower($extId)) ?: 'x') . '@' . $key . '.invalid';
     }
-    function itops_conn_is_placeholder(string $email): bool { return (bool)preg_match('/^no-email-[a-z0-9]+@[a-z0-9_]+\.invalid$/', $email); }
 
-    /** One call that proves the stored key works. Returns ['ok' => bool, 'note' => sentence]. Never throws. */
-    function itops_conn_test_call(string $key, array $creds): array {
-        try {
-            if ($key === 'justcall') {
-                require_once __DIR__ . '/JustCall.php';
-                $t = (new ItopsJustCall($creds['api_key'] ?? '', $creds['api_secret'] ?? ''))->test();
-                $miss = array_values(array_diff(['id', 'email', 'name'], $t['fields']));
-                if ($t['users_seen'] > 0 && $miss) return ['ok' => false, 'note' => 'JustCall answered, but a user has no ' . implode(', ', $miss) . ' in the answer, so people cannot be matched. Fields seen: ' . implode(', ', $t['fields']) . '.'];
-                return ['ok' => true, 'note' => 'JustCall answered' . ($t['total'] !== null ? ': ' . $t['total'] . ' user(s) in the account' : '') . '.' . ($t['users_seen'] ? ' A user carries: ' . implode(', ', $t['fields']) . '.' : ' It listed no user.')];
-            }
-            if ($key === 'pbx') {   // BT151
-                require_once __DIR__ . '/Ucm.php';
-                $db = getDB(); $st = itops_conn_state($db, 'pbx');
-                $u = new ItopsUcm($creds['address'] ?? '', $creds['api_user'] ?? '', $creds['api_secret'] ?? '', (string)($st['pin'] ?? ''));
-                try { $u->login(); $s = $u->status(); $x = $u->extensions(); }
-                catch (ItopsUcmException $e) { if ($e->loginRefused) { $st = itops_conn_state($db, 'pbx'); $st['login_refused_at'] = itops_conn_now(); itops_conn_put($db, 'pbx', $st); } throw $e; }
-                finally { $u->logout(); }
-                if ($u->seenPin !== '' && empty($st['pin'])) { $st = itops_conn_state($db, 'pbx'); $st['pin'] = $u->seenPin; itops_conn_put($db, 'pbx', $st); }
-                $mail = count(array_filter($x, fn($e) => $e['email'] !== ''));
-                return ['ok' => true, 'note' => 'The phone system answered' . ($s['model'] !== '' ? ': ' . $s['model'] : '') . ($s['firmware'] !== '' ? ', firmware ' . $s['firmware'] : '') . '. ' . count($x) . ' extension(s)'
-                        . ', ' . count(array_filter($x, fn($e) => $e['out_of_service'])) . ' out of service. ' . ($mail ? $mail . ' carry an email.' : 'None carries an email: assign each to its person on the PBX tab.')
-                        . ($u->seenPin !== '' ? ' Its certificate is remembered.' : '')];
-            }
-            if ($key === 'ctm') {   // BT148
-                require_once __DIR__ . '/Ctm.php';
-                $t = (new ItopsCtm($creds['api_key'] ?? '', $creds['api_secret'] ?? '', $creds['account_id'] ?? ''))->test();
-                $acc = ($t['account']['name'] !== '' ? $t['account']['name'] . ' ' : '') . '#' . $t['account']['id'];
-                if ($t['users_seen'] > 0 && !in_array('email', $t['fields'], true)) return ['ok' => false, 'note' => 'CallTrackingMetrics answered (account ' . $acc . '), but a user has no email in the answer, so people cannot be matched. Fields seen: ' . implode(', ', $t['fields']) . '.'];
-                return ['ok' => true, 'note' => 'CallTrackingMetrics answered: account ' . $acc . ($t['total'] !== null ? ', ' . $t['total'] . ' user(s)' : '') . '.' . ($t['users_seen'] ? ' A user carries: ' . implode(', ', $t['fields']) . '.' : ' It listed no user.')];
-            }
-            if (in_array($key, ['hubspot', 'jotform', 'efax'], true)) {   // BT126
-                require_once __DIR__ . '/SaasUsers.php';
-                $t = (new ItopsSaasUsers($key, $creds))->test(); $n = ItopsSaasUsers::name($key);
-                if (!$t['lists']) return ['ok' => false, 'note' => $t['note']];
-                $miss = array_values(array_diff(['email'], $t['fields']));
-                if ($t['users_seen'] > 0 && $miss) return ['ok' => false, 'note' => $n . ' answered, but a user has no email in the answer, so people cannot be matched. Fields seen: ' . implode(', ', $t['fields']) . '.'];
-                return ['ok' => true, 'note' => $n . ' answered' . ($t['total'] !== null ? ': ' . $t['total'] . ' user(s)' : '') . '.' . ($t['users_seen'] ? ' A user carries: ' . implode(', ', $t['fields']) . '.' : ' No user in the first page.')];
-            }
-            return ['ok' => false, 'note' => 'This build has no connection for that system.'];
-        } catch (Throwable $e) { return ['ok' => false, 'note' => itops_conn_scrub($e->getMessage(), $creds)]; }
-    }
 
     /** Every account of the system, in one shape: id, name, email, role, extension, owned_numbers, shared_numbers, groups, last_login. Throws. */
     function itops_conn_fetch(string $key, array $creds): array {
@@ -326,153 +264,8 @@ if (!function_exists('itops_conn_defs')) {
         return ['ok' => $r['ok'], 'error' => $r['error'], 'at' => $r['at']];
     }
 
-    /** The scheduled job: read each connected system when its last reading is older than ITOPS_CONN_CRON_EVERY. */
-    function itops_conn_cron(PDO $db): array {
-        $out = [];
-        foreach (itops_sys_all($db) as $s) {
-            if ($s['mode'] !== 'connected') continue;
-            $st = itops_conn_state($db, $s['key']);
-            $at = isset($st['last_sync_at']) ? strtotime((string)$st['last_sync_at']) : false;
-            $lastTry = isset($st['last_error_at']) ? strtotime((string)$st['last_error_at']) : false;
-            if (($at && (time() - $at) < ITOPS_CONN_CRON_EVERY) || ($lastTry && (time() - $lastTry) < 1800)) continue;   // a failed reading is tried again after half an hour, not every run
-            $out[$s['key']] = itops_conn_sync($db, $s['key']);
-        }
-        return $out;
-    }
 
-    /**
-     * Accounts of a connected system that belong to nobody ITOps knows: no Microsoft 365 account has their email.
-     * Returns labels (at most 20), or null when the Microsoft 365 directory could not be read. An offboarding that
-     * finds "no user" must say so when such accounts exist: one of them may be the person, under another email.
-     */
-    function itops_conn_unmatched(PDO $db, string $key): ?array {
-        $d = itops_sys_directory($db);
-        if ($d['users'] === null) return null;
-        $known = [];
-        foreach ($d['users'] as $u) foreach ([itops_sys_email($u['upn'] ?? ''), itops_sys_email($u['mail'] ?? '')] as $e) if ($e !== '') $known[$e] = 1;
-        try { $q = $db->prepare("SELECT email, account FROM itops_people_links WHERE system_key = ? AND status = 'active' AND ext_id IS NOT NULL ORDER BY account"); $q->execute([$key]); }
-        catch (Throwable $e) { return null; }
-        $out = [];
-        foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) if (!isset($known[(string)$r['email']])) $out[] = (string)$r['account'];
-        return array_slice($out, 0, 20);
-    }
 
-    /**
-     * The accounts read from a connected system, each with the person it is matched to and what Microsoft 365 says
-     * about that person. $dir = directory rows, or null when Microsoft 365 could not be read.
-     */
-    function itops_conn_accounts(PDO $db, string $key, ?array $dir): array {
-        $by = [];
-        foreach ($dir ?? [] as $u) {
-            $row = ['name' => (string)($u['display_name'] ?? ''), 'enabled' => !empty($u['enabled']), 'upn' => itops_sys_email($u['upn'] ?? '')];
-            foreach ([itops_sys_email($u['upn'] ?? ''), itops_sys_email($u['mail'] ?? '')] as $e) if ($e !== '' && !isset($by[$e])) $by[$e] = $row;
-        }
-        $q = $db->prepare("SELECT l.*, cu.display_name AS created_by_name, ru.display_name AS removed_by_name FROM itops_people_links l
-                           LEFT JOIN itops_users cu ON cu.id = l.created_by LEFT JOIN itops_users ru ON ru.id = l.removed_by
-                           WHERE l.system_key = ? AND l.status = 'active' AND l.ext_id IS NOT NULL ORDER BY l.account, l.id");
-        $q->execute([$key]);
-        $rows = []; $sum = ['users' => 0, 'numbers' => 0, 'attention' => 0, 'left' => 0, 'unmatched' => 0, 'no_email' => 0, 'idle' => 0, 'pinned' => 0];
-        foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $l = itops_sys_link_row($r); $d = is_array($l['detail']) ? $l['detail'] : [];
-            $ph = itops_conn_is_placeholder($l['email']);
-            $m = $ph ? null : ($by[$l['email']] ?? null);
-            $m365 = $dir === null ? 'unknown' : ($m ? ($m['enabled'] ? 'enabled' : 'disabled') : 'none');
-            $flag = $ph ? 'no_email' : ($m365 === 'none' ? 'unmatched' : ($m365 === 'disabled' ? 'left' : ''));
-            // BT150: a seat nobody uses — no sign-in for 90 days (only when the system says when the last sign-in was)
-            $ll = (string)($d['last_login'] ?? ''); $llT = $ll === '' ? false : (ctype_digit($ll) ? (int)(strlen($ll) > 11 ? (int)substr($ll, 0, 10) : $ll) : strtotime($ll));
-            if ($flag === '' && $llT && $llT > 946684800 && $llT < time() - 90 * 86400) $flag = 'idle';
-            $owned = array_values(array_filter((array)($d['owned_numbers'] ?? []), 'is_string')); $shared = array_values(array_filter((array)($d['shared_numbers'] ?? []), 'is_string'));
-            $rows[] = ['id' => $l['id'], 'ext_id' => $l['ext_id'], 'name' => (string)($d['name'] ?? $l['person_name']), 'email' => $l['ext_email'], 'account' => $l['account'],
-                       'person' => $ph ? '' : $l['email'], 'person_name' => $m ? $m['name'] : '', 'pinned' => $l['pinned'], 'm365' => $m365, 'flag' => $flag,
-                       'role' => (string)($d['role'] ?? ''), 'extension' => (string)($d['extension'] ?? ''), 'owned_numbers' => $owned, 'shared_numbers' => $shared,
-                       'groups' => array_values(array_filter((array)($d['groups'] ?? []), 'is_string')), 'last_login' => (string)($d['last_login'] ?? ''), 'seen_at' => $l['seen_at'], 'note' => $l['note']];
-            $sum['users']++; $sum['numbers'] += count($owned);
-            if ($flag !== '') { $sum['attention']++; $sum[$flag]++; }
-            if ($l['pinned']) $sum['pinned']++;
-        }
-        usort($rows, fn($a, $b) => [$a['flag'] === '' ? 1 : 0, mb_strtolower($a['name'])] <=> [$b['flag'] === '' ? 1 : 0, mb_strtolower($b['name'])]);
-        return ['rows' => $rows, 'summary' => $sum];
-    }
 
-    /**
-     * A step of an onboarding or offboarding for a CONNECTED system. The person does the work in the system; the step
-     * is done when the system itself shows it. Nobody's word replaces a reading.
-     *   grant:  granted (= "check the system") | not_needed        remove: removed | none (= "check the system")
-     */
-    function itops_conn_step_run(PDO $db, array $sys, array $run, string $op, string $outcome, string $note, array $user): array {
-        $key = $sys['key']; $name = $sys['name']; $emails = itops_sys_run_emails($run);
-        $tail = $note !== '' ? ' · ' . $note : '';
-        $labels = fn(array $ls) => implode(', ', array_map(fn($l) => $l['account'], $ls));
-        if ($op === 'grant') {
-            if (!in_array($outcome, ['granted', 'not_needed'], true)) itops_ob_fail('Say what applies in ' . $name . ': check it for the account, or it is not needed for this person.', 400);
-            if ($outcome === 'not_needed') return ['result' => $name . ': not needed for this person' . $tail, 'detail' => ['system' => $name, 'outcome' => 'not needed']];
-        } else {
-            if ($outcome === 'moved') itops_ob_fail($name . ' is read directly, so a hand-over is not recorded here. Give the numbers to the colleague in ' . $name . ' and remove the user; then check again.', 400);
-            if (!in_array($outcome, ['removed', 'none', 'remove_now'], true) || ($outcome === 'remove_now' && !in_array($key, ['hubspot', 'pbx'], true))) itops_ob_fail('Remove the user in ' . $name . ', then use "Check ' . $name . ' again" on the step.', 400);
-        }
-        if (!$emails) itops_ob_fail('This record has no work email for the person, so ' . $name . ' cannot be asked about them. Look in ' . $name . ' yourself and skip the step with a note.', 409);
-        // BT133: HubSpot users are removed from the step itself (the user ids read from HubSpot; a Super Admin never)
-        $removedNow = [];
-        // BT151: the PBX extension is taken out of service from the step itself (call forwarding cleared; nothing deleted)
-        if ($op !== 'grant' && $outcome === 'remove_now' && $key === 'pbx') {
-            require_once __DIR__ . '/PbxService.php';
-            $mine = array_values(array_filter(itops_sys_links($db, $emails, 'active', 'pbx'), fn($l) => $l['ext_id'] !== null && preg_match('/^[0-9]{2,18}$/', (string)$l['ext_id'])));
-            if (!$mine) itops_ob_fail('No extension is recorded for this person, so there is nothing to take out of service. Use "Check the phone system again".', 409);
-            foreach ($mine as $l) {
-                try { $chg = itops_pbx_service($db, (string)$l['ext_id'], true, 'offboarding record #' . (int)$run['id']); }
-                catch (Throwable $e) { itops_ob_fail('The phone system did not take extension ' . $l['ext_id'] . ' out of service: ' . $e->getMessage(), 502); }
-                $removedNow[] = 'ext ' . $l['ext_id'] . ' out of service' . (count($chg) > 1 ? ', forwarding cleared' : '');
-            }
-        }
-        if ($op !== 'grant' && $outcome === 'remove_now' && $key === 'hubspot') {
-            require_once __DIR__ . '/HubspotPeople.php';
-            $mine = array_values(array_filter(itops_sys_links($db, $emails, 'active', $key), fn($l) => $l['ext_id'] !== null && preg_match('/^[0-9]{1,20}$/', (string)$l['ext_id'])));
-            if (!$mine) itops_ob_fail('No HubSpot user is recorded for this person, so there is nothing to remove. Use "Check HubSpot again".', 409);
-            try { $c = itops_hsp_client($db); } catch (Throwable $e) { itops_ob_fail($e->getMessage(), 409); }
-            foreach ($mine as $l) {
-                try { $raw = itops_hsp_get($c, (string)$l['ext_id']); } catch (Throwable $e) { itops_ob_fail('HubSpot could not be asked about ' . $l['account'] . ': ' . $e->getMessage(), 502); }
-                if (!$raw) continue;   // already gone
-                $u = itops_hsp_shape($raw);
-                if (!in_array($u['email'], $emails, true)) itops_ob_fail('The HubSpot user ' . $l['account'] . ' now has another email (' . $u['email'] . '). Look at it in HubSpot. Nothing was removed.', 409);
-                if ($u['super_admin']) { audit_log('hubspot_user_refused', 'access', null, $u['email'] . ' - HubSpot', null, ['Why' => 'offboarding step: a Super Admin is not removed from here', 'Offboarding record' => '#' . (int)$run['id']]);
-                    itops_ob_fail($u['email'] . ' is a Super Admin in HubSpot. Another Super Admin removes them in HubSpot; then use "Check HubSpot again".', 409); }
-                [$st, $d] = $c->call('DELETE', '/settings/v3/users/' . rawurlencode($u['id']), ['idProperty' => 'USER_ID']);
-                if ($st !== 204 && ($st < 200 || $st >= 300) && $st !== 404) { $why = itops_hsp_err($c, $st, $d, 'remove the user');
-                    audit_log('hubspot_user_refused', 'access', null, $u['email'] . ' - HubSpot', null, ['Why' => $why, 'Offboarding record' => '#' . (int)$run['id']]); itops_ob_fail($why, 502); }
-                audit_log('hubspot_user_remove', 'access', null, $u['email'] . ' - HubSpot', itops_hsp_audit_view($u) + ['HubSpot user' => 'exists'], ['HubSpot user' => 'removed', 'Offboarding record' => '#' . (int)$run['id']]);
-                $removedNow[] = $l['account'];
-            }
-        }
-        // An answer is a person saying "I did it in the system just now": always a new reading, never one from before.
-        $f = itops_conn_fresh($db, $key, $user, 0);
-        if (!$f['ok']) itops_ob_fail($name . ' could not be read just now, so the step stays open: ' . ($f['error'] ?: 'no answer') . '.', 409);
-        $when = itops_conn_when($f['at']);
-        $links = itops_sys_links($db, $emails, 'active', $key);
-        if ($op === 'grant') {
-            if (!$links) itops_ob_fail($name . ' lists no user with the email ' . $emails[0] . ' (read ' . $when . '). Add the person in ' . $name . ' and check again. If their user there has another email, assign it to them on the ' . $name . ' tab of Company systems.', 409);
-            return ['result' => $name . ': the user is there (' . $labels($links) . '), read from ' . $name . ' ' . $when . $tail,
-                    'detail' => ['system' => $name, 'outcome' => 'set up, read from ' . $name, 'account' => $labels($links), 'read_at' => $f['at']]];
-        }
-        if ($links) itops_ob_fail($name . ' still lists ' . $labels($links) . ' for this person (read ' . $when . '). Reassign the numbers and remove the user in ' . $name . ', then check again.', 409);
-        $closed = array_values(array_filter(itops_sys_links($db, $emails, 'removed', $key), fn($l) => $l['ext_id'] !== null));
-        $un = itops_conn_unmatched($db, $key);
-        $caveat = $un ? '; ' . count($un) . ' user(s) in ' . $name . ' are matched to nobody and were not counted' : '';
-        return ['result' => $name . ': ' . ($removedNow ? 'removed from here (' . implode(', ', $removedNow) . '); ' : '') . 'no user for this person, read from ' . $name . ' ' . $when . ($closed ? ' (was: ' . $labels(array_slice($closed, 0, 3)) . ')' : '') . $caveat . $tail,
-                'detail' => ['system' => $name, 'outcome' => 'no user, read from ' . $name, 'accounts' => $labels($closed), 'read_at' => $f['at'], 'unmatched' => $un === null ? 'unknown' : count($un)]];
-    }
 
-    /** The line of "Verify offboarding" for a connected system: the system is asked, and "could not ask" is a failure. */
-    function itops_conn_verify_check(PDO $db, array $sys, array $emails, ?array $step): array {
-        $name = $sys['name']; $label = 'Account removed (read from ' . $name . ')';
-        if (!$emails) return ['system' => $name, 'label' => $label, 'status' => 'skip', 'detail' => 'No work email on this process, so ' . $name . ' cannot be asked'];
-        $f = itops_conn_fresh($db, $sys['key'], itops_conn_actor());
-        if (!$f['ok']) return ['system' => $name, 'label' => $label, 'status' => 'fail', 'detail' => 'Could not read ' . $name . ': ' . ($f['error'] ?: 'no answer')];
-        $open = itops_sys_links($db, $emails, 'active', $sys['key']);
-        $when = itops_conn_when($f['at']);
-        if ($open) return ['system' => $name, 'label' => $label, 'status' => 'fail', 'detail' => $name . ' still lists ' . implode(', ', array_map(fn($l) => $l['account'], $open)) . ' (read ' . $when . ')'];
-        $un = itops_conn_unmatched($db, $sys['key']);
-        return ['system' => $name, 'label' => $label, 'status' => 'pass',
-                'detail' => 'No user with this person’s email (read ' . $when . ')' . ($un ? '. ' . count($un) . ' user(s) there are matched to nobody: look at the ' . $name . ' tab' : '')
-                          . ($step && in_array($step['status'], ['pending', 'failed'], true) ? '. The step of this offboarding is still open' : '')];
-    }
 }

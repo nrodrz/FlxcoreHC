@@ -8,7 +8,7 @@
  * rule depends on comes first, then by severity, then by effort. It is built by rules, never by the AI: the same scan
  * gives the same plan.
  *
- * Each item gets a decision: do it (owner and date), make it a task (a ticket in the service desk), accept the risk
+ * Each item gets a decision: do it (owner and date), accept the risk
  * (reason, expiry), not for us (reason), later. Decisions carry over to the next version; an accepted risk whose expiry
  * has passed comes back undecided. A draft is signed off by a named client contact; a signed plan is kept as it was, and
  * a new version starts from it. Every build, decision, task, sign-off and refusal is in the Audit Log.
@@ -131,8 +131,8 @@ if (!function_exists('itops_sp_ready')) {
         $cat = itops_sa_catalog(); $meta = itops_sa_meta(); $areas = itops_sa_areas(); $lic = itops_sa_licenses(); $D = itops_sp_decisions(); $S = itops_sp_stages();
         $latest = (int)$db->query('SELECT MAX(id) FROM itops_sa_runs')->fetchColumn(); $now = [];
         if ($latest) { $q = $db->prepare('SELECT check_id, status FROM itops_sa_results WHERE run_id=?'); $q->execute([$latest]); $now = $q->fetchAll(PDO::FETCH_KEY_PAIR); }
-        $q = $db->prepare('SELECT i.*, o.display_name AS owner_name, d.display_name AS decided_by_name, t.ticket_number, t.status AS ticket_status FROM itops_sa_plan_items i
-                           LEFT JOIN itops_users o ON o.id=i.owner_id LEFT JOIN itops_users d ON d.id=i.decided_by LEFT JOIN itops_tickets t ON t.id=i.ticket_id WHERE i.plan_id=? ORDER BY i.stage, i.seq');
+        $q = $db->prepare('SELECT i.*, o.display_name AS owner_name, d.display_name AS decided_by_name, NULL AS ticket_number, NULL AS ticket_status FROM itops_sa_plan_items i
+                           LEFT JOIN itops_users o ON o.id=i.owner_id LEFT JOIN itops_users d ON d.id=i.decided_by WHERE i.plan_id=? ORDER BY i.stage, i.seq');
         $q->execute([$planId]); $items = [];
         foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $x) {
             $id = $x['rule_id']; $c = $cat[$id] ?? null; $m = $meta[$id] ?? ['strict', 'none', 'medium', 'medium', []];
@@ -160,6 +160,7 @@ if (!function_exists('itops_sp_ready')) {
         if (!$it) throw new InvalidArgumentException('No such plan item.');
         if ($it['plan_status'] !== 'draft') throw new InvalidArgumentException('This plan is signed. Start a new version to change decisions.');
         $dec = (string)($f['decision'] ?? ''); if (!isset(itops_sp_decisions()[$dec])) throw new InvalidArgumentException('Unknown decision.');
+        if ($dec === 'task') throw new InvalidArgumentException('"Make it a task" is not part of this product: choose "Do it" with an owner and a date.');   // 0001-A004: it made a Service Desk ticket
         $note = trim((string)($f['note'] ?? '')); $owner = (int)($f['owner_id'] ?? 0) ?: null; $due = trim((string)($f['due_date'] ?? '')) ?: null; $exp = trim((string)($f['expires_on'] ?? '')) ?: null;
         foreach (['due date' => $due, 'expiry date' => $exp] as $l => $v) if ($v !== null && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) || !strtotime($v))) throw new InvalidArgumentException('The ' . $l . ' is not a date.');
         if ($owner) { $o = $db->prepare("SELECT COUNT(*) FROM itops_users WHERE id=? AND status='active'"); $o->execute([$owner]); if (!$o->fetchColumn()) throw new InvalidArgumentException('The owner is not an active user.'); }
@@ -171,17 +172,9 @@ if (!function_exists('itops_sp_ready')) {
         }
         if ($dec === 'na' && mb_strlen($note) < 5) throw new InvalidArgumentException('Say why this does not apply here.');
         if ($dec !== 'accept') $exp = null;
-        // Review SEC-30: the item is locked while its ticket is made and linked, so two clicks make one ticket
         $ownTx = !$db->inTransaction(); if ($ownTx) $db->beginTransaction();
         try {
-        $lk = $db->prepare('SELECT ticket_id FROM itops_sa_plan_items WHERE id=? FOR UPDATE'); $lk->execute([$itemId]); $it['ticket_id'] = $lk->fetchColumn() ?: null;
-        $tid = $it['ticket_id'] ? (int)$it['ticket_id'] : null; $tn = null;
-        if ($dec === 'task' && !$tid) {
-            $catId = (int)($f['category_id'] ?? 0);
-            $c = $db->prepare("SELECT COUNT(*) FROM itops_ticket_categories WHERE id=? AND (status IS NULL OR status='active')"); $c->execute([$catId]);
-            if (!$catId || !$c->fetchColumn()) throw new InvalidArgumentException('Choose the ticket category for the task.');
-            [$tn, $tid] = itops_sp_ticket($db, $it, $catId, $owner, $due, $note, $user);
-        }
+        $tid = !empty($it['ticket_id']) ? (int)$it['ticket_id'] : null; $tn = null;   // a ticket linked by the reference app's data is kept as it was
         $old = ['decision' => $it['decision'], 'note' => $it['note'], 'owner_id' => $it['owner_id'], 'due_date' => $it['due_date'], 'expires_on' => $it['expires_on']];
         $db->prepare('UPDATE itops_sa_plan_items SET decision=?, note=?, owner_id=?, due_date=?, expires_on=?, ticket_id=?, decided_by=?, decided_at=NOW() WHERE id=?')
            ->execute([$dec, $note !== '' ? mb_substr($note, 0, 1000) : null, $owner, $due, $exp, $tid, (int)$user['id'], $itemId]);
@@ -189,27 +182,6 @@ if (!function_exists('itops_sp_ready')) {
         if ($ownTx) $db->commit();
         } catch (Throwable $e) { if ($ownTx && $db->inTransaction()) $db->rollBack(); throw $e; }
         return ['old' => $old, 'new' => ['decision' => $dec, 'note' => $note, 'owner_id' => $owner, 'due_date' => $due, 'expires_on' => $exp], 'rule_id' => $it['rule_id'], 'ticket_number' => $tn, 'ticket_id' => $tid, 'version' => (int)$it['version']];
-    }
-
-    /** "Make it a task": a ticket in the service desk with the rule, what was found and the steps. */
-    function itops_sp_ticket(PDO $db, array $it, int $catId, ?int $owner, ?string $due, string $note, array $user): array {
-        require_once __DIR__ . '/TicketNumbers.php';
-        $c = itops_sa_catalog()[$it['rule_id']] ?? null; $title = $c ? $c[1] : $it['rule_id'];
-        $desc = 'Security plan (Microsoft 365 → Posture), version ' . (int)$it['version'] . ": " . $title . "\n\nWhat was found: " . $it['found_detail']
-              . ($c ? "\n\nWhy it matters: " . $c[5] . "\n\nHow to fix it:\n" . implode("\n", array_map(fn($s, $i) => ($i + 1) . '. ' . $s, $c[6], array_keys($c[6]))) : '')
-              . ($due ? "\n\nWanted by " . date('m/d/Y', strtotime($due)) . '.' : '') . ($note !== '' ? "\n\nNote: " . $note : '');
-        $subj = mb_substr('Security plan: ' . $title, 0, 250); $req = (int)$user['id'];
-        $pri = ($c && $c[2] === 'high') ? 'p2_high' : 'p3_medium';
-        [$tn, $tid] = itops_ticket_create_numbered($db, function (string $tn) use ($db, $subj, $desc, $catId, $pri, $req) {
-            $db->prepare("INSERT INTO itops_tickets (ticket_number,subject,description,category_id,priority,status,ticket_type,requester_id) VALUES (?,?,?,?,?,'open','request',?)")
-               ->execute([$tn, $subj, $desc, $catId, $pri, $req]);
-            return [$tn, (int)$db->lastInsertId()];
-        });
-        if (!function_exists('itops_ticket_sla_fill')) require_once __DIR__ . '/BusinessHours.php';
-        try { itops_ticket_sla_fill($db, $tid); } catch (Throwable $e) {}
-        try { require_once __DIR__ . '/TicketRouting.php'; itops_tr_on_created($db, $tid, null, 'security_plan'); } catch (Throwable $e) {}
-        if ($owner) $db->prepare('UPDATE itops_tickets SET assignee_id=? WHERE id=?')->execute([$owner, $tid]);
-        return [$tn, $tid];
     }
 
     /** Sign off a draft: the client contact's name and title. The signed plan stays as it was. */

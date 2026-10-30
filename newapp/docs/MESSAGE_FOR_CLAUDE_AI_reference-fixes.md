@@ -34,6 +34,12 @@ ALSO
 
 10. READ-ME-FIRST.txt / INSTALL-FIRST.txt use old names ("Connection → Maintenance / General → Version"; the app says Settings → …) and assume an /itops/ subfolder in the cron examples.
 
+13. opsh-hostcheck.php names a hosting provider in its header comment ("In Docker (… LAMP)") — against the rule of no customer, person, domain or hosting provider in code. Make it "In Docker:".
+
+14. api/routes/mail.php (PUT, the CORE-2 Super Admin-only check) lists smtp_secure|smtp_encryption, but the setting is mail_smtp_security, so a non-Super Admin with Settings · Email · Edit can change the SMTP security (e.g. TLS → none) when no SMTP password is saved. Name smtp_security in the pattern.
+
+15. GET /api/ai (Settings → Sign-in & AI card) requires Tickets · View: an admin with Settings but not Tickets gets 403. Require Settings · View for the settings read; keep the Tickets check on the ticket assistant.
+
 ALREADY KNOWN, STILL OPEN
 11. With Microsoft 365 not connected, m365hub/m365-defender, m365-service-health and m365-storage answer 500 → answer 409 with the message, and show a "connect Microsoft 365" panel on the page.
 12. api/lib/O365.php (email sending, mailbox reading) gets a new token every run → reuse the cached token like Graph.php.

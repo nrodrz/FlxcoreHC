@@ -51,10 +51,4 @@ if (!function_exists('itops_secret_wrap')) {
     /** vTiger JSON blobs: which fields are secrets. */
     function itops_secret_vtiger_fields(): array { return ['prov' => ['access_key', 'bridge_secret', 'bridge_secret_pending'], 'db' => ['pass']]; }
 
-    function itops_secret_map_fields(array $a, array $fields, bool $wrap): array {
-        foreach ($fields as $f) if (isset($a[$f]) && is_string($a[$f]) && $a[$f] !== '') {
-            try { $a[$f] = $wrap ? itops_secret_wrap($a[$f]) : itops_secret_unwrap($a[$f]); } catch (\Throwable $e) { if (!$wrap) $a[$f] = ''; }
-        }
-        return $a;
-    }
 }

@@ -117,39 +117,7 @@ switch($method){
         error_response('Only a Super Admin can change "' . $k . '"', 403);
       }
       if (!itops_can($currentUser, itops_setting_area($k), 'edit')) error_response('Your role cannot change "' . $k . '" (' . itops_setting_area_label(itops_setting_area($k)) . ')', 403);
-      if (in_array($k, ['vtiger_provision', 'vtiger_db'], true)) error_response('Use the vTiger provisioning screen for this setting', 400);
-      if ($k === 'sla_priority_targets') {   // BT52: [response h, resolution h] per priority; resolution never shorter than response
-        $tv = $body[$k]; if (is_string($tv)) $tv = json_decode($tv, true);
-        if (!is_array($tv)) error_response('Priority targets: a list of hours per priority is expected', 400);
-        foreach (['p1_critical','p2_high','p3_medium','p4_low','p5_planned'] as $pk) {
-            $pv = $tv[$pk] ?? null;
-            if (!is_array($pv) || count($pv) !== 2 || !is_numeric($pv[0]) || !is_numeric($pv[1]) || $pv[0] <= 0 || $pv[1] <= 0 || $pv[0] > 8760 || $pv[1] > 8760)
-                error_response('Priority targets: every hour value must be a number above 0 (decimals allowed)', 400);
-            if ((float)$pv[1] < (float)$pv[0]) error_response('Priority targets: the resolution target cannot be shorter than the response target', 400);
-        }
-      }
-      if ($k === 'sla_priority_defs') {   // BT94: what each priority means, with examples (shown on the ticket form and in Help)
-        require_once __DIR__ . '/../lib/ScorecardDetail.php';
-        try { $body[$k] = json_encode(itops_prio_defs_clean($body[$k]), JSON_UNESCAPED_UNICODE); } catch (InvalidArgumentException $e) { error_response($e->getMessage(), 400); }
-      }
-      if ($k === 'sla_incident_targets') {   // BT81: incidents' own targets; empty = the same as service requests
-        $tv = $body[$k]; if (is_string($tv)) $tv = $tv === '' ? [] : json_decode($tv, true);
-        if (!is_array($tv)) error_response('Incident targets: a list of hours per priority is expected', 400);
-        if ($tv) foreach (['p1_critical','p2_high','p3_medium','p4_low','p5_planned'] as $pk) {
-            $pv = $tv[$pk] ?? null;
-            if (!is_array($pv) || count($pv) !== 2 || !is_numeric($pv[0]) || !is_numeric($pv[1]) || $pv[0] <= 0 || $pv[1] <= 0 || $pv[0] > 8760 || $pv[1] > 8760)
-                error_response('Incident targets: every hour value must be a number above 0 (decimals allowed)', 400);
-            if ((float)$pv[1] < (float)$pv[0]) error_response('Incident targets: the resolution target cannot be shorter than the response target', 400);
-        }
-        $body[$k] = $tv ? json_encode($tv) : '';
-      }
-      if ($k === 'sla_csat_enabled') $body[$k] = in_array((string)$body[$k], ['0', 'false', ''], true) ? '0' : '1';   // BT81
-      if ($k === 'sla_autoclose_days') {   // BT75: business days before a resolved ticket closes on its own (0 = never)
-        $av = $body[$k];
-        if (!(is_int($av) || (is_string($av) && preg_match('/^\d{1,2}$/', $av))) || (int)$av > 30) error_response('Close resolved tickets after: a whole number of business days from 0 (never) to 30', 400);
-        $body[$k] = (string)(int)$av;
-      }
-      if (in_array(strtolower($k), ['access_conn', 'access_systems'], true)) error_response('Company systems and their connections are changed on the Company systems page, where every change is checked and written to the Audit Log.', 400);   // BT45
+      if (preg_match('/^(sla_|vtiger_|access_)/', strtolower((string)$k))) error_response('"' . $k . '" is not a setting of this product.', 400);   // 0001-A004: removed modules
     }
     // BT60: document branding — checked here, and logged with the values before and after
     $docOld = []; $docNew = [];

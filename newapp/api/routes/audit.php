@@ -48,30 +48,4 @@ $dir = strtolower((string)($_GET['dir'] ?? 'desc')); if (!in_array($dir, ['asc',
 $order = $SORT[$sortK] . ' ' . strtoupper($dir) . ($sortK === 'time' ? '' : ', created_at DESC') . ', id ' . strtoupper($dir === 'asc' && $sortK === 'time' ? 'asc' : 'desc');
 $stmt = $db->prepare("SELECT * FROM itops_audit_log WHERE $where ORDER BY $order LIMIT $limit OFFSET $offset"); $stmt->execute($bind);
 $rows = $stmt->fetchAll();
-/* BT92 (code audit M-7): an entry follows the rights of the record it is about — the details of a private calendar event are
-   for the people who can open it, and IT Budget amounts (a project's budget lines) for IT Budget · View. The entry stays
-   listed; only what it says is withheld. A Super Admin, and the person who made the entry, read it in full. */
-$isSA = ($currentUser['role_slug'] ?? '') === 'super_admin';
-if (!$isSA) {
-    $budgetOk = itops_can($currentUser, 'budget', 'view');
-    $calSeen = [];
-    foreach ($rows as &$r) {
-        if ((int)($r['user_id'] ?? 0) === (int)$currentUser['id']) continue;
-        if (($r['entity_type'] ?? '') === 'calendar_event') {
-            $priv = strpos((string)$r['old_value'], '"Visibility":"private"') !== false || strpos((string)$r['new_value'], '"Visibility":"private"') !== false;
-            $eid = (int)($r['entity_id'] ?? 0);
-            if ($eid && !array_key_exists($eid, $calSeen)) {
-                $calSeen[$eid] = null;
-                try { require_once __DIR__ . '/../lib/Calendar.php'; $ev = itops_cal_get($db, $eid); if ($ev) $calSeen[$eid] = ['private' => ($ev['visibility'] ?? '') === 'private', 'see' => itops_cal_can_see($ev, $currentUser)]; } catch (Throwable $e) {}
-            }
-            $cs = $eid ? $calSeen[$eid] : null;
-            if (($cs && $cs['private'] && !$cs['see']) || ($priv && !($cs && $cs['see']))) { $r['entity_name'] = 'Private event'; $r['old_value'] = null; $r['new_value'] = null; $r['withheld'] = 'private event'; }
-        }
-        if (!$budgetOk && in_array((string)($r['action'] ?? ''), ['case_budget_linked', 'case_budget_unlinked'], true)) {
-            foreach (['old_value', 'new_value'] as $k) { $j = json_decode((string)$r[$k], true); if (is_array($j)) { foreach (['planned', 'amount', 'Amount', 'Planned'] as $x) if (isset($j[$x])) $j[$x] = '(IT Budget only)'; $r[$k] = json_encode($j); } }
-            $r['withheld'] = 'budget amounts';
-        }
-    }
-    unset($r);
-}
 json_response(['data' => $rows, 'pagination' => ['page'=>$page,'limit'=>$limit,'total'=>$total,'pages'=>(int)ceil($total/$limit)], 'limited' => itops_audit_allowed($currentUser) !== null]);

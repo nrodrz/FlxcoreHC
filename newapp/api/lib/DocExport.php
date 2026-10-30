@@ -47,14 +47,6 @@ if (!class_exists('ItopsDoc')) {
         public function headings(): array { $o = []; foreach ($this->blocks as $b) if ($b[0] === 'h1') $o[] = $b[1]; return $o; }
     }
 
-    /** Text helpers shared by both formats. */
-    function itops_doc_money(?float $v, string $cur = 'USD', bool $cents = false): string {
-        if ($v === null) return '—';
-        $sym = ['USD' => '$', 'EUR' => '€', 'GBP' => '£', 'CAD' => 'CA$', 'MXN' => 'MX$'][$cur] ?? ($cur . ' ');
-        $s = number_format(abs($v), $cents ? 2 : 0);
-        return ($v < 0 ? '-' : '') . $sym . $s;
-    }
-    function itops_doc_pct(?float $v, int $dec = 1): string { return $v === null ? '—' : number_format($v, $dec) . '%'; }
 
     /**
      * A logo for documents from a LOCAL file (never a URL): PNG, JPEG, GIF or WEBP. Re-encoded through GD when present

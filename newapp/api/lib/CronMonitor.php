@@ -28,8 +28,6 @@ if (!function_exists('itops_cron_php_bin')) {
     }
     /** BT96: the folder this installation runs from, so every cron line shown is this installation's own (no fixed path). */
     function itops_install_root(): string { return realpath(__DIR__ . '/../..') ?: dirname(__DIR__, 2); }
-    /** The exact command for one cron script of this installation ("cron-mail.php", "cron-sla.php digest" …). */
-    function itops_cron_cmd(string $script): string { return itops_cron_php_bin() . ' ' . itops_install_root() . '/' . $script . ' >/dev/null 2>&1'; }
 }
 if (!function_exists('itops_cron_jobs')) {
     /** 0001-A004: the token the web call of cron-sla.php needs (setting mail_cron_token), made the first time it is needed.
@@ -118,9 +116,6 @@ if (!function_exists('itops_cron_jobs')) {
         $c['step'] = null;
     }
     /** Finish the run. $status null = from the steps (any failed step → warning). */
-    /** BT62: this run had nothing to do (a per-minute job with nothing due). Idle runs are kept for 24 hours only, so the
-     *  every-minute jobs do not push the other jobs' history out of the table. */
-    function itops_cron_idle(): void { if (!empty($GLOBALS['__itops_cron'])) $GLOBALS['__itops_cron']['idle'] = true; }
     function itops_cron_end(?string $status = null, string $summary = ''): void {
         $c = &$GLOBALS['__itops_cron']; if (empty($c) || $c['done']) return;
         itops_cron_step_close(); $c['done'] = true;
@@ -148,12 +143,6 @@ if (!function_exists('itops_cron_jobs')) {
         itops_cron_end();
     }
 
-    /** A finished run recorded in one go (the in-app scheduler records its email intake as a "mail" run this way). */
-    function itops_cron_record(PDO $db, string $job, string $via, string $status, string $summary, int $ms, array $steps = []): void {
-        if (!itops_cron_ready($db)) return;
-        try { $db->prepare('INSERT INTO itops_cron_runs (job, via, started_at, finished_at, duration_ms, status, summary, steps, php, host) VALUES (?,?,?,?,?,?,?,?,?,?)')
-                 ->execute([$job, $via, date('Y-m-d H:i:s', time() - (int)round($ms / 1000)), date('Y-m-d H:i:s'), $ms, $status, mb_substr($summary, 0, 500), json_encode($steps), PHP_VERSION, substr((string)(gethostname() ?: ''), 0, 80)]); } catch (Throwable $e) {}
-    }
 
     // ── health ──────────────────────────────────────────────────────────────────────────────────────────────────────
 

@@ -25,27 +25,7 @@ if (!function_exists('itops_cat_kinds')) {
         ];
     }
 
-    /**
-     * A record's category must be a category of its own list (the database cannot check the kind of a shared table).
-     * $body['category_id'] empty → null. Refusals are in the Audit Log.
-     */
-    function itops_cat_check(PDO $db, string $kind, array &$body, string $entity, ?int $id = null): void {
-        if (!array_key_exists('category_id', $body)) return;
-        $v = $body['category_id'];
-        if ($v === '' || $v === null || $v === 0 || $v === '0') { $body['category_id'] = null; return; }
-        if (!is_numeric($v) || (int)$v <= 0) { $body['category_id'] = null; return; }
-        $q = $db->prepare('SELECT kind FROM itops_categories WHERE id = ?'); $q->execute([(int)$v]); $k = $q->fetchColumn();
-        if ($k === $kind) { $body['category_id'] = (int)$v; return; }
-        $lab = itops_cat_kinds()[$kind][2] ?? $kind;
-        if (function_exists('audit_log')) audit_log('category_refused', $entity, $id, 'Category #' . (int)$v, null, ['why' => $k === false ? 'no such category' : 'not a ' . $lab . ' category']);
-        error_response('That category is not one of the ' . $lab . ' categories.', 400);
-    }
 
-    /** One line in the access log (who opened, copied, rotated … what). Never the value itself. */
-    function itops_access_log_add(PDO $db, string $kind, int $itemId, int $userId, string $action, string $ip = ''): void {
-        $db->prepare('INSERT INTO itops_access_log (kind, item_id, user_id, action, ip_address) VALUES (?,?,?,?,?)')
-           ->execute([$kind, $itemId, $userId, mb_substr($action, 0, 20), mb_substr($ip, 0, 45)]);
-    }
 
     function itops_bt138_table(PDO $db, string $t): bool {
         $q = $db->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?'); $q->execute([$t]);

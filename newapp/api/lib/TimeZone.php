@@ -46,7 +46,6 @@ if (!function_exists('itops_tz_valid')) {
         if ($db) { try { $db->exec("SET time_zone = '" . date('P') . "'"); } catch (Throwable $e) {} }
         return $tz;
     }
-    function itops_tz_reset_cache(): void { /* the static cache lives for one request; nothing to clear across requests */ }
     /** "Eastern Time (America/New_York)" style label. */
     function itops_tz_label(string $tz): string {
         $names = itops_tz_common();
@@ -59,18 +58,5 @@ if (!function_exists('itops_tz_valid')) {
                 'America/Halifax' => 'Atlantic Time, Canada', 'America/Toronto' => 'Eastern Time, Canada', 'America/Mexico_City' => 'Central Time, Mexico', 'America/Bogota' => 'Colombia Time',
                 'America/Santo_Domingo' => 'Atlantic Time, Dominican Republic', 'America/Sao_Paulo' => 'Brasília Time', 'Europe/London' => 'United Kingdom', 'Europe/Madrid' => 'Central European Time, Spain',
                 'UTC' => 'Coordinated Universal Time'];
-    }
-    /**
-     * The Windows zone name Microsoft Graph's calendar calls expect for an IANA zone (the common ones), or the IANA
-     * name itself, which Graph also accepts for most zones.
-     */
-    function itops_tz_windows(string $tz): string {
-        $m = ['America/New_York' => 'Eastern Standard Time', 'America/Toronto' => 'Eastern Standard Time', 'America/Chicago' => 'Central Standard Time',
-              'America/Mexico_City' => 'Central Standard Time (Mexico)', 'America/Denver' => 'Mountain Standard Time', 'America/Phoenix' => 'US Mountain Standard Time',
-              'America/Los_Angeles' => 'Pacific Standard Time', 'America/Anchorage' => 'Alaskan Standard Time', 'Pacific/Honolulu' => 'Hawaiian Standard Time',
-              'America/Puerto_Rico' => 'SA Western Standard Time', 'America/Santo_Domingo' => 'SA Western Standard Time', 'America/Halifax' => 'Atlantic Standard Time',
-              'America/Bogota' => 'SA Pacific Standard Time', 'America/Sao_Paulo' => 'E. South America Standard Time', 'Europe/London' => 'GMT Standard Time',
-              'Europe/Madrid' => 'Romance Standard Time', 'UTC' => 'UTC'];
-        return $m[$tz] ?? $tz;
     }
 }

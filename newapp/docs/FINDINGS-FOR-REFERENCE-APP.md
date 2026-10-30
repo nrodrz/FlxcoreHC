@@ -7,7 +7,7 @@ Names are the reference app's (`opsh_…`, `X-OpsHub-…`, `api/lib/…`). Line 
 ITOps copy, where the prefix was renamed in 0001-A002. Each entry: where, what breaks, suggested fix, and whether ITOps
 has fixed it in its own code.
 
-**Paste-ready version for Claude.ai:** `MESSAGE_FOR_CLAUDE_AI_reference-fixes.md` (same items, numbered 1–12 = R-01…R-12); refresh it when items are added.
+**Paste-ready version for Claude.ai:** `MESSAGE_FOR_CLAUDE_AI_reference-fixes.md` (same items; each number is its R-number); refresh it when items are added.
 
 **How to use this list:** add a new finding at the end of its section with the next number, the ITOps build it was
 found in, and the same four parts. When the reference app ships a fix, mark the entry *Fixed in <reference build>* —
@@ -84,6 +84,24 @@ do not delete it.
 - **Where:** `READ-ME-FIRST.txt`, `INSTALL-FIRST.txt`.
 - **What breaks:** they say "Connection → Maintenance / General → Version"; the app says Settings → Maintenance / General. The cron examples assume an `/itops/` subfolder.
 - **Fix:** use the app's current names.
+
+### R-13 · A hosting provider is named in the host check
+- **Found:** ITOps 0001-A004 · **Status:** Open · **ITOps:** fixed in 0001-A004
+- **Where:** `opsh-hostcheck.php`, header comment ("In Docker (… LAMP)").
+- **What breaks:** the owner's rule is no customer, person, domain or hosting provider in code; the comment names one.
+- **Fix:** "In Docker:".
+
+### R-14 · The Super Admin-only mail settings check misses the SMTP security key
+- **Found:** ITOps 0001-A004 · **Status:** Open · **ITOps:** fixed in 0001-A004
+- **Where:** `api/routes/mail.php`, PUT, the CORE-2 check: `preg_match('/^mail_(…|smtp_secure|smtp_encryption|…)$/')`.
+- **What breaks:** the setting is saved as `mail_smtp_security`, which the pattern does not name, so someone with Settings · Email · Edit who is not a Super Admin can change the SMTP security (for example from TLS to none). When an SMTP password is saved the H-5 check (password must be typed again) stops it; when none is saved it goes through.
+- **Fix:** name `smtp_security` in the pattern (and drop the two names that do not exist).
+
+### R-15 · The AI settings card asks for Tickets · View
+- **Found:** ITOps 0001-A004 · **Status:** Open · **ITOps:** fixed in 0001-A004 (Settings · View)
+- **Where:** `api/routes/ai.php`, `GET /api/ai`: `opsh_require($currentUser, 'tickets', 'view')`.
+- **What breaks:** the card lives in Settings → Sign-in & AI, but an administrator with Settings and without Tickets cannot load it (403); in an installation without the Service Desk module nobody can, Super Admin included.
+- **Fix:** `opsh_require($currentUser, 'settings', 'view')` for the settings read (the ticket assistant keeps its own Tickets check).
 
 ## Already in the ITOps spec (step 4), still open in the reference app
 

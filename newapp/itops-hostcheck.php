@@ -9,7 +9,7 @@
  *   php itops-hostcheck.php
  *   php itops-hostcheck.php --db-host=database --db-user=itops --db-name=itops      (asks for the password; not shown, not saved)
  *   php itops-hostcheck.php --whm=server.example.com                                   (can this server reach WHM on port 2087, with a valid certificate?)
- * In Docker (Elestio LAMP):  docker compose exec -T webserver php /var/www/html/itops-hostcheck.php   (the service name may differ: docker compose ps)
+ * In Docker:  docker compose exec -T webserver php /var/www/html/itops-hostcheck.php   (the service name may differ: docker compose ps)
  *
  * In a browser (only the web-server part: rewrite rules, the Authorization header, HTTPS):
  *   https://YOUR-SITE/itops-hostcheck.php — works for 1 hour after the file is uploaded, then it refuses. Delete the file when done.

@@ -15,10 +15,6 @@ if (!defined('ITOPS_SIGN_LINK_DAYS')) define('ITOPS_SIGN_LINK_DAYS', 30);
 
 if (!function_exists('itops_sig_modules')) {
 
-    /** doc_type => permission module */
-    function itops_sig_modules(): array {
-        return ['sops' => 'sops', 'job_descriptions' => 'job_descriptions', 'kb' => 'kb', 'kb_article' => 'kb', 'asset_loan' => 'assets'];
-    }
 
     /** The document behind a request: ['title','content','version','fp','status'] or null when it does not exist (or the type is unknown). */
     function itops_sig_doc(PDO $db, string $type, int $id): ?array {
@@ -48,16 +44,5 @@ if (!function_exists('itops_sig_modules')) {
         return md5(preg_replace('/\s+/', ' ', trim($content)));
     }
 
-    /** Has the document changed since the request was sent? (requests made before BT91 have no fingerprint: not checked) */
-    function itops_sig_changed(PDO $db, array $req): bool {
-        if (empty($req['doc_fp'])) return false;
-        $d = itops_sig_doc($db, (string)$req['doc_type'], (int)$req['doc_id']);
-        return !$d || !hash_equals((string)$req['doc_fp'], $d['fp']);
-    }
 
-    function itops_sig_cols(PDO $db): bool {
-        static $ok = null;
-        if ($ok === null) { try { $db->query('SELECT doc_fp, doc_version FROM itops_signature_requests LIMIT 0'); $db->query('SELECT token_expires FROM itops_signature_signers LIMIT 0'); $ok = true; } catch (Throwable $e) { $ok = false; } }
-        return $ok;
-    }
 }

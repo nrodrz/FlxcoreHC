@@ -114,18 +114,6 @@ if (!function_exists('itops_pf_ready')) {
 
     /* ───────────── Scorecard ───────────── */
 
-    function itops_pf_scorecard_sources(): array {
-        return ['sa_score' => 'Security assessment — score (%)', 'sa_failed' => 'Security assessment — failed rules (count)', 'sa_drift' => 'Security assessment — drift: rules that passed and fail again (count)'];
-    }
-    /** A Scorecard value for [$from, $to): the last scan before the end (score, failed) or the drift found in the range. */
-    function itops_pf_scorecard_value(PDO $db, string $src, string $from, string $to): ?float {
-        if ($src === 'sa_drift') { if (!itops_pf_ready($db)) return null; $q = $db->prepare('SELECT COUNT(*) FROM itops_sa_drift WHERE detected_at >= ? AND detected_at < ?'); $q->execute([$from, $to]); return (float)$q->fetchColumn(); }
-        $q = $db->prepare('SELECT score, counts FROM itops_sa_runs WHERE finished_at < ? ORDER BY id DESC LIMIT 1'); $q->execute([$to]); $r = $q->fetch(PDO::FETCH_ASSOC);
-        if (!$r) return null;
-        if ($src === 'sa_score') return $r['score'] === null ? null : (float)$r['score'];
-        if ($src === 'sa_failed') { $c = json_decode((string)$r['counts'], true) ?: []; return isset($c['fail']) ? (float)$c['fail'] : null; }
-        return null;
-    }
 
     /* ───────────── executive report ───────────── */
 

@@ -5,16 +5,13 @@ declare(strict_types=1);
 // ITOps BT21 — Microsoft 365 domain service (lib/M365.php design), kept as close to that design as
 // possible so both apps offer the same Microsoft 365 options. Changes from the original:
 //   class M365 → ItopsM365, ItopsM365Exception → ItopsM365Exception, GraphClient → ItopsGraphClient
-//   (ITOps's Graph connection), fromConfig() reads ITOps's settings, and attachVtiger() uses
-//   ITOps's vTiger lookup (read-only DB when configured, otherwise the provisioning bridge).
+//   (ITOps's Graph connection), fromConfig() reads ITOps's settings. 0001-A004: the vTiger linkage is gone (Microsoft 365 only).
 //
 // M365.php — domain service over GraphClient for the Microsoft 365 console.
 // Phase 1: directory reads (users, SKUs), account enable/disable, password and
 // MFA reset, and session revocation. All app-only via the daemon app registration.
-// vTiger linkage is read-only: it matches M365 emails to vtiger_users.email1.
 
 require_once __DIR__ . '/ItopsGraphClient.php';
-require_once __DIR__ . '/HubVtiger.php';
 
 if (!class_exists('ItopsM365')) {
 final class ItopsM365Exception extends Exception {}
@@ -2113,47 +2110,6 @@ final class ItopsM365
         if (!empty($opts['removeLicenses'])) $run('Remove licenses', fn() => ['removed' => $this->removeAllLicenses($id)]);
         if (!empty($opts['removeFromGroups'])) $run('Remove from groups', fn() => $this->removeFromAllGroups($id));
         return ['steps' => $steps];
-    }
-
-    // ---- vTiger linkage (read-only) --------------------------------------
-
-    /**
-     * Given a list of shaped users, attach ['vtiger' => {username,status,is_admin}|null]
-     * by matching email/UPN to vtiger_users.email1. No-op if vTiger isn't configured.
-     */
-    /** BT36: why the last attachVtiger() could not read vTiger ('' when it could). Shown on Accounts instead of silence. */
-    public static string $vtigerError = '';
-
-    /**
-     * Adds 'vtiger' => {id, username, email, status, is_admin, matched_by} | null to each user.
-     * BT36: matched by email first (vTiger's email = the person's mail or sign-in name), then by user name (vTiger's
-     * user name = the part of the sign-in name before the "@"). Guests are matched by email only.
-     */
-    public static function attachVtiger(array $users, array $config = []): array
-    {
-        self::$vtigerError = '';
-        $avail = function_exists('itops_hub_vtiger_available') && itops_hub_vtiger_available();
-        if (!$avail) {
-            foreach ($users as &$u) { $u['vtiger'] = null; $u['vtiger_available'] = false; }
-            return $users;
-        }
-        $ok = true;
-        try { itops_hub_vtiger_all_users(); }
-        catch (Throwable $e) { $ok = false; self::$vtigerError = $e->getMessage(); }   // linkage is best-effort, but say why
-
-        foreach ($users as &$u) {
-            $hit = null;
-            if ($ok) {
-                $upn = (string)($u['upn'] ?? '');
-                $guest = strcasecmp((string)($u['user_type'] ?? ''), 'Guest') === 0 || strpos($upn, '#') !== false;
-                $m = itops_hub_vtiger_match([$u['mail'] ?? '', $upn], $guest ? '#' : $upn);
-                if ($m) $hit = ['id' => (string)$m['id'], 'username' => (string)$m['user_name'], 'email' => (string)($m['email'] ?? ''), 'status' => (string)$m['status'],
-                                'is_admin' => (bool)$m['is_admin'], 'matched_by' => (string)$m['matched_by']];
-            }
-            $u['vtiger'] = $hit;
-            $u['vtiger_available'] = true;
-        }
-        return $users;
     }
 
     // ---- Shaping & helpers ------------------------------------------------

@@ -24,9 +24,8 @@ UPDATE (same full zip)
      signed in as a Super Admin (or Settings → Maintenance → Database update).
   3. Hard-refresh; check the build stamp under Settings → General → Version.
 
-SCHEDULED JOBS (host panel → Cron Jobs) — recommended
-  */5 * * * *  php /home/USER/public_html/cron-mail.php
+SCHEDULED JOB (host panel → Cron Jobs) — recommended
   */5 * * * *  php /home/USER/public_html/cron-sla.php
-  0 7 * * 1    php /home/USER/public_html/cron-sla.php digest
+  The exact line for this server is shown under Logs & Integrations → Scheduled jobs.
   Without cron, the in-app scheduler does the same work while someone has ITOps open.
   Scheduled offboarding at an exact time needs cron.

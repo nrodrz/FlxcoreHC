@@ -87,12 +87,6 @@ if (!function_exists('itops_auth_fail_count')) {
             if (itops_can($user, $m, $a)) return true;
         return false;
     }
-    /** The same question for an account row that has no role details loaded yet. */
-    function itops_account_is_admin(PDO $db, int $uid): bool {
-        $q = $db->prepare('SELECT u.*, r.slug AS role_slug, r.permissions AS role_perms FROM itops_users u LEFT JOIN itops_roles r ON r.id=u.role_id WHERE u.id=?'); $q->execute([$uid]);
-        $u = $q->fetch(PDO::FETCH_ASSOC);
-        return $u ? itops_user_is_admin($u) : false;
-    }
 
     /**
      * M-9: may a Microsoft sign-in (web or Teams) link itself to this existing account found by email?

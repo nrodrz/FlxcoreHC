@@ -17,24 +17,22 @@
  *   GET    /onboarding/runs                 list runs
  *   GET    /onboarding/runs/:id             run + its tasks
  *   POST   /onboarding/runs                 start a run from a template (snapshots tasks)
- *   POST   /onboarding/runs/:id/tasks/:tid  execute / mark a run task  {action:'run'|'done'|'skip'|'leave', ...}  (BT93: leave = vTiger records left for later, {reason})
- *   GET    /onboarding/runs?vt_left=1       BT93: only the processes whose vTiger records were left for later and are not moved yet
- *   POST   /onboarding/runs/:id/tasks/:tid  {action:'preview'}  vTiger tasks: records owned + possible new owners (read-only)
+ *   POST   /onboarding/runs/:id/tasks/:tid  execute / mark a run task  {action:'run'|'done'|'skip', ...}
  *   POST   /onboarding/runs/:id/cancel      cancel a run
  *   GET    /onboarding/runs/:id/preflight   pre-flight: will each pending automated step work? (read-only)
- *   POST   /onboarding/runs/:id/verify      "Verify offboarding" — re-reads M365 + vTiger, stores + audits the checklist
+ *   POST   /onboarding/runs/:id/verify      "Verify offboarding" — re-reads Microsoft 365, stores + audits the checklist
  *   POST   /onboarding/recertify            re-verify every completed offboarding (access recertification)
  *
  * BT89: a person sees the records they started and the ones of their department; a Super Admin and a role with
  * Onboarding · All records see every one (itops_ob_scope_sql). Steps change only while the process is in progress, a step
- * runs once at a time, a vTiger step needs the vTiger provisioning permission, and every refusal is in the Audit Log.
+ * runs once at a time, and every refusal is in the Audit Log.
  *
  * Task types: manual, m365_create, m365_license, m365_license_remove, m365_license_remove_all, m365_group,
  *             m365_disable, m365_revoke_sessions, m365_autoreply, m365_forward, m365_delegate_onedrive,
- *             assign_reading, assign_equipment, notify, vtiger_create, vtiger_reassign, vtiger_deactivate.
+ *             notify, send_welcome. (0001-A004: the reference app's vTiger, equipment, reading and company-system steps are gone.)
  * M365 task types additionally require the m365_admin permission to execute.
  *
- * Temporary passwords (M365 / vTiger create) are returned ONCE in the response as `secret` and are
+ * Temporary passwords (M365 create) are returned ONCE in the response as `secret` and are
  * never stored — the task result only records that one was generated and who saw it.
  */
 
@@ -103,23 +101,12 @@ if ($sec === 'templates') {
     if ($method === 'PUT' && $id && $sub === 'tasks') {
         $tasks = $body['tasks'] ?? $body;
         if (!is_array($tasks)) error_response('tasks array required');
-        // BT89 (H-11): adding, changing or removing a vTiger step (and the new owner it names) needs the vTiger provisioning permission.
-        $vtSig = function (array $list): array { $o = [];
-            foreach ($list as $t) { $ty = (string)($t['task_type'] ?? ''); if (strpos($ty, 'vtiger_') !== 0) continue;
-                $c = $t['config'] ?? []; if (is_string($c)) $c = json_decode($c, true); $c = is_array($c) ? $c : []; ksort($c); $o[] = $ty . ':' . json_encode($c); }
-            sort($o); return $o; };
-        $curT = $db->prepare("SELECT task_type, config FROM itops_ob_template_tasks WHERE template_id=?"); $curT->execute([$id]);
-        $before = $vtSig($curT->fetchAll()); $after = $vtSig(array_filter($tasks, fn($t) => is_array($t) && trim((string)($t['title'] ?? '')) !== ''));
-        if ($before !== $after) {
-            foreach (array_unique(array_map(fn($x) => strstr($x, ':', true), array_merge(array_diff($after, $before), array_diff($before, $after)))) as $ty)
-                if (!itops_ob_type_allowed($currentUser, $ty)) $obRefuse($id, 'Template ' . $id, 'Change the vTiger steps of a template', 'needs ' . itops_ob_type_perm_label($ty), 'Changing the vTiger steps of a template needs the ' . itops_ob_type_perm_label($ty) . ' permission. Nothing was saved.', 403);
-        }
         $db->prepare("DELETE FROM itops_ob_template_tasks WHERE template_id=?")->execute([$id]);
         $ins = $db->prepare("INSERT INTO itops_ob_template_tasks (template_id,sort_order,title,task_type,config,assignee_role,required,due_offset_days) VALUES (?,?,?,?,?,?,?,?)");
         $i = 0;
         // Review SEC-28: a step type must be one the app knows (a mistyped type was "run" as done)
-        $known = ['manual', 'document', 'm365_create', 'm365_license', 'm365_license_remove', 'm365_license_remove_all', 'm365_group', 'm365_groups_remove_all', 'm365_disable', 'm365_revoke_sessions', 'm365_autoreply',
-                  'm365_forward', 'm365_delegate_onedrive', 'm365_exchange_manual', 'assign_reading', 'assign_equipment', 'equipment_return', 'notify', 'send_welcome', 'system_access', 'vtiger_create', 'vtiger_reassign', 'vtiger_deactivate'];
+        $known = ['manual', 'document', 'm365_create', 'm365_license', 'm365_license_remove', 'm365_license_remove_all', 'm365_group', 'm365_groups_remove_all', 'm365_disable', 'm365_revoke_sessions',
+                  'm365_forward', 'm365_delegate_onedrive', 'm365_exchange_manual', 'm365_autoreply', 'notify', 'send_welcome'];   // 0001-A004: no vTiger, equipment, reading, company-system steps
         foreach ($tasks as $t) { $tt = (string)($t['task_type'] ?? 'manual'); if (trim($t['title'] ?? '') !== '' && !in_array($tt, $known, true)) error_response('Unknown step type "' . mb_substr($tt, 0, 40) . '" in "' . mb_substr((string)$t['title'], 0, 80) . '". Nothing was saved.', 400); }
         $oldN = (int)$db->query('SELECT COUNT(*) FROM itops_ob_template_tasks WHERE template_id=' . (int)$id)->fetchColumn();
         foreach ($tasks as $t) {
@@ -161,19 +148,11 @@ if ($sec === 'runs') {
             $q = $db->prepare("SELECT r.*, t.name AS template_name,
                                   (SELECT COUNT(*) FROM itops_ob_run_tasks x WHERE x.run_id=r.id) AS total,
                                   (SELECT COUNT(*) FROM itops_ob_run_tasks x WHERE x.run_id=r.id AND x.status IN ('done','skipped')) AS done,
-                                  (SELECT x.config FROM itops_ob_run_tasks x WHERE x.run_id=r.id AND x.task_type='vtiger_reassign' AND x.status='done' AND x.config LIKE '%left_for_later%' LIMIT 1) AS vt_left_cfg
                                 FROM itops_ob_runs r LEFT JOIN itops_ob_templates t ON t.id=r.template_id
                                 WHERE $scW
                                 ORDER BY (r.status='in_progress') DESC, r.created_at DESC LIMIT 200");
             $q->execute($scA); $rows = $q->fetchAll();
         } catch (\Throwable $e) { $needMig($e); }
-        // BT93: vTiger records left for later and not moved yet (the daily check keeps the count; "moved" once it reaches 0)
-        foreach ($rows as &$rw) {
-            $lf = $rw['vt_left_cfg'] ? ((json_decode((string)$rw['vt_left_cfg'], true) ?: [])['left_for_later'] ?? null) : null; unset($rw['vt_left_cfg']);
-            $rw['vt_left'] = (is_array($lf) && empty($lf['moved_at'])) ? ['count' => (int)($lf['count_now'] ?? $lf['count'] ?? 0), 'since' => $lf['at'] ?? null, 'reason' => (string)($lf['reason'] ?? '')] : null;
-        }
-        unset($rw);
-        if (!empty($_GET['vt_left'])) $rows = array_values(array_filter($rows, fn($x) => $x['vt_left'] !== null));
         json_response(['data' => $rows, 'all_departments' => itops_ob_sees_all($currentUser)]);
     }
     if ($method === 'GET' && $id && $sub === '') {
@@ -182,11 +161,6 @@ if ($sec === 'runs') {
         if (!$run || !itops_ob_run_visible($currentUser, $run)) error_response('Run not found', 404);
         $tk = $db->prepare("SELECT * FROM itops_ob_run_tasks WHERE run_id=? ORDER BY sort_order, id"); $tk->execute([$id]);
         $run['tasks'] = $tk->fetchAll();
-        if ($run['kind'] === 'offboard') {
-            $covered = [];
-            foreach ($run['tasks'] as $t) if ($t['task_type'] === 'equipment_return') { $j = json_decode((string)$t['config'], true) ?: []; $covered[(int)($j['loan_id'] ?? 0)] = 1; }
-            $run['open_loans'] = array_map(fn($l) => $l + ['covered' => isset($covered[(int)$l['loan_id']])], itops_ob_open_loans($db, $run));
-        }
         json_response($run);
     }
     if ($method === 'POST' && !$id) {
@@ -210,7 +184,7 @@ if ($sec === 'runs') {
                           ($body['department_id'] ?? '') ?: $tpl['department_id'], ($body['start_date'] ?? '') ?: null, $body['notes'] ?? '', ($tpl['std_req_ids'] ?? null), (int)$currentUser['id']]);
         } catch (\Throwable $e) { $needMig($e); }
         $runId = (int)$db->lastInsertId();
-        // Optional person details used by "M365: create account" / "vTiger: create user" (Phase B).
+        // Optional person details used by "M365: create account" (Phase B).
         $prof = [];
         foreach (['first_name' => 80, 'last_name' => 80, 'job_title' => 120, 'department' => 120, 'manager_upn' => 190, 'employee_id' => 60, 'mobile_phone' => 40, 'office_location' => 120] as $pk => $len) {
             if (isset($body[$pk]) && trim((string)$body[$pk]) !== '') $prof[$pk] = mb_substr(trim((string)$body[$pk]), 0, $len);
@@ -229,12 +203,9 @@ if ($sec === 'runs') {
             if ($startDate && isset($x['due_offset_days']) && $x['due_offset_days'] !== null && $x['due_offset_days'] !== '') {
                 $due = date('Y-m-d', strtotime($startDate . ' ' . (int)$x['due_offset_days'] . ' days'));
             }
-            // BT40: "this vTiger user is the same person" belongs to one departure — it is never inherited from a template.
             $xc = $x['config'];
-            if (in_array($x['task_type'], ['vtiger_reassign', 'vtiger_deactivate'], true)) { $cj = json_decode((string)$xc, true); if (is_array($cj) && array_key_exists('vtiger_id', $cj)) { unset($cj['vtiger_id']); $xc = json_encode($cj ?: new stdClass()); } }
             $ins->execute([$runId, $x['sort_order'], $x['title'], $x['task_type'], $xc, $x['assignee_role'], $x['required'], $due]);
         }
-        if ($kind === 'offboard') { try { itops_ob_add_equipment_tasks($db, $runId); } catch (\Throwable $e) {} }   // one "Return …" step per item on loan
         audit_log($kind === 'offboard' ? 'offboarding_started' : 'onboarding_started', 'onboarding', $runId, $body['subject_name']);
         itops_log('info', 'onboarding', ($kind === 'offboard' ? 'Offboarding' : 'Onboarding') . ' started: ' . $body['subject_name'], ['run' => $runId]);
         $fire($kind === 'offboard' ? 'offboarding.started' : 'onboarding.started', ['run_id' => $runId, 'subject' => $body['subject_name']]);
@@ -255,13 +226,6 @@ if ($sec === 'runs') {
         try { $out = itops_ob_task_action($db, (int)$id, (int)$sid, $body, $currentUser); }
         catch (ItopsObError $e) { json_response(['ok' => false, 'error' => ['code' => $e->http, 'message' => $e->getMessage()]] + $e->extra, $e->http); }
         json_response(isset($out['preview']) ? $out['preview'] : $out);
-    }
-    if ($method === 'POST' && $id && $sub === 'equipment_sync') {
-        $run = $runFor($id);
-        if (!in_array($run['status'], ['in_progress', 'completed'], true)) $obRefuse($id, (string)$run['subject_name'], 'Add return steps', 'the process is ' . $run['status'], 'This process is ' . str_replace('_', ' ', (string)$run['status']) . ': no steps can be added.', 409);
-        $n = itops_ob_add_equipment_tasks($db, (int)$id);
-        if ($n) { $db->prepare("UPDATE itops_ob_runs SET status='in_progress', completed_at=NULL WHERE id=? AND status='completed'")->execute([$id]); audit_log('ob_equipment_tasks_added', 'onboarding', (int)$id, $n . ' return step(s)'); }
-        json_response(['ok' => true, 'added' => $n]);
     }
     if ($method === 'PUT' && $id && $sub === 'schedule') {
         // Schedule the automated steps of an OFFBOARDING (e.g. 5:00 pm on the last day). Times are stored in UTC.

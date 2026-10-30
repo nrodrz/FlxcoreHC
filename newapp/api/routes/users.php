@@ -83,8 +83,6 @@ switch($method){
     // Add password_hash to allowed fields for this operation
     $userCrud = new CrudEngine('itops_users','user', array_merge(['password_hash'], $editable), [], $currentUser);
     $newUser = $userCrud->create($body);
-    require_once __DIR__ . '/../lib/Requesters.php';
-    if (!empty($newUser['id'])) itops_claim_tickets(getDB(), (int)$newUser['id'], (string)$body['email']);
     json_response($newUser,201); break;
   case 'PUT':
     $body=json_decode(file_get_contents('php://input'),true);
@@ -126,24 +124,6 @@ switch($method){
       $nRev = itops_sessions_revoke(getDB(), (int)$id, $keep);
       audit_log('sessions_revoked', 'user', (int)$id, ($pwChanged ? 'password changed' : 'deactivated') . ' — ' . $nRev . ' session(s) ended');
     }
-    // BT80: work left in Cases & Projects by someone deactivated — the admin is told what to hand over
-    if ($deactivated && is_file(__DIR__ . '/../lib/Cases.php')) { try {
-      require_once __DIR__ . '/../lib/Cases.php'; $dbc = getDB();
-      if (itops_cs_has($dbc)) {
-        $one = function (string $q) use ($dbc, $id) { $st = $dbc->prepare($q); $st->execute([(int)$id]); return (int)$st->fetchColumn(); };
-        $own = $one("SELECT COUNT(*) FROM itops_cases WHERE owner_id=? AND status IN ('open','in_progress')");
-        $spn = function_exists('itops_cs_has6') && itops_cs_has6($dbc) ? $one("SELECT COUNT(*) FROM itops_cases WHERE sponsor_id=? AND status IN ('open','in_progress')") : 0;
-        $tsk = $one("SELECT COUNT(*) FROM itops_case_tasks t JOIN itops_cases c ON c.id=t.case_id WHERE t.assignee_id=? AND t.kind<>'requester' AND t.status IN ('open','in_progress','waiting') AND c.status IN ('open','in_progress')");
-        if ($own || $spn || $tsk) {
-          $nm = $dbc->prepare('SELECT display_name FROM itops_users WHERE id=?'); $nm->execute([(int)$id]); $who = (string)$nm->fetchColumn();
-          $parts = array_filter([$own ? $own . ' open case' . ($own === 1 ? '' : 's') . ' or project' . ($own === 1 ? '' : 's') . ' they own' : '', $spn ? $spn . ' project' . ($spn === 1 ? '' : 's') . ' they sponsor' : '', $tsk ? $tsk . ' open task' . ($tsk === 1 ? '' : 's') : '']);
-          $msg = $who . ' still has ' . implode(', ', $parts) . '. Hand them over in Cases & Projects (a new owner, sponsor or assignee).';
-          $dbc->prepare('INSERT INTO itops_notifications (user_id,title,body,type,link) VALUES (?,?,?,?,?)')->execute([(int)$currentUser['id'], 'Case work to hand over', $msg, 'case', 'cases']);
-          audit_log('user_case_work_left', 'user', (int)$id, $who, null, ['owns' => $own, 'sponsors' => $spn, 'open tasks' => $tsk]);
-          if (is_array($upd)) $upd['case_work'] = ['owns' => $own, 'sponsors' => $spn, 'tasks' => $tsk, 'message' => $msg];
-        }
-      }
-    } catch (Throwable $e) {} }
     json_response($upd); break;
   case 'DELETE':
     if ((int)$id === (int)$currentUser['id']) error_response('You cannot delete your own account');

@@ -16,7 +16,6 @@ $action = $segments[1] ?? '';
 $db = getDB();
 require_once __DIR__ . '/../lib/O365.php';
 require_once __DIR__ . '/../lib/Totp.php';
-require_once __DIR__ . '/../lib/Requesters.php';
 require_once __DIR__ . '/../lib/TermsOfUse.php';   // BT97: terms_required in the sign-in answers
 require_once __DIR__ . '/../lib/AuthGuard.php';   // BT90 (code audit M-8, M-9): throttles, 2FA codes used once, Microsoft linking rules
 /** BT108: the person's screen preferences, with the defaults (Ticket Categories opens on the grid). */
@@ -46,7 +45,6 @@ function itops_audit_signin(array $user, string $how): void {
 
 /** Issue a full session + JWT + cookie and emit the standard user payload. */
 function itops_issue_login(PDO $db, array $user) {
-    itops_claim_tickets($db, (int)$user['id'], (string)$user['email']);   // tickets they sent by email / form before having an account
     $db->prepare('UPDATE itops_users SET last_login_at=NOW(), last_login_ip=?, login_count=login_count+1 WHERE id=?')
        ->execute([$_SERVER['REMOTE_ADDR'] ?? '', $user['id']]);
     $token = jwt_encode(['uid'=>(int)$user['id'],'email'=>$user['email'],'role'=>$user['role_slug'],'dept'=>(int)$user['department_id'],'sid'=>bin2hex(random_bytes(12))]);   // sid: every login gets a unique token/session
@@ -365,7 +363,6 @@ switch ("$method:$action") {
             // Update login stats
             $db->prepare('UPDATE itops_users SET last_login_at=NOW(), last_login_ip=?, login_count=login_count+1 WHERE id=?')
                ->execute([$_SERVER['REMOTE_ADDR'] ?? '', $user['id']]);
-            itops_claim_tickets($db, (int)$user['id'], (string)$user['email']);   // e.g. a form ticket sent before their first Microsoft sign-in
             
             $token = jwt_encode([
                 'uid' => (int)$user['id'],
@@ -465,7 +462,6 @@ switch ("$method:$action") {
         }
         if ($user['status'] !== 'active') error_response('Account is inactive', 403);
         $db->prepare('UPDATE itops_users SET last_login_at=NOW(), last_login_ip=?, login_count=login_count+1 WHERE id=?')->execute([$_SERVER['REMOTE_ADDR'] ?? '', $user['id']]);
-        itops_claim_tickets($db, (int)$user['id'], (string)$user['email']);
         $token = jwt_encode(['uid' => (int)$user['id'], 'email' => $user['email'], 'role' => $user['role_slug'], 'dept' => (int)$user['department_id'], 'sid' => bin2hex(random_bytes(12))]);
         itops_session_create($db, (int)$user['id'], $token);
         itops_audit_signin($user, 'teams');   // BT99

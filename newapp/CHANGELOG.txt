@@ -3,6 +3,39 @@ Microsoft 365 Administration. Newest first.
 Build IDs match the stamp shown under the app and in the browser console.
 
 ========================================================================
+0001-A004 — Server of this product only (10/30/2026)
+            [DB update: no. Press Ctrl+F5 after uploading.]
+  - Scheduled jobs: one job, cron-sla.php (scheduled offboarding, onboarding reminders, the monthly access re-check,
+    alerts and digests, Teams notifications, the security assessment, device inventory, Microsoft 365 background reads,
+    License Hub check-in, webhooks, clean-up). cron-mail.php (email to ticket), cron-uptime.php (uptime and backups),
+    cron-audit.php (integration audit) and the weekly SLA digest mode are gone; so is backup-checkin.php.
+  - The in-app scheduler now runs the main job on a new installation: the token it needs is made the first time it is
+    needed (before, only saving the Email settings made it).
+  - Onboarding and offboarding: Microsoft 365 steps only. The vTiger steps (create, reassign, deactivate, records left
+    for later), equipment check-in, SOP reading and company-system steps are gone from the engine, the templates, the
+    offboarding check and the pre-run check. A person's account no longer shows a vTiger user or other systems.
+  - Licenses → Reconcile compares Microsoft 365 with the people who can sign in here: licensed accounts that are
+    blocked, and users here with no enabled Microsoft 365 account (was Microsoft 365 ↔ vTiger).
+  - Security incidents, risky people and the posture plan no longer make Service Desk tickets ("Make it a task" is
+    refused by the server too).
+  - Settings → Email: outgoing mail only (the mailbox intake, IMAP test and poll are gone). The Super Admin-only check
+    now names the SMTP security setting it missed. Bulk Import: users only. Integrations: this product's scopes and
+    events. The AI settings load with Settings · View (they asked for Tickets · View, which no role can have here).
+  - Email templates: 22 of this product's (the ticket, case, announcement, reminder, SLA, backup, uptime, server,
+    equipment and signature emails are gone).
+  - Server code: 183 → 134 files, about 51,000 → 31,500 lines; 41 library files deleted (vTiger, HubSpot, phone
+    systems, Jotform, tickets, cases, calendar, knowledge base, SOPs, equipment, contracts, invoices, budget, servers,
+    scorecard, announcements, Help visuals…). The API routes attachments, history, links, help and help_script are gone.
+  - Left for 0001-A005 (clean starting database): the libraries that only the old database updates still load
+    (Categories, DbInsight, ErrLogs, IntegrationAudit, JotformForms, Mon360, NetWatch, PbxCdr, Signatures,
+    StandardsSetup and what they load), and the tables and columns of the removed modules.
+  - Tests: dev/check-app.mjs 26 checks: also the in-app scheduler running the main job, and no call to a removed
+    function. New dev tools: php-unused.php, php-undefined.php, cut-actions.php.
+  - Found along the way and listed for the reference app (docs/FINDINGS-FOR-REFERENCE-APP.md): R-13 a hosting
+    provider named in itops-hostcheck.php, R-14 the SMTP security key missing from the Super Admin check, R-15 the AI
+    settings asking for Tickets · View.
+
+========================================================================
 0001-A003 — Screens of this product only (10/30/2026)
             [DB update: no. Press Ctrl+F5 after uploading.]
   - Menu: Dashboard, Microsoft 365, Administration, Logs & Integrations. The 31 pages of the removed modules (tickets,

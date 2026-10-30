@@ -146,7 +146,7 @@ if (!function_exists('itops_rk_factors')) {
 
     /** The follow-up settings. */
     function itops_rf_cfg(PDO $db): array {
-        $d = ['enabled' => false, 'levels' => ['high', 'medium'], 'days' => 7, 'remind_after' => 3, 'manager' => true, 'ticket' => true, 'ticket_category_id' => null, 'mfa_group_id' => '', 'mfa_group_name' => ''];
+        $d = ['enabled' => false, 'levels' => ['high', 'medium'], 'days' => 7, 'remind_after' => 3, 'manager' => true, 'ticket' => false, 'ticket_category_id' => null, 'mfa_group_id' => '', 'mfa_group_name' => ''];
         try { $v = json_decode((string)$db->query("SELECT sval FROM itops_settings WHERE skey='rf_cfg'")->fetchColumn(), true); if (is_array($v)) $d = array_merge($d, array_intersect_key($v, $d)); } catch (Throwable $e) {}
         return $d;
     }
@@ -226,37 +226,12 @@ if (!function_exists('itops_rk_factors')) {
         return $out;
     }
 
-    /** The deadline passed: tell the manager, open a ticket, propose the changes (nothing changes until approved). */
+    /** The deadline passed: tell the manager, propose the changes (nothing changes until approved). */
     function itops_rf_escalate(PDO $db, array $f, array $p, array $codes, array $cfg, callable $D, callable $send, array &$out): void {
         $fid = (int)$f['id']; $mgr = null;
         if ($cfg['manager']) { try { $mgr = $D('manager:' . $p['user_oid']); } catch (Throwable $e) { $mgr = null; } }
         if ($mgr && !empty($mgr['mail'])) $send('risk_manager_escalation', $mgr['mail'], ['recipient_name' => $mgr['name'], 'person_name' => $p['name'], 'deadline' => itops_tpl_d2($f['deadline']), 'body_md' => itops_rf_body($codes, false)], 'manager', $fid);
-        $tid = null;
-        if ($cfg['ticket']) {
-            try {
-                require_once __DIR__ . '/TicketNumbers.php';
-                $F = itops_rk_factors();
-                $desc = "Risky people follow-up (Security assessment). " . $p['name'] . ' (' . $p['upn'] . ') has not fixed these by ' . date('m/d/Y', strtotime($f['deadline'])) . ":\n\n"
-                      . implode("\n", array_map(fn($c) => '- ' . ($F[$c][5] ?? $c), $codes)) . "\n\nScore " . (int)$p['score'] . ' (' . $p['level'] . "). The person was emailed on " . date('m/d/Y', strtotime($f['started_at']))
-                      . ($f['reminded_at'] ? ' and reminded on ' . date('m/d/Y', strtotime($f['reminded_at'])) : '') . ($mgr && !empty($mgr['mail']) ? '; their manager (' . $mgr['name'] . ') was told today' : '') . '.'
-                      . "\n\nChanges " . (function_exists('itops_app_name') ? itops_app_name() : 'the app') . " can make wait for approval in IT Operations → Risky people → Approvals.";
-                $subj = mb_substr('Account at risk: ' . $p['name'], 0, 250); $cat = $cfg['ticket_category_id'];
-                // requester: the person's own ITOps account when they have one, else the first active Super Admin (the
-                // ticket is IT's own work; the person is named in it)
-                $rq = $db->prepare('SELECT id FROM itops_users WHERE LOWER(email) IN (LOWER(?), LOWER(?)) AND status=\'active\' LIMIT 1'); $rq->execute([$p['mail'], $p['upn']]); $req = (int)$rq->fetchColumn();
-                if (!$req) $req = (int)$db->query("SELECT u.id FROM itops_users u JOIN itops_roles r ON r.id=u.role_id WHERE r.slug='super_admin' AND u.status='active' ORDER BY u.id LIMIT 1")->fetchColumn();
-                [$tn, $tid] = itops_ticket_create_numbered($db, function (string $tn) use ($db, $subj, $desc, $cat, $p, $req) {
-                    $db->prepare("INSERT INTO itops_tickets (ticket_number,subject,description,category_id,priority,status,ticket_type,requester_id) VALUES (?,?,?,?,?,'open','request',?)")
-                       ->execute([$tn, $subj, $desc, $cat, $p['level'] === 'high' ? 'p2_high' : 'p3_medium', $req]);
-                    return [$tn, (int)$db->lastInsertId()];
-                });
-                if (!function_exists('itops_ticket_sla_fill')) require_once __DIR__ . '/BusinessHours.php';
-                try { itops_ticket_sla_fill($db, $tid); } catch (Throwable $e) {}
-                try { require_once __DIR__ . '/TicketRouting.php'; itops_tr_on_created($db, $tid, null, 'risk'); } catch (Throwable $e) {}
-                audit_log('rf_ticket', 'security_assessment', $fid, $p['name'] . ' (' . $p['upn'] . ')', null, ['Ticket' => $tn]);
-                $out['tickets']++;
-            } catch (Throwable $e) { $tid = null; audit_log('rf_ticket_failed', 'security_assessment', $fid, $p['name'], null, ['Why' => mb_substr($e->getMessage(), 0, 200)]); }
-        }
+        $tid = null;   // 0001-A004: no Service Desk ticket in this product
         // proposals
         $F = itops_rk_factors(); $acts = [];
         foreach ($codes as $c) { $a = $F[$c][2] ?? ''; if ($a === '' || isset($acts[$a])) continue; if ($a === 'mfa_group' && $cfg['mfa_group_id'] === '') continue; $acts[$a] = $F[$c][5]; }
@@ -275,19 +250,11 @@ if (!function_exists('itops_rk_factors')) {
         $out['escalated']++;
     }
 
-    /** Closes a follow-up (fixed | dismissed): the ticket gets a note and is resolved, open proposals are withdrawn. */
+    /** Closes a follow-up (fixed | dismissed): open proposals are withdrawn. */
     function itops_rf_close(PDO $db, array $f, string $status, string $note, ?int $by): void {
         $fid = (int)$f['id'];
         $db->prepare('UPDATE itops_risk_followups SET status=?, closed_at=?, closed_by=?, close_note=? WHERE id=?')->execute([$status, date('Y-m-d H:i:s'), $by, mb_substr($note, 0, 500), $fid]);
         $db->prepare("UPDATE itops_risk_actions SET status='withdrawn', decided_at=?, result=? WHERE followup_id=? AND status='pending'")->execute([date('Y-m-d H:i:s'), $status === 'fixed' ? 'No longer needed: fixed.' : 'Withdrawn: the follow-up was dismissed.', $fid]);
-        if (!empty($f['ticket_id'])) {
-            try {
-                $who = $by ?: (int)$db->query("SELECT u.id FROM itops_users u JOIN itops_roles r ON r.id=u.role_id WHERE r.slug='super_admin' AND u.status='active' ORDER BY u.id LIMIT 1")->fetchColumn();   // automatic: noted as the Super Admin
-                $db->prepare('INSERT INTO itops_ticket_comments (ticket_id, user_id, content, is_internal) VALUES (?,?,?,1)')->execute([(int)$f['ticket_id'], $who, $note]);
-                $db->prepare("UPDATE itops_tickets SET status='resolved', resolved_at=COALESCE(resolved_at, ?), resolution_notes=COALESCE(NULLIF(resolution_notes,''), ?) WHERE id=? AND status NOT IN ('resolved','closed','cancelled')")
-                   ->execute([date('Y-m-d H:i:s'), $note, (int)$f['ticket_id']]);
-            } catch (Throwable $e) { audit_log('rf_ticket_failed', 'security_assessment', $fid, (string)($f['name'] ?? ''), null, ['Why' => 'closing the ticket: ' . mb_substr($e->getMessage(), 0, 200)]); }
-        }
         audit_log($status === 'fixed' ? 'rf_fixed' : 'rf_dismissed', 'security_assessment', $fid, ($f['name'] ?: $f['upn']) . ' (' . $f['upn'] . ')', null, ['Note' => mb_substr($note, 0, 200)]);
     }
 

@@ -164,15 +164,6 @@ if (!function_exists('itops_modules_catalog')) {
         if (isset($map[$pg])) return $map[$pg];
         return strpos($pg, 'm365') === 0 ? 'm365' : null;
     }
-    /** BT101: the module a Scorecard measurable's automatic source reads from (null = core). */
-    function itops_sc_source_module(string $src): ?string {
-        if (in_array($src, ['p1_incidents', 'ticket_volume', 'frt_minutes', 'sla_closure_pct'], true)) return 'service_desk';
-        if ($src === 'onboarding_ontime') return 'onboarding';
-        if (strpos($src, 'sa_') === 0) return 'security_assessment';   // BT123
-        if (in_array($src, ['secure_score_pct', 'intune_compliance', 'mfa_pct'], true)) return 'm365';
-        if (in_array($src, ['ssl_days_min', 'uptime_pct', 'backup_success'], true) || strpos($src, 'uptime_') === 0 || strpos($src, 'bkp_') === 0) return 'servers';
-        return null;
-    }
     function itops_link_enabled(?string $link): bool { $m = itops_link_module($link); return $m === null || itops_module_on($m); }
     /** BT101: a scheduled-job step of a module that is off is skipped, and says so in Scheduled jobs. */
     function itops_cron_off(string ...$mods): bool {

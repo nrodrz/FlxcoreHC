@@ -72,6 +72,18 @@ try {
   { const g = await (await fetch(B + 'guide.js')).text(); const i = g.indexOf('const CONTENT ='); let t = g.slice(i + 15, g.indexOf('\n', i)).trim().replace(/;$/, ''); const C = JSON.parse(t);
     const cats = C.categories.map(c => c.cat); const titles = C.categories.flatMap(c => c.topics.map(x => x.title));
     ok('Help Center: only this product\'s categories (' + cats.join(', ') + ')', cats.length === 4 && !titles.some(x => /Tickets?\b|SLA|vTiger|Company systems|Knowledge Base|IT Budget|Announcements/.test(x)), titles.filter(x => /Tickets?\b|SLA|vTiger|Company systems|Knowledge Base|IT Budget|Announcements/.test(x)).join(' | ')); }
+  { // 0001-A004 (R-03): on a fresh installation the in-app scheduler starts the main job (it used to need the Email settings saved first)
+    const my = (q) => execFileSync('mysql', ['-uroot', '--socket=' + (process.env.DB_SOCKET || '/run/mysqld/mysqld.sock'), '-N', '-e', q, DB]).toString().trim();
+    my("UPDATE itops_settings SET sval='0' WHERE skey='auto_tick_at'");
+    const before = +my("SELECT COUNT(*) FROM itops_cron_runs WHERE job='sla'");
+    await api('POST', '/tick', {}); let after = before;
+    for (let i = 0; i < 30 && after === before; i++) { await new Promise(r => setTimeout(r, 1000)); after = +my("SELECT COUNT(*) FROM itops_cron_runs WHERE job='sla'"); }
+    ok('in-app scheduler: runs the main job on a fresh installation (' + before + ' → ' + after + ' runs)', after > before, 'no main-scheduler run recorded'); }
+  { // 0001-A004: no call to a function that was removed (the only ones allowed are web-server functions, each behind function_exists)
+    const out = execFileSync('php', [path.join(HERE, 'dev', 'php-undefined.php')]).toString().split('\n').filter(l => l.includes('←'));
+    const okNames = ['apache_request_headers', 'getallheaders', 'litespeed_finish_request', 'fastcgi_finish_request', 'apache_get_modules', 'itops_ai_http_stub'];
+    const bad = out.filter(l => !okNames.includes(l.split(' ')[0]));
+    ok('server code: every function it calls exists', bad.length === 0, bad.join(' | ').slice(0, 300)); }
   for (const c of ['cron-sla.php']) { let out = ''; try { out = execFileSync('php', [c], { cwd: RUN, timeout: 120000 }).toString(); } catch (e) { out = 'EXIT ' + e.status + ' ' + String(e.stdout || '') + String(e.stderr || ''); }
     ok('scheduled job ' + c + ' runs without a PHP error', !/Fatal|EXIT [1-9]|Uncaught/.test(out), out.slice(-300)); }
 } catch (e) { ok('ran to the end', false, e.message.split('\n')[0]); }
