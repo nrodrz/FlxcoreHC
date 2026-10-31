@@ -48,7 +48,5 @@ if (!function_exists('itops_secret_wrap')) {
         try { return vault_decrypt(vault_encrypt('itops-check')) === 'itops-check'; } catch (\Throwable $e) { return false; }
     }
 
-    /** vTiger JSON blobs: which fields are secrets. */
-    function itops_secret_vtiger_fields(): array { return ['prov' => ['access_key', 'bridge_secret', 'bridge_secret_pending'], 'db' => ['pass']]; }
 
 }

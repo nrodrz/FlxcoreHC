@@ -5,28 +5,16 @@
  *
  * The installer's "Add sample records" box loads sql/sample.sql. This finds those records again from the same file (the
  * file is the only list, so it can never drift from what was loaded) and removes them. A record is a sample record only
- * when its identifying fields still hold the sample values (for example a ticket's number AND subject). A sample record
- * that is in use is kept and named, never removed:
- *   credentials  a secret, user name, notes or MFA details were saved on it, or it is linked to an asset
- *   contracts    an invoice line, budget line or license subscription points to it, a file is attached, or an asset link
- *   KB articles  a case refers to it (known error / change)
- *   tickets      a form submission, risk follow-up, plan item, Microsoft 365 incident, major review or monitoring alert
- *                points to it, or an asset link
- *   calendar     a case task refers to it
- * Removing a ticket removes its comments and attachments (as when a ticket is deleted), its rating and SLA alerts; a KB
- * article its votes; a calendar entry its attendees and sent reminders. Everything runs in one transaction.
+ * when its identifying fields still hold the sample values (an onboarding template's name AND description). Everything
+ * runs in one transaction. 0001-A005: the samples are two onboarding templates (the reference app's were credentials,
+ * contracts, articles, tickets and a calendar entry).
  */
-
 if (!function_exists('itops_sample_catalog')) {
 
     /** table => [label, the columns that identify a sample record]. */
     function itops_sample_tables(): array {
         return [
-            'itops_tickets'         => ['Tickets', ['ticket_number', 'subject']],
-            'itops_calendar_events' => ['Calendar entries', ['title', 'description']],
-            'itops_kb_articles'     => ['Knowledge Base articles', ['title', 'slug']],
-            'itops_contracts'       => ['Contracts', ['title', 'contract_type', 'start_date']],
-            'itops_credentials'     => ['Credentials', ['name', 'description', 'system_url']],
+            'itops_m365_templates' => ['Onboarding templates', ['name', 'description']],
         ];
     }
 
@@ -89,43 +77,9 @@ if (!function_exists('itops_sample_catalog')) {
         }
         return $c[$k];
     }
-    function itops_sample_count(PDO $db, string $table, string $col, int $id, string $extra = '', array $args = []): int {
-        if (!itops_sample_has($db, $table, $col)) return 0;
-        $st = $db->prepare('SELECT COUNT(*) FROM `' . $table . '` WHERE `' . $col . '`=?' . $extra);
-        $st->execute(array_merge([$id], $args)); return (int)$st->fetchColumn();
-    }
 
-    /** Why a found sample record must be kept ('' = free to remove). */
+    /** Why a found sample record must be kept ('' = free to remove). An onboarding template is never referred to by id. */
     function itops_sample_in_use(PDO $db, string $table, int $id): string {
-        $c = fn($t, $col, $x = '', $a = []) => itops_sample_count($db, $t, $col, $id, $x, $a);
-        $ci = fn($type) => itops_sample_count($db, 'itops_ci_links', 'entity_id', $id, ' AND entity_type=?', [$type]);
-        switch ($table) {
-            case 'itops_credentials':
-                $st = $db->prepare("SELECT COALESCE(username_enc,''), COALESCE(password_enc,''), COALESCE(api_key_enc,''), COALESCE(mfa_details_enc,''), COALESCE(notes_enc,'') FROM itops_credentials WHERE id=?");
-                $st->execute([$id]); $r = $st->fetch(PDO::FETCH_NUM) ?: [];
-                if (implode('', $r) !== '') return 'a value was saved on it';
-                if ($ci('credential')) return 'linked to an asset';
-                return '';
-            case 'itops_contracts':
-                if ($c('itops_invoice_lines', 'contract_id')) return 'an invoice line points to it';
-                if ($c('itops_budget_lines', 'contract_id')) return 'a budget line points to it';
-                if ($c('itops_license_subs', 'contract_id')) return 'a license subscription points to it';
-                if (itops_sample_count($db, 'itops_attachments', 'entity_id', $id, ' AND entity_type=?', ['contracts'])) return 'a file is attached';
-                if ($ci('contract')) return 'linked to an asset';
-                return '';
-            case 'itops_kb_articles':
-                if ($c('itops_case_svc', 'kb_article_id')) return 'a case refers to it';
-                return '';
-            case 'itops_tickets':
-                foreach (['itops_form_submissions' => 'a form submission', 'itops_risk_followups' => 'a risk follow-up', 'itops_sa_plan_items' => 'a security plan item',
-                          'itops_m365_incident_tickets' => 'a Microsoft 365 incident', 'itops_major_reviews' => 'a major incident review', 'itops_m360_alerts' => 'a monitoring alert', 'itops_phone_calls' => 'a missed call', 'itops_pbx_cdr' => 'a phone system call record', 'itops_jf_submissions' => 'a Jotform submission'] as $t => $w)
-                    if ($c($t, 'ticket_id')) return $w . ' points to it';
-                if ($ci('ticket')) return 'linked to an asset';
-                return '';
-            case 'itops_calendar_events':
-                if ($c('itops_case_tasks', 'event_id')) return 'a case task refers to it';
-                return '';
-        }
         return '';
     }
 
@@ -141,7 +95,7 @@ if (!function_exists('itops_sample_catalog')) {
                 foreach ($row as $k => $v) { if ($v === null) $w[] = '`' . $k . '` IS NULL'; else { $w[] = '`' . $k . '`=?'; $a[] = $v; } }
                 $st = $db->prepare('SELECT id FROM `' . $table . '` WHERE ' . implode(' AND ', $w));
                 $st->execute($a);
-                $name = (string)reset($row) . ($table === 'itops_tickets' ? ' · ' . $row['subject'] : '');
+                $name = (string)reset($row);
                 foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $id) {
                     $why = itops_sample_in_use($db, $table, (int)$id);
                     if ($why === '') $remove[] = ['id' => (int)$id, 'name' => $name]; else $keep[] = ['id' => (int)$id, 'name' => $name, 'why' => $why];
@@ -166,13 +120,6 @@ if (!function_exists('itops_sample_catalog')) {
             foreach ($scan['tables'] as $tb) {
                 $ids = array_column($tb['remove'], 'id');
                 if (!$ids) { $done[$tb['table']] = 0; continue; }
-                switch ($tb['table']) {
-                    case 'itops_tickets':
-                        foreach (['itops_ticket_comments', 'itops_ticket_attachments', 'itops_ticket_csat', 'itops_sla_alerts'] as $t) $del($t, 'ticket_id', $ids);
-                        break;
-                    case 'itops_kb_articles': $del('itops_kb_votes', 'article_id', $ids); break;
-                    case 'itops_calendar_events': $del('itops_calendar_attendees', 'event_id', $ids); $del('itops_calendar_reminders_sent', 'event_id', $ids); break;
-                }
                 $del($tb['table'], 'id', $ids);
                 $done[$tb['table']] = count($ids);
             }

@@ -13,8 +13,7 @@ const ITOPS_DBH_PREFIX = 'itops_';
 function itops_dbh_app(): string { return function_exists('itops_app_name') ? itops_app_name() : 'ITOps'; }
 
 /** Tables that must exist for ITOps to work (a missing one means an install/update problem). */
-const ITOPS_DBH_CORE = ['itops_users', 'itops_roles', 'itops_settings', 'itops_tickets', 'itops_ticket_categories', 'itops_ticket_comments',
-    'itops_kb_articles', 'itops_sops', 'itops_notifications', 'itops_audit_log', 'itops_event_log', 'itops_sessions', 'itops_migrations'];
+const ITOPS_DBH_CORE = ['itops_users', 'itops_roles', 'itops_settings', 'itops_notifications', 'itops_audit_log', 'itops_event_log', 'itops_sessions', 'itops_migrations'];
 
 /** What each table holds — shown next to the name so the list is readable without knowing the schema. */
 function itops_dbh_describe(string $t): string {
@@ -24,19 +23,11 @@ function itops_dbh_describe(string $t): string {
     static $d = [
         'itops_audit_log' => 'Audit log — who changed what (kept, never purged)', 'itops_event_log' => 'Event log — system, cron and integration events',
         'itops_mail_log' => 'Outbound email log', 'itops_notifications' => 'Bell notifications', 'itops_sessions' => 'Sign-in sessions',
-        'itops_webhook_deliveries' => 'Webhook delivery attempts', 'itops_tickets' => 'Tickets', 'itops_ticket_comments' => 'Ticket comments and notes',
-        'itops_ticket_attachments' => 'Ticket attachment records (files are on disk)', 'itops_kb_articles' => 'Knowledge Base articles', 'itops_sops' => 'SOPs',
-        'itops_sop_versions' => 'SOP version history', 'itops_sop_acks' => 'SOP acknowledgements', 'itops_users' => 'Users', 'itops_roles' => 'Roles and permissions',
-        'itops_settings' => 'Settings (secrets encrypted)', 'itops_credentials' => 'Credential vault (encrypted)', 'itops_contracts' => 'Contracts',
-        'itops_vendors' => 'Vendors', 'itops_assets' => 'Equipment', 'itops_asset_loans' => 'Equipment loans', 'itops_ob_runs' => 'Onboarding / offboarding history',
+        'itops_webhook_deliveries' => 'Webhook delivery attempts', 'itops_users' => 'Users', 'itops_roles' => 'Roles and permissions',
+        'itops_settings' => 'Settings (secrets encrypted)', 'itops_ob_runs' => 'Onboarding / offboarding history',
         'itops_ob_run_tasks' => 'Onboarding / offboarding steps', 'itops_m365_templates' => 'Onboarding templates', 'itops_m365_policy_backups' => 'Intune policy backups',
-        'itops_server_metric_samples' => 'Integration Audit metric samples (own retention)', 'itops_integration_observations' => 'Integration Audit observations',
-        'itops_integration_evidence' => 'Integration Audit evidence', 'itops_sla_alerts' => 'SLA alerts already sent (prevents repeats)',
-        'itops_migrations' => 'Applied database updates', 'itops_db_snapshots' => 'Daily database size snapshots', 'itops_device_inventory' => 'Microsoft 365 device inventory (Entra devices and sign-ins)', 'itops_announcements' => 'Announcements', 'itops_announcement_audience' => 'Announcements: chosen audience', 'itops_announcement_recipients' => 'Announcements: who received and read each one', 'itops_calendar_events' => 'Calendar events',
-        'itops_outlook_users' => 'Outlook calendar sync: each person\'s choice', 'itops_outlook_links' => 'Outlook calendar sync: the app\'s items in Outlook', 'itops_cron_runs' => 'Scheduled job runs (this month; earlier months go to the monthly report)', 'itops_cron_months' => 'Scheduled jobs — monthly report', 'itops_uptime_monitors' => 'Uptime monitors', 'itops_uptime_checks' => 'Uptime checks (kept 90 days)', 'itops_uptime_incidents' => 'Uptime outages', 'itops_backup_jobs' => 'Watched backups', 'itops_backup_events' => 'Backup results (kept 400 days)', 'itops_calendar_attendees' => 'Calendar event attendees', 'itops_calendar_reminders_sent' => 'Calendar reminders already sent (prevents repeats)', 'itops_calendar_reports' => 'Saved calendar reports',
-        'itops_forms' => 'Forms', 'itops_form_submissions' => 'Form responses', 'itops_documents' => 'Documents', 'itops_signature_requests' => 'Signature requests',
-        'itops_signature_signers' => 'Signers', 'itops_access_log' => 'Access log: credentials revealed, documents opened', 'itops_categories' => 'Categories of the Knowledge Base, documents, SOPs and credentials',
-        'itops_api_keys' => 'API keys (hashed)', 'itops_webhooks' => 'Webhooks', 'itops_std_requirements' => 'Standards & Audits requirements', 'itops_std_evidence' => 'Standards & Audits evidence',
+        'itops_migrations' => 'Applied database updates', 'itops_db_snapshots' => 'Daily database size snapshots', 'itops_device_inventory' => 'Microsoft 365 device inventory (Entra devices and sign-ins)', 'itops_cron_runs' => 'Scheduled job runs (this month; earlier months go to the monthly report)', 'itops_cron_months' => 'Scheduled jobs — monthly report',
+        'itops_api_keys' => 'API keys (hashed)', 'itops_webhooks' => 'Webhooks',
     ];
     return $d[$t] ?? '';
 }

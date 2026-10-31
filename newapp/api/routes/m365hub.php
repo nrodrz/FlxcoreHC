@@ -1969,11 +1969,11 @@ if ($action === 'onboard-template-save' || $action === 'onboard-template-delete'
         $exists = false;
         if ($id > 0) { $q = $db->prepare("SELECT 1 FROM itops_m365_templates WHERE id=?"); $q->execute([$id]); $exists = (bool)$q->fetchColumn(); }
         if ($exists) {
-            $db->prepare("UPDATE itops_m365_templates SET name=?, description=?, m365_json=?, vtiger_json=?, updated_by=?, updated_at=NOW() WHERE id=?")
-               ->execute([$name, $desc, json_encode($m365), '{}', (int)$currentUser['id'], $id]);
+            $db->prepare("UPDATE itops_m365_templates SET name=?, description=?, m365_json=?, updated_by=?, updated_at=NOW() WHERE id=?")
+               ->execute([$name, $desc, json_encode($m365), (int)$currentUser['id'], $id]);
         } else {
-            $db->prepare("INSERT INTO itops_m365_templates (name, description, m365_json, vtiger_json, created_by, created_at, updated_at) VALUES (?,?,?,?,?,NOW(),NOW())")
-               ->execute([$name, $desc, json_encode($m365), '{}', (int)$currentUser['id']]);
+            $db->prepare("INSERT INTO itops_m365_templates (name, description, m365_json, created_by, created_at, updated_at) VALUES (?,?,?,?,NOW(),NOW())")
+               ->execute([$name, $desc, json_encode($m365), (int)$currentUser['id']]);
             $id = (int)$db->lastInsertId();
         }
     } catch (Throwable $e) { error_response('Run db-update.php once to install the onboarding templates table.', 409); }
@@ -2096,10 +2096,10 @@ if ($action === 'onboard-record') {
     $name = trim((string)($body['display_name'] ?? '')); $upn = trim((string)($body['upn'] ?? ''));
     if ($name === '' || $upn === '') error_response('Nothing to record.', 400);
     try {
-        $db->prepare("INSERT INTO itops_ob_runs (template_id,kind,subject_name,subject_email,subject_upn,status,notes,created_by,created_at,completed_at,m365_id,vtiger_id,first_name,last_name,job_title,department)
-                      VALUES (NULL,'onboard',?,?,?,'completed',?,?,NOW(),NOW(),?,?,?,?,?,?)")
+        $db->prepare("INSERT INTO itops_ob_runs (template_id,kind,subject_name,subject_email,subject_upn,status,notes,created_by,created_at,completed_at,m365_id,first_name,last_name,job_title,department)
+                      VALUES (NULL,'onboard',?,?,?,'completed',?,?,NOW(),NOW(),?,?,?,?,?)")
            ->execute([$name, $upn, $upn, mb_substr('Onboarded from Microsoft 365 → Accounts → Onboard' . (($body['template'] ?? '') !== '' ? ' · template "' . $body['template'] . '"' : ''), 0, 1000),
-                      (int)$currentUser['id'], (string)($body['m365_id'] ?? '') ?: null, null,
+                      (int)$currentUser['id'], (string)($body['m365_id'] ?? '') ?: null,
                       mb_substr((string)($body['first_name'] ?? ''), 0, 80) ?: null, mb_substr((string)($body['last_name'] ?? ''), 0, 80) ?: null,
                       mb_substr((string)($body['job_title'] ?? ''), 0, 120) ?: null, mb_substr((string)($body['department'] ?? ''), 0, 120) ?: null]);
     } catch (Throwable $e) { json_response(['ok' => false]); }
@@ -2677,8 +2677,8 @@ if (in_array($action, ['incident', 'incident-update', 'incident-comment'], true)
     };
     if ($action === 'incident') {
         $cap('m365.view'); $inc = $read();
-        $q = $db->prepare('SELECT l.ticket_id, t.ticket_number, t.status FROM itops_m365_incident_tickets l LEFT JOIN itops_tickets t ON t.id=l.ticket_id WHERE l.incident_id=?'); $q->execute([$inc['id']]); $tk = $q->fetch(PDO::FETCH_ASSOC) ?: null;
-        $cats = []; try { $cats = $db->query("SELECT id, name FROM itops_ticket_categories WHERE parent_id IS NOT NULL AND (status IS NULL OR status='active') ORDER BY name")->fetchAll(PDO::FETCH_ASSOC); } catch (Throwable $e) {}
+        $tk = null;   // 0001-A005: no Service Desk tickets in this product
+        $cats = [];
         $people = [];
         foreach ($db->query("SELECT u.id, u.display_name, u.email, r.slug AS role_slug, r.permissions AS role_perms FROM itops_users u LEFT JOIN itops_roles r ON r.id=u.role_id WHERE u.status='active' ORDER BY u.display_name")->fetchAll(PDO::FETCH_ASSOC) as $u)
             if (itops_can($u, 'm365_incidents', 'edit')) $people[] = ['id' => (int)$u['id'], 'name' => $u['display_name'], 'email' => strtolower((string)$u['email'])];

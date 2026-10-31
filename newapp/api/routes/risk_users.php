@@ -57,14 +57,14 @@ if ($method === 'GET' && $what === '') {
         }
     }
     $pending = []; foreach ($db->query("SELECT a.* FROM itops_risk_actions a WHERE a.status='pending' ORDER BY a.created_at")->fetchAll(PDO::FETCH_ASSOC) as $a) $pending[] = $actRow($a);
-    $cats = []; try { foreach ($db->query('SELECT id, name FROM itops_ticket_categories ORDER BY name')->fetchAll(PDO::FETCH_ASSOC) as $c) $cats[] = ['id' => (int)$c['id'], 'name' => $c['name']]; } catch (Throwable $e) {}
+    $cats = [];   // 0001-A005: no ticket categories
     json_response(['run' => $run, 'people' => $people, 'settings' => itops_rf_cfg($db), 'can_edit' => itops_can($currentUser, 'security_assessment', 'edit'), 'pending' => $pending,
                    'categories' => $cats, 'actions' => array_map(fn($a) => ['label' => $a[0], 'needs' => $a[1], 'explains' => $a[2]], itops_rk_actions()),
                    'factor_catalog' => array_map(fn($f) => ['label' => $f[0], 'points' => $f[1]], itops_rk_factors())]);
 }
 if ($method === 'GET' && $what === 'followups') {
     $need('view', 'See the follow-ups');
-    $rows = $db->query('SELECT f.*, t.ticket_number FROM itops_risk_followups f LEFT JOIN itops_tickets t ON t.id=f.ticket_id ORDER BY f.id DESC LIMIT 300')->fetchAll(PDO::FETCH_ASSOC);
+    $rows = $db->query('SELECT f.*, NULL AS ticket_number FROM itops_risk_followups f ORDER BY f.id DESC LIMIT 300')->fetchAll(PDO::FETCH_ASSOC);
     $acts = []; foreach ($db->query('SELECT a.*, u.display_name AS decided_by_name FROM itops_risk_actions a LEFT JOIN itops_users u ON u.id=a.decided_by ORDER BY a.id')->fetchAll(PDO::FETCH_ASSOC) as $a) $acts[(int)$a['followup_id']][] = $actRow($a);
     foreach ($rows as &$r) { $r['id'] = (int)$r['id']; $r['factors'] = json_decode($r['factors'], true) ?: []; $r['actions'] = $acts[$r['id']] ?? []; }
     json_response(['data' => $rows]);
@@ -72,7 +72,7 @@ if ($method === 'GET' && $what === 'followups') {
 if ($method === 'PUT' && $what === 'settings') {
     $need('edit', 'Change the follow-up settings');
     try { $c = itops_rf_clean($body); } catch (InvalidArgumentException $e) { error_response($e->getMessage(), 400); }
-    if (array_key_exists('ticket_category_id', $c) && $c['ticket_category_id'] !== null) { $q = $db->prepare('SELECT COUNT(*) FROM itops_ticket_categories WHERE id=?'); $q->execute([$c['ticket_category_id']]); if (!(int)$q->fetchColumn()) error_response('Unknown ticket category.', 400); }
+    unset($c['ticket'], $c['ticket_category_id']);   // 0001-A005: no Service Desk tickets
     $old = itops_rf_cfg($db); $new = array_merge($old, $c);
     $db->prepare("INSERT INTO itops_settings (skey,sval,updated_by) VALUES ('rf_cfg',?,?) ON DUPLICATE KEY UPDATE sval=VALUES(sval), updated_by=VALUES(updated_by)")->execute([json_encode($new), (int)$currentUser['id']]);
     $diffO = []; $diffN = []; foreach ($new as $k => $v) if ($old[$k] !== $v) { $diffO[$k] = is_array($old[$k]) ? implode(', ', $old[$k]) : $old[$k]; $diffN[$k] = is_array($v) ? implode(', ', $v) : $v; }

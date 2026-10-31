@@ -3,7 +3,7 @@
 require_once __DIR__ . '/Brand.php';   // BT20: itops_app_name() for cron scripts too
 /**
  * ITOps — outgoing email: PHP mail(), SMTP, or Microsoft 365 Graph. Configuration lives in itops_settings (Settings → Email).
- * 0001-A004: was Mail.php; the email-to-ticket intake (IMAP / Graph mailbox reading) is gone with the Service Desk.
+ * 0001-A004: was MailIntake.php; the email-to-ticket intake (IMAP / Graph mailbox reading) is gone with the Service Desk.
  */
 require_once __DIR__ . '/O365.php';
 require_once __DIR__ . '/EmailTemplates.php';
@@ -29,9 +29,9 @@ if (!function_exists('mail_send')) {
         // Every attempt is recorded (Connection → Email → Outbound email log) so "no email arrived"
         // can be diagnosed without guessing.
         try {
-            getDB()->prepare('INSERT INTO itops_mail_log (to_email,subject,method,kind,ticket_id,ok,error,sent_by) VALUES (?,?,?,?,?,?,?,?)')
+            getDB()->prepare('INSERT INTO itops_mail_log (to_email,subject,method,kind,ok,error,sent_by) VALUES (?,?,?,?,?,?,?)')
                    ->execute([$to, mb_substr($subject, 0, 255), (string)(mail_cfg()['mail_out_method'] ?? 'mailfn'), (string)($ctx['kind'] ?? ''),
-                              isset($ctx['ticket_id']) ? (int)$ctx['ticket_id'] : null, !empty($r['ok']) ? 1 : 0, mb_substr((string)($r['error'] ?? ''), 0, 1000),
+                              !empty($r['ok']) ? 1 : 0, mb_substr((string)($r['error'] ?? ''), 0, 1000),
                               (int)($_SERVER['ITOPS_USER_ID'] ?? 0) ?: null]);
         } catch (Throwable $e) { /* log table missing until db-update runs — never block the send */ }
         return $r;

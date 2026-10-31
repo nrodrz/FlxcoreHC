@@ -101,35 +101,4 @@ if (!function_exists('itops_sx_ready')) {
         if ($body === '') throw new RuntimeException('The AI answer could not be read. Try again.');
         return ['title' => mb_substr($title !== '' ? $title : $item['title'], 0, 190), 'body' => mb_substr($body, 0, 6000)];
     }
-    /** Plain text to the simple HTML the KB and announcements keep. */
-    function itops_sx_html(string $text): string {
-        $out = [];
-        foreach (preg_split('/\n\s*\n/', trim(str_replace("\r", '', $text))) as $para) {
-            $lines = array_values(array_filter(array_map('trim', explode("\n", $para)), 'strlen'));
-            if ($lines && count(array_filter($lines, fn($l) => preg_match('/^\d+[.)]\s+/', $l))) === count($lines)) {
-                $out[] = '<ol>' . implode('', array_map(fn($l) => '<li>' . htmlspecialchars(preg_replace('/^\d+[.)]\s+/', '', $l), ENT_QUOTES) . '</li>', $lines)) . '</ol>';
-            } elseif ($lines && count(array_filter($lines, fn($l) => preg_match('/^[-•*]\s+/', $l))) === count($lines)) {
-                $out[] = '<ul>' . implode('', array_map(fn($l) => '<li>' . htmlspecialchars(preg_replace('/^[-•*]\s+/', '', $l), ENT_QUOTES) . '</li>', $lines)) . '</ul>';
-            } elseif ($lines) $out[] = '<p>' . implode('<br>', array_map(fn($l) => htmlspecialchars($l, ENT_QUOTES), $lines)) . '</p>';
-        }
-        return implode("\n", $out);
-    }
-    /** Save edited text as a KB article draft or an announcement draft. Returns the new id. */
-    function itops_sx_save(PDO $db, string $as, string $title, string $body, int $by): int {
-        $title = trim($title); $body = trim($body);
-        if (mb_strlen($title) < 3) throw new InvalidArgumentException('Give it a title.');
-        if (mb_strlen($body) < 20) throw new InvalidArgumentException('The text is too short to save.');
-        $html = itops_sx_html($body);
-        if ($as === 'kb') {
-            $slug = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($title)), '-') ?: 'article';
-            $q = $db->prepare('SELECT COUNT(*) FROM itops_kb_articles WHERE slug=?'); $q->execute([$slug]); if ((int)$q->fetchColumn()) $slug .= '-' . substr(md5(uniqid('', true)), 0, 6);
-            $db->prepare("INSERT INTO itops_kb_articles (title, slug, content, author_id, status) VALUES (?,?,?,?,'draft')")->execute([mb_substr($title, 0, 255), mb_substr($slug, 0, 255), $html, $by]);
-            return (int)$db->lastInsertId();
-        }
-        if ($as === 'announcement') {
-            $db->prepare("INSERT INTO itops_announcements (title, body, level, audience, requires_ack, ch_email, status, created_by) VALUES (?,?,'info','all',0,0,'draft',?)")->execute([mb_substr($title, 0, 200), $html, $by]);
-            return (int)$db->lastInsertId();
-        }
-        throw new InvalidArgumentException('Save as a KB article or an announcement.');
-    }
 }

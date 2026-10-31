@@ -103,6 +103,12 @@ do not delete it.
 - **What breaks:** the card lives in Settings → Sign-in & AI, but an administrator with Settings and without Tickets cannot load it (403); in an installation without the Service Desk module nobody can, Super Admin included.
 - **Fix:** `opsh_require($currentUser, 'settings', 'view')` for the settings read (the ticket assistant keeps its own Tickets check).
 
+### R-16 · A real-looking support address is seeded
+- **Found:** ITOps 0001-A005 · **Status:** Open · **ITOps:** fixed in 0001-A005 (empty)
+- **Where:** `sql/schema.sql`, the settings seed: `('support_email','support@company.com')`.
+- **What breaks:** company.com is a real domain; the owner's rule is made-up data only (example.com). An installation that never changes it shows and may use that address.
+- **Fix:** seed it empty (or `support@example.com`), and let the installer or Settings set the real one.
+
 ## Already in the ITOps spec (step 4), still open in the reference app
 
 ### R-11 · Pages answer HTTP 500 when Microsoft 365 is not connected

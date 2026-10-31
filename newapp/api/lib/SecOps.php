@@ -168,7 +168,7 @@ if (!function_exists('itops_so_classes')) {
         }
         return $n;
     }
-    function itops_so_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM itops_m365_role_changes LIMIT 1'); $db->query('SELECT 1 FROM itops_m365_incident_tickets LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
+    function itops_so_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM itops_m365_role_changes LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
     function itops_so_role_label(string $kind, array $p): string {
         $who = ($p['who'] ?? '') ?: '?'; $role = ($p['role'] ?? '') ?: '?';
         if ($kind === 'role_remove') return 'Remove "' . $role . '" from ' . $who;

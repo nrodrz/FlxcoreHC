@@ -129,7 +129,7 @@ if ($what === 'plan') {
         $id = isset($_GET['id']) && ctype_digit((string)$_GET['id']) ? (int)$_GET['id'] : itops_sp_current_id($db);
         $v = $id ? itops_sp_view($db, $id) : null; if (isset($_GET['id']) && !$v) error_response('Unknown plan version.', 404);
         $vers = $db->query('SELECT p.id, p.version, p.status, p.baseline, p.created_at, p.signed_at, p.signed_name, (SELECT COUNT(*) FROM itops_sa_plan_items i WHERE i.plan_id=p.id) AS items FROM itops_sa_plans p ORDER BY p.id DESC LIMIT 50')->fetchAll(PDO::FETCH_ASSOC);
-        $cats = []; try { foreach ($db->query("SELECT c.id, c.name, g.name AS grp FROM itops_ticket_categories c LEFT JOIN itops_ticket_categories g ON g.id=c.parent_id WHERE c.status IS NULL OR c.status='active' ORDER BY COALESCE(g.name,c.name), c.parent_id IS NOT NULL, c.name")->fetchAll(PDO::FETCH_ASSOC) as $c) $cats[] = ['id' => (int)$c['id'], 'name' => ($c['grp'] ? $c['grp'] . ' › ' : '') . $c['name']]; } catch (Throwable $e) {}
+        $cats = [];   // 0001-A005: no ticket categories in this product
         $people = $db->query("SELECT id, display_name FROM itops_users WHERE status='active' ORDER BY display_name")->fetchAll(PDO::FETCH_ASSOC);
         $hasDraft = (bool)$db->query("SELECT COUNT(*) FROM itops_sa_plans WHERE status='draft'")->fetchColumn();
         // BT121 (4d): the planning assistant (on when the AI integration is set up)
@@ -178,15 +178,6 @@ if ($what === 'plan') {
             catch (Throwable $e) { audit_log('sa_ai_failed', 'security_assessment', $pid, 'Security plan v' . $v['plan']['version'], null, ['Asked' => $W[$act], 'Why' => $e->getMessage()]); error_response($e->getMessage(), 502); }
             audit_log('sa_ai_suggest', 'security_assessment', $pid, 'Security plan v' . $v['plan']['version'], null, ['Undecided items sent' => $asked, 'Suggestions kept' => $kept, 'Answers dropped (not an undecided item of this plan, or not a decision)' => $dropped, 'Sent' => 'rules, counts and the tenant profile; no names']);
             json_response(['ok' => true, 'kept' => $kept, 'dropped' => $dropped, 'asked' => $asked, 'suggestions' => (object)itops_sx_suggestions($db, $pid)]);
-        }
-        if ($act === 'save') {
-            $as = (string)($body['as'] ?? '');
-            if ($as === 'kb') { if (!itops_module_on('knowledge') || !itops_can($currentUser, 'kb', 'create')) $refuse('Saving a KB article needs Knowledge Base (create).', $W[$act], 403); }
-            elseif ($as === 'announcement') { if (!itops_module_on('announcements') || !itops_can($currentUser, 'announcements', 'create')) $refuse('Saving an announcement needs Announcements (create).', $W[$act], 403); }
-            try { $nid = itops_sx_save($db, $as, (string)($body['title'] ?? ''), (string)($body['body'] ?? ''), (int)$currentUser['id']); }
-            catch (InvalidArgumentException $e) { $refuse($e->getMessage(), $W[$act]); }
-            audit_log($as === 'kb' ? 'created' : 'announcement_created', $as === 'kb' ? 'kb_article' : 'announcement', $nid, mb_substr(trim((string)$body['title']), 0, 250), null, ['Status' => 'draft', 'From' => 'Security plan: planning assistant, edited by a person', 'Rule' => mb_substr((string)($body['rule_id'] ?? ''), 0, 60)]);
-            json_response(['ok' => true, 'id' => $nid, 'as' => $as]);
         }
         $rid = (string)($body['rule_id'] ?? ''); $item = null; foreach ($v['items'] as $i) if ($i['rule_id'] === $rid) $item = $i;
         if (!$item) $refuse('That rule is not in the plan.', $W[$act]);

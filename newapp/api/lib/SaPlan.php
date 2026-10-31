@@ -109,16 +109,16 @@ if (!function_exists('itops_sp_ready')) {
                 $db->prepare("INSERT INTO itops_sa_plans (version, status, baseline, run_id, created_by, created_at, updated_at) VALUES (?,'draft',?,?,?,NOW(),NOW())")->execute([$ver, $baseline, $run, $userId]);
                 $pid = (int)$db->lastInsertId();
             }
-            $ins = $db->prepare('INSERT INTO itops_sa_plan_items (plan_id, rule_id, stage, seq, found_status, found_detail, affected_count, decision, note, owner_id, due_date, expires_on, ticket_id, decided_by, decided_at)
-                                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+            $ins = $db->prepare('INSERT INTO itops_sa_plan_items (plan_id, rule_id, stage, seq, found_status, found_detail, affected_count, decision, note, owner_id, due_date, expires_on, decided_by, decided_at)
+                                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
             $carried = 0; $expired = 0; $seq = 0;
             foreach ($items as $it) {
-                $p = $prev[$it['rule_id']] ?? null; $dec = 'undecided'; $note = null; $owner = null; $due = null; $exp = null; $tid = null; $by = null; $at = null;
+                $p = $prev[$it['rule_id']] ?? null; $dec = 'undecided'; $note = null; $owner = null; $due = null; $exp = null; $by = null; $at = null;
                 if ($p && $p['decision'] !== 'undecided') {
-                    $dec = $p['decision']; $note = $p['note']; $owner = $p['owner_id']; $due = $p['due_date']; $exp = $p['expires_on']; $tid = $p['ticket_id']; $by = $p['decided_by']; $at = $p['decided_at']; $carried++;
+                    $dec = $p['decision']; $note = $p['note']; $owner = $p['owner_id']; $due = $p['due_date']; $exp = $p['expires_on']; $by = $p['decided_by']; $at = $p['decided_at']; $carried++;
                     if ($dec === 'accept' && $exp && strtotime($exp) < strtotime(date('Y-m-d'))) { $dec = 'undecided'; $note = 'The accepted risk expired on ' . date('m/d/Y', strtotime($exp)) . ': decide again. (Reason given then: ' . mb_substr((string)$p['note'], 0, 300) . ')'; $exp = null; $expired++; $carried--; }
                 }
-                $ins->execute([$pid, $it['rule_id'], $it['stage'], ++$seq, $it['found_status'], $it['found_detail'], $it['affected_count'], $dec, $note, $owner, $due, $exp, $tid, $by, $at]);
+                $ins->execute([$pid, $it['rule_id'], $it['stage'], ++$seq, $it['found_status'], $it['found_detail'], $it['affected_count'], $dec, $note, $owner, $due, $exp, $by, $at]);
             }
             $db->commit();
         } catch (Throwable $e) { $db->rollBack(); throw $e; }
@@ -131,7 +131,7 @@ if (!function_exists('itops_sp_ready')) {
         $cat = itops_sa_catalog(); $meta = itops_sa_meta(); $areas = itops_sa_areas(); $lic = itops_sa_licenses(); $D = itops_sp_decisions(); $S = itops_sp_stages();
         $latest = (int)$db->query('SELECT MAX(id) FROM itops_sa_runs')->fetchColumn(); $now = [];
         if ($latest) { $q = $db->prepare('SELECT check_id, status FROM itops_sa_results WHERE run_id=?'); $q->execute([$latest]); $now = $q->fetchAll(PDO::FETCH_KEY_PAIR); }
-        $q = $db->prepare('SELECT i.*, o.display_name AS owner_name, d.display_name AS decided_by_name, NULL AS ticket_number, NULL AS ticket_status FROM itops_sa_plan_items i
+        $q = $db->prepare('SELECT i.*, o.display_name AS owner_name, d.display_name AS decided_by_name FROM itops_sa_plan_items i
                            LEFT JOIN itops_users o ON o.id=i.owner_id LEFT JOIN itops_users d ON d.id=i.decided_by WHERE i.plan_id=? ORDER BY i.stage, i.seq');
         $q->execute([$planId]); $items = [];
         foreach ($q->fetchAll(PDO::FETCH_ASSOC) as $x) {
@@ -143,8 +143,7 @@ if (!function_exists('itops_sp_ready')) {
                 'found_status' => $x['found_status'], 'found_detail' => $x['found_detail'], 'affected_count' => (int)$x['affected_count'],
                 'now' => $st, 'fixed' => $st === 'pass' || $st === 'na',
                 'decision' => $x['decision'], 'decision_label' => $D[$x['decision']] ?? $x['decision'], 'note' => $x['note'], 'owner_id' => $x['owner_id'] ? (int)$x['owner_id'] : null, 'owner_name' => $x['owner_name'],
-                'due_date' => $x['due_date'], 'expires_on' => $x['expires_on'], 'expired' => $x['decision'] === 'accept' && $x['expires_on'] && $x['expires_on'] < date('Y-m-d'), 'ticket_id' => $x['ticket_id'] ? (int)$x['ticket_id'] : null, 'ticket_number' => $x['ticket_number'], 'ticket_status' => $x['ticket_status'],
-                'decided_by' => $x['decided_by_name'], 'decided_at' => $x['decided_at']];
+                'due_date' => $x['due_date'], 'expires_on' => $x['expires_on'], 'expired' => $x['decision'] === 'accept' && $x['expires_on'] && $x['expires_on'] < date('Y-m-d'), 'decided_by' => $x['decided_by_name'], 'decided_at' => $x['decided_at']];
         }
         $counts = array_fill_keys(array_keys($D), 0); foreach ($items as $i) $counts[$i['decision']]++;
         $soon = count(array_filter($items, fn($i) => $i['decision'] === 'accept' && $i['expires_on'] && strtotime($i['expires_on']) < time() + 30 * 86400));
@@ -174,14 +173,13 @@ if (!function_exists('itops_sp_ready')) {
         if ($dec !== 'accept') $exp = null;
         $ownTx = !$db->inTransaction(); if ($ownTx) $db->beginTransaction();
         try {
-        $tid = !empty($it['ticket_id']) ? (int)$it['ticket_id'] : null; $tn = null;   // a ticket linked by the reference app's data is kept as it was
         $old = ['decision' => $it['decision'], 'note' => $it['note'], 'owner_id' => $it['owner_id'], 'due_date' => $it['due_date'], 'expires_on' => $it['expires_on']];
-        $db->prepare('UPDATE itops_sa_plan_items SET decision=?, note=?, owner_id=?, due_date=?, expires_on=?, ticket_id=?, decided_by=?, decided_at=NOW() WHERE id=?')
-           ->execute([$dec, $note !== '' ? mb_substr($note, 0, 1000) : null, $owner, $due, $exp, $tid, (int)$user['id'], $itemId]);
+        $db->prepare('UPDATE itops_sa_plan_items SET decision=?, note=?, owner_id=?, due_date=?, expires_on=?, decided_by=?, decided_at=NOW() WHERE id=?')
+           ->execute([$dec, $note !== '' ? mb_substr($note, 0, 1000) : null, $owner, $due, $exp, (int)$user['id'], $itemId]);
         $db->prepare('UPDATE itops_sa_plans SET updated_at=NOW() WHERE id=?')->execute([(int)$it['plan_id']]);
         if ($ownTx) $db->commit();
         } catch (Throwable $e) { if ($ownTx && $db->inTransaction()) $db->rollBack(); throw $e; }
-        return ['old' => $old, 'new' => ['decision' => $dec, 'note' => $note, 'owner_id' => $owner, 'due_date' => $due, 'expires_on' => $exp], 'rule_id' => $it['rule_id'], 'ticket_number' => $tn, 'ticket_id' => $tid, 'version' => (int)$it['version']];
+        return ['old' => $old, 'new' => ['decision' => $dec, 'note' => $note, 'owner_id' => $owner, 'due_date' => $due, 'expires_on' => $exp], 'rule_id' => $it['rule_id'], 'version' => (int)$it['version']];
     }
 
     /** Sign off a draft: the client contact's name and title. The signed plan stays as it was. */
@@ -195,7 +193,7 @@ if (!function_exists('itops_sp_ready')) {
         $db->beginTransaction();
         try {
             $q = $db->prepare('SELECT id FROM itops_sa_plans WHERE id=? FOR UPDATE'); $q->execute([$planId]);
-            $q = $db->prepare("SELECT rule_id, stage, found_status, decision, note, owner_id, due_date, expires_on, ticket_id FROM itops_sa_plan_items WHERE plan_id=? ORDER BY stage, seq FOR UPDATE"); $q->execute([$planId]);
+            $q = $db->prepare("SELECT rule_id, stage, found_status, decision, note, owner_id, due_date, expires_on FROM itops_sa_plan_items WHERE plan_id=? ORDER BY stage, seq FOR UPDATE"); $q->execute([$planId]);
             $items = $q->fetchAll(PDO::FETCH_ASSOC);
             $und = count(array_filter($items, fn($i) => $i['decision'] === 'undecided'));
             if ($und) throw new InvalidArgumentException($und . ' item' . ($und === 1 ? ' is' : 's are') . ' not decided yet. Decide every item (Later is a decision) before signing off.');

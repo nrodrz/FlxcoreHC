@@ -31,21 +31,6 @@ require_once __DIR__ . '/Secrets.php';
 if (!function_exists('itops_pc_table')) {
     if (!defined('ITOPS_PC_LINK_DAYS')) define('ITOPS_PC_LINK_DAYS', 60);
 
-    function itops_pc_table(PDO $db): void {
-        $db->exec("CREATE TABLE IF NOT EXISTS itops_pc_people (
-            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            email VARCHAR(190) NOT NULL,
-            person_name VARCHAR(190) NOT NULL DEFAULT '',
-            token_hash CHAR(64) NOT NULL,
-            status VARCHAR(12) NOT NULL DEFAULT 'invited',
-            invited_by INT UNSIGNED NULL, invited_at DATETIME NOT NULL, expires_at DATETIME NOT NULL,
-            consent_at DATETIME NULL, consent_name VARCHAR(190) NULL, consent_ip VARCHAR(45) NULL, consent_version INT NULL,
-            report MEDIUMTEXT NULL, reported_at DATETIME NULL, reports INT NOT NULL DEFAULT 0,
-            path VARCHAR(10) NULL, package_at DATETIME NULL,
-            withdrawn_at DATETIME NULL, withdraw_note VARCHAR(300) NULL,
-            UNIQUE KEY uq_token (token_hash), KEY k_email (email)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-    }
     function itops_pc_ready(PDO $db): bool { try { $db->query('SELECT 1 FROM itops_pc_people LIMIT 1'); return true; } catch (Throwable $e) { return false; } }
 
     // ───────────────────────────── the program's settings ─────────────────────────────

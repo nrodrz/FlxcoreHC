@@ -90,9 +90,8 @@ if ($sec === 'templates') {
         if (trim($body['name'] ?? '') === '') error_response('Name is required');
         $kind = ($body['kind'] ?? 'onboard') === 'offboard' ? 'offboard' : 'onboard';
         try {
-            $std = isset($body['std_req_ids']) && is_array($body['std_req_ids']) ? json_encode(array_values(array_map('intval', $body['std_req_ids']))) : null;
-            $db->prepare("INSERT INTO itops_ob_templates (name,kind,description,department_id,status,std_req_ids,created_by,created_at) VALUES (?,?,?,?, 'active', ?, ?, NOW())")
-               ->execute([trim($body['name']), $kind, $body['description'] ?? '', ($body['department_id'] ?? '') ?: null, $std, (int)$currentUser['id']]);
+            $db->prepare("INSERT INTO itops_ob_templates (name,kind,description,department_id,status,created_by,created_at) VALUES (?,?,?,?, 'active', ?, NOW())")
+               ->execute([trim($body['name']), $kind, $body['description'] ?? '', ($body['department_id'] ?? '') ?: null, (int)$currentUser['id']]);
             $newTplId = (int)$db->lastInsertId();
         } catch (\Throwable $e) { $needMig($e); }
         audit_log('ob_template_created', 'onboarding', $newTplId, $body['name']);
@@ -122,8 +121,7 @@ if ($sec === 'templates') {
         $sets = []; $bind = [];
         foreach (['name', 'description', 'status'] as $f) if (isset($body[$f])) { $sets[] = "$f=?"; $bind[] = $body[$f]; }
         if (isset($body['department_id'])) { $sets[] = "department_id=?"; $bind[] = $body['department_id'] ?: null; }
-        if (isset($body['std_req_ids']) && is_array($body['std_req_ids'])) { $sets[] = "std_req_ids=?"; $bind[] = json_encode(array_values(array_map('intval', $body['std_req_ids']))); }
-        $tq = $db->prepare('SELECT name, description, status, department_id, std_req_ids FROM itops_ob_templates WHERE id=?'); $tq->execute([$id]); $tOld = $tq->fetch(PDO::FETCH_ASSOC) ?: [];
+        $tq = $db->prepare('SELECT name, description, status, department_id FROM itops_ob_templates WHERE id=?'); $tq->execute([$id]); $tOld = $tq->fetch(PDO::FETCH_ASSOC) ?: [];
         if ($sets) { $bind[] = $id; $db->prepare("UPDATE itops_ob_templates SET " . implode(',', $sets) . " WHERE id=?")->execute($bind); }
         $tq->execute([$id]); $tNew = $tq->fetch(PDO::FETCH_ASSOC) ?: [];   // review SEC-28: template changes are in the Audit Log with values
         $tb = []; $ta = []; foreach ($tNew as $k => $v) if ((string)($tOld[$k] ?? '') !== (string)$v) { $tb[$k] = mb_substr((string)($tOld[$k] ?? ''), 0, 300); $ta[$k] = mb_substr((string)$v, 0, 300); }
@@ -147,7 +145,7 @@ if ($sec === 'runs') {
         try {
             $q = $db->prepare("SELECT r.*, t.name AS template_name,
                                   (SELECT COUNT(*) FROM itops_ob_run_tasks x WHERE x.run_id=r.id) AS total,
-                                  (SELECT COUNT(*) FROM itops_ob_run_tasks x WHERE x.run_id=r.id AND x.status IN ('done','skipped')) AS done,
+                                  (SELECT COUNT(*) FROM itops_ob_run_tasks x WHERE x.run_id=r.id AND x.status IN ('done','skipped')) AS done
                                 FROM itops_ob_runs r LEFT JOIN itops_ob_templates t ON t.id=r.template_id
                                 WHERE $scW
                                 ORDER BY (r.status='in_progress') DESC, r.created_at DESC LIMIT 200");
@@ -178,10 +176,10 @@ if ($sec === 'runs') {
         if (!$tpl) error_response('Template not found', 404);
         $kind = $tpl['kind'];
         try {
-            $db->prepare("INSERT INTO itops_ob_runs (template_id,kind,subject_name,subject_email,subject_upn,department_id,start_date,status,notes,std_req_ids,created_by,created_at)
-                          VALUES (?,?,?,?,?,?,?, 'in_progress', ?, ?, ?, NOW())")
+            $db->prepare("INSERT INTO itops_ob_runs (template_id,kind,subject_name,subject_email,subject_upn,department_id,start_date,status,notes,created_by,created_at)
+                          VALUES (?,?,?,?,?,?,?, 'in_progress', ?, ?, NOW())")
                ->execute([$tplId, $kind, trim($body['subject_name']), ($body['subject_email'] ?? '') ?: null, ($body['subject_upn'] ?? '') ?: (($body['subject_email'] ?? '') ?: null),
-                          ($body['department_id'] ?? '') ?: $tpl['department_id'], ($body['start_date'] ?? '') ?: null, $body['notes'] ?? '', ($tpl['std_req_ids'] ?? null), (int)$currentUser['id']]);
+                          ($body['department_id'] ?? '') ?: $tpl['department_id'], ($body['start_date'] ?? '') ?: null, $body['notes'] ?? '', (int)$currentUser['id']]);
         } catch (\Throwable $e) { $needMig($e); }
         $runId = (int)$db->lastInsertId();
         // Optional person details used by "M365: create account" (Phase B).

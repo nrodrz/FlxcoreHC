@@ -526,24 +526,10 @@ function itops_email(string $key, string $to, array $vars = [], array $opt = [])
     if (!isset($vars['recipient_name'])) {
         try { $st = getDB()->prepare('SELECT display_name FROM itops_users WHERE email=? LIMIT 1'); $st->execute([$to]); $vars['recipient_name'] = (string)($st->fetchColumn() ?: ''); } catch (Throwable $e) {}
     }
-    // Ticket emails: links open that ticket in the app; people with an ITOps account also get the "follow it online" box.
-    if (!empty($opt['ticket_id'])) {
-        $turl = itops_tpl_ticket_url((int)$opt['ticket_id']);
-        $base = defined('APP_URL') ? rtrim(APP_URL, '/') : '';
-        if (!isset($vars['link']) || $vars['link'] === '' || rtrim((string)$vars['link'], '/') === $base) $vars['link'] = $turl;
-        if (!isset($vars['portal_link'])) {
-            $hasAccount = false;
-            try {
-                $st = getDB()->prepare(!empty($opt['user_id']) ? "SELECT 1 FROM itops_users WHERE id=? AND status='active'" : "SELECT 1 FROM itops_users WHERE email=? AND status='active' LIMIT 1");
-                $st->execute([!empty($opt['user_id']) ? (int)$opt['user_id'] : $to]); $hasAccount = (bool)$st->fetchColumn();
-            } catch (Throwable $e) {}
-            $vars['portal_link'] = $hasAccount ? itops_tpl_portal_link($turl, (string)($vars['ticket_number'] ?? '')) : '';
-        }
-    }
     $lang = $opt['lang'] ?? itops_email_lang($to, $opt['user_id'] ?? null);
     $r = itops_tpl_render($key, $lang, $vars);
     if (!function_exists('mail_send')) require_once __DIR__ . '/Mail.php';
-    return mail_send($to, $r['subject'], $r['text'], ['kind' => $key, 'ticket_id' => $opt['ticket_id'] ?? null, 'html' => $r['html'], 'lang' => $lang]);
+    return mail_send($to, $r['subject'], $r['text'], ['kind' => $key, 'html' => $r['html'], 'lang' => $lang]);
 }
 
 }

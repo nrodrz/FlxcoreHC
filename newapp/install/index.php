@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $schema = file_get_contents(__DIR__ . '/../sql/schema.sql');
                 $pdo->exec($schema);
                 
-                // Run seed data: the first admin, categories and defaults. Sample records only when asked.
+                // Run seed data: the first admin. Sample records only when asked.
                 $seed = file_get_contents(__DIR__ . '/../sql/seed.sql');
                 if ($seed) $pdo->exec($seed);
                 if (!empty($_POST['sample']) && is_file(__DIR__ . '/../sql/sample.sql')) $pdo->exec(file_get_contents(__DIR__ . '/../sql/sample.sql'));
@@ -239,13 +239,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             unset($_SESSION['install']['o365_client_secret'], $_SESSION['install']['db_pass'], $_SESSION['install']['admin_password']);
             
-            // Update credential seed data owner_id
-            $db->exec("UPDATE itops_credentials SET owner_id=$adminId WHERE owner_id=1 OR owner_id IS NULL");
-            $db->exec("UPDATE itops_contracts SET owner_id=$adminId WHERE owner_id=1 OR owner_id IS NULL");
-            
-            // Encrypt seed credentials with vault key
-            // (In production, seed credentials would be entered through the UI)
-            
             // Bring the fresh schema fully up to date. schema.sql holds the original tables; every later
             // feature (equipment loans, mail log, terms, email templates, …) is created by the migrations.
             // They are idempotent and skip content that the seed already inserted.
@@ -386,7 +379,7 @@ This wizard will set up ITOps on your server. You'll need your MySQL database cr
 <div class="field"><label>Username</label><input name="db_user" required></div>
 <div class="field"><label>Password</label><input name="db_pass" type="password"></div>
 </div>
-<div class="field"><label style="display:flex;gap:8px;align-items:center;font-weight:normal"><input type="checkbox" name="sample" value="1" style="width:auto"> Add sample records (for trying the app: credentials, contracts, articles, tickets and calendar entries with made-up values)</label><small>Leave this off for a real installation.</small></div>
+<div class="field"><label style="display:flex;gap:8px;align-items:center;font-weight:normal"><input type="checkbox" name="sample" value="1" style="width:auto"> Add sample records (for trying the app: two onboarding templates with made-up values)</label><small>Leave this off for a real installation.</small></div>
 <div class="actions"><div></div><button class="btn btn-primary" type="submit">Test & Install Schema →</button></div>
 </form>
 

@@ -30,52 +30,14 @@ if (!function_exists('itops_bin_kinds')) {
      */
     function itops_bin_kinds(): array {
         $nm = fn(...$k) => function (array $r) use ($k) { foreach ($k as $c) if (isset($r[$c]) && trim((string)$r[$c]) !== '') return (string)$r[$c]; return '#' . ($r['id'] ?? ''); };
-        return [
-            'ticket' => ['itops_tickets', 'Ticket', 'tickets', fn($r) => trim(($r['ticket_number'] ?? '') . ' · ' . ($r['subject'] ?? ''), ' ·'),
-                'children' => [['itops_ticket_comments', 'ticket_id'], ['itops_ticket_attachments', 'ticket_id'], ['itops_ticket_csat', 'ticket_id'], ['itops_sla_alerts', 'ticket_id'],
-                               ['itops_major_reviews', 'ticket_id'], ['itops_ci_links', 'entity_id', "entity_type='ticket'"]],
-                'files' => ['itops_ticket_attachments' => 'file_path']],
-            'ticket_file' => ['itops_ticket_attachments', 'Ticket file', 'tickets', $nm('file_name'), 'files' => ['itops_ticket_attachments' => 'file_path']],
-            'kb_article' => ['itops_kb_articles', 'Knowledge Base article', 'kb', $nm('title'), 'children' => [['itops_kb_votes', 'article_id']],
-                'used' => [['itops_case_svc', 'kb_article_id', 'case (known error or change)', null, 'cases (known error or change)']], 'legacy_status' => 'draft'],
-            'sop' => ['itops_sops', 'SOP', 'sops', $nm('title'), 'children' => [['itops_sop_versions', 'sop_id'], ['itops_sop_acks', 'sop_id'], ['itops_sop_audience', 'sop_id']], 'legacy_status' => 'draft'],
-            'job_description' => ['itops_job_descriptions', 'Job description', 'job_descriptions', $nm('title'), 'children' => [['itops_jd_versions', 'jd_id']], 'legacy_status' => 'draft'],
-            'document' => ['itops_documents', 'Document', 'sops', $nm('title', 'file_name'), 'files' => ['itops_documents' => 'file_path'], 'legacy_status' => 'active'],
-            'credential' => ['itops_credentials', 'Credential', 'creds', $nm('name'), 'children' => [['itops_ci_links', 'entity_id', "entity_type='credential'"]], 'legacy_status' => 'current'],
-            'contract' => ['itops_contracts', 'Contract', 'contracts', $nm('title'),
-                'children' => [['itops_attachments', 'entity_id', "entity_type='contracts'"], ['itops_ci_links', 'entity_id', "entity_type='contract'"], ['itops_calendar_events', 'entity_id', "entity_type='contract'"]],
-                'files' => ['itops_attachments' => 'file_path'],
-                'used' => [['itops_invoice_lines', 'contract_id', 'invoice line'], ['itops_budget_lines', 'contract_id', 'IT Budget line'], ['itops_license_subs', 'contract_id', 'license subscription']],
-                'legacy_status' => 'active'],
-            'vendor' => ['itops_vendors', 'Vendor', 'vendors', $nm('name'),
-                'children' => [['itops_vendor_contacts', 'vendor_id'], ['itops_attachments', 'entity_id', "entity_type='vendors'"]], 'files' => ['itops_attachments' => 'file_path'],
-                'used' => [['itops_contracts', 'vendor_id', 'contract'], ['itops_invoices', 'vendor_id', 'invoice'], ['itops_budget_lines', 'vendor_id', 'IT Budget line'], ['itops_budget_actuals', 'vendor_id', 'IT Budget spend entry', null, 'IT Budget spend entries']],
-                'legacy_status' => 'active'],
-            'vendor_contact' => ['itops_vendor_contacts', 'Vendor contact', 'vendors', $nm('name', 'email')],
-            'invoice' => ['itops_invoices', 'Invoice', 'invoices', fn($r) => trim(($r['invoice_number'] ?? '') . ' · ' . ($r['invoice_date'] ?? ''), ' ·'),
-                'children' => [['itops_invoice_lines', 'invoice_id'], ['itops_attachments', 'entity_id', "entity_type='invoices'"]], 'files' => ['itops_attachments' => 'file_path']],
-            'file' => ['itops_attachments', 'File', '', $nm('file_name'), 'files' => ['itops_attachments' => 'file_path']],
-            'budget_line' => ['itops_budget_lines', 'IT Budget line', 'budget', $nm('name'), 'used' => [['itops_budget_actuals', 'line_id', 'spend entry', null, 'spend entries'], ['itops_case_budget', 'line_id', 'case']]],
+        return [   // 0001-A005: the kinds of records this product has (the reference app had tickets, KB, SOPs, contracts…)
             'role' => ['itops_roles', 'Role', 'roles', $nm('name'), 'used' => [['itops_users', 'role_id', 'person', null, 'people']]],
-            'ticket_category' => ['itops_ticket_categories', 'Ticket category', 'categories', $nm('name'),
-                'used' => [['itops_ticket_categories', 'parent_id', 'category inside it', null, 'categories inside it']], 'relink' => [['itops_tickets', 'category_id']]],
-            'announcement' => ['itops_announcements', 'Announcement', 'announcements', $nm('title'),
-                'children' => [['itops_announcement_recipients', 'announcement_id'], ['itops_announcement_audience', 'announcement_id'], ['itops_announcement_external', 'announcement_id'], ['itops_announcement_audience_ext', 'announcement_id']]],
-            'calendar_event' => ['itops_calendar_events', 'Calendar entry', 'calendar', fn($r) => trim(($r['title'] ?? '') . ' · ' . substr((string)($r['start_date'] ?? ''), 0, 10), ' ·'),
-                'children' => [['itops_calendar_attendees', 'event_id'], ['itops_calendar_reminders_sent', 'event_id']]],
-            'form' => ['itops_forms', 'Form', 'forms', $nm('name'), 'children' => [['itops_form_submissions', 'form_id']]],
             'ob_template' => ['itops_ob_templates', 'Onboarding checklist template', 'onboarding', $nm('name'), 'children' => [['itops_ob_template_tasks', 'template_id']]],
-            'case_template' => ['itops_case_templates', 'Case template', 'cases', $nm('name'), 'children' => [['itops_case_template_tasks', 'template_id']]],
             'm365_template' => ['itops_m365_templates', 'Onboarding template (Microsoft 365)', 'onboarding', $nm('name')],
-            'uptime_monitor' => ['itops_uptime_monitors', 'Uptime monitor', 'uptime', $nm('name', 'url'), 'children' => [['itops_uptime_incidents', 'monitor_id']]],
-            'backup_job' => ['itops_backup_jobs', 'Backup', 'backups', $nm('name'), 'children' => [['itops_backup_events', 'job_id']]],
-            'scorecard_measurable' => ['itops_scorecard_measurables', 'Scorecard measurable', 'scorecard', $nm('name'), 'children' => [['itops_scorecard_entries', 'measurable_id']]],
-            'std_requirement' => ['itops_std_requirements', 'Standards requirement', 'standards', $nm('code', 'title', 'name'), 'children' => [['itops_std_evidence', 'requirement_id']], 'files' => ['itops_std_evidence' => 'file_path']],
         ];
     }
     /** The permission module whose people may see / put back / delete for good an entry ('' = Super Admin only). */
     function itops_bin_module_of(string $kind, array $row): string {
-        if ($kind === 'file') return ['contracts' => 'contracts', 'vendors' => 'vendors', 'assets' => 'assets', 'asset_loans' => 'assets', 'invoices' => 'invoices'][(string)($row['entity_type'] ?? '')] ?? '';
         if ($kind === 'role') return '';   // roles are changed by a Super Admin only
         return (string)(itops_bin_kinds()[$kind][2] ?? '');
     }
@@ -311,21 +273,4 @@ if (!function_exists('itops_bin_kinds')) {
         return ['items' => $out, 'keep_days' => $days, 'kinds' => array_map(fn($s) => $s[1], $K), 'super' => ($user['role_slug'] ?? '') === 'super_admin'];
     }
 
-    /**
-     * BT141 database update: records deleted before Deleted items existed were only marked "archived". Those whose last
-     * Audit Log entry is a delete move into Deleted items (marked as earlier ones); one still used by others stays as it is.
-     */
-    function itops_bin_adopt_legacy(PDO $db): string {
-        itops_bin_table($db); $moved = 0; $kept = 0;
-        $ent = ['kb_article' => 'kb_article', 'sop' => 'sop', 'job_description' => 'job_description', 'document' => 'document', 'credential' => 'credential', 'contract' => 'contract', 'vendor' => 'vendor'];
-        foreach ($ent as $kind => $et) {
-            $s = itops_bin_kinds()[$kind]; if (!itops_bin_has($db, $s[0], 'status')) continue;
-            $q = $db->query("SELECT t.id FROM `" . $s[0] . "` t WHERE t.status='archived' AND (SELECT a.action FROM itops_audit_log a WHERE a.entity_type=" . $db->quote($et) . " AND a.entity_id=t.id ORDER BY a.id DESC LIMIT 1)='deleted'");
-            foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $id) {
-                try { if (itops_bin_put($db, $kind, (int)$id, null, true)) $moved++; } catch (ItopsBinRefused $e) { $kept++; }
-            }
-        }
-        if (($moved || $kept) && function_exists('audit_log')) audit_log('bin_adopted', 'system', 0, 'Deleted items: ' . $moved . ' earlier deleted record(s) moved in' . ($kept ? ', ' . $kept . ' still in use left as they were' : ''));
-        return 'Deleted items ready' . ($moved ? ' (' . $moved . ' earlier deleted records moved in)' : '');
-    }
 }

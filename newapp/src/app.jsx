@@ -9,7 +9,7 @@ function detectBase(){
   return (p||'') + '/api';
 }
 let API_BASE = detectBase();
-const APP_BUILD='0001-A004';
+const APP_BUILD='0001-A005';
 /* BT96: the product and its owner — fixed, not a setting (the name people see is appName()). */
 const ITOPS_PRODUCT='ITOps', ITOPS_OWNER='Indisse-BTS', ITOPS_YEARS='2026';   /* BT100: the owner is named as the business */
 /* BT20: the product is sold as "ITOps", but each client can rename it (Settings → Branding → App name).
@@ -683,7 +683,7 @@ function SampleRecords({toast}){
     setBusy(true); try{ const r=await api('POST','/dbupdate/sample',{confirm:'REMOVE'}); toast('Removed '+r.removed+' sample record'+(r.removed===1?'':'s')+(r.kept&&r.kept.length?' · '+r.kept.length+' kept (in use)':''),'ok'); }catch(e){ toast(e.message); } setBusy(false); load(); };
   return <div className="card" style={{marginTop:14}} data-sample-card="1">
     <div style={{fontSize:15,fontWeight:700,marginBottom:4}}>Sample records</div>
-    <div style={{fontSize:13,color:'var(--t4)',marginBottom:10}}>The made-up credentials, contracts, articles, tickets and calendar entries that the installer adds when “Add sample records” is ticked. Only records that still hold the sample values are found; one that is in use is kept.</div>
+    <div style={{fontSize:13,color:'var(--t4)',marginBottom:10}}>The two made-up onboarding templates that the installer adds when “Add sample records” is ticked. Only templates that still hold the sample name and description are found.</div>
     {err?<div style={{color:'var(--red)',fontSize:14}}>{err}</div>:!d?<div style={{fontSize:14,color:'var(--t4)'}}>Looking…</div>:!d.available?<div style={{fontSize:14,color:'var(--t4)'}}>This installation has no list of sample records.</div>:
     <div>
       {d.remove===0&&d.keep===0?<div style={{display:'flex',alignItems:'center',gap:9}} data-sample-none="1"><span className="dot" style={{background:'var(--green)'}}/><span style={{fontSize:14}}>No sample records here.</span></div>:<div>

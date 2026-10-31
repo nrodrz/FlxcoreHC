@@ -36,7 +36,7 @@ switch ($method) {
             'mail_smtp_user'          => $cfg['mail_smtp_user'] ?? '',
             'mail_smtp_pass_set'      => !empty($cfg['mail_smtp_pass_enc']) ? 1 : 0,
             'mail_auto_tick'          => $cfg['mail_auto_tick'] ?? '1',
-            'mail_log'                => (function () { try { return getDB()->query("SELECT l.id,l.to_email,l.subject,l.method,l.kind,l.ticket_id,l.ok,l.error,l.created_at,u.display_name AS sent_by_name FROM itops_mail_log l LEFT JOIN itops_users u ON u.id=l.sent_by ORDER BY l.id DESC LIMIT 40")->fetchAll(); } catch (Throwable $e) { return []; } })(),
+            'mail_log'                => (function () { try { return getDB()->query("SELECT l.id,l.to_email,l.subject,l.method,l.kind,l.ok,l.error,l.created_at,u.display_name AS sent_by_name FROM itops_mail_log l LEFT JOIN itops_users u ON u.id=l.sent_by ORDER BY l.id DESC LIMIT 40")->fetchAll(); } catch (Throwable $e) { return []; } })(),
             'auto_tick_last'          => (function () { try { $v = getDB()->query("SELECT sval FROM itops_settings WHERE skey='auto_tick_last'")->fetchColumn(); return $v ? json_decode($v, true) : null; } catch (Throwable $e) { return null; } })(),
         ]);
         break;

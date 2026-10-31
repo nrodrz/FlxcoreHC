@@ -3,6 +3,31 @@ Microsoft 365 Administration. Newest first.
 Build IDs match the stamp shown under the app and in the browser console.
 
 ========================================================================
+0001-A005 — Clean starting database (10/31/2026)
+            [Fresh installation only (no installation exists yet). Press Ctrl+F5 after uploading.]
+  - A new installation builds this product's 52 tables from sql/schema.sql, in their final shape (was the reference
+    app's original tables plus its 121 database updates: 148 tables, 96 of them for removed modules). The update list
+    starts empty: a later change of the database is one new step in api/lib/Migrations.php
+    (<date>_<n>_<build>_<what>), the same on a new installation and an updated one. Owner decision 10/31/2026.
+  - Columns of removed modules are gone from the tables that stay (ticket on emails, plan items and risk follow-ups;
+    standards and vTiger on onboarding runs and templates).
+  - Default roles for a Microsoft 365 team: Super Admin, Admin, Department Admin, Manager, Service desk (Microsoft 365),
+    Read-only, Auditor, and "Signed in, no access" — the role given to someone the first time they sign in with
+    Microsoft: they see nothing until an administrator gives them a role (it used to open tickets, KB and SOPs).
+  - Sample records: two made-up onboarding templates (was credentials, contracts, articles, tickets and a calendar
+    entry); Settings → Maintenance → Sample records finds and removes them. The support email default is empty (it
+    was a real-looking address).
+  - Deleted items, the data dictionary and database health list only this product's tables and records.
+  - Server: 21 more library files deleted (the ones only the old updates loaded: phone systems, Jotform, company
+    systems, server performance, integration audit, signatures, standards…), the content library and its update;
+    Migrations.php from about 2,500 lines to 68.
+  - Fixed: the onboarding History list answered a server error since 0001-A004 (a query left with a stray comma when
+    the vTiger part was removed). The check now opens it, and 20 other product endpoints.
+  - Tests: dev/check-app.mjs 29 checks: also a fresh installation is exactly the baseline, nothing to update, and the
+    sample templates are found and removed.
+  - Found for the reference app: R-16, a real-looking support address seeded in sql/schema.sql.
+
+========================================================================
 0001-A004 — Server of this product only (10/30/2026)
             [DB update: no. Press Ctrl+F5 after uploading.]
   - Scheduled jobs: one job, cron-sla.php (scheduled offboarding, onboarding reminders, the monthly access re-check,

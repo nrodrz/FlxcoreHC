@@ -40,6 +40,8 @@ ALSO
 
 15. GET /api/ai (Settings → Sign-in & AI card) requires Tickets · View: an admin with Settings but not Tickets gets 403. Require Settings · View for the settings read; keep the Tickets check on the ticket assistant.
 
+16. sql/schema.sql seeds support_email = 'support@company.com' — a real domain (made-up data only: example.com). Seed it empty, or support@example.com.
+
 ALREADY KNOWN, STILL OPEN
 11. With Microsoft 365 not connected, m365hub/m365-defender, m365-service-health and m365-storage answer 500 → answer 409 with the message, and show a "connect Microsoft 365" panel on the page.
 12. api/lib/O365.php (email sending, mailbox reading) gets a new token every run → reuse the cached token like Graph.php.

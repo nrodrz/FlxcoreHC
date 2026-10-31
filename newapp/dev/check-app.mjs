@@ -20,13 +20,26 @@ try {
   const [ab, about] = await api('GET', '/about'); ok('About & ownership: new product, owner Indisse-BTS', ab === 200 && about.product === NAME && /Indisse-BTS/.test(JSON.stringify(about)) && about.product === NAME && !/OpsHub|NewApp/.test(about.product + about.product_line + about.developed_by), JSON.stringify(about).slice(0, 300));
   const gone = {}; for (const rt of ['tickets', 'kb', 'assets', 'guardian', 'server_perf', 'vtiger_users', 'budget', 'contracts', 'calendar', 'announcements', 'public_ticket']) gone[rt] = (await api('GET', '/' + rt))[0];
   ok('removed modules: their APIs answer 404', Object.values(gone).every(c => c === 404), JSON.stringify(gone));
-  const kept = {}; for (const rt of ['m365hub/m365-domains', 'security_assessment', 'risk_users', 'onboarding/templates', 'settings', 'users', 'roles', 'audit']) kept[rt] = (await api('GET', '/' + rt))[0];
+  const kept = {}; for (const rt of ['m365hub/m365-domains', 'security_assessment', 'risk_users', 'onboarding/templates', 'onboarding/runs', 'm365hub/onboard-templates-get', 'risk_users/followups', 'security_assessment/plan', 'sent_emails', 'recycle', 'datadict', 'dbupdate/health', 'jobs', 'ai', 'mail', 'lookups', 'search?q=ad', 'settings', 'users', 'roles', 'audit']) kept[rt] = (await api('GET', '/' + rt))[0];
   ok('product and platform APIs answer (no 404 / 5xx): ' + JSON.stringify(kept), Object.values(kept).every(c => c !== 404 && c < 500), JSON.stringify(kept));
   const tbl = execFileSync('mysql', ['-uroot', '--socket=' + (process.env.DB_SOCKET || '/run/mysqld/mysqld.sock'), '-N', '-e', "SELECT table_name FROM information_schema.tables WHERE table_schema='" + DB + "'"]).toString().trim().split('\n');
   ok('database: every table (' + tbl.length + ') uses the itops_ prefix', tbl.length > 0 && tbl.every(t => t.startsWith('itops_')), tbl.filter(t => !t.startsWith('itops_')).join(' '));
   const mig = execFileSync('php', ['-r', 'require "config.php"; chdir("api"); require "lib/Migrations.php"; echo count(itops_migrations_list());'], { cwd: RUN }).toString().trim();
   const done = execFileSync('mysql', ['-uroot', '--socket=' + (process.env.DB_SOCKET || '/run/mysqld/mysqld.sock'), '-N', '-e', 'SELECT COUNT(*) FROM itops_migrations', DB]).toString().trim();
-  ok('database: the installer applied every update (' + done + ' of ' + mig + ')', +mig > 0 && mig === done, done + ' of ' + mig);
+  ok('database: the installer applied every update (' + done + ' of ' + mig + ')', mig === done, done + ' of ' + mig);
+  { // 0001-A005: a fresh installation is exactly the baseline (sql/schema.sql), with nothing left to update
+    const fs = require('fs');
+    const want = [...fs.readFileSync(path.join(HERE, 'sql', 'schema.sql'), 'utf8').matchAll(/CREATE TABLE `(itops_[a-z0-9_]+)`/g)].map(m => m[1]).sort();
+    const have = tbl.slice().sort();
+    const miss = want.filter(t => !have.includes(t)), extra = have.filter(t => !want.includes(t));
+    ok('database: the tables are the baseline\'s ' + want.length + ' (sql/schema.sql)', miss.length === 0 && extra.length === 0, 'missing ' + miss.join(' ') + ' · extra ' + extra.join(' '));
+    const [dc, du] = await api('GET', '/dbupdate');
+    ok('database: nothing to update after a fresh install', dc === 200 && du && Array.isArray(du.pending) && du.pending.length === 0, JSON.stringify(du).slice(0, 200));
+    const [sc, sa] = await api('GET', '/dbupdate/sample');
+    const found = sa && sa.tables ? sa.tables.reduce((n, t) => n + t.remove.length, 0) : -1;
+    const [rc, rr] = await api('POST', '/dbupdate/sample', { confirm: 'REMOVE' });
+    const left = +execFileSync('mysql', ['-uroot', '--socket=' + (process.env.DB_SOCKET || '/run/mysqld/mysqld.sock'), '-N', '-e', "SELECT COUNT(*) FROM itops_m365_templates WHERE name LIKE 'Sample · %'", DB]).toString().trim();
+    ok('sample records: the 2 sample onboarding templates are found and removed (' + found + ' found, ' + left + ' left)', sc === 200 && found === 2 && rc === 200 && left === 0, JSON.stringify(rr).slice(0, 200)); }
   const [mc, mods] = await api('GET', '/modules'); ok('the Modules screen lists only the product modules and the two plans', mc === 200 && mods.modules.length === KEEP.length && mods.plans.map(p => p.key).join() === 'complete,essentials', JSON.stringify(mods && { m: mods.modules && mods.modules.map(x => x.key), p: mods.plans && mods.plans.map(p => p.key) }));
   const pg = await (await br.newContext({ viewport: { width: 1360, height: 900 } })).newPage(); const errs = [], s5 = [], known = new Set();
   pg.on('pageerror', e => errs.push(e.message)); pg.on('response', async rr => { if (rr.status() >= 500) { let t = ''; try { t = await rr.text(); } catch (e) {} if (!/Microsoft 365 is not connected/.test(t)) s5.push(rr.status() + ' ' + rr.url()); else known.add(rr.url().replace(/.*\/api\//, '')); } });

@@ -8,7 +8,7 @@
  *    Identity Protection risk. One row per person with a score (0–100), a level (high ≥ 50, medium ≥ 25, low) and the
  *    reasons. Kept per assessment run.
  * 2. Follow-up (when switched on): a person newly at a followed level gets an email with their own reasons and steps and a
- *    deadline; a reminder; at the deadline, their manager is told, IT gets a ticket, and the changes ITOps could make
+ *    deadline; a reminder; at the deadline, their manager is told and the changes ITOps could make
  *    (add to the MFA-required group, sign out everywhere, block sign-in) are PROPOSED. Nothing in the tenant changes until
  *    an administrator approves a proposal (decision, 10/23/2026). Someone who fixes it is marked fixed, their ticket is
  *    resolved with a note and their open proposals are withdrawn.
@@ -231,7 +231,6 @@ if (!function_exists('itops_rk_factors')) {
         $fid = (int)$f['id']; $mgr = null;
         if ($cfg['manager']) { try { $mgr = $D('manager:' . $p['user_oid']); } catch (Throwable $e) { $mgr = null; } }
         if ($mgr && !empty($mgr['mail'])) $send('risk_manager_escalation', $mgr['mail'], ['recipient_name' => $mgr['name'], 'person_name' => $p['name'], 'deadline' => itops_tpl_d2($f['deadline']), 'body_md' => itops_rf_body($codes, false)], 'manager', $fid);
-        $tid = null;   // 0001-A004: no Service Desk ticket in this product
         // proposals
         $F = itops_rk_factors(); $acts = [];
         foreach ($codes as $c) { $a = $F[$c][2] ?? ''; if ($a === '' || isset($acts[$a])) continue; if ($a === 'mfa_group' && $cfg['mfa_group_id'] === '') continue; $acts[$a] = $F[$c][5]; }
@@ -245,7 +244,7 @@ if (!function_exists('itops_rk_factors')) {
         $out['proposed'] += $n;
         if ($n) { try { foreach ($db->query("SELECT u.id FROM itops_users u JOIN itops_roles r ON r.id=u.role_id WHERE r.slug='super_admin' AND u.status='active'")->fetchAll(PDO::FETCH_COLUMN) as $uid)
             $db->prepare('INSERT INTO itops_notifications (user_id,title,body,type,link) VALUES (?,?,?,?,?)')->execute([(int)$uid, 'Changes wait for your approval', $n . ' proposed change(s) for ' . $p['name'] . ' (risky people follow-up).', 'warning', '#risk_users']); } catch (Throwable $e) {} }
-        $db->prepare("UPDATE itops_risk_followups SET status='escalated', escalated_at=?, ticket_id=?, manager_mail=? WHERE id=?")->execute([date('Y-m-d H:i:s'), $tid, $mgr['mail'] ?? null, $fid]);
+        $db->prepare("UPDATE itops_risk_followups SET status='escalated', escalated_at=?, manager_mail=? WHERE id=?")->execute([date('Y-m-d H:i:s'), $mgr['mail'] ?? null, $fid]);
         audit_log('rf_escalated', 'security_assessment', $fid, $p['name'] . ' (' . $p['upn'] . ')', null, ['Manager told' => $mgr && !empty($mgr['mail']) ? $mgr['name'] : 'no manager set', 'Ticket' => $tid ? 'yes' : 'no', 'Changes proposed' => $n]);
         $out['escalated']++;
     }

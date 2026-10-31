@@ -31,7 +31,7 @@ if (($segments[1] ?? '') === 'timezone') {
     require_once __DIR__ . '/../lib/TimeZone.php';
     $tzNow = itops_tz_get($db); $fixed = defined('ITOPS_TIMEZONE');
     $since = (string)$db->query("SELECT sval FROM itops_settings WHERE skey='installed_at'")->fetchColumn();
-    $records = (int)$db->query("SELECT COUNT(*) FROM itops_tickets")->fetchColumn() + (int)$db->query("SELECT COUNT(*) FROM itops_audit_log WHERE action NOT IN ('system_installed')")->fetchColumn();
+    $records = (int)$db->query("SELECT COUNT(*) FROM itops_audit_log WHERE action NOT IN ('system_installed')")->fetchColumn();
     if ($method === 'GET') {
         $common = []; foreach (itops_tz_common() as $k => $v) $common[] = ['id' => $k, 'label' => $v];
         json_response(['timezone' => $tzNow, 'label' => itops_tz_label($tzNow), 'fixed_in_config' => $fixed, 'common' => $common, 'all' => DateTimeZone::listIdentifiers(),

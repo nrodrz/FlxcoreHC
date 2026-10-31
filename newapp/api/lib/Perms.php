@@ -63,32 +63,8 @@ if (!function_exists('itops_audit_types')) {
  * entries of the modules it can see (any one of the listed grants is enough). A person always sees what they did
  * themselves. Kinds not listed here are shown to a Super Admin only.
  */
-/**
- * BT76: people a Super Admin named under Settings → General → Cases & Projects get those actions in the permissions the
- * browser receives (so the menu shows Cases). The server checks the same list itself (lib/Cases.php itops_cs_can).
- */
+/** BT76: the reference app added Cases & Projects rights here; 0001-A004/A005: this product has no such overlay. */
 function itops_perm_overlay($perms, int $uid) {
-    if (!is_array($perms) || !empty($perms['*'])) return $perms;
-    $granular = false; foreach ($perms as $pv) { if (is_array($pv)) { $granular = true; break; } }
-    if (!$granular) return $perms;   // a legacy role (strings) is left as it is
-    try {
-        $s = getDB()->prepare("SELECT sval FROM itops_settings WHERE skey='cases_people'"); $s->execute(); $p = json_decode((string)$s->fetchColumn(), true);
-        if (!is_array($p)) $p = [];
-        $add = [];
-        if (in_array($uid, array_map('intval', (array)($p['create'] ?? [])), true)) $add = array_merge($add, ['view', 'create']);
-        if (in_array($uid, array_map('intval', (array)($p['all'] ?? [])), true)) $add = array_merge($add, ['view', 'all']);
-        // someone given a task, watching, sponsoring or invited to a meeting of an open case or project opens the Cases & Projects page for it, whatever their role
-        if (!$add && !(is_array($perms['cases'] ?? null) && in_array('view', $perms['cases'], true))) {
-            try { $q = getDB()->prepare("SELECT 1 FROM itops_cases c WHERE c.status IN ('open','in_progress') AND (EXISTS (SELECT 1 FROM itops_case_watchers w WHERE w.case_id=c.id AND w.user_id=?) OR EXISTS (SELECT 1 FROM itops_case_tasks t WHERE t.case_id=c.id AND t.assignee_id=? AND t.kind<>'requester')) LIMIT 1");
-                  $q->execute([$uid, $uid]); if ($q->fetchColumn()) $add = ['view']; } catch (Throwable $e) {}
-            if (!$add) { try { $q = getDB()->prepare("SELECT 1 FROM itops_cases WHERE sponsor_id=? AND status IN ('open','in_progress') LIMIT 1");   // BT80: a project's sponsor
-                  $q->execute([$uid]); if ($q->fetchColumn()) $add = ['view']; } catch (Throwable $e) {} }
-            if (!$add) { try { $q = getDB()->prepare("SELECT 1 FROM itops_case_tasks t JOIN itops_cases c ON c.id=t.case_id JOIN itops_calendar_attendees a ON a.event_id=t.event_id
-                  WHERE a.user_id=? AND c.status IN ('open','in_progress') AND NOT EXISTS (SELECT 1 FROM itops_tickets k WHERE k.case_id=c.id AND k.requester_id=a.user_id) LIMIT 1");   // BT80: invited to a case or project meeting
-                  $q->execute([$uid]); if ($q->fetchColumn()) $add = ['view']; } catch (Throwable $e) {} }
-        }
-        if ($add) $perms['cases'] = array_values(array_unique(array_merge(is_array($perms['cases'] ?? null) ? $perms['cases'] : [], $add)));
-    } catch (Throwable $e) {}
     return $perms;
 }
 function itops_audit_types(): array {

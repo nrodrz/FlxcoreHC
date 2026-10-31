@@ -16,7 +16,7 @@ if ($method !== 'GET') error_response('Not found', 404);
 itops_require($currentUser, 'event_log', 'view');
 require_once __DIR__ . '/../lib/EmailTemplates.php';
 $names = []; try { foreach (itops_tpl_catalog() as $k => $t) $names[$k] = (string)($t[1] ?? $k); } catch (Throwable $e) {}
-$names += ['mail_ack' => 'Acknowledgement of a new email', 'mail_notify_reply' => 'Reply on a ticket', 'mail_notify_status' => 'Ticket status changed', 'mail_notify_assign' => 'Ticket assigned', 'test' => 'Test email'];
+$names += ['test' => 'Test email'];
 $kindName = fn(string $k) => $k === '' ? 'Other' : ($names[$k] ?? ucfirst(str_replace('_', ' ', $k)));
 
 $where = []; $bind = [];
@@ -26,16 +26,16 @@ $kind = (string)($_GET['kind'] ?? ''); if ($kind !== '') { $where[] = 'l.kind=?'
 $from = (string)($_GET['from'] ?? ''); if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) { $where[] = 'l.created_at >= ?'; $bind[] = $from . ' 00:00:00'; }
 $to = (string)($_GET['to'] ?? ''); if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) { $where[] = 'l.created_at < ?'; $bind[] = date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00'; }
 $W = $where ? ' WHERE ' . implode(' AND ', $where) : '';
-$sel = 'SELECT l.id, l.created_at, l.to_email, l.subject, l.kind, l.method, l.ok, l.error, l.ticket_id, t.ticket_number, u.display_name AS sent_by_name
-        FROM itops_mail_log l LEFT JOIN itops_users u ON u.id = l.sent_by LEFT JOIN itops_tickets t ON t.id = l.ticket_id' . $W . ' ORDER BY l.id DESC';
+$sel = 'SELECT l.id, l.created_at, l.to_email, l.subject, l.kind, l.method, l.ok, l.error, u.display_name AS sent_by_name
+        FROM itops_mail_log l LEFT JOIN itops_users u ON u.id = l.sent_by' . $W . ' ORDER BY l.id DESC';
 $row = fn(array $r) => ['id' => (int)$r['id'], 'at' => $r['created_at'], 'to' => (string)$r['to_email'], 'subject' => (string)$r['subject'], 'kind' => (string)$r['kind'], 'kind_name' => $kindName((string)$r['kind']),
-    'method' => (string)$r['method'], 'ok' => (bool)$r['ok'], 'error' => (string)($r['error'] ?? ''), 'ticket_id' => $r['ticket_id'] ? (int)$r['ticket_id'] : null, 'ticket_number' => $r['ticket_number'], 'sent_by' => $r['sent_by_name']];
+    'method' => (string)$r['method'], 'ok' => (bool)$r['ok'], 'error' => (string)($r['error'] ?? ''), 'sent_by' => $r['sent_by_name']];
 
 if ($what === 'export') {
     $s = $db->prepare($sel . ' LIMIT 10000'); $s->execute($bind); $rows = array_map($row, $s->fetchAll(PDO::FETCH_ASSOC));
     $cell = function ($v) { $v = (string)$v; if ($v !== '' && strpos("=+-@\t\r", $v[0]) !== false) $v = "'" . $v; return '"' . str_replace('"', '""', $v) . '"'; };
-    $out = "\xEF\xBB\xBF" . implode(',', array_map($cell, ['When (' . date_default_timezone_get() . ')', 'To', 'Subject', 'Email', 'Result', 'Error', 'Ticket', 'Sent by', 'How'])) . "\r\n";
-    foreach ($rows as $r) $out .= implode(',', array_map($cell, [date('m/d/Y g:i A', strtotime($r['at'])), $r['to'], $r['subject'], $r['kind_name'], $r['ok'] ? 'Sent' : 'Failed', $r['error'], (string)$r['ticket_number'], (string)$r['sent_by'], $r['method']])) . "\r\n";
+    $out = "\xEF\xBB\xBF" . implode(',', array_map($cell, ['When (' . date_default_timezone_get() . ')', 'To', 'Subject', 'Email', 'Result', 'Error', 'Sent by', 'How'])) . "\r\n";
+    foreach ($rows as $r) $out .= implode(',', array_map($cell, [date('m/d/Y g:i A', strtotime($r['at'])), $r['to'], $r['subject'], $r['kind_name'], $r['ok'] ? 'Sent' : 'Failed', $r['error'], (string)$r['sent_by'], $r['method']])) . "\r\n";
     $prev = !empty($_GET['preview']);
     $filt = array_filter(['Search' => $q, 'Result' => $res, 'Email' => $kind !== '' ? $kindName($kind) : '', 'From' => $from, 'To' => $to], fn($v) => $v !== '');
     audit_log($prev ? 'mail_log_preview' : 'mail_log_export', 'event_log', 0, 'Sent emails', null, $filt + ['Rows' => (string)count($rows)]);
