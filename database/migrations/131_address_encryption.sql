@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- v1.171.3 — residential / provider addresses are personal data: line1, line2 and phone are stored encrypted.
 -- Existing rows keep working (plaintext is still read until you run: php database/encrypt_existing_addresses.php).
 ALTER TABLE addresses

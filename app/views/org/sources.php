@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $sources */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $sources */
 $title = 'Regulations'; $__path = '/organization/sources'; require FLXCOREHC_APP . '/views/org/_tabs.php'; ?>
 <div class="topline"><h1><?= e(t('Regulatory sources')) ?></h1></div>
 <p class="hint" style="max-width:800px"><?= e(t('Why the system requires each item — the law, regulation or circular letter behind it, with effective dates and when it was last reviewed. Maintained by the platform team.')) ?></p>

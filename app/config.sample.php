@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * FlxCoreHC configuration. Copy to app/config.php and edit.
  * On cPanel, create the database and user in "MySQL Databases" first.

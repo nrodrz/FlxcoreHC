@@ -1,4 +1,4 @@
-<?php /** @var array $sources */ /** @var array $due */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $sources */ /** @var array $due */
 $title = 'Platform console — Regulatory sources'; $adminTab = 'regulatory'; require FLXCOREHC_APP . '/views/admin/_tabs.php'; ?>
 <div class="topline"><h1>Regulatory sources</h1><?php if ($due): ?><span class="chip warn"><?= count($due) ?> due for review</span><?php endif; ?></div>
 <p class="hint" style="max-width:820px">The dated citation behind every requirement. Review each on its cadence; when a law changes (as telehealth did with Ley 8-2025), record the superseded date and the new source so tenants see current rules.</p>

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var FlxCoreHC\TenantContext $ctx */ /** @var string $range */ /** @var string $from */ /** @var string $today */
 /** @var array $totals */ /** @var array $highlights */ /** @var array $byPerson */ /** @var array $byDay */ /** @var array $recent */
 $title = 'Activity';

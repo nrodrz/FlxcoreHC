@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Beneficiary interaction register — the CMS sales-conduct audit trail.
 --
 -- Producers being *credentialed* is only half of Medicare Advantage compliance. The other

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Puerto Rico healthcare jurisdiction content (healthcare Phase 4).
 --
 -- Providers in Puerto Rico carry the same FEDERAL credentials as mainland providers (NPI, DEA, CLIA,

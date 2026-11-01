@@ -1,4 +1,4 @@
-<?php $title = 'Choose an organization'; ?>
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ $title = 'Choose an organization'; ?>
 <div class="auth-wrap">
   <div class="auth-card">
     <h1 style="margin-bottom:.2rem">Choose an organization</h1>

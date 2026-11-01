@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 102_history_ledger.sql
 -- Permanent, append-only history so a client's full record is retained across years, not just the
 -- current state. Three additions:

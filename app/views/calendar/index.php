@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $events */ /** @var array $upcoming */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $events */ /** @var array $upcoming */
 /** @var string $monthStart */ /** @var int $overdue */ /** @var int $planYear */
 /** @var string $viewMode */ /** @var string $from */ /** @var string $to */ /** @var string $statusF */
 /** @var array $listEvents */ /** @var array $agents */

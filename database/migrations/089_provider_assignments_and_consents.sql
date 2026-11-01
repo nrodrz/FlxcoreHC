@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 089_provider_assignments_and_consents.sql
 -- Privacy architecture, two pieces:
 --

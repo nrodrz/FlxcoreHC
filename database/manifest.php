@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Canonical, ordered list of schema files applied to a FlxCoreHC database.
  * Both install.php (fresh installs) and the in-app updater (FlxCoreHC\Migrator)

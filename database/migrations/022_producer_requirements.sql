@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Per-producer assignment of required credentials (from credential_catalog).
 -- Drives the credential-compliance view: each producer's assigned requirements
 -- are checked against the credentials on file.

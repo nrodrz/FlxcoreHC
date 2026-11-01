@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 085_leie_exclusions.sql
 -- Local copy of the OIG LEIE (List of Excluded Individuals/Entities). The OIG publishes NO API —
 -- it offers a monthly downloadable CSV — so automated screening works by ingesting that file into

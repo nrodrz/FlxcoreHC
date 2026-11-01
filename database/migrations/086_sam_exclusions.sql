@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 086_sam_exclusions.sql
 -- Local copy of the SAM.gov (System for Award Management) exclusions list — the government-wide
 -- debarment/suspension list that succeeded EPLS. Screened alongside OIG LEIE. SAM offers both a REST

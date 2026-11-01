@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 071_training_vertical.sql
 -- Training content is vertical-specific. The existing library is Medicare-agent material (AHIP,
 -- SOA, ready-to-sell, FWA…), which should not show to a healthcare tenant. This adds a `vertical`

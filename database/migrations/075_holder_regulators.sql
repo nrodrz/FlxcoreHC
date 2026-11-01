@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 075_holder_regulators.sql
 -- Which regulators each provider (or the organization entity) must answer to. Assigning a regulator
 -- to a provider means the provider inherits that regulator's requirement list in their compliance

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 108_cross_tenant_sharing.sql
 -- Cross-tenant sharing on the CONSENT model. The same real-world provider (matched by the NPI blind
 -- index — never by decrypting anyone's data) may be managed by several organizations. Each keeps its

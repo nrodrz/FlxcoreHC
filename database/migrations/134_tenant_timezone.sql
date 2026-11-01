@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 134_tenant_timezone.sql — v1.172.16: each organization can have its own time zone.
 --   tenants.timezone: an IANA zone name from the allowed list (America/Puerto_Rico, America/New_York, ...).
 --   NULL means "use the platform time zone" (Admin > System), so every existing organization behaves exactly as before.

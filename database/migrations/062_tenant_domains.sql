@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Map hostnames to tenants so a white-labelled deployment can serve each agency its own branded
 -- sign-in page from the very first visit, before anyone has logged in.
 --

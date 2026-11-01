@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- NPI-verified producer profile. CMS's NPPES registry OWNS certain fields (legal name, entity type,
 -- taxonomy/specialty, practice city/state, professional credential). We store them as a VERIFIED
 -- SNAPSHOT separate from the agency's own editable fields, stamped with when CMS last confirmed them.

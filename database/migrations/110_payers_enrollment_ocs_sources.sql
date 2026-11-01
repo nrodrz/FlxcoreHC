@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 110_payers_enrollment_ocs_sources.sql
 -- From "license tracker" to credentialing & regulatory compliance platform (Puerto Rico):
 --   payers               — reference list of insurers/plans (platform-seeded PR payers + tenant-added)

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- FlxCoreHC — Tenant hierarchy (the FMO scale-up spine).
 -- A tenant tree: FMO -> downline agencies -> agents, via self-referential parent.
 -- CRITICAL: this does NOT change per-tenant isolation. TenantRepository stays

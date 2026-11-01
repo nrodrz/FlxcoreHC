@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Platform carrier master + producer book-of-business review (v1.51).
 --
 -- Two features:

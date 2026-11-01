@@ -1,4 +1,4 @@
-<?php /** @var array $apps */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $apps */
 $K = FlxCoreHC\Repository\ApplicationRepository::KINDS;
 $S = FlxCoreHC\Repository\ApplicationRepository::STATUSES;
 $open = FlxCoreHC\Repository\ApplicationRepository::OPEN_STATUSES;

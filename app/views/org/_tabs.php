@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Organization hub navigation (v1.149). The 14 surfaces are grouped into five logical areas and
  * rendered by the shared grouped-nav partial: a compact rail on desktop, a single select on mobile

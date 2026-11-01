@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Curated packet builder. Expects $row, $picks, $templates. */
 $title = FlxCoreHC\Repository\HolderRepository::displayName($row);
 require FLXCOREHC_APP . '/views/holders/_provider_header.php';

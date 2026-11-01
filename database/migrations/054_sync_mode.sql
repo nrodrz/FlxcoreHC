@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Give the plan catalog a state dimension (so a CMS sync can reconcile within an exact
 -- year+state scope) and let each source choose what happens to plans CMS has dropped.
 ALTER TABLE platform_carrier_plans ADD COLUMN IF NOT EXISTS state VARCHAR(4) NULL AFTER plan_year;

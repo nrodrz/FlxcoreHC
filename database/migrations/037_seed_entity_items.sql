@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Tenant-scoped seeding for states + entity requirements.
 --
 -- Split out of 036 because migrations run before any tenant exists at install time,

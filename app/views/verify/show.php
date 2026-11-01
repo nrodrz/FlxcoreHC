@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Standalone public page — no session, no nav. Shows one producer's credential status. */
 $name = $holder['holder_type'] === 'individual'
     ? trim(($holder['first_name'] ?? '') . ' ' . ($holder['last_name'] ?? ''))

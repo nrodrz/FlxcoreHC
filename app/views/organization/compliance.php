@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */
 /** @var array $sections */ /** @var array $summary */ /** @var array $recs */
 $title = 'Security & compliance';
 ?>

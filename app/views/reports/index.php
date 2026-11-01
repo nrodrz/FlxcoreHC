@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $rollup */ /** @var int $planYear */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $rollup */ /** @var int $planYear */
 use FlxCoreHC\RiskScoreService;
 $title='Reports'; ?>
 <div class="crumb"><?= e($ctx->tenantName) ?></div>

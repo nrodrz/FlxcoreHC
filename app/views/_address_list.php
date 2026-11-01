@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Shared address list. Expects: $addresses, $base (post url base for {id}/delete|primary), $canEdit. */
 $kinds = FlxCoreHC\Repository\AddressRepository::KINDS; ?>
 <?php if ($addresses === []): ?><p class="hint"><?= e(t('No addresses yet.')) ?></p>

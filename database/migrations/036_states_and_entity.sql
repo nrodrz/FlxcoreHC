@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Multi-state templates + entity (agency/FMO) compliance.
 --
 -- Two gaps this closes:

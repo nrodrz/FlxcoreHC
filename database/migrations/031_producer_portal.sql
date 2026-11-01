@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Producer self-service portal + CE hour tracking.
 -- users.holder_id already exists in the base schema; this adds the CE ledger
 -- and the birth month that anchors Florida's biennial CE cycle (F.S. 626.2815).

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 $title = $row ? 'Edit credential' : 'Add credential';
 // Insurance and healthcare are both catalog-driven now (global seed + this tenant's custom types).
 // CatalogService::all() already merges global rows with the tenant's custom rows and excludes

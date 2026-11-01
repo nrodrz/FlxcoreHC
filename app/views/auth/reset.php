@@ -1,4 +1,4 @@
-<?php $title = 'Choose a new password'; /** @var array $acct */ /** @var string $token */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ $title = 'Choose a new password'; /** @var array $acct */ /** @var string $token */
   $__b = $GLOBALS['flx_brand'] ?? []; $__bn = (string) ($__b['name'] ?? 'FlxCoreHC'); ?>
 <div class="auth-card">
   <div class="brand"><span class="mark"><?= e(mb_strtoupper(mb_substr($__bn, 0, 2))) ?></span> <?= e($__bn) ?></div>

@@ -1,4 +1,4 @@
-<?php /** @var array $o */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $o */
 $title='Revenue';
 $money=fn($n)=>'$'.number_format((float)$n,2);
 ?>

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Carrier certification schedule — the maintained calendar of when each carrier's annual
 -- Medicare certification opens, what platform it runs on, and the link to start it.
 --

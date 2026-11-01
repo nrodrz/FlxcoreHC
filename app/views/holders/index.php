@@ -1,4 +1,4 @@
-<?php $title = vocab('holders');
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ $title = vocab('holders');
 $heading = 'Providers & organizations';
 ?>
 <div class="crumb"><?= e($ctx->tenantName) ?></div>

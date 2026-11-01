@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 121_agency_credentialing.sql
 -- Agency Credentialing — an ORCHESTRATION layer over existing FlxCoreHC entities.
 -- Adds the Credentialing Case as the operational unit of work, its case-specific requirement

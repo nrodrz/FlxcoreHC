@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $addresses */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $addresses */
 $title = 'Addresses'; $__path = '/organization/addresses'; require FLXCOREHC_APP . '/views/org/_tabs.php'; ?>
 <div class="topline"><h1><?= e(t('Organization addresses')) ?></h1></div>
 <p class="hint" style="max-width:780px"><?= e(t('Mailing, billing, correspondence and legal addresses for your organization — distinct from practice locations. Credentials and enrollments can cite the address on file with each issuer or payer.')) ?></p>

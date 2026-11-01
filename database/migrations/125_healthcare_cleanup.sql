@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 125_healthcare_cleanup.sql — v1.170.8 follow-up to 124.
 -- Insurance-era compliance checklist items seeded by 004 (applies_to='insurance') were the last insurance
 -- seed rows surviving a fresh install (hidden only by the vertical filter). Remove them — child status rows

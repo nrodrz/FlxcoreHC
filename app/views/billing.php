@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $tenantRow */ /** @var array $usage */ /** @var array $plans */ /** @var bool $billingOn */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $tenantRow */ /** @var array $usage */ /** @var array $plans */ /** @var bool $billingOn */
 $title='Billing';
 $plan = $usage['plan'];
 $status = $tenantRow['billing_status'] ?? 'none';

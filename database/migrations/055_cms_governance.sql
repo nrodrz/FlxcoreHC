@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Governance for CMS integrations: who ran each sync, a pre-configured landscape source
 -- (points at the STABLE cms.gov page; the sync auto-discovers the current ZIP link, which
 -- survives CMS renaming the file each revision), plus in-app training on the compliance model.

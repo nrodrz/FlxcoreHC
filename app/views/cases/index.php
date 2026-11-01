@@ -1,4 +1,4 @@
-<?php /** @var array $cases @var array $queue @var array $types */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $cases @var array $queue @var array $types */
 $title = 'Credentialing cases';
 $statusChip = ['open'=>'','in_progress'=>'warn','ready_for_submission'=>'active','submitted'=>'active','completed'=>'ok','closed'=>'muted','cancelled'=>'muted'];
 ?>

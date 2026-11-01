@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Carrier-facing share links — read-only credential verification without a login.
 --
 -- When an upline or carrier needs to confirm a producer is appointment-ready, the agency

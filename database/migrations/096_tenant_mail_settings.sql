@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 096_tenant_mail_settings.sql
 -- Per-tenant email delivery. Each organization can send through ITS OWN mailbox/provider — Google
 -- Workspace, Microsoft 365, a cPanel mailbox, or any SMTP submission endpoint — independent of the

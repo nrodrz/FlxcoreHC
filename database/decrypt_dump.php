@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Decrypt a passphrase-sealed database backup (.sql.gz.flxenc) back to a normal .sql.gz. CLI only.
  *   php database/decrypt_dump.php <in.flxenc> <out.sql.gz>

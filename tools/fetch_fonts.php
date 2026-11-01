@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * fetch_fonts.php — download the web fonts once so they can be served from your own host.
  *

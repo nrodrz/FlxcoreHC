@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 097_healthcare_templates_by_profession.sql
 -- Pre-built requirement templates for the professional types a billing company actually credentials,
 -- beyond the original Physician / Nurse / Lab / Clinic / Group set. Each bundle reflects the

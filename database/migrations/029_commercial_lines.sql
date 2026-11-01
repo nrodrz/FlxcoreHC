@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Commercial / P&C lines expansion. FlxCoreHC now serves Medicare AND commercial
 -- insurance agencies. Adds a line-of-business dimension to the catalog, a tenant
 -- setting for which lines the org operates in, FL commercial licensing items

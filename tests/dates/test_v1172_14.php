@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.14 — daylight-saving edge cases and per-item overdue marking. Runs WITHOUT a database:  php tests/dates/test_v1172_14.php
  * D1 local_time_status(): a time skipped when clocks move forward is 'gap'; a time that happens twice when they move back is 'ambiguous'

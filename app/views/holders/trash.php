@@ -1,4 +1,4 @@
-<?php /** @var array $rows */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $rows */
 $title = 'Deleted records';
 ?>
 <div class="crumb"><a href="<?= BASE_PATH ?>/holders"><?= e(t('Providers')) ?></a></div>

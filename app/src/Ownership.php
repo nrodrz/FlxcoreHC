@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 declare(strict_types=1);
 
 namespace FlxCoreHC;
@@ -20,6 +20,13 @@ final class Ownership
     /** Permission that opens the full About & ownership view. */
     public const VIEW_PERMISSION = 'license.view';
 
+    /** The product name followed by U+2060 (WORD JOINER, invisible). Ownership statements use it so that a branding rewrite of the
+     *  plain product name (a rebrand or pack script, a tenant brand substitution) skips them. Never remove it from the statements. */
+    public static function p(): string
+    {
+        return self::PRODUCT . "\u{2060}";
+    }
+
     public static function copyright(): string
     {
         return '© ' . self::YEARS . ' ' . self::OWNER . '. All rights reserved.';
@@ -33,12 +40,12 @@ final class Ownership
 
     public static function poweredBy(): string
     {
-        return 'Powered by ' . self::PRODUCT . ' · ' . self::copyright();
+        return 'Powered by ' . self::p() . ' · ' . self::copyright();
     }
 
     public static function developedBy(): string
     {
-        return self::PRODUCT . ' is designed, developed and owned by ' . self::OWNER
+        return self::p() . ' is designed, developed and owned by ' . self::OWNER
             . ', drawing on 30 years managing IT operations for multiple companies in Puerto Rico and Florida.';
     }
 
@@ -71,9 +78,17 @@ final class Ownership
     public const SIGNIN_STATEMENT = 'Proprietary software, licensed, not sold.';
     public const NO_LICENSE    = 'No license record installed';
 
+    /** A text file shipped at the package root (LICENSE.txt, THIRD-PARTY-NOTICES.txt); empty string if it is not there. */
+    private static function packageFile(string $name): string
+    {
+        $root = defined('FLXCOREHC_ROOT') ? FLXCOREHC_ROOT : dirname(__DIR__, 2);
+        $t = @file_get_contents($root . '/' . $name);
+        return $t === false ? '' : str_replace("\r\n", "\n", $t);
+    }
+
     private static function sub(string $s): string
     {
-        return str_replace('<Product>', self::PRODUCT, $s);
+        return str_replace('<Product>', self::p(), $s);
     }
 
     /**
@@ -82,7 +97,7 @@ final class Ownership
      */
     public static function spanish(): array
     {
-        $p = self::PRODUCT; $o = self::OWNER;
+        $p = self::p(); $o = self::OWNER;
         return [
             'developed' => "$p es diseñado, desarrollado y propiedad de $o, con base en 30 años administrando operaciones de TI para varias empresas en Puerto Rico y Florida.",
             'independent' => "$p es un producto independiente. Fue concebido, diseñado y desarrollado por $o como desarrollador independiente de software, y no como empleado, contratista ni consultor de ninguna empresa u organización. No fue encargado por ninguna organización que lo use ni es una obra por encargo (work made for hire) para ella. Licenciar, suscribirse, usar, probar o solicitar funciones de $p no otorga a ninguna organización ningún derecho de propiedad sobre el producto, sus actualizaciones ni las mejoras hechas a su solicitud.",
@@ -138,6 +153,8 @@ final class Ownership
             'license_terms'    => self::licenseTerms(),
             'license_terms_closing' => self::TERMS_CLOSING,
             'license_record'   => self::NO_LICENSE,
+            'license_text'     => self::packageFile('LICENSE.txt'),
+            'third_party_notices' => self::packageFile('THIRD-PARTY-NOTICES.txt'),
         ];
         return ['view' => 'full'] + $short + $full;
     }

@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $org */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $org */
 $title='Organization settings';
 $accent = $org['brand_accent'] ?? '';
 $navColor  = $org['brand_nav'] ?? '';

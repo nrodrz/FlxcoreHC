@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $payers */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $payers */
 $title = 'Payers'; $__path = '/organization/payers'; require FLXCOREHC_APP . '/views/org/_tabs.php';
 $kinds = ['commercial'=>'Commercial','medicare_advantage'=>'Medicare Advantage plan','medicaid_mco'=>'Medicaid MCO','government'=>'Government','other'=>'Other']; ?>
 <div class="topline"><h1><?= e(t('Payers')) ?></h1></div>

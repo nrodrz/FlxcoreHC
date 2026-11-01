@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 119_field_level_security.sql
 -- Field-level security, levels 2 and 3 (v1.158).
 --  Level 2 — per-field rules in the role editor: a role can be granted or denied specific sensitive

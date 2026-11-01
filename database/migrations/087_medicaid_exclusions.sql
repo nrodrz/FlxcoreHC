@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 087_medicaid_exclusions.sql
 -- Local copy of state/territory Medicaid exclusion lists, starting with Puerto Rico (PR). Many states
 -- publish their own Medicaid exclusion list of individuals/entities barred from Medicaid participation,

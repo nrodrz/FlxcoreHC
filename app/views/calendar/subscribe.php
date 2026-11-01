@@ -1,4 +1,4 @@
-<?php /** @var string $token */ $title='Subscribe / sync calendar';
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var string $token */ $title='Subscribe / sync calendar';
 $appUrl = rtrim((string) config('app_url', ''), '/');
 if ($appUrl === '') { $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http'; $appUrl = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'your-domain'); }
 // The feed URL carries a secret token: never hand out a plain-http link on a production install.

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $about */
 $title = 'About & ownership';
 $O = 'FlxCoreHC\\Ownership';
@@ -65,6 +65,18 @@ $kv = function (string $label, $value): void {
         <p><strong><?= e($es['closing']) ?></strong></p>
       </div>
     <?php endif; ?>
+  </div>
+  <div class="panel">
+    <h2 style="margin-top:0"><?= e(t('License notice (LICENSE.txt)')) ?></h2>
+    <!--flx-notranslate-->
+    <pre style="max-height:20rem;overflow:auto;white-space:pre-wrap;font-size:.78rem;line-height:1.45;background:var(--surface-2,#f6f6f4);padding:.8rem;border-radius:8px"><?= e($about['license_text'] !== '' ? $about['license_text'] : FlxCoreHC\Ownership::NO_LICENSE) ?></pre>
+    <!--/flx-notranslate-->
+  </div>
+  <div class="panel">
+    <h2 style="margin-top:0"><?= e(t('Third-party components')) ?></h2>
+    <!--flx-notranslate-->
+    <pre style="max-height:20rem;overflow:auto;white-space:pre-wrap;font-size:.78rem;line-height:1.45;background:var(--surface-2,#f6f6f4);padding:.8rem;border-radius:8px"><?= e($about['third_party_notices']) ?></pre>
+    <!--/flx-notranslate-->
   </div>
   <?php endif; ?>
 </div>

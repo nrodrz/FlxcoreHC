@@ -1,0 +1,75 @@
+FlxCoreHC — LICENSE NOTICE
+
+DRAFT FOR ATTORNEY REVIEW. This notice restates, in the same terms, the license terms shown in the product under
+"About & ownership". The written agreement each organization signs with the owner is what applies; where this notice
+and a signed agreement differ, the signed agreement prevails.
+
+© 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold.
+
+
+OWNERSHIP
+
+FlxCoreHC is designed, developed and owned by Indisse-BTS, drawing on 30 years managing IT operations for multiple
+companies in Puerto Rico and Florida. The owner, the copyright and these terms are part of the product and cannot be
+changed from within it, in any installation or workspace.
+
+
+INDEPENDENT DEVELOPMENT
+
+FlxCoreHC is an independent product. It was conceived, designed and developed by Indisse-BTS as an independent
+software developer, and not as an employee, contractor or consultant of any company or organization. It was not
+commissioned by, and is not a work made for hire for, any organization that uses it. Licensing, subscribing to,
+using, testing or requesting features of FlxCoreHC gives no organization any ownership interest in it, in its
+updates, or in improvements made at its request.
+
+The owner is an independent software vendor, not an employee or agent of any organization. Any other work the owner
+does for an organization is separate from the agreement and transfers no right in FlxCoreHC.
+
+
+LICENSED, NOT SOLD
+
+FlxCoreHC is proprietary software. It is licensed, not sold, whether it runs on the organization's own server or as
+a hosted service.
+
+Each organization uses FlxCoreHC under its own written agreement with the owner: a license agreement for its own
+installation, or a subscription agreement for the hosted service. That agreement sets the term, the installation or
+workspace, the number of users and the modules.
+
+A license or subscription does not transfer ownership of the software, its source code, design, database structure,
+documentation, or any change or improvement made to it.
+
+Ideas, requests, feedback or testing by an organization do not make it an owner or co-author of FlxCoreHC or of any
+feature made from them. Every update, module and customization belongs to the owner and is licensed under the
+organization's agreement.
+
+
+RESTRICTIONS
+
+Unless the agreement allows it in writing: no copying beyond the licensed installation and its backups, no
+redistribution, sublicensing, resale or hosting for others, no reverse engineering, and no removal of these notices.
+
+
+THE LICENSEE'S DATA
+
+The organization owns its own data. The owner of FlxCoreHC claims no right to it.
+
+
+OTHER NAMES
+
+Names of other products, services and agencies (for example the systems FlxCoreHC connects to) only identify what
+FlxCoreHC connects to or works with. They belong to their owners and imply no affiliation or endorsement.
+
+
+THIRD-PARTY COMPONENTS
+
+FlxCoreHC includes open-source components, each under its own license. They are listed, with their license texts, in
+THIRD-PARTY-NOTICES.txt, which is part of the package and is shown in About & ownership. Those licenses apply to those
+components only; they do not change the ownership or the terms above for FlxCoreHC itself.
+
+
+WARRANTY
+
+Unless the signed agreement says otherwise, FlxCoreHC is provided "as is", without warranty of any kind, express or
+implied, including merchantability, fitness for a particular purpose and non-infringement. FlxCoreHC records and
+tracks credentialing information and does not replace the organization's own verification, legal or compliance
+review. The scope of any warranty, support and liability is set by the signed agreement of each organization.

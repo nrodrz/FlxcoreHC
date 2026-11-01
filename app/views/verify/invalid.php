@@ -1,4 +1,4 @@
-<?php /** Standalone — invalid, expired, or revoked share link. */ ?><!doctype html>
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** Standalone — invalid, expired, or revoked share link. */ ?><!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">

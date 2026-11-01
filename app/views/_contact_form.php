@@ -1,4 +1,4 @@
-<?php /** Office contact form. Expects: $caction, $cform (row or null). */ $c = $cform ?? []; ?>
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** Office contact form. Expects: $caction, $cform (row or null). */ $c = $cform ?? []; ?>
 <form method="post" action="<?= e($caction) ?>" class="stack" style="max-width:640px">
   <?= FlxCoreHC\Auth\CsrfGuard::field() ?>
   <div class="grid2">

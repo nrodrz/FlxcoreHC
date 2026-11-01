@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 078_exclusion_screenings.sql
 -- Slice 7: Exclusion / sanctions screening (strategy doc §5, §6, §17 Phase 3). Providers must be
 -- screened against federal and state exclusion lists — OIG LEIE, SAM.gov, and state/PR Medicaid

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 """
 v1.172.9 — browser checks (Playwright, needs the demo server + DB: see docs). Evidence class: Claude.ai sandbox only.
   E1 the New-event modal offers exactly the tenant's ACTIVE event types (system 'deadline' excluded; no invented 'Task')

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 114_microsoft_oauth.sql
 -- Microsoft 365 "modern auth": OAuth 2.0 authorization-code flow + Microsoft Graph sendMail, replacing
 -- basic SMTP AUTH (which Microsoft is retiring). Works for the platform sender and for each tenant.

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $sections */ /** @var ?string $cur */ /** @var string $q */ /** @var array $hits */
 $L = FlxCoreHC\I18n::locale() === 'es';
 $title = $L ? 'Ayuda' : 'Help';

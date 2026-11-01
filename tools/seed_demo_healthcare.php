@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * seed_demo_healthcare.php — populate a healthcare (billing-company) tenant with realistic demo
  * data: five providers of different types, each with a plausible set of credentials at varying

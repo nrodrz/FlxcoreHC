@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Billing (Stripe) + usage caps.
 ALTER TABLE plans
   ADD COLUMN stripe_price_id VARCHAR(80) NULL,

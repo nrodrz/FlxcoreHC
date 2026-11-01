@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $row */ /** @var array $pending */ /** @var array $links */ /** @var bool $hasNpi */
 $title = 'Linked organizations';
 $stLabel = ['pending_provider'=>'Waiting for you','pending_owner'=>'Waiting for the other organization','active'=>'Active','declined'=>'Declined','revoked'=>'Revoked'];

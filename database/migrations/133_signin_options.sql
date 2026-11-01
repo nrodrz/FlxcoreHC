@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 133_signin_options.sql — v1.172.0: sign-in options.
 --   1. users.mfa_method: which second factor an account uses when two-factor is on (totp = authenticator app, email = e-mailed code).
 --   2. auth_email_codes: one-time 6-digit codes sent by e-mail (stored as HMAC hashes, short-lived, attempt-limited).

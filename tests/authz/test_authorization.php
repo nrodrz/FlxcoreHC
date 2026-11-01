@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.170.9 — Authorization regression suite. AUTHORED; REQUIRES EXTERNAL RUNTIME VALIDATION (MySQL).
  * Run ONLY through the isolated runner:  php tests/authz/run.php   (creates/drops database flx_authz)

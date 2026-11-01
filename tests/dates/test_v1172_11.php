@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.11 — "today" is the organization's day, and a timed event is typed in its zone. Runs WITHOUT a database:
  *   php tests/dates/test_v1172_11.php

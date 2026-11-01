@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Access foundation (v1.45): the read_only role and the tenant lifecycle.
 --
 -- Two independent axes from here on:

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 120_pr_regulators_expansion.sql
 -- Puerto Rico regulator expansion, verified against PR government sources (September 2026).
 -- Adds the profession-specific examining boards under ORCPS and the key oversight agencies, plus

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 // Test-only SMTP server. php fake_smtp.php <port> <mode> <pem> <outfile>
 // modes: plain (AUTH PLAIN only) | login (AUTH LOGIN only) | both | noauth | ssl (implicit TLS, both) | starttls (both, after STARTTLS)
 [$_, $port, $mode, $pem, $out] = $argv;

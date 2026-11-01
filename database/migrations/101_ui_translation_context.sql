@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 101_ui_translation_context.sql
 -- Group the translation editor by where a string appears. `context` holds the screen/section the
 -- string was first seen on (e.g. "calendar", "holders", "settings"), so the editor can present

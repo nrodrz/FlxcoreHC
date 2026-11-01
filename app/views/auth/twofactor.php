@@ -1,4 +1,4 @@
-<?php $title = 'Two-factor verification'; $byEmail = !empty($byEmail); ?>
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ $title = 'Two-factor verification'; $byEmail = !empty($byEmail); ?>
 <div class="auth-card">
     <h1 style="margin-bottom:.2rem"><?= e(t('Two-step verification')) ?></h1>
     <?php if ($byEmail): ?>

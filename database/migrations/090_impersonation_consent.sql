@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 090_impersonation_consent.sql
 -- Consent-gated support access. A platform admin can no longer open a tenant at will: they request
 -- access with a reason; the tenant's Master Admin approves (a 4-HOUR window — more time needs a new

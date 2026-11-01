@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 099_notifications.sql
 -- In-app notification center. One row per (tenant, user, event). `dedupe_key` makes generation
 -- idempotent so the opportunistic sweep can run on every dashboard load without duplicating.

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Router for PHP's built-in server (TEST / LOCAL USE ONLY — production runs on Apache/cPanel with .htaccess):
  *   php -S 127.0.0.1:8099 tools/router.php

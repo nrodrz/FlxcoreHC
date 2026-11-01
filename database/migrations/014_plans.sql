@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Subscription plans: seat limits + included features per tenant.
 CREATE TABLE IF NOT EXISTS plans (
   id            CHAR(36)     NOT NULL PRIMARY KEY,

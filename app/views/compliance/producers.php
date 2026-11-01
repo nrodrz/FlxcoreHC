@@ -1,4 +1,4 @@
-<?php /** @var array $producers */ /** @var array $totals */ /** @var bool $available */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $producers */ /** @var array $totals */ /** @var bool $available */
 $title = 'Compliance — ' . vocab('holders');
 $hname = fn($h)=> ($h['holder_type']??'')==='organization' ? ($h['org_name']??'') : trim((string)($h['first_name']??'').' '.(string)($h['last_name']??''));
 $stChip = fn($st)=> match($st){

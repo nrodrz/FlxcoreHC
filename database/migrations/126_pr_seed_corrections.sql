@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 126_pr_seed_corrections.sql
 -- Puerto Rico seed corrections from the independent v1.170.9 review (D-5). Fully idempotent; also applied
 -- to new signups by AuthService::seedTemplatesFor.

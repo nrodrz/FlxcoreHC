@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.12 — blind-spot guards found by the independent v1.172.11 run. Runs WITHOUT a database:  php tests/dates/test_v1172_12.php
  * G1 no database-side "today" in UTC (CURDATE()) anywhere that runs: app/, cron/, tools/, index.php, install.php (tests/docs/migrations excluded)

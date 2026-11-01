@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- FlxCoreHC — Calendar & client-interaction system.
 -- Unifies tasks, events, client interactions, and compliance deadlines into one
 -- timeline an agent can see and act on. Sources of events:

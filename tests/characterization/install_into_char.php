@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Applies schema.sql + the migration files, in the EXACT order install.php lists them, into the
  *  already-selected flx_char database. Reads that ordered list out of install.php so it can never drift
  *  from production ordering. Does not modify install.php, schema.sql, or any migration. */

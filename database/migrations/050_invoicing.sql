@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Manual invoicing + payment ledger (v1.56). For operators collecting payment OUTSIDE the app
 -- (check, ACH, wire, card-on-file elsewhere): issue an invoice, email it, and record the
 -- payment when it arrives. Independent of the Stripe subscription path — an operator can use

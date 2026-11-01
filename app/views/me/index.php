@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Producer portal: their own compliance card, expirations, tasks, CE, training.
  *  Expects: $ctx, $row, $mine, $myTasks, $creds, $ce, $ceHours, $ceLaw, $cycle. */
 $title = 'My compliance';

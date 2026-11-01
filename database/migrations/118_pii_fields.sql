@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 118_pii_fields.sql
 -- Sensitive identity fields for credentialing applications, with FIELD-LEVEL access control.
 --   dob_enc      — date of birth, encrypted at rest (PII, but routine: it is on every insurance card)

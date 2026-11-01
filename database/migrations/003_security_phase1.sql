@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- FlxCoreHC — Security Hardening Phase 1 (code/schema only)
 -- Addresses audit findings: M2 (composite tenant FKs), H3 (soft-delete + retention),
 -- C1 (encrypted PHI columns), M5 (CHECK constraints), H2 (access logging),

@@ -1,4 +1,4 @@
-<?php /** @var array $tenant */ /** @var array $ledger */ /** @var array $invoices */ /** @var array $methods */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $tenant */ /** @var array $ledger */ /** @var array $invoices */ /** @var array $methods */
 $adminTab = 'invoices';
 $title = 'Ledger — ' . ($tenant['name'] ?? '');
 $m = fn($c) => FlxCoreHC\InvoiceService::money((int) $c);

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Two-factor authentication (TOTP). Optional per user; can be required for
 -- owners/managers via the org setting below.
 ALTER TABLE users

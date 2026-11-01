@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Hub navigation: a collapsible right side panel (v1.153). Used by Organization and the Platform
  * console. The panel is fixed to the viewport's right edge; groups are <details> so only one is open

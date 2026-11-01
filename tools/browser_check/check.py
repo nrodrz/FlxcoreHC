@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 """FlxCoreHC v1.172.0 — real-browser checks (see run.sh). Each check asserts what a person would see or get."""
 import base64, hashlib, hmac, json, os, re, struct, subprocess, sys, time
 from playwright.sync_api import sync_playwright

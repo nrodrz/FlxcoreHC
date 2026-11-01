@@ -1,3 +1,4 @@
+/* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /* Mobile document capture & scan (client-side).
  * - Camera capture via a capture=environment input.
  * - HEIC/HEIF from iPhones is converted to JPEG (via heic2any if present, else the browser's

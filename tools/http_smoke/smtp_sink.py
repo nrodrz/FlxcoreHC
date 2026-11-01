@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 """FlxCoreHC v1.172.0 — a tiny SMTP sink for the HTTP smoke test (TEST ENVIRONMENT ONLY).
 
 Accepts mail on 127.0.0.1:<port> without TLS or authentication and appends each message to a JSON-lines file, so the

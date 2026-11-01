@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Auto renewal tasks from compliance gaps: a stable source key lets the sync
 -- engine create one task per gap, keep it deduplicated, and auto-close it
 -- when the gap resolves.

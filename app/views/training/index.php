@@ -1,4 +1,4 @@
-<?php /** @var array $library */ /** @var array $resources */ /** @var array $regulators */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $library */ /** @var array $resources */ /** @var array $regulators */
 /** @var bool $canManage */ /** @var string $q */ /** @var ?array $results */ /** @var bool $available */
 $title = 'Training Center';
 $cats = FlxCoreHC\TrainingLibraryService::CATEGORIES;

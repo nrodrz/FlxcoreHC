@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 107_external_shares.sql
 -- Controlled, read-only, password-protected, time-limited web view of a provider's profile for a
 -- recipient who is NOT a FlxCoreHC user (payer, state agency, accreditation body, hospital, other).

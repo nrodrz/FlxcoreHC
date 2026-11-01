@@ -1,4 +1,4 @@
-<?php /** @var array $tenants */ /** @var string $preTenant */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $tenants */ /** @var string $preTenant */
 $adminTab = 'invoices';
 $title = 'New invoice';
 include __DIR__ . '/_tabs.php';

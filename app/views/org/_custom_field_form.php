@@ -1,4 +1,4 @@
-<?php /** Expects $faction, $fd (row|null), $fscope ('provider'|'tenant'). */ $d = $fd ?? []; $types = FlxCoreHC\CustomFieldService::TYPES; ?>
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** Expects $faction, $fd (row|null), $fscope ('provider'|'tenant'). */ $d = $fd ?? []; $types = FlxCoreHC\CustomFieldService::TYPES; ?>
 <form method="post" action="<?= e($faction) ?>" class="stack" style="max-width:600px">
   <?= FlxCoreHC\Auth\CsrfGuard::field() ?>
   <input type="hidden" name="applies_to" value="<?= e($fscope) ?>">

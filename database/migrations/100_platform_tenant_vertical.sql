@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 100_platform_tenant_vertical.sql
 -- Repair for installs created before the platform operator's own tenant adopted the edition vertical.
 -- The SaaS top-level account was created with vertical='platform', which hid every healthcare-gated

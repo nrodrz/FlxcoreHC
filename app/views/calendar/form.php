@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $agents */ /** @var array $types */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $agents */ /** @var array $types */
 $types = $types ?? [];
 $title='Add task / event'; ?>
 <div class="crumb"><a href="<?= BASE_PATH ?>/calendar">Calendar</a></div>

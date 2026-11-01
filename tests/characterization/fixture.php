@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Phase 0.1 deterministic fixtures — six provider states (A–F) built ONLY from verified APIs/columns.
  * Each returns a fresh holder in one isolated tenant. No invented columns/behavior. No production writes

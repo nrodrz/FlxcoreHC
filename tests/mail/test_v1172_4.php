@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.4 — SmtpClient against a REAL local SMTP conversation (tests/mail/fake_smtp.php), no DB.
  * Every check asserts what the server received / what the operator is told, not source text.

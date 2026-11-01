@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 123_nonclinical_catalog_fix.sql
 -- Fix for migration 122 (Finding B): 122 omitted the `id` column and used a wrong column list, so under
 -- INSERT IGNORE only the first row seeded (with id='') and the other 8 collided on the empty PK and were

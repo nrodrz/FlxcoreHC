@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.170.9 authorization tests — self-contained runner. Creates an ISOLATED throwaway database `flx_authz`,
  * installs schema + migrations into it (same order as install.php, via tests/characterization/install_into_char.php),

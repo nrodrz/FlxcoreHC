@@ -1,4 +1,4 @@
-<?php /** @var array|null $inv */ /** @var string $token */ /** @var string|null $error */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array|null $inv */ /** @var string $token */ /** @var string|null $error */
 $title = 'Accept invitation';
 ?>
 <div class="auth-card" style="max-width:440px">

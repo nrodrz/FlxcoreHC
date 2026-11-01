@@ -1,4 +1,4 @@
-<?php /** @var array $plan */ /** @var bool $ok */ /** @var string $clientSecret */ /** @var string $error */ /** @var string $pk */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $plan */ /** @var bool $ok */ /** @var string $clientSecret */ /** @var string $error */ /** @var string $pk */
 $title = 'Subscribe — ' . $plan['name'];
 ?>
 <div class="crumb"><a href="<?= BASE_PATH ?>/billing">Billing</a></div>

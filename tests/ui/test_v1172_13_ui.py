@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 """
 v1.172.13 — Spanish for the messages Claude Code found in English (Playwright + demo server). Evidence class: Claude.ai sandbox only.
   V1 /verify/<bad token>: heading AND body are Spanish

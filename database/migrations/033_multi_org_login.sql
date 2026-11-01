@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- One person, several organizations.
 --
 -- users.email was globally unique, so the same person could not belong to two

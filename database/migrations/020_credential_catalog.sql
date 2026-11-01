@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Reference catalog of Medicare Advantage credentials (Florida market focus).
 -- Global lookup data (not tenant-scoped); drives credential types + requirement checklists.
 CREATE TABLE IF NOT EXISTS credential_catalog (

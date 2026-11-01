@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Help content — English. Each section: title, summary, and an ordered list of blocks:
  *   ['h', 'Heading'], ['p', 'Paragraph'], ['steps', ['Step one', 'Step two']], ['tip', 'Callout']

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Scope of Appointment forms — captured and e-signed inside FlxCoreHC.
 --
 -- Until now FlxCoreHC recorded THAT an SOA existed (on the beneficiary interaction). This lets

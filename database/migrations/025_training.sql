@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Training Center: a global reference library (CMS + certification + carrier process)
 -- plus a tenant-authored resources table for an agency's own materials & links.
 CREATE TABLE IF NOT EXISTS training_library (

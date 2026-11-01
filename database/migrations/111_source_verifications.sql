@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 111_source_verifications.sql
 -- Verification records against authoritative registries (FlxCoreHC records the lookup/evidence; it does not certify primary-source verification), honest about what each source offers:
 --   Tier A (automated) — NPPES (free public API) and SAM.gov (free public API with a key)

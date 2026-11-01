@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 113_pr_training_content.sql
 -- Puerto Rico regulatory & certification knowledge in the Training Center, source-verified
 -- (September 2026). These become the platform's curated PR guidance and, later, the seed knowledge

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $group */ /** @var array $members */ /** @var string $glabel */
 $title = $group['name'];
 $dn = function(array $h): string {

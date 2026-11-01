@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Phase 0.1 capture — compares EQUIVALENT business decisions across the compliance engines, per the
  * corrected methodology. It does NOT compare unrelated metrics (the Phase 0 error): it normalizes each

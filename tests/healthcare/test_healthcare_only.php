@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.170.7 — healthcare-only guarantees. Runs WITHOUT a database:  php tests/healthcare/test_healthcare_only.php
  * H1 context is always healthcare · H2 vocabulary · H3 sign-up offers only healthcare shapes · H4 catalog

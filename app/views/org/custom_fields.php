@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $provider */ /** @var array $tenant */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $provider */ /** @var array $tenant */
 $title = 'Custom fields'; $__path = '/organization/custom-fields'; require FLXCOREHC_APP . '/views/org/_tabs.php';
 $types = FlxCoreHC\CustomFieldService::TYPES;
 $list = function (array $defs, string $scope) use ($types) { ?>

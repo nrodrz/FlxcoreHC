@@ -1,4 +1,4 @@
-<?php /** @var array $row */ /** @var string $shareId */ /** @var array $log */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $row */ /** @var string $shareId */ /** @var array $log */
 $name = FlxCoreHC\Repository\HolderRepository::displayName($row); $title = 'Share access log — ' . $name; ?>
 <div class="crumb"><a href="<?= BASE_PATH ?>/holders/<?= e($row['id']) ?>#crossorg">← <?= e($name) ?></a></div>
 <div class="topline"><h1><?= e(t('Cross-organization share — access log')) ?></h1></div>

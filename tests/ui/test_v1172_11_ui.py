@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 """
 v1.172.11 — browser/database checks for "today" and typed times (Playwright + demo server). Evidence class: Claude.ai sandbox only.
   A  database-side day maths uses the organization's day: a credential expiring on the org's TODAY shows 0 days left, yesterday's shows -1

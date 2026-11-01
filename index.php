@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 declare(strict_types=1);
 
 // First-run: if the app hasn't been configured yet, hand off to the web installer.

@@ -1,3 +1,4 @@
+/* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /* FlxCoreHC UI runtime — theme, drawer, toasts, modal-confirm, custom selects, validation.
    Vanilla, no dependencies, no build step. */
 (function () {

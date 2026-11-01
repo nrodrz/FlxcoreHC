@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Error log — production breakage that reaches a screen instead of a phone call.
 --
 -- Uncaught exceptions and fatal errors already go to PHP's error_log(), which on shared cPanel

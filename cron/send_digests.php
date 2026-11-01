@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Activity-pulse digests. Run daily; weekly digests go out on Mondays.
  *   0 7 * * *  /usr/local/bin/php /path/to/cron/send_digests.php

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Provider-type templates for healthcare organizations (healthcare Phase 2).
 --
 -- The same requirement_templates machinery the insurance vertical uses, seeded with provider-type

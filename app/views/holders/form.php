@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 $isOrg = $row ? (($row['holder_type'] ?? '') === 'organization') : (($type ?? 'individual') === 'organization');
 $word  = $isOrg ? 'organization' : strtolower(vocab('holder'));
 $title = $row ? ('Edit ' . $word) : ('Add ' . $word);

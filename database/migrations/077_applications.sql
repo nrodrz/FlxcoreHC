@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 077_applications.sql
 -- Slice 5: Application / Enrollment tracking — the "in flight" submission the strategy doc's
 -- Enrollment Center and Credentialing Workspace track (PECOS/PRMP/payer applications moving

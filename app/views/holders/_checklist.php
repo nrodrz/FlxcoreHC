@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** The merged credential checklist. Expects $checklist (from ChecklistService), $row, $ctx. */
 $ck = $checklist ?? ['rows'=>[],'done'=>0,'total'=>0,'pct'=>0,'missing'=>0,'expiring'=>0,'expired'=>0,'provider_type'=>null,'has_template'=>false];
 $canWrite = FlxCoreHC\Authz::can($ctx, 'records.write');

@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $rows */ /** @var array $f */ /** @var array $typeOptions */ /** @var array $holderOptions */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $rows */ /** @var array $f */ /** @var array $typeOptions */ /** @var array $holderOptions */
 $title = 'Credential report';
 $hc = $ctx->vertical === 'healthcare';
 $holderWord = vocab('holder');

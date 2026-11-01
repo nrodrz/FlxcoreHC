@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Persistent provider header band. Expects $row, $ctx, and (optional) $level, $checklist. */
 $hid = $row['id'];
 $isOrg = ($row['holder_type'] ?? '') === 'organization';

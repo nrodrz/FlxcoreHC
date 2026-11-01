@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- FlxCoreHC MVP schema — MariaDB 10.6+ / MySQL 8
 -- All timestamps UTC DATETIME. All business tables tenant-scoped.
 SET NAMES utf8mb4;

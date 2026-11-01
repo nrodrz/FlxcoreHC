@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 084_prune_beneficiary_interactions.sql
 -- The beneficiary-interaction register (CMS Medicare sales-conduct records: Scope of Appointment,
 -- TPMO disclaimer, Permission to Contact, recording/enrolment clocks) was an insurance feature.

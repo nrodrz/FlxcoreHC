@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Demand signal for NIPR / state-DOI licence verification.
 --
 -- NIPR verification is the most credible remaining gap against AgentSync, but committing to it

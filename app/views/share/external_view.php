@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var array $share */ /** @var array $profile */ /** @var string $token */
 $h = $profile['holder']; $t = $profile['tenant']; $creds = $profile['credentials']; $docs = $profile['docs'];
 $name = ($h['holder_type'] ?? '') === 'organization' ? (string)($h['org_name'] ?? '') : trim(($h['first_name'] ?? '') . ' ' . ($h['last_name'] ?? ''));

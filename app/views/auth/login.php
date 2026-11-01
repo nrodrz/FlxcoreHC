@@ -1,3 +1,4 @@
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ ?>
 <div class="auth-card">
 <?php
   // Signed-out pages carry the agency's own logo and name when we can identify them.

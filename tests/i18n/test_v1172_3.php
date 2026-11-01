@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.3 — reminder thresholds and the Spanish dictionary. Runs WITHOUT a database:  php tests/i18n/test_v1172_3.php
  * R1 ReminderService::thresholds() (default, override, cleaning, legacy key ignored) · R2 label · R3 code/config guards

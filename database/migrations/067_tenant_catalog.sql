@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Tenant-extensible credential catalog.
 --
 -- Until now the catalog was global and migration-seeded: only a code release could add a credential

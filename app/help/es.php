@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Contenido de ayuda — Español. Misma estructura que en.php. */
 return [
   'getting-started' => ['title' => 'Primeros pasos', 'summary' => 'De una organización vacía a un calendario de cumplimiento funcionando en una tarde.', 'blocks' => [

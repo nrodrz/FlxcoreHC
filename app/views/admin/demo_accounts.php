@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var FlxCoreHC\TenantContext $ctx */ /** @var string $doc */ /** @var bool $built */
 $title = 'Platform console — Demo accounts';
 $adminTab = 'system';

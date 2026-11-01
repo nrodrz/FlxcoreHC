@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.0 — behavioural tests (DB-level; each asserts an OUTCOME, not source text) for:
  *   P   platform console two-factor policy (a setting, off on a new installation)

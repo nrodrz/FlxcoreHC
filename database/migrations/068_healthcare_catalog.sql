@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Healthcare national starter catalog + provider type on holders (healthcare Phase 2).
 --
 -- Seeds the standard, verified credentialing document set a US provider tracks, as GLOBAL rows

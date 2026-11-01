@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 079_calendar_event_types.sql
 -- Configurable calendar event types. Replaces the old hardcoded, insurance-flavoured kind list
 -- (which included SOA/Carrier) with a tenant-editable set. Manual events reference a type by its

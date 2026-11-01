@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Platform console navigation (v1.149). Grouped into four areas and rendered by the shared
  * grouped-nav partial — compact rail on desktop, one select on mobile.

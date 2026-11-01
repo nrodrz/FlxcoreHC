@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 106_document_requests.sql
 -- A tenant asks its provider (or their office) for a document; the office uploads it in the provider
 -- portal against the request. The tenant is the credential manager: after ACCEPT the document is the

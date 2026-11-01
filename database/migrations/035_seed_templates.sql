@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Seed the starter templates into every existing organization. New organizations get
 -- the same set at registration (see AuthService::seedTemplates). Agencies may edit,
 -- rename, or delete any of them — these are a starting point, not a cage.

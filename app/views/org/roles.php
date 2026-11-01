@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $roles */ /** @var array $catalog */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $roles */ /** @var array $catalog */
 $title = 'Roles & permissions';
 include __DIR__ . '/_tabs.php';
 $totalCaps = count(FlxCoreHC\Capabilities::all());

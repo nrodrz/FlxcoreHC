@@ -1,4 +1,4 @@
-<?php /** @var string $viewFile */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var string $viewFile */
 $brand = $GLOBALS['flx_brand'] ?? [];          // {accent, accent2, logo, name, themeCss, mode}
 // Colour scheme: the person's own choice wins; otherwise fall back to the tenant's default.
 // 'auto' defers to the OS preference, applied client-side before paint to avoid a flash.

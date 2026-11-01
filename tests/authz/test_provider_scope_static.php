@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.170.9 — provider-scope (need-to-know) STATIC guards. Runs WITHOUT a database:
  *   php tests/authz/test_provider_scope_static.php

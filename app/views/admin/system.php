@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $status */ /** @var array $diag */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $status */ /** @var array $diag */
 $title='System & updates';
 $adminTab = 'system';
 require FLXCOREHC_APP . '/views/admin/_tabs.php';

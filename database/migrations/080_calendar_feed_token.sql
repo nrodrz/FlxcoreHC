@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 080_calendar_feed_token.sql
 -- Per-user secret token for the read-only iCalendar (ICS) subscription feed. Possession of the
 -- token authorises a read-only calendar feed of that user's tenant events — the same model Google

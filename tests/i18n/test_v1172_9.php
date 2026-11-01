@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.9 — Spanish gaps and wording. Runs WITHOUT a database:  php tests/i18n/test_v1172_9.php
  * N1 notification texts are re-rendered per language (14 templates), English unchanged

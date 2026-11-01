@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Authoritative source links per training article, so agents can verify the
 -- guidance against CMS, certification bodies, carriers, and the state.
 CREATE TABLE IF NOT EXISTS training_sources (

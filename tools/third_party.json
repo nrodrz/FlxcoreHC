@@ -1,0 +1,17 @@
+{
+  "_comment": "Lock list of the third-party components shipped in this package (there is no Composer/npm lock: nothing is installed at build time). Add an entry whenever a third-party file is added; tools/third_party_notices.php --check fails when a shipped third-party file is not listed.",
+  "components": [
+    {"name": "IBM Plex Sans", "version": "web fonts as distributed by Google Fonts", "license": "SIL OFL 1.1",
+     "copyright": "Copyright 2019 IBM Corp. All rights reserved.",
+     "files": ["assets/fonts/ibm-plex-sans-*.woff2"], "license_file": "assets/fonts/OFL.txt"},
+    {"name": "IBM Plex Mono", "version": "web fonts as distributed by Google Fonts", "license": "SIL OFL 1.1",
+     "copyright": "Copyright 2019 IBM Corp. All rights reserved.",
+     "files": ["assets/fonts/ibm-plex-mono-*.woff2"], "license_file": "assets/fonts/OFL.txt"},
+    {"name": "Archivo", "version": "web fonts as distributed by Google Fonts", "license": "SIL OFL 1.1",
+     "copyright": "See the notice at the top of the license text below.",
+     "files": ["assets/fonts/archivo-*.woff2"], "license_file": "assets/fonts/OFL.txt"},
+    {"name": "Tabler Icons", "version": "icon paths used by app/src/IconService.php", "license": "MIT",
+     "copyright": "Copyright (c) 2020-2026 Paweł Kuna",
+     "files": ["assets/vendor/tabler-icons-LICENSE.txt"], "license_file": "assets/vendor/tabler-icons-LICENSE.txt"}
+  ]
+}

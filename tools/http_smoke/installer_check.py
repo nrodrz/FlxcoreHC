@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 """v1.171.5 — installer behaviour over HTTP (TEST ONLY; driven by installer_check.sh).
 Runs the real web installer against an empty database with FLX_CONFIG pointing at a temp file, once over plain http and
 once behind a TLS proxy (X-Forwarded-Proto: https), then checks what it wrote and that the front controller now serves the app."""

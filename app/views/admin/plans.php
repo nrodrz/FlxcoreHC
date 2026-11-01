@@ -1,4 +1,4 @@
-<?php /** @var array $plans */ /** @var array $features */ /** @var array|null $edit */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $plans */ /** @var array $features */ /** @var array|null $edit */
 $title='Plans';
 ?>
 <div class="crumb"><a href="<?= BASE_PATH ?>/admin">Platform admin</a></div>

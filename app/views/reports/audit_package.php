@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $holder */ /** @var array $score */
 /** @var array $credentials */ /** @var array $compliance */ /** @var array $auditLog */
 /** @var array $accessLog */ /** @var int $planYear */ /** @var string $generatedAt */

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 115_addresses_contacts.sql
 -- Addresses and office contacts as first-class records.
 --

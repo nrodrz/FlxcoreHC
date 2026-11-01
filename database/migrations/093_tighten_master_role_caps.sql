@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 093_tighten_master_role_caps.sql
 -- Least-privilege hardening of the built-in global master roles, and the safety decision that these
 -- built-in masters are immutable (enforced in code: superadmin may create NEW global roles but cannot

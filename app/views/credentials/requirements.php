@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $catalog */ /** @var array $checklist */ /** @var bool $available */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $catalog */ /** @var array $checklist */ /** @var bool $available */
 $title = 'MA credential requirements';
 $catLabel = ['certification'=>'Certification','license'=>'License','insurance'=>'Malpractice / liability','appointment'=>'Payer enrollment','training'=>'Training','background'=>'Background','contract'=>'Contract','identifier'=>'Identifier'];
 $stChip = function($st){

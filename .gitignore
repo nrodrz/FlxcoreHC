@@ -4,3 +4,5 @@ app/*.flxkeys
 uploads/*
 !uploads/.keep
 !uploads/.htaccess
+__pycache__/
+*.pyc

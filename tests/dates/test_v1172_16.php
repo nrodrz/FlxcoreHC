@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.16 — per-organization time zone: source guards. Runs WITHOUT a database:  php tests/dates/test_v1172_16.php
  * Y1 migration 134 adds tenants.timezone (NULL = platform zone) and is listed by both install.php and the manifest

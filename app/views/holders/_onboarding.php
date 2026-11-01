@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Computed onboarding checklist — no schema, derived from real state.
  *  Expects: $row (holder), $mine (compliance producer entry or null), $manage (bool: manager view). */
 $steps = [];

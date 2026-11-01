@@ -1,4 +1,4 @@
-<?php /** @var array $app */ /** @var array $history */ /** @var array $holderList */ /** @var array $regulatorList */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $app */ /** @var array $history */ /** @var array $holderList */ /** @var array $regulatorList */
 $K = FlxCoreHC\Repository\ApplicationRepository::KINDS;
 $S = FlxCoreHC\Repository\ApplicationRepository::STATUSES;
 $chip = function(string $s) { return match($s) {

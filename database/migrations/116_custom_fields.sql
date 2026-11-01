@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 116_custom_fields.sql
 -- Custom fields (definitions + values). Each organization defines its own extra fields for providers
 -- or for the organization itself — label, type, required, options, order — with NO schema change per

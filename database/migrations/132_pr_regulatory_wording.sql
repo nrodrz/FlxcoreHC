@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 132_pr_regulatory_wording.sql (v1.171.4) — Puerto Rico regulatory wording, idempotent.
 --  * The nursing board is named "Junta Examinadora de Enfermería" on the Puerto Rico Department of Health site
 --    (salud.pr.gov/CMS/126); rename the seeded "…Enfermeras y Enfermeros" rows (new tenants get the new name from 120/126 directly).

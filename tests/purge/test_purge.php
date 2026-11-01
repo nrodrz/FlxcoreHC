@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.170.6 — PurgeService + related security fixes. AUTHORED; RUNTIME VALIDATION PENDING.
  * Run ONLY through the isolated runner:  php tests/purge/run.php

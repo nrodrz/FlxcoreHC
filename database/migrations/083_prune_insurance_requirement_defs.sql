@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 083_prune_insurance_requirement_defs.sql
 -- Remove the 15 global insurance requirement definitions (vertical='insurance') seeded by
 -- migration 006. In the healthcare edition, RequirementRepository::defs() only ever selects

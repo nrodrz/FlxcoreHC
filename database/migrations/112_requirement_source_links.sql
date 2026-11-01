@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 112_requirement_source_links.sql
 -- Level 1 of regulatory grounding: link each credential/requirement type to the dated legal source
 -- that justifies it, so a provider page can answer "why is this required?" inline. The source table

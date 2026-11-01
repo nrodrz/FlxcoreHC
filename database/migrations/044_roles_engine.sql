@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Custom-role engine (v1.49): permissions move from hardcoded code into per-tenant data.
 --
 -- Until now a user's role was a fixed string and Authz held a hardcoded capability matrix.

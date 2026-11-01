@@ -1,4 +1,4 @@
-<?php /** @var array $producers */ /** @var array $totals */ /** @var array $soon */ /** @var bool $available */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $producers */ /** @var array $totals */ /** @var array $soon */ /** @var bool $available */
 $title = 'Compliance';
 $hname = fn($h)=> ($h['holder_type']??'')==='organization' ? ($h['org_name']??'') : trim((string)($h['first_name']??'').' '.(string)($h['last_name']??''));
 $bar = fn(int $pct)=> '<div style="height:8px;background:var(--line);border-radius:5px;overflow:hidden;min-width:110px"><div style="height:100%;width:'.$pct.'%;background:'.($pct>=100?'var(--ok)':($pct>=60?'var(--warn)':'var(--danger)')).'"></div></div>';

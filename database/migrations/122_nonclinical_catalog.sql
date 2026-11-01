@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 122_nonclinical_catalog.sql — SUPERSEDED (see Finding B / migration 123).
 -- The original 122 omitted the `id` column and used a wrong column list, so under INSERT IGNORE only one
 -- empty-id row seeded and the rest collided on the empty primary key. It is intentionally EMPTY (comments

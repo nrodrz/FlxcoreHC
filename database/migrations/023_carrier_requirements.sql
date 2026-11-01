@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Carrier-specific compliance:
 -- 1) carrier_requirements — each carrier's own extra requirements (tenant-defined).
 -- 2) producer_requirements gains a carrier dimension so items like

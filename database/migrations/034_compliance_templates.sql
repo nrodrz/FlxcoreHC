@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Compliance templates: the missing middle layer.
 --
 -- Until now a producer's requirements came from an implicit "role default" — every

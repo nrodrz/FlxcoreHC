@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var ?array $role */ /** @var array $catalog */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var ?array $role */ /** @var array $catalog */
 $isNew   = $role === null;
 $isOwner = !$isNew && $role['slug'] === 'tenant_owner';
 $isSystem = !$isNew && $role['is_system'];

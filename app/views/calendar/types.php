@@ -1,4 +1,4 @@
-<?php /** @var array $types */ $title='Event types'; ?>
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $types */ $title='Event types'; ?>
 <div class="crumb"><a href="<?= BASE_PATH ?>/calendar">Calendar</a></div>
 <div class="topline"><h1>Event types</h1></div>
 <p class="hint" style="margin-top:-.4rem">The types available when adding a calendar event. Add your own; the system “Compliance deadline” type is used by auto-generated credential deadlines and can't be removed.</p>

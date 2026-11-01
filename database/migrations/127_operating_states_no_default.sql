@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 127_operating_states_no_default.sql
 -- No jurisdiction is assumed for a new tenant (the silent 'FL' default was a review finding, D-5).
 -- Existing tenants keep whatever they saved.

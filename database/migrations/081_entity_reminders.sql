@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 081_entity_reminders.sql
 -- Generic dedup ledger for reminders on entities beyond credentials (applications, screening
 -- cadence, attestation cadence). Mirrors credential_reminders but keyed generically by

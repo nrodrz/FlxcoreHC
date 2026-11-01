@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 """
 v1.172.10 — browser checks for the findings of the independent v1.172.7 validation (Playwright + demo server).
 Evidence class: Claude.ai sandbox only.

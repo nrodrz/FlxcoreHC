@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- FlxCoreHC — compliance-aware scheduling (booking/appointment engine).
 -- Booking types expose an unguessable public slug; bookings capture invitee contact
 -- (encrypted), TCPA consent, and — for marketing appointments — a Scope of Appointment

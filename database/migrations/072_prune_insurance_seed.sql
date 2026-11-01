@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 072_prune_insurance_seed.sql
 -- Healthcare Edition cleanup: remove the inert insurance-vertical global seed data that earlier
 -- migrations (020 catalog, 025/026 training, 068/071 vertical tagging) left in the shared catalog

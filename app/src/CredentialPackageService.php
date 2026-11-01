@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 declare(strict_types=1);
 
 namespace FlxCoreHC;
@@ -38,6 +38,7 @@ final class CredentialPackageService
         $pdf->rect(0, 86, MiniPdf::W, 3, self::GOLD);
         $pdf->text($M, 34, (string)$o['org'], 15, true, [1, 1, 1]);
         $pdf->text($M, 56, 'Credential Package', 10.5, false, [0.78, 0.84, 0.95]);
+        $pdf->text($M, 72, Ownership::PRODUCT . ' — ' . Ownership::PRODUCT_LINE, 8, false, [0.62, 0.70, 0.85]);   // ownership standard: product and product line on the cover
         $dateStr = 'Generated ' . fmt_dt(utc_now(), 'm/d/Y');
         $pdf->text($R - MiniPdf::width($dateStr, 9), 34, $dateStr, 9, false, [0.78, 0.84, 0.95]);
         if (!empty($o['regulator'])) {
@@ -186,7 +187,8 @@ final class CredentialPackageService
     {
         $y = MiniPdf::H - 42;
         $pdf->line(46, $y - 12, MiniPdf::W - 46, $y - 12);
-        $pdf->text(46, $y, $o['org'] . '  ·  Powered by FlxCoreHC  ·  ' . $o['ruleset'], 7.8, false, self::GRAY);
+        $pdf->text(46, $y, $o['org'] . '  ·  Powered by ' . Ownership::PRODUCT . '  ·  ' . $o['ruleset'], 7.8, false, self::GRAY);
+        $pdf->text(46, $y + 11, Ownership::copyright(), 7, false, self::GRAY);
         $pn = 'Page ' . $pageNo;
         $pdf->text(MiniPdf::W - 46 - MiniPdf::width($pn, 7.8), $y, $pn, 7.8, false, self::GRAY);
     }

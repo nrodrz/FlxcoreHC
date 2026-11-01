@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $rows */ /** @var array $filter */ /** @var array $tenants */ /** @var array $actions */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $rows */ /** @var array $filter */ /** @var array $tenants */ /** @var array $actions */
 $adminTab = 'audit'; $title = 'Platform audit log';
 include __DIR__ . '/_tabs.php';
 $qs = function (array $extra) use ($filter) { return http_build_query(array_merge($filter, $extra)); };

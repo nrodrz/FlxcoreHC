@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 074_seed_regulators.sql
 -- Citation-checked starter set of regulators for healthcare tenants: the federal agencies,
 -- frameworks, accreditor and state boards (FL + PR) most billing companies answer to. Each

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 117_provider_application_data.sql
 -- Provider data that credentialing / enrollment APPLICATIONS ask for (CAQH ProView, OCS/SICRO,
 -- Medicaid PEP, Medicare 855, payer packets) but a tracking record did not hold. Non-sensitive

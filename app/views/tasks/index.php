@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $rows */ /** @var array $holderList */ /** @var array $credList */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $rows */ /** @var array $holderList */ /** @var array $credList */
 $title = 'Renewal tasks';
 $hname = function($h){ return ($h['holder_type'] ?? '') === 'organization' ? ($h['org_name'] ?? '') : trim((string)($h['first_name'] ?? '').' '.(string)($h['last_name'] ?? '')); };
 $priColor = ['high'=>'var(--danger)','normal'=>'var(--accent)','low'=>'var(--ink-3)'];

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- FlxCoreHC v1.1 — Medicare Advantage / CMS compliance layer
 -- Carriers + plan-year credentials. Run once on existing installs.
 

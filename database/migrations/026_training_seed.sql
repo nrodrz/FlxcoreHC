@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Seed the reference library. Content is original summary written for FlxCoreHC; facts only.
 INSERT IGNORE INTO training_library (code, title, category, authority, summary, body, link, link_label, minutes, sort, updated_at) VALUES
 

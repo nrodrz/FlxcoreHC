@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Email delivery (v1.53). On shared hosting PHP mail() frequently fails silently, so every
 -- message is queued in an outbox first, then a sender attempts delivery (SMTP if configured,
 -- otherwise mail()) and records the result. This gives retries and an audit trail, and lets

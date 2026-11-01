@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 073_regulators.sql
 -- Generalise the payer ("carrier") concept into a first-class REGULATOR: any entity a provider or
 -- facility must satisfy — a payer (Aetna, Medicare), a government agency (CMS, FDA, CDC), a

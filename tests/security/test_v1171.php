@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.171.0 — behavioural regression tests for the Claude Code review findings (DB-level; each asserts an OUTCOME, not source text).
  * Run ONLY through the isolated runner:  php tests/security/run.php   (creates/drops database flx_security)

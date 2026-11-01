@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $cfg */ /** @var array $outbox */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $cfg */ /** @var array $outbox */
 $adminTab = 'email';
 $title = 'Email';
 include __DIR__ . '/_tabs.php';

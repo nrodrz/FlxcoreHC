@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Per-type business timezone (availability is interpreted here; slots stored as UTC).
 ALTER TABLE booking_types ADD COLUMN timezone VARCHAR(64) NOT NULL DEFAULT 'UTC';
 -- Reminder bookkeeping so the cron doesn't double-send.

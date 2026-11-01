@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.6 — every visible date is MM/DD/YYYY and every time is local (app timezone, 12-hour), never UTC.
  * Runs WITHOUT a database:  php tests/dates/test_v1172_6.php

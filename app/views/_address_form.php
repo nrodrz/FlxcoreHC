@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Shared address form. Expects: $action (post url), $a (existing row or null). */
 $a = $a ?? []; $kinds = FlxCoreHC\Repository\AddressRepository::KINDS; ?>
 <form method="post" action="<?= e($action) ?>" class="stack" style="max-width:640px">

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Shared CME / CE panel (healthcare). Expects: $row (holder), $ce (entries), $ceHours, $cycle, $ctx.
  *  Providers can add their own entries; managers can add for anyone.
  *  v1.170.7 — replaced the Florida insurance CE rule (24 h / Law & Ethics / F.S. 626.2815). CME/CE

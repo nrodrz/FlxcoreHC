@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 099_document_verification.sql
 -- Verification evidence recorded on the DOCUMENT itself. A credential carries dates; the document
 -- (license PDF, malpractice COI, board letter) is what a credentialing specialist actually verifies —

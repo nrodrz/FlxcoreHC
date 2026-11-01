@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- CY2027 CMS Final Rule (CMS-4208-F3, issued 2026-04-02) + PY2027 certification season.
 -- Marketing/compliance provisions apply from 2026-10-01 (ahead of AEP for plan year 2027).
 -- Idempotent: INSERT IGNORE for new items, UPDATEs for revised guidance.

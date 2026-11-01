@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 088_user_locale.sql
 -- Per-user interface language preference for the Puerto Rico market (Spanish-first). Defaults to
 -- English; a user can switch to Spanish and it persists. Nullable so existing rows need no backfill.

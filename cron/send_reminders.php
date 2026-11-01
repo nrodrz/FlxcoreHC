@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 declare(strict_types=1);
 /**
  * Compliance reminder sweep — optional, run from cPanel cron (e.g. daily):

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 098_ui_translations.sql
 -- Editable UI translations. The English source text is the key; `target` is the translation in
 -- `locale`. Rows with target NULL are strings the translator has SEEN rendered but that have no

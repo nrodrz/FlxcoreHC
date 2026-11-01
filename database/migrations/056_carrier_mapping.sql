@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Carrier aliasing: CMS landscape files identify plans by legal ORGANIZATION name
 -- ("AETNA LIFE INSURANCE COMPANY", "AETNA HEALTH INC. (FL)") and CONTRACT ID (H5521, H1609),
 -- not by the marketing brand ("Aetna Medicare") we seed the master carrier list with. Without a

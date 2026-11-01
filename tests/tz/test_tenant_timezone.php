@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.16 — each organization has its own time zone. Run ONLY through  php tests/tz/run.php  (creates/drops database flx_tz).
  * Fixture: three organizations — Puerto Rico (AST, no daylight saving), Honolulu, and one with NO zone of its own (follows the platform: Eastern).

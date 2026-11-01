@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 076_verifications_attestations.sql
 -- Slice 4: the two records that turn an expiry tracker into a credentialing system.
 --

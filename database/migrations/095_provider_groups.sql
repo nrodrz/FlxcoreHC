@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 095_provider_groups.sql
 -- Intermediate grouping layer INSIDE a tenant: "groups". One entity that different org types read
 -- differently — a billing company's "client groups" (the medical groups it serves), a hospital's

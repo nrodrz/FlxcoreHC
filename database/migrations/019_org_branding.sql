@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Per-tenant branding + organization profile.
 ALTER TABLE tenants
   ADD COLUMN brand_name    VARCHAR(120) NULL,

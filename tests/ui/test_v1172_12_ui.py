@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 """
 v1.172.12 — checks for the gaps the independent v1.172.11 run found (Playwright + demo DB). Evidence class: Claude.ai sandbox only.
   K  the nightly cron sweep uses the organization's day: a credential expiring on the org's TODAY stays 'expiring', yesterday's becomes 'expired'

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 declare(strict_types=1);
 
 namespace FlxCoreHC;
@@ -130,6 +130,7 @@ final class CvService
         $foot = 'Produced from the credential system of record by ' . (string)($o['generatedBy'] ?? '')
               . ' · ' . (string)$o['org'] . ' · Statuses reflect expiry dates as of the generation date.';
         $pdf->wrap($M, MiniPdf::H - 38, $R - $M, $foot, 7.5, false, self::GRAY);
+        $pdf->text($M, MiniPdf::H - 18, 'Powered by ' . Ownership::PRODUCT . '  ·  ' . Ownership::copyright(), 7, false, self::GRAY);
 
         return $pdf->output();
     }

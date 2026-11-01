@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- CMS data integration: richer plan attributes from the MA/Part D Landscape files, plus the
 -- config + audit tables that drive automated (cron) and manual refreshes, and an NPI cache.
 

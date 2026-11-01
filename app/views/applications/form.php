@@ -1,4 +1,4 @@
-<?php /** @var array $holderList */ /** @var array $regulatorList */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $holderList */ /** @var array $regulatorList */
 $K = FlxCoreHC\Repository\ApplicationRepository::KINDS;
 $app = $app ?? [];
 $preHolder = $preHolder ?? '';

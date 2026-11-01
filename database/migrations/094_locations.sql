@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 094_locations.sql
 -- Practice locations within a tenant. A billing company (or group/lab/clinic) commonly manages
 -- providers across several physical sites; this lets a tenant define its locations and affiliate

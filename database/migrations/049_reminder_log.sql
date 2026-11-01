@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Compliance expiry reminders (v1.54).
 --
 -- The credential_reminders table already exists (base schema) with UNIQUE (credential_id,

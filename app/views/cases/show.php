@@ -1,4 +1,4 @@
-<?php /** @var array $case @var array $holder @var array $requirements @var array $blockers @var array $history @var array $catalog @var array $transitions */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $case @var array $holder @var array $requirements @var array $blockers @var array $history @var array $catalog @var array $transitions */
 $title = 'Case';
 $T = FlxCoreHC\Repository\CredentialingCaseRepository::TYPES;
 $reqStatuses = FlxCoreHC\Repository\CredentialingCaseRequirementRepository::STATUSES;

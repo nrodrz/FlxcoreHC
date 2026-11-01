@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Agency Credentialing — expanded tests (§8 of the remediation). AUTHORED; RUNTIME VALIDATION PENDING
  * (no PHP/MySQL in the authoring environment). Run on a PHP 8 + MySQL host:

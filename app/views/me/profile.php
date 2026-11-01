@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** Self-service intake: the producer/provider completes their own record — identifiers, license,
  *  and CE anchor — feeding straight into the same holder row staff manage. Staff-owned fields
  *  (name, email/login, status) are shown read-only; identity changes go through the office.

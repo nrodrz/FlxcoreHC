@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 124_healthcare_only.sql — v1.170.7: FlxCoreHC is healthcare-only.
 -- 1) Healthcare entity profile columns on tenants (replaces the insurance "agency licence" / "entity NPN").
 -- 2) Data clean-up for installs that pre-date the healthcare edition (all idempotent; no-ops on a fresh install).

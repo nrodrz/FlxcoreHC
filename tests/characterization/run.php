@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Phase 0.1 runner — executes the six scenarios against an ISOLATED flx_char DB, captures decision-level
  * comparisons, verification-store analysis, and the regulator runtime-dependency finding, and writes

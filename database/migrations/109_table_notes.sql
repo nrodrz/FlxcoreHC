@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 109_table_notes.sql
 -- Operator notes against the data dictionary. The dictionary itself is generated live from the
 -- schema; this table stores the platform team's own annotations (why a table exists, gotchas,

@@ -1,3 +1,4 @@
+/* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /* Tier 2 — in-browser multi-page document scanner.
  * Opens a modal: capture/choose page images, per-page crop (drag corners), enhance, reorder/remove,
  * then combine into ONE PDF entirely client-side and hand it to the upload input. No libraries, no

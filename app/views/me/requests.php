@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $row */ /** @var array $requests */
 $title = 'Document requests';
 $open = array_filter($requests, fn($r) => in_array($r['status'], ['open','returned'], true));

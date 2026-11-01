@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Master catalog of carrier plan NAMES, so agents pick from a controlled list when entering
 -- their book of business instead of free-texting (which fragments plan-level reporting).
 -- Platform-level (not tenant-scoped), like platform_carriers: one authoritative list the

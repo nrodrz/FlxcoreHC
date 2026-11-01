@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- FlxCoreHC — consent-based network invites (self-serve downline management).
 -- A parent (FMO/agency) issues an invite code; a downline tenant accepts it, which
 -- sets its parent_tenant_id. Oversight is read-only and the downline can leave anytime.

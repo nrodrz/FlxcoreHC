@@ -1,4 +1,4 @@
-<?php /** @var array $byCategory */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $byCategory */
 $cats = FlxCoreHC\Repository\RegulatorRepository::CATEGORIES;
 $title = 'Regulators'; ?>
 <div class="topline"><h1>Regulators</h1></div>

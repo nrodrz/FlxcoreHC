@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 SET NAMES utf8mb4;
 INSERT INTO requirement_defs
  (id, tenant_id, authority, applies_to, vertical, code, title, description, cadence, evidence_kind, satisfied_by_credential_type, severity, grace_days, sort_order, active, created_at) VALUES

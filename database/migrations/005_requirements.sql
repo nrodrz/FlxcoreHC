@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- FlxCoreHC — Compliance Requirements engine (per agent & per agency)
 -- Distinct from `credentials` (documents/licenses) and `compliance_items` (org-level
 -- platform/security checklist). Tracks recurring REGULATORY obligations each agent

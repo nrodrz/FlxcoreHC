@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $rows */ /** @var array $filter */
 /** @var array $users */ /** @var array $actions */ /** @var int $total */ /** @var int $page */ /** @var int $pages */
 $title = 'Audit log';

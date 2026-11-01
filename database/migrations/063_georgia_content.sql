@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Georgia regulatory content — the second statute-sourced state.
 --
 -- Until now every verified rule in the catalog was Florida's; Georgia agencies got the federal

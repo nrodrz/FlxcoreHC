@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.10 — findings from the independent v1.172.7 validation. Runs WITHOUT a database:  php tests/i18n/test_v1172_10.php
  * S1 SmtpGuard: a host name that does not resolve is refused with a message, never a TypeError (was HTTP 500)

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.171.0 security & behaviour tests — self-contained runner. Creates an ISOLATED throwaway database `flx_security`,
  * installs schema + migrations into it (same order as install.php, via tests/characterization/install_into_char.php),

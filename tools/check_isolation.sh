@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 # CI backstop (audit H1, hardened in v1.171.2 after review finding B-7): every tenant-table query must go
 # through the repository layer. Fails when:
 #   1. Database::pdo() is used in app/ outside the sanctioned files below;

@@ -1,4 +1,4 @@
-<?php $title = 'Credentials'; ?>
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ $title = 'Credentials'; ?>
 <div class="crumb"><?= e($ctx->tenantName) ?></div>
 <div class="topline">
   <h1>Credentials</h1>

@@ -1,4 +1,4 @@
-<?php $title = FlxCoreHC\Repository\HolderRepository::displayName($row);
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ $title = FlxCoreHC\Repository\HolderRepository::displayName($row);
 require FLXCOREHC_APP . '/views/holders/_provider_header.php'; ?>
 <?php $manage = true; require FLXCOREHC_APP . '/views/holders/_onboarding.php'; ?>
 

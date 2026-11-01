@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- FlxCoreHC — global compliance checklist template items (tenant_id NULL).
 -- Seeded once. Tenants get their own status rows on first interaction.
 -- applies_to gates by vertical: 'all', 'healthcare', or 'insurance'.

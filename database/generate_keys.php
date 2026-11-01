@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 // Run once at setup to generate encryption keys for app/config.php:
 //   php database/generate_keys.php
 // Paste the output into config.php. Store config.php OUTSIDE the web root.

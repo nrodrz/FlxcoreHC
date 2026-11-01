@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Verified authoritative sources (official domains only). Idempotent via INSERT IGNORE.
 INSERT IGNORE INTO training_sources (article_code, label, url, authority, sort) VALUES
  ('ready_to_sell', 'CMS — CY2027 MA & Part D Final Rule (fact sheet)', 'https://www.cms.gov/newsroom/fact-sheets/contract-year-2027-medicare-advantage-part-d-final-rule', 'cms', 10),

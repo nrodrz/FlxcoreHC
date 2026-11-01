@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Recover the encryption keys from a FlxCoreHC key-backup file (.flxkeys) created by the installer or by
  * Console → System → "Download key backup".   CLI only.

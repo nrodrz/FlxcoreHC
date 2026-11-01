@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 082_prune_insurance_vestiges.sql
 -- Structural pruning of insurance-era vestige tables and columns that no live healthcare
 -- code reads or writes. Each table below was audited against the entire live codebase

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.172.13 — every user-visible message literal has a Spanish entry. Runs WITHOUT a database:  php tests/i18n/test_v1172_13.php
  * F1 each flash('...') literal in index.php / app/src and each `return [bool, '...']` message literal in app/src has an entry in app/lang/es.php

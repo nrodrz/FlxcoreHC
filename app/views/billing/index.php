@@ -1,4 +1,4 @@
-<?php /** @var array $invoices */ /** @var array $ledger */ /** @var array|null $plan */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $invoices */ /** @var array $ledger */ /** @var array|null $plan */
 $title = 'Billing';
 $m = fn($c) => FlxCoreHC\InvoiceService::money((int) $c);
 $chip = ['draft'=>'muted','sent'=>'warn','partial'=>'warn','paid'=>'active','void'=>'muted'];

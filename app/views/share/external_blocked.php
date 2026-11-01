@@ -1,4 +1,4 @@
-<?php /** @var string $reason */ $title = 'Link unavailable'; ?>
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var string $reason */ $title = 'Link unavailable'; ?>
 <?php require __DIR__ . '/_lang.php'; ?>
 <div class="auth-card" style="max-width:440px;margin:3rem auto;text-align:center">
   <h1 style="font-size:1.2rem"><?= e(t('This link is no longer available')) ?></h1>

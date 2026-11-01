@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 105_document_kinds.sql
 -- Every credential / managed item holds 0..n documents. `kind` labels why each one is there so a
 -- license, its renewal letter and a supporting affidavit can coexist meaningfully. `sort_order` keeps

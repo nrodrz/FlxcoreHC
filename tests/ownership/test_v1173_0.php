@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.173.0 — Ownership & White-Label Standard, steps 1-4 and 8. Runs WITHOUT a database:  php tests/ownership/test_v1173_0.php
  * O1 the ownership constants and statements are exactly the standard's wording
@@ -19,20 +19,23 @@ $src = $rd('app/src/Ownership.php');
 define('FLXCOREHC_VERSION', 'test');
 require_once "$ROOT/app/src/Ownership.php";
 use FlxCoreHC\Ownership as O;
+$W = "\u{2060}";   // the invisible word joiner that protects the product name in ownership statements (v1.173.1)
+$n = fn(string $x) => str_replace($W, '', $x);
 $check(O::OWNER === 'Indisse-BTS', 'O1 owner is Indisse-BTS');
 $check(O::copyright() === '© 2026 Indisse-BTS. All rights reserved.', 'O1 copyright line');
 $check(O::fileHeader() === '© 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.', 'O1 source-file header');
-$check(O::poweredBy() === 'Powered by FlxCoreHC · © 2026 Indisse-BTS. All rights reserved.', 'O1 sign-in "Powered by" line');
-$check(O::developedBy() === 'FlxCoreHC is designed, developed and owned by Indisse-BTS, drawing on 30 years managing IT operations for multiple companies in Puerto Rico and Florida.', 'O1 developed-by sentence');
-$ind = O::independentDeveloper();
+$check($n(O::poweredBy()) === 'Powered by FlxCoreHC · © 2026 Indisse-BTS. All rights reserved.', 'O1 sign-in "Powered by" line');
+$check($n(O::developedBy()) === 'FlxCoreHC is designed, developed and owned by Indisse-BTS, drawing on 30 years managing IT operations for multiple companies in Puerto Rico and Florida.', 'O1 developed-by sentence');
+$ind = $n(O::independentDeveloper());
 $check(str_starts_with($ind, 'FlxCoreHC is an independent product. It was conceived, designed and developed by Indisse-BTS as an independent software developer, and not as an employee, contractor or consultant of any company or organization.')
     && str_ends_with($ind, 'gives no organization any ownership interest in it, in its updates, or in improvements made at its request.')
     && str_contains($ind, 'is not a work made for hire for, any organization that uses it'), 'O1 independent-developer statement');
-$t = O::licenseTerms();
+$tRaw = O::licenseTerms(); $t = array_map($n, $tRaw);
 $check(count($t) === 8, 'O1 eight license lines');
 $check(str_starts_with($t[0], 'FlxCoreHC is proprietary software. It is licensed, not sold') && str_starts_with($t[3], 'Unless the agreement allows it in writing:')
     && str_starts_with($t[4], 'The organization owns its own data.') && str_starts_with($t[7], 'The owner is an independent software vendor'), 'O1 the lines are in the standard\'s order');
 $check(!str_contains(implode(' ', $t), '<Product>'), 'O1 no unreplaced placeholder');
+$check(str_contains(O::developedBy(), 'FlxCoreHC' . $W) && str_contains(O::poweredBy(), 'FlxCoreHC' . $W) && str_contains(O::independentDeveloper(), 'FlxCoreHC' . $W) && substr_count(implode(' ', $tRaw), 'FlxCoreHC' . $W) === substr_count(implode(' ', $t), 'FlxCoreHC'), 'O1 every mention of the product in the ownership statements is followed by U+2060 (product-name protection)');
 $check(O::TERMS_CLOSING === 'The signed agreement of each organization is what applies.', 'O1 closing sentence');
 $sp = O::spanish();
 $check(count($sp['terms']) === 8 && str_contains($sp['independent'], 'work made for hire'), 'O1 Spanish courtesy translation has all eight lines');

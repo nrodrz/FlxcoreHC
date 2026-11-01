@@ -1,4 +1,4 @@
-<?php /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $metrics */ /** @var array $rev */ /** @var array $tenants */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $metrics */ /** @var array $rev */ /** @var array $tenants */
 $title='Dashboard';
 $m=$metrics; $money=fn($n)=>'$'.number_format((float)$n,0);
 ?>

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Demo dataset support (v1.52). A single flag on the tenant marks the whole "Sunrise Senior
 -- Advisors" demonstration organization. Because every record is tenant-scoped, flagging the
 -- tenant is enough to identify and remove the entire demo in one operation — no per-row flag

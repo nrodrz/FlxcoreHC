@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 declare(strict_types=1);
 /**
  * CLI: encrypt legacy plaintext address fields (line1, line2, phone) into the *_enc columns and clear the

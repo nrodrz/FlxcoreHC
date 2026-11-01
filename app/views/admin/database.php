@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /** @var FlxCoreHC\TenantContext $ctx */ /** @var array $summary */ /** @var array $checks */ /** @var array $dictionary */ /** @var string $q */
 $title = 'Platform console — Database';
 $adminTab = 'database';

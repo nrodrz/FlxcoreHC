@@ -1,3 +1,4 @@
+# © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 import collections
 import json, re, sys, http.cookiejar, urllib.request, urllib.parse
 import os, subprocess
@@ -492,7 +493,7 @@ opn=client(); sN,_,hN=req(opn,'/about')
 rec('OW1 /about needs a sign-in (signed-out visitors are sent to the sign-in page)', sN==302 and (hN.get('Location') or '').endswith('/login'), f'status {sN}')
 sT,bT,_=req(opn,'/terms'); rec('OW2 the Terms of Use page is public and labelled as a draft', sT==200 and 'Terms of Use' in bT and 'DRAFT' in bT, f'status {sT}')
 sL,bL,_=req(opn,'/login')
-rec('OW3 the sign-in page shows the Powered-by line, "licensed, not sold" and the Terms link', 'Powered by FlxCoreHC · © 2026 Indisse-BTS. All rights reserved.' in bL and 'Proprietary software, licensed, not sold.' in bL and 'href="/terms"' in bL, f'status {sL}')
+rec('OW3 the sign-in page shows the Powered-by line, "licensed, not sold" and the Terms link', 'Powered by FlxCoreHC · © 2026 Indisse-BTS. All rights reserved.' in bL.replace('\u2060','') and 'Proprietary software, licensed, not sold.' in bL and 'href="/terms"' in bL, f'status {sL}')
 OWN=r'^[0-9A-F]{4}(-[0-9A-F]{4}){3}$'
 opx=login('owner@smoke.test')[0]
 sF,bF,_=req(opx,'/about?format=json'); F=_json.loads(bF) if sF==200 else {}
@@ -518,6 +519,11 @@ req(opx,'/settings',{'_csrf':tokN,'name':old})
 a2=dbq("select count(*) from audit_logs where action='org_name_changed'")
 req(opx,'/settings',{'_csrf':tokN,'name':old})
 rec('OW12 saving the form without changing the name writes no audit row', dbq("select count(*) from audit_logs where action='org_name_changed'")==a2, '')
+# ---- v1.173.1 — license notice, third-party notices, PDFs
+rec('OW13 the About page (owner) shows LICENSE.txt and the third-party notices in the full view', sH==200 and 'LICENSE NOTICE' in bH and 'THIRD-PARTY NOTICES' in bH and 'THIRD-PARTY COMPONENTS' in bH, f'status {sH}')
+rec('OW14 the About page (read-only) shows neither', 'LICENSE NOTICE' not in bR and 'THIRD-PARTY NOTICES' not in bR, '')
+sP,bP,hP=req(opx,'/holders/'+ids['P1']+'/package')
+rec('OW15 the credential package PDF carries the product line and the copyright line', sP==200 and 'pdf' in (hP.get('Content-Type') or '') and 'All rights reserved' in bP and 'Healthcare Compliance Intelligence Platform' in bP, f'status {sP} {hP.get("Content-Type")}')
 
 # ==== v1.172.0 — sign-in options and guided onboarding, over HTTP =====================================================
 MAILBOX=os.environ.get('FLX_MAILBOX','')

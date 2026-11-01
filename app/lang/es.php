@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * Spanish (es) interface catalog — keyed by the exact English source string.
  *
@@ -3181,4 +3181,6 @@ return [
     'Proprietary software, licensed, not sold.' => 'Software propietario, licenciado, no vendido.',
     'This software includes open-source components; your administrator can show the notices.' => 'Este software incluye componentes de código abierto; su administrador puede mostrar los avisos.',
     'View the full About & ownership page (workspace ID, plan, license terms)' => 'Ver la página completa de Acerca de y titularidad (ID del espacio de trabajo, plan, términos de licencia)',
+    'License notice (LICENSE.txt)' => 'Aviso de licencia (LICENSE.txt)',
+    'Third-party components' => 'Componentes de terceros',
 ];

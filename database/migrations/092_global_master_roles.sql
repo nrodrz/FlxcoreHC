@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- 092_global_master_roles.sql
 -- Global "master" roles: role definitions owned by the platform (tenant_id = NULL), edited only by the
 -- superadmin and applied to every tenant. Tenants see them read-only and may still create their own

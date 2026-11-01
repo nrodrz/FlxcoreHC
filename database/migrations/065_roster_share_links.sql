@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Roster verification links — one URL that lets a carrier or upline verify a whole downline.
 --
 -- An FMO onboarding twenty agents with a carrier currently sends twenty separate links, or a

@@ -1,4 +1,4 @@
-<?php
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */
 /**
  * v1.170.9 — migration validation scenarios A–D for migrations 124/125.  AUTHORED — NOT EXECUTED IN CLAUDE.AI
  * (no MySQL there): REQUIRES EXTERNAL RUNTIME VALIDATION.  Uses throwaway databases flx_mig_a … flx_mig_c and

@@ -1,4 +1,4 @@
-<?php /** @var array $invoices */ /** @var array $summary */
+<?php /* © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt. */ /** @var array $invoices */ /** @var array $summary */
 $adminTab = 'invoices';
 $title = 'Invoices';
 $m = fn(int $c) => FlxCoreHC\InvoiceService::money($c);

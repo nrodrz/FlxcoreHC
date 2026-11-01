@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- FlxCoreHC — Book of Business: policies, carrier interactions, commissions/payments.
 -- POLICY/commercial view only — NO clinical/health-management data.
 -- Beneficiary identifiers are stored ENCRYPTED (client_name_enc, client_mbi_enc) via

@@ -1,3 +1,4 @@
+-- © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
 -- Tenant theming. The stylesheet is already built on CSS custom properties, so a tenant's
 -- palette is expressed by overriding a handful of tokens rather than shipping a second
 -- stylesheet. Each column is NULL by default = "use the product default", so an agency that
