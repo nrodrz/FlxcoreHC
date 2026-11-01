@@ -186,6 +186,7 @@ function runInstall(array $in): array
         . "return " . var_export([
             'db_host' => $host, 'db_name' => $name, 'db_user' => $user, 'db_pass' => $pass,
             'app_env' => $env,
+            'app_timezone' => in_array((string) ($in['app_timezone'] ?? ''), ['America/Puerto_Rico','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Anchorage','Pacific/Honolulu','UTC'], true) ? (string) $in['app_timezone'] : 'America/New_York',   // v1.172.16
             'force_secure_cookies' => !empty($in['force_secure_cookies']) || $isHttps,   // v1.172.13: an install done over HTTPS keeps its cookies HTTPS-only
             'docs_path' => DOCS_PATH,
             'mail_enabled' => false,
@@ -345,6 +346,7 @@ function runInstall(array $in): array
         __DIR__ . '/database/migrations/131_address_encryption.sql',
         __DIR__ . '/database/migrations/132_pr_regulatory_wording.sql',
         __DIR__ . '/database/migrations/133_signin_options.sql',
+        __DIR__ . '/database/migrations/134_tenant_timezone.sql',
         __DIR__ . '/database/migrations/099_document_verification.sql',
     ];
     $applied = [];
@@ -498,6 +500,12 @@ code{background:#f0f0f0;padding:1px 5px;border-radius:4px;font-size:13px}
     <div><label>Database password</label><input type="password" name="db_pass" value=""></div>
   </div>
   <label class="chk"><input type="checkbox" name="force_secure_cookies" value="1"<?= ((!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https') ? ' checked' : '' ?>> Force secure (HTTPS-only) cookies — leave on for any site with SSL.</label>
+  <label style="margin-top:12px">Platform time zone <span class="note" style="font-weight:400">(default for every organization; each organization can choose its own later)</span></label>
+  <select name="app_timezone" style="padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px">
+    <?php foreach (['America/New_York'=>'Eastern (EST/EDT) — Florida','America/Puerto_Rico'=>'Atlantic — Puerto Rico (AST)','America/Chicago'=>'Central','America/Denver'=>'Mountain','America/Los_Angeles'=>'Pacific','America/Anchorage'=>'Alaska','Pacific/Honolulu'=>'Hawaii','UTC'=>'UTC'] as $__z => $__l): ?>
+      <option value="<?= $e($__z) ?>" <?= (($_POST['app_timezone'] ?? 'America/New_York') === $__z) ? 'selected' : '' ?>><?= $e($__l) ?></option>
+    <?php endforeach; ?>
+  </select>
   <label class="chk"><input type="checkbox" name="confirm_overwrite" value="1"> The database is empty / safe to (re)create tables.</label>
   <label class="chk"><input type="checkbox" name="app_env" value="dev"> Development mode (shows errors, allows unencrypted dev data). Leave OFF for production.</label>
 

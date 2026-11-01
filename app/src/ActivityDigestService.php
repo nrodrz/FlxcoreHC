@@ -26,7 +26,7 @@ final class ActivityDigestService
         try {
             $users = $pdo->prepare(
                 "SELECT u.id, u.tenant_id, u.email, u.full_name, u.role, u.locale,
-                        t.name AS tenant_name, t.vertical, t.org_shape
+                        t.name AS tenant_name, t.vertical, t.org_shape, t.timezone
                  FROM users u JOIN tenants t ON t.id = u.tenant_id
                  WHERE u.activity_digest = ? AND u.status = 'active' AND t.status = 'active'
                    AND u.email IS NOT NULL AND u.email <> ''");
@@ -37,10 +37,11 @@ final class ActivityDigestService
         }
 
         $days = $cadence === 'weekly' ? 7 : 1;
-        $from = today_local('-' . ($days - 1) . ' days');
-        $to   = today_local();
 
         foreach ($rows as $u) {
+            app_tz_use_tenant($u['timezone'] ?: null);   // v1.172.16: the digest period is this organization's days
+            $from = today_local('-' . ($days - 1) . ' days');
+            $to   = today_local();
             // Only roles that can see the audit log get an activity digest.
             if (!in_array($u['role'], ['tenant_owner', 'manager', 'admin'], true)) continue;
             $ctx = new TenantContext($u['tenant_id'], $u['id'], (string)$u['role'], (string)$u['tenant_name'],
@@ -53,6 +54,7 @@ final class ActivityDigestService
             MailService::queue((string)$u['email'], $subject, $body, 'digest', (string)$u['full_name'], (string)$u['tenant_id']);
             $sent++;
         }
+        app_tz_use_tenant(null);
         return $sent;
     }
 

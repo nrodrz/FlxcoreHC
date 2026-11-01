@@ -379,19 +379,21 @@ final class ReminderService
     {
         $total = 0;
         $tenants = Database::pdo()->query(
-            "SELECT t.id, t.name, t.vertical, t.org_shape, MIN(u.id) AS uid
+            "SELECT t.id, t.name, t.vertical, t.org_shape, t.timezone, MIN(u.id) AS uid
              FROM tenants t
              JOIN users u ON u.tenant_id = t.id AND u.role = 'tenant_owner'
              WHERE t.status = 'active' AND t.is_demo = 0
-             GROUP BY t.id, t.name, t.vertical, t.org_shape"
+             GROUP BY t.id, t.name, t.vertical, t.org_shape, t.timezone"
         )->fetchAll();
         foreach ($tenants as $t) {
+            app_tz_use_tenant($t['timezone'] ?: null);   // v1.172.16: "today" and every date in the e-mail follow this organization's zone
             $ctx = new TenantContext($t['id'], $t['uid'], 'tenant_owner',
                 $t['name'], $t['vertical'] ?: 'healthcare', $t['org_shape'] ?: 'medical_group', 'System', false);
             $total += (new self($ctx))->run();
             // Same pass also refreshes the in-app notification center for every tenant.
             try { NotificationService::sweep($ctx, true); } catch (\Throwable $e) {}
         }
+        app_tz_use_tenant(null);
         return $total;
     }
 }

@@ -1,6 +1,20 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.172.15**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.172.16**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.172.16 — Time zone per organization (migration 134)
+
+Why: Puerto Rico stays on AST (UTC−4) all year while Florida switches between EST and EDT, so one zone for the whole installation is wrong as soon as organizations in both places share it. Timestamps are, and stay, stored in **UTC**; the zone only decides which clock time and calendar day are shown and used.
+
+- **New column `tenants.timezone`** (migration 134). NULL means "use the platform zone", so every existing organization behaves as before. Allowed zones: Puerto Rico, Eastern, Central, Mountain, Pacific, Alaska, Hawaii, UTC (one list, `flx_timezones()`).
+- **Settings → Organization → Time zone** (organization owner) picks the organization's zone, or "Platform default". Admin → System now labels its zone "Platform time zone" (the default for organizations without their own).
+- **Installer** asks for the platform zone (default Eastern) and writes it to `config.php`. `config.php` is now used whenever the operator has not set a platform zone (before, only when the setting happened to be Eastern).
+- **Every request** uses the signed-in organization's zone for dates, clock times, "today", overdue tests, calendar, reports, PDFs and e-mails; sign-in pages and platform pages use the platform zone. `@flx_today` follows the organization chosen.
+- **Nightly jobs work one organization at a time**: `cron/sweep_expiring.php` (credential expiring/expired), `ReminderService::runAll` (reminder e-mails and notifications) and the activity digests use each organization's own day.
+- Tests: `tests/tz/` (database suite, stage 3d2, also run with the clock set to 06:00 UTC when `faketime` is installed — then Puerto Rico and Eastern are on the next day and Honolulu is not; reverting the sweep to one global day fails it) and `tests/dates/test_v1172_16.php` (source guards, stage 3a11).
+- Not changed: a user's personal zone (all users of an organization see its zone); booking pages keep their own zone (migration 017).
 
 ---
 

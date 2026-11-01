@@ -32,6 +32,15 @@ $initial = strtoupper(substr($brandName,0,1));
           <?php endforeach; ?>
         </select>
         <div class="hint"><?= e(t('New users see the app in this language until they choose their own, and reminder emails are sent in it.')) ?></div></div>
+      <div><label><?= e(t('Time zone')) ?></label>
+        <select name="timezone" style="max-width:260px">
+          <?php $__otz = (string)($org['timezone'] ?? ''); ?>
+          <option value="" <?= $__otz === '' ? 'selected' : '' ?>><?= e(t('Platform default')) ?> — <?= e(flx_timezones()[app_tz_platform_name()] ?? app_tz_platform_name()) ?></option>
+          <?php foreach (flx_timezones() as $z => $lbl): ?>
+            <option value="<?= e($z) ?>" <?= $__otz === $z ? 'selected' : '' ?>><?= e($lbl) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <div class="hint"><?= e(t('Dates, "today", due dates and reminder e-mails follow this organization\'s time zone. Puerto Rico does not change its clocks; Florida does.')) ?></div></div>
       <div><label>Website</label><input name="website" value="<?= e($org['website'] ?? '') ?>" placeholder="https://"></div>
       <div><label>Address</label><textarea name="address" rows="2"><?= e($org['address'] ?? '') ?></textarea></div>
 

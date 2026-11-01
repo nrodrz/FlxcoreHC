@@ -2987,4 +2987,7 @@ return [
     'Portal login created for {name}.' => 'Acceso al portal creado para {name}.',
     'That time does not exist on that date (clocks move forward). Choose another time.' => 'Esa hora no existe en esa fecha (el reloj se adelanta). Elija otra hora.',
     'overdue' => 'atrasado',
+    'Time zone' => 'Zona horaria',
+    'Platform default' => 'Valor de la plataforma',
+    'Dates, "today", due dates and reminder e-mails follow this organization\'s time zone. Puerto Rico does not change its clocks; Florida does.' => 'Las fechas, "hoy", los vencimientos y los correos de recordatorio siguen la zona horaria de esta organización. Puerto Rico no cambia su reloj; Florida sí.',
 ];

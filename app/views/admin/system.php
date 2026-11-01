@@ -189,14 +189,11 @@ $yn = function($v){ if ($v===null) return '<span class="chip pending">unknown</s
         <tr><td>PHP version</td><td class="right mono"><?= e($diag['php']) ?></td></tr>
         <tr><td>Database</td><td class="right mono"><?= e($diag['db']) ?></td></tr>
         <tr><td>Base path</td><td class="right mono"><?= e($diag['base_path']) ?></td></tr>
-        <tr><td>App timezone</td><td class="right">
+        <tr><td>Platform time zone <span class="hint" style="font-weight:400">(default for organizations that have not chosen their own)</span></td><td class="right">
           <form method="post" action="<?= BASE_PATH ?>/admin" style="margin:0;display:inline-flex;gap:.4rem;align-items:center"><?= FlxCoreHC\Auth\CsrfGuard::field() ?>
             <input type="hidden" name="action" value="set_timezone">
             <select name="app_timezone" style="min-width:190px">
-              <?php $__cur = $diag['tz'] ?? 'America/New_York'; foreach ([
-                'America/Puerto_Rico'=>'Atlantic — Puerto Rico (AST)', 'America/New_York'=>'Eastern (EST/EDT)',
-                'America/Chicago'=>'Central', 'America/Denver'=>'Mountain', 'America/Los_Angeles'=>'Pacific',
-                'America/Anchorage'=>'Alaska', 'Pacific/Honolulu'=>'Hawaii', 'UTC'=>'UTC'] as $z=>$lbl): ?>
+              <?php $__cur = $diag['tz'] ?? 'America/New_York'; foreach (flx_timezones() as $z=>$lbl): ?>
                 <option value="<?= $z ?>" <?= $__cur===$z?'selected':'' ?>><?= e($lbl) ?></option>
               <?php endforeach; ?>
             </select>

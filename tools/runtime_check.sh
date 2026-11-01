@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# FlxCoreHC v1.172.15 — runtime validation for Claude Code / a PHP+MySQL host.
+# FlxCoreHC v1.172.16 — runtime validation for Claude Code / a PHP+MySQL host.
 # Runs: PHP lint (all files) → isolation → agency, purge, authz, migration, HTTP smoke, installer and security suites → harness. Reports PASS/FAIL per stage.
 # Does NOT modify code. Run from the app root on a TEST environment (never production).
 set -u
@@ -59,6 +59,8 @@ line "3a9. Every flash/service message has a Spanish entry; placeholder messages
 php tests/i18n/test_v1172_13.php || { echo "I18N 1.172.13 CHECKS: FAIL — send the output to Claude."; fail=1; }
 line "3a10. Daylight-saving edge cases (gap refused, second 01:30 kept) and per-item overdue marking (v1.172.14, no database needed)"
 php tests/dates/test_v1172_14.php || { echo "DATE 1.172.14 CHECKS: FAIL — send the output to Claude."; fail=1; }
+line "3a11. Per-organization time zone source guards (v1.172.16, no database needed)"
+php tests/dates/test_v1172_16.php || { echo "DATE 1.172.16 CHECKS: FAIL — send the output to Claude."; fail=1; }
 
 line "3b. Purge + security tests (v1.170.6, isolated flx_purge DB)"
 if command -v php >/dev/null 2>&1; then
@@ -76,6 +78,17 @@ if command -v php >/dev/null 2>&1; then
   php tests/authz/run.php; rc=$?
   [ $rc -ne 0 ] && { echo "AUTHZ SUITE: FAIL/SKIP (exit $rc) — send the exact output to Claude; do not edit code or tests."; fail=1; }
 else echo "AUTHZ SUITE: SKIPPED — php not found"; fail=1; fi
+
+line "3d2. Per-organization time zone (v1.172.16, isolated flx_tz DB — zone saved, clock/day per organization, sweep per organization's own day, @flx_today)"
+if command -v php >/dev/null 2>&1; then
+  php tests/tz/run.php; rc=$?
+  [ $rc -ne 0 ] && { echo "TIME-ZONE SUITE: FAIL/SKIP (exit $rc) — send the exact output to Claude; do not edit code or tests."; fail=1; }
+  if command -v faketime >/dev/null 2>&1; then   # 06:00 UTC: Puerto Rico / Eastern are already on the next day, Honolulu is not
+    faketime '2026-11-02 06:00:00' php tests/tz/run.php >/tmp/flx_tz_fake.out 2>&1; rc=$?
+    grep -E '^(PASS|FAIL)' /tmp/flx_tz_fake.out | sed 's/^/[clock 06:00 UTC] /'
+    [ $rc -ne 0 ] && { echo "TIME-ZONE SUITE (clock 06:00 UTC): FAIL (exit $rc)"; fail=1; }
+  else echo "NOTE: faketime not installed — the 06:00 UTC run (days differ between zones) was skipped; the normal run still checks every zone's own day."; fi
+else echo "TIME-ZONE SUITE: SKIPPED — php not found"; fail=1; fi
 
 line "3e. Migration scenarios A-D for 124/125 (v1.170.9, throwaway flx_mig_* DBs)"
 if command -v php >/dev/null 2>&1; then

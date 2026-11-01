@@ -23,11 +23,17 @@ final class Database
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]);
             self::$pdo->exec("SET time_zone = '+00:00'");
-            // v1.172.11: "today" for expiry / due-date maths is the ORGANIZATION's calendar day, not the database's (UTC) day.
-            // Queries use @flx_today where they used @flx_today; timestamps stay UTC.
-            try { self::$pdo->exec("SET @flx_today = DATE('" . (function_exists('today_local') ? today_local() : gmdate('Y-m-d')) . "')"); }
-            catch (\Throwable $e) { self::$pdo->exec("SET @flx_today = DATE(UTC_TIMESTAMP())"); }
+            self::syncToday();
         }
         return self::$pdo;
+    }
+
+    /** v1.172.11: "today" for expiry / due-date maths is the ORGANIZATION's calendar day, not the database's (UTC) day;
+     *  queries use @flx_today for it, timestamps stay UTC. v1.172.16: re-run whenever the app zone changes (organization chosen). */
+    public static function syncToday(): void
+    {
+        if (self::$pdo === null) return;
+        try { self::$pdo->exec("SET @flx_today = DATE('" . (function_exists('today_local') ? today_local() : gmdate('Y-m-d')) . "')"); }
+        catch (\Throwable $e) { self::$pdo->exec("SET @flx_today = DATE(UTC_TIMESTAMP())"); }
     }
 }

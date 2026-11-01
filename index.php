@@ -94,6 +94,12 @@ if (isset($_SESSION['auth']) && !FlxCoreHC\Auth\AuthService::revalidateSession()
     }
 }
 $ctx  = TenantContext::fromSession();
+// v1.172.16: the organization's own time zone (NULL = the platform's) is the app zone for this request, so every date,
+// "today", overdue test and clock time follows the organization, not the server.
+$__flxTenantTz = static function (?TenantContext $c): void {
+    app_tz_use_tenant($c ? OrgService::timezoneFor($c->tenantId) : null);
+};
+$__flxTenantTz($ctx);
 // The platform_admin flag must never outlive its database grant: if the session claims
 // it but the users row no longer carries it, strip it and rebuild the context.
 if ($ctx && $ctx->isPlatformAdmin && !FlxCoreHC\Authz::verifyPlatformAdmin($ctx)) {
@@ -3726,8 +3732,7 @@ if ($seg[0] === 'admin') {
         }
         if ($act === 'set_timezone') {
             $__tz = (string)($_POST['app_timezone'] ?? '');
-            $__valid = ['America/Puerto_Rico','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Anchorage','Pacific/Honolulu','UTC'];
-            if (in_array($__tz, $__valid, true)) { FlxCoreHC\SettingsService::put(['app_timezone' => $__tz]); audit_log($ctx, 'timezone_set', 'platform_settings', null, json_encode(['tz'=>$__tz])); flash('Timezone set to ' . $__tz . '.'); }
+            if (isset(flx_timezones()[$__tz])) { FlxCoreHC\SettingsService::put(['app_timezone' => $__tz]); audit_log($ctx, 'timezone_set', 'platform_settings', null, json_encode(['tz'=>$__tz])); flash('Timezone set to ' . $__tz . '.'); }
             else flash('Pick a valid timezone.', 'error');
             redirect('/admin/system');
         }

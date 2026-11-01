@@ -138,5 +138,6 @@ return [
     'database/migrations/131_address_encryption.sql',
     'database/migrations/132_pr_regulatory_wording.sql',
     'database/migrations/133_signin_options.sql',
+    'database/migrations/134_tenant_timezone.sql',
     'database/migrations/099_document_verification.sql',
 ];

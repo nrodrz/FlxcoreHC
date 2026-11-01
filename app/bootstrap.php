@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 
 define('FLXCOREHC_APP', __DIR__);
-define('FLXCOREHC_VERSION', '1.172.15');   // shown on System & updates; bump with each release
+define('FLXCOREHC_VERSION', '1.172.16');   // shown on System & updates; bump with each release
 // Which vertical this installation serves: 'insurance', 'healthcare', or 'both'.
 // The edition locks registration/installer org shapes and the demo builders, so a
 // single-vertical app can never grow tenants of the other industry. Everything downstream
@@ -482,15 +482,37 @@ function handle_logo_upload(\FlxCoreHC\TenantContext $ctx, \FlxCoreHC\OrgService
 }
 
 /** Display helpers — DB stores UTC; the app shows Eastern, 12-hour, MM/DD/YYYY by default. */
+/** v1.172.16: the time zones an organization (or the platform) may choose. Value = what the picker shows. */
+function flx_timezones(): array {
+    return [
+        'America/Puerto_Rico' => 'Atlantic — Puerto Rico (AST)', 'America/New_York' => 'Eastern (EST/EDT)',
+        'America/Chicago' => 'Central', 'America/Denver' => 'Mountain', 'America/Los_Angeles' => 'Pacific',
+        'America/Anchorage' => 'Alaska', 'Pacific/Honolulu' => 'Hawaii', 'UTC' => 'UTC',
+    ];
+}
+/** The platform's own zone: platform setting (operator-chosen, no file edit) → config.php → Eastern. Used when an organization has none. */
+function app_tz_platform_name(): string {
+    static $name = null;
+    if ($name !== null) return $name;
+    $n = '';
+    try { if (class_exists('FlxCoreHC\\Database', false) || @class_exists('FlxCoreHC\\Database')) { $v = FlxCoreHC\SettingsService::get('app_timezone'); if ($v) $n = (string) $v; } } catch (\Throwable $e) {}
+    if ($n === '') { $c = config('app_timezone'); $n = $c ? (string) $c : 'America/New_York'; }   // config.php (set by the installer) when the operator has not chosen one
+    try { new \DateTimeZone($n); } catch (\Throwable $e) { $n = 'America/New_York'; }
+    return $name = $n;
+}
+/** v1.172.16: make the signed-in organization's zone the app zone for the rest of the request (null = back to the platform zone).
+ *  Also re-points the database's "today" (@flx_today) at that zone's calendar day. */
+function app_tz_use_tenant(?string $zone): void {
+    $zone = ($zone !== null && isset(flx_timezones()[$zone])) ? $zone : null;
+    if (($GLOBALS['flx_tenant_tz'] ?? null) === $zone) return;
+    $GLOBALS['flx_tenant_tz'] = $zone;
+    try { FlxCoreHC\Database::syncToday(); } catch (\Throwable $e) {}
+}
+/** The zone in force right now: the organization's if one is in use, else the platform's. */
 function app_tz(): \DateTimeZone {
-    static $tz = null;
-    if ($tz !== null) return $tz;
-    // Order: platform setting (operator-chosen, no file edit) → config.php → sane default (Eastern).
-    $name = 'America/New_York';
-    try { if (class_exists('FlxCoreHC\\Database', false) || @class_exists('FlxCoreHC\\Database')) { $v = FlxCoreHC\SettingsService::get('app_timezone'); if ($v) $name = $v; } } catch (\Throwable $e) {}
-    if ($name === 'America/New_York') { $c = config('app_timezone'); if ($c) $name = (string) $c; }
-    try { $tz = new \DateTimeZone($name); } catch (\Throwable $e) { $tz = new \DateTimeZone('America/New_York'); }
-    return $tz;
+    static $cache = [];
+    $name = $GLOBALS['flx_tenant_tz'] ?? app_tz_platform_name();
+    return $cache[$name] ??= new \DateTimeZone($name);
 }
 function fmt_dt(?string $utc, string $fmt = 'm/d/Y g:i A'): string {
     if (!$utc) return '';

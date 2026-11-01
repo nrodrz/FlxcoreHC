@@ -35,6 +35,16 @@ final class OrgService
         return null;
     }
 
+    /** v1.172.16: the organization's own time zone (null = use the platform's). Read once per request by index.php. */
+    public static function timezoneFor(string $tenantId): ?string
+    {
+        try {
+            $q = Database::pdo()->prepare('SELECT timezone FROM tenants WHERE id = ? LIMIT 1');
+            $q->execute([$tenantId]);
+            return ($z = $q->fetchColumn()) ? (string) $z : null;
+        } catch (\Throwable $e) { return null; }   // column missing before migration 134 → platform zone
+    }
+
     public function updateInfo(array $in): void
     {
         $set = [];
@@ -53,6 +63,11 @@ final class OrgService
             $loc = (string) $in['default_locale'];
             $set[] = 'default_locale = ?';
             $args[] = isset(\FlxCoreHC\I18n::LOCALES[$loc]) ? $loc : 'en';
+        }
+        if ($has('timezone')) {   // v1.172.16: blank = use the platform's zone
+            $z = (string) $in['timezone'];
+            $set[] = 'timezone = ?';
+            $args[] = isset(flx_timezones()[$z]) ? $z : null;
         }
         if ($has('contact_email')) {
             $email = trim((string) $in['contact_email']);
