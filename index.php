@@ -1093,7 +1093,7 @@ if ($seg[0] === 'help') {
             if (str_contains($hay, $needle)) $hits[$key] = $sec;
         }
     }
-    view('help/index', ['ctx' => $ctx, 'sections' => $sections, 'cur' => $cur, 'q' => $q, 'hits' => $hits, 'skipOutputTranslate' => true]);
+    view('help/index', ['ctx' => $ctx, 'sections' => $sections, 'cur' => $cur, 'q' => $q, 'hits' => $hits]);   // v1.172.17: the frame is translated; the topics are per-language files (no-translate region in the view)
 }
 
 // ---- Notification center ---------------------------------------------------------------
@@ -4197,7 +4197,12 @@ if ($seg[0] === 'reports') {
             'accessLog'   => AccessLog::recent($ctx, 20),
             'generatedAt' => utc_now(),
         ]);
+        // v1.172.17: this printable page is rendered without view(), so it never went through the translator (Spanish users got English headers)
+        if (FlxCoreHC\I18n::locale() === 'en') { require FLXCOREHC_APP . '/views/reports/audit_package.php'; exit; }
+        ob_start();
         require FLXCOREHC_APP . '/views/reports/audit_package.php';
+        echo FlxCoreHC\I18n::translateHtml((string) ob_get_clean());
+        FlxCoreHC\I18n::flushMissing();
         exit;
     }
     http_response_code(404); exit('Not found.');

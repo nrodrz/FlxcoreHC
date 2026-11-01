@@ -45,7 +45,7 @@ foreach (($filter ?? []) as $k => $v) { if ($v) $filterQs .= '&' . $k . '=' . ur
 <?php if ($overdue>0): ?><div class="error"><?= e($overdue > 1 ? t('{n} items overdue — highlighted below.', ['n' => (int)$overdue]) : t('{n} item overdue — highlighted below.', ['n' => (int)$overdue])) ?></div><?php endif; ?>
 
 <div class="cal-toolbar">
-  <div class="mlabel-lg"><?= e($ms->format('F Y')) ?></div>
+  <div class="mlabel-lg"><?= e(t($ms->format('F')) . ' ' . $ms->format('Y')) ?></div>
   <div class="cal-nav">
     <a class="btn sm line" href="<?= BASE_PATH ?>/calendar?m=<?= e($ms->modify('-1 month')->format('Y-m')) ?>&view=<?= $viewMode ?>">‹</a>
     <a class="btn sm line" href="<?= BASE_PATH ?>/calendar?m=<?= e(date('Y-m')) ?>&view=<?= $viewMode ?>">Today</a>
@@ -129,7 +129,7 @@ foreach (($filter ?? []) as $k => $v) { if ($v) $filterQs .= '&' . $k . '=' . ur
     </div>
   <?php endforeach; endif; ?>
 </div>
-<p class="hint">Agenda groups open items by urgency so a large roster stays scannable. Use the filters above to focus on one <?= e(strtolower($groupLabelPlural)) ?>, location, provider, or type. Switch to Month or List for the classic views.</p>
+<p class="hint"><?= e(t('Agenda groups open items by urgency so a large roster stays scannable. Use the filters above to narrow by {groups}, location, provider, or type. Switch to Month or List for the classic views.', ['groups' => strtolower($groupLabelPlural)])) ?></p>
 
 <?php elseif ($viewMode==='month'): ?>
 <div class="panel">

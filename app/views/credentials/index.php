@@ -6,9 +6,9 @@
 </div>
 <p>
   <a class="btn sm <?= $filter === null ? '' : 'line' ?>" href="<?= BASE_PATH ?>/credentials">All</a>
-  <a class="btn sm <?= $filter === 'active' ? '' : 'line' ?>" href="<?= BASE_PATH ?>/credentials?status=active">Active (<?= $counts['active'] ?>)</a>
-  <a class="btn sm <?= $filter === 'expiring' ? '' : 'line' ?>" href="<?= BASE_PATH ?>/credentials?status=expiring">Expiring (<?= $counts['expiring'] ?>)</a>
-  <a class="btn sm <?= $filter === 'expired' ? '' : 'line' ?>" href="<?= BASE_PATH ?>/credentials?status=expired">Expired (<?= $counts['expired'] ?>)</a>
+  <a class="btn sm <?= $filter === 'active' ? '' : 'line' ?>" href="<?= BASE_PATH ?>/credentials?status=active"><?= e(t('Active ({n})', ['n' => $counts['active']])) ?></a>
+  <a class="btn sm <?= $filter === 'expiring' ? '' : 'line' ?>" href="<?= BASE_PATH ?>/credentials?status=expiring"><?= e(t('Expiring ({n})', ['n' => $counts['expiring']])) ?></a>
+  <a class="btn sm <?= $filter === 'expired' ? '' : 'line' ?>" href="<?= BASE_PATH ?>/credentials?status=expired"><?= e(t('Expired ({n})', ['n' => $counts['expired']])) ?></a>
 </p>
 <div class="panel">
 <?php if ($rows === []): ?>

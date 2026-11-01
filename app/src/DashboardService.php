@@ -60,7 +60,7 @@ final class DashboardService
         $forecast = [];
         for ($i = 0; $i < 6; $i++) {
             $m = (new \DateTimeImmutable('first day of this month'))->modify("+$i months");
-            $forecast[] = ['label' => $m->format('M'), 'ym' => $m->format('Y-m'),
+            $forecast[] = ['label' => t($m->format('M')), 'ym' => $m->format('Y-m'),
                 'n' => $one("SELECT COUNT(*) FROM credentials WHERE tenant_id=? AND deleted_at IS NULL{$S0} AND expiry_date >= ? AND expiry_date < ?",
                     array_merge([$t], $SP, [$m->format('Y-m-01'), $m->modify('+1 month')->format('Y-m-01')]))];
         }

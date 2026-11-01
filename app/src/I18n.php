@@ -158,8 +158,10 @@ final class I18n
             self::$missing[$key] = true;
             return $text;
         };
-        // Split out script/style so their contents are never touched.
-        $parts = preg_split('#(<script\b[^>]*>.*?</script>|<style\b[^>]*>.*?</style>)#is', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+        // Split out script/style so their contents are never touched. v1.172.17: also anything between
+        // <!--flx-notranslate--> and <!--/flx-notranslate--> (content that is already written per language, e.g. the Help Center
+        // topics) — so such a page can have its frame (menu, buttons, footer) translated without its body being touched or collected as "missing".
+        $parts = preg_split('#(<!--flx-notranslate-->.*?<!--/flx-notranslate-->|<script\b[^>]*>.*?</script>|<style\b[^>]*>.*?</style>)#is', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
         foreach ($parts as $i => $p) {
             if ($i % 2 === 1) continue;
             // text nodes

@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 
 define('FLXCOREHC_APP', __DIR__);
-define('FLXCOREHC_VERSION', '1.172.16');   // shown on System & updates; bump with each release
+define('FLXCOREHC_VERSION', '1.172.17');   // shown on System & updates; bump with each release
 // Which vertical this installation serves: 'insurance', 'healthcare', or 'both'.
 // The edition locks registration/installer org shapes and the demo builders, so a
 // single-vertical app can never grow tenants of the other industry. Everything downstream

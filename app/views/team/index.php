@@ -9,7 +9,7 @@ $activeOwners = count(array_filter($users, fn($u) => $u['role'] === 'tenant_owne
 $iAmOwner = $ctx->role === 'tenant_owner';
 $statusChip = ['active' => ['active', 'active'], 'suspended' => ['disabled', 'muted'], 'invited' => ['invited', 'warn']];
 ?>
-<div class="topline"><h1>Team</h1><span class="hint"><?= count($users) ?> user<?= count($users) === 1 ? '' : 's' ?></span></div>
+<div class="topline"><h1>Team</h1><span class="hint"><?= e(count($users) === 1 ? t('1 user') : t('{n} users', ['n' => count($users)])) ?></span></div>
 <p class="hint" style="margin-top:-.4rem;max-width:74ch">
   Everyone signs in with their own email and password. Roles control what each person can
   do; an organization always keeps at least one active owner.

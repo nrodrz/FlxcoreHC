@@ -28,7 +28,7 @@ $hname = fn($h)=> ($h['holder_type']??'')==='organization' ? ($h['org_name']??''
 ?>
   <div class="panel">
     <div class="topline"><h2><?= e($hname($h)) ?> <span class="hint" style="font-weight:400">· <?= e(ucfirst($c['role'])) ?></span></h2>
-      <span class="chip <?= $ok?'active':($missing?'expired':'expiring') ?>"><?= $ok ? 'Compliant' : ($missing.' missing'.($exp?', '.$exp.' expiring':'')) ?></span></div>
+      <span class="chip <?= $ok?'active':($missing?'expired':'expiring') ?>"><?= $ok ? 'Compliant' : ($exp ? t('{n} missing, {e} expiring', ['n' => $missing, 'e' => $exp]) : t('{n} missing', ['n' => $missing])) ?></span></div>
     <div class="table-wrap"><table>
       <tr><th>Required credential</th><th>Authority</th><th>Renewal</th><th>Status</th><th></th></tr>
       <?php foreach ($req as $r): $s = $cov[$r['code']] ?? null;
@@ -57,7 +57,7 @@ $hname = fn($h)=> ($h['holder_type']??'')==='organization' ? ($h['org_name']??''
 <?php endforeach; endif; ?>
 
 <div class="panel">
-  <div class="topline"><h2>Full catalog</h2><span class="hint"><?= count($catalog) ?> credential types tracked</span></div>
+  <div class="topline"><h2>Full catalog</h2><span class="hint"><?= e(t('{n} credential types tracked', ['n' => count($catalog)])) ?></span></div>
   <div class="table-wrap"><table>
     <tr><th>Credential</th><th>Category</th><th>Applies to</th><th>Authority</th><th>Renewal</th><th>Required</th></tr>
     <?php foreach ($catalog as $r): ?>

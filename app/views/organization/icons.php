@@ -21,7 +21,7 @@ $title = 'Menu icons';
         $isCustom = isset($overrides[$slot]); ?>
         <div class="icon-slot" style="display:flex;align-items:center;gap:.6rem;padding:.5rem .6rem;border:1px solid var(--line);border-radius:var(--r-sm)">
           <button type="button" class="icon-pick" data-slot="<?= e($slot) ?>"
-                  title="Choose an icon for <?= e($label) ?>"
+                  title="<?= e(t('Choose an icon for {name}', ['name' => $label])) ?>"
                   style="display:grid;place-items:center;width:38px;height:38px;flex:none;cursor:pointer;
                          border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);color:var(--accent)">
             <span data-preview="<?= e($slot) ?>"><?= I::svg($cur) ?></span>

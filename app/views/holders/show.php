@@ -139,7 +139,7 @@ if ($legacyReadiness):
   $ov = $legacyReadiness['overall']; ?>
 <div class="panel">
   <div class="topline"><h2>Readiness</h2>
-    <?php if ($ov !== null): ?><span class="chip <?= $ov>=90?'active':($ov>=60?'warn':'expired') ?>" style="font-size:.82rem"><?= (int)$ov ?>% overall</span><?php endif; ?>
+    <?php if ($ov !== null): ?><span class="chip <?= $ov>=90?'active':($ov>=60?'warn':'expired') ?>" style="font-size:.82rem"><?= e(t('{n}% overall', ['n' => (int)$ov])) ?></span><?php endif; ?>
   </div>
   <p class="hint" style="margin:-.2rem 0 .8rem"><?= e(fmt_iso_text((string)$legacyReadiness['summary'])) ?></p>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.7rem 1.1rem">

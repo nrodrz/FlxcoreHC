@@ -177,7 +177,7 @@ final class CompliancePostureService
                 : 'Available · ' . (int) $users['withMfa'] . ' of ' . (int) $users['total'] . ' users enrolled',
             'session' => (int) config('session_idle_seconds', 1800) / 60 . ' min idle · '
                        . (int) config('session_absolute_seconds', 43200) / 3600 . ' h maximum',
-            'audit'   => number_format($auditCount) . ' entries recorded',
+            'audit'   => t('{n} entries recorded', ['n' => number_format($auditCount)]),
             'npi'     => $verified > 0 ? $verified . ' provider(s) NPI-verified' : 'Available',
             'require2fa' => $require2fa,
             'users'   => $users,
@@ -214,7 +214,7 @@ final class CompliancePostureService
         }
         $total = (int) ($s['users']['total'] ?? 0); $mfa = (int) ($s['users']['withMfa'] ?? 0);
         if ($total > 0 && $mfa < $total) {
-            $out[] = [($total - $mfa) . ' user(s) have not enrolled in two-factor authentication',
+            $out[] = [t('{n} user(s) have not enrolled in two-factor authentication', ['n' => $total - $mfa]),
                       'Each person enables it from Account → Two-factor authentication.'];
         }
         if (str_starts_with((string) $s['https'], 'Not detected')) {
@@ -237,7 +237,7 @@ final class CompliancePostureService
         $pdf->rect(0, 86, MiniPdf::W, 3, $GOLD);
         $pdf->text($M, 40, 'Security & Compliance Overview', 16, true, [1, 1, 1]);
         $pdf->text($M, 60, $orgName, 10, false, [0.78, 0.84, 0.95]);
-        $issued = 'Generated ' . fmt_dt(utc_now(), 'M j, Y g:i A') . ' ET';
+        $issued = t('Generated {when}', ['when' => fmt_dt(utc_now(), 'm/d/Y g:i A T')]);
         $pdf->text($R - MiniPdf::width($issued, 9), 60, $issued, 9, false, [0.78, 0.84, 0.95]);
 
         $y = 112.0;

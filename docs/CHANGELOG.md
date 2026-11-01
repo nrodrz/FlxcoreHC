@@ -1,6 +1,20 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.172.16**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.172.17**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.172.17 — Spanish screens: Help frame, audit package, joined messages, catalog names (no migration)
+
+Source: the Spanish screens review of v1.172.16 (`docs/SPANISH_SCREENS_REVIEW_v1.172.16.md`): seven roles, ≈1,200 pages, 10,504 distinct texts.
+
+- **Help Center:** the page frame (menu, "Sign out", theme, profile, back-up reminder) is now translated; before, the whole page skipped the translator. The topics themselves are per-language files and are kept as they are (new `<!--flx-notranslate-->` region understood by the translator).
+- **Audit-readiness package** (`/reports/audit/…`) is printed without the normal page renderer and was never translated: headers, the ten security-checklist lines and the footers are now Spanish.
+- **Joined messages rewritten with placeholders** so they translate: "N of M permissions", "Full access (all N permissions)", "N of M users with 2FA", "Recommended next steps (N)", "N entries recorded", "N user(s) have not enrolled in two-factor…", "Generated …" (and the hard-coded "ET" suffix is gone — the time zone abbreviation of the organization is shown), "N credential types tracked", Active/Expiring/Expired (N), "Choose an icon for …", "N users", "N defined", "N seats · N providers", "N/M done", "N% overall", "Credentials (N)", "Set up your groups", "N gaps", "N missing", "N/M active · score". The calendar hint no longer says "one groups".
+- **Month and weekday names** follow the language (calendar title, dashboard forecast labels, weekday headers).
+- **Catalog names and notes** stored in the database (credential types, requirement names, regulator notes, provider-type names) have Spanish entries (≈170 added to `es.php`); the translator already applies them on every screen. Proper names (The Joint Commission, NPPES, payers) stay as they are.
+- Not translated yet: Training articles (≈15) and some Help-adjacent long-form text; platform-admin pages stay English.
+- Tests: `tests/i18n/test_v1172_17.php` (no database, stage 3a12).
 
 ---
 

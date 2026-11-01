@@ -46,7 +46,7 @@ $bar = function($u){ $lim=$u['limit']; if($lim===null) return '<span class="mono
     <div class="panel" style="margin:0;<?= $cur?'border-color:var(--ok)':'' ?>">
       <strong><?= e($pl['name']) ?></strong> <?= $cur?'<span class="chip active">current</span>':'' ?>
       <div style="font-size:1.3rem;font-weight:800;margin:.2rem 0"><?= $pl['price_monthly']!==null?'$'.number_format((float)$pl['price_monthly'],0):'—' ?><span style="font-size:.7rem;color:var(--ink-2)">/mo</span></div>
-      <div class="hint"><?= $pl['max_users']===null?'Unlimited':(int)$pl['max_users'] ?> seats · <?= $pl['max_holders']===null?'∞':(int)$pl['max_holders'] ?> providers</div>
+      <div class="hint"><?= e(t('{seats} seats · {providers} providers', ['seats' => $pl['max_users']===null ? t('Unlimited') : (int)$pl['max_users'], 'providers' => $pl['max_holders']===null ? '∞' : (int)$pl['max_holders']])) ?></div>
       <div class="hint" style="margin:.3rem 0"><?= $f?e(implode(', ',$f)):'core only' ?></div>
       <?php if ($billingOn && !$cur && !empty($pl['stripe_price_id'])): ?>
         <a class="btn sm" href="<?= BASE_PATH ?>/billing/subscribe/<?= e($pl['id']) ?>">Choose <?= e($pl['name']) ?></a>

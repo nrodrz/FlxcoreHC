@@ -64,7 +64,7 @@ $generated = fmt_dt(utc_now(), 'm/d/Y g:i A');
     <?php foreach ($__cf as $f): ?><div><b><?= e($f['label']) ?></b><?= e($f['value']) ?></div><?php endforeach; ?>
   </div>
   <?php endif; ?>
-  <h2>Credentials (<?= count($creds) ?>)</h2>
+  <h2><?= e(t('Credentials ({n})', ['n' => count($creds)])) ?></h2>
   <?php if ($creds === []): ?><p class="hint">No credentials on file.</p><?php else: ?>
   <table data-no-stack>
     <tr><th>Credential</th><th>Number</th><th>Issuer</th><th>Issued</th><th>Expires</th><th>Status</th><th>Documents / verification</th></tr>

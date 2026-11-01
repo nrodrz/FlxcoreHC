@@ -31,11 +31,11 @@ $totalCaps = count(FlxCoreHC\Capabilities::all());
       <td><span class="hint"><?= (int) $r['user_count'] ?></span></td>
       <td>
         <?php if ($isOwner): ?>
-          <span class="hint">Full access (all <?= $totalCaps ?> permissions)</span>
+          <span class="hint"><?= e(t('Full access (all {n} permissions)', ['n' => $totalCaps])) ?></span>
         <?php elseif ($count === 0): ?>
           <span class="hint">View only</span>
         <?php else: ?>
-          <span class="hint"><?= $count ?> of <?= $totalCaps ?> permissions</span>
+          <span class="hint"><?= e(t('{n} of {m} permissions', ['n' => $count, 'm' => $totalCaps])) ?></span>
         <?php endif; ?>
       </td>
       <td style="text-align:right;white-space:nowrap">

@@ -60,7 +60,7 @@ require FLXCOREHC_APP . '/views/org/_tabs.php';
 
 <div class="panel">
   <div class="topline"><h2>Your custom types</h2>
-    <span class="hint"><?= count($custom) ?> defined</span></div>
+    <span class="hint"><?= e(t('{n} defined', ['n' => count($custom)])) ?></span></div>
 
   <?php if ($custom === []): ?>
     <div class="empty">No custom document types yet. The built-in set covers the standards; add your own above when you track something it doesn't.</div>

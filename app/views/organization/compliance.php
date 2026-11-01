@@ -19,7 +19,7 @@ $title = 'Security & compliance';
     <span class="l">Two-factor required for admins</span></div>
   <div class="kpi <?= $summary['mfaPct'] >= 100 ? 'ok' : ($summary['mfaPct'] >= 50 ? 'warn' : 'danger') ?>">
     <span class="n"><?= (int) $summary['mfaPct'] ?>%</span>
-    <span class="l"><?= (int) $summary['mfaUsers'] ?> of <?= (int) $summary['totalUsers'] ?> users with 2FA</span></div>
+    <span class="l"><?= e(t('{n} of {m} users with 2FA', ['n' => (int) $summary['mfaUsers'], 'm' => (int) $summary['totalUsers']])) ?></span></div>
   <div class="kpi ok"><span class="n">AES-256</span><span class="l">Encryption at rest</span></div>
   <div class="kpi"><span class="n" style="font-size:1.05rem"><?= e($summary['audit']) ?></span>
     <span class="l">Audit trail</span></div>
@@ -27,7 +27,7 @@ $title = 'Security & compliance';
 
 <?php if ($recs !== []): ?>
 <div class="panel" style="border-left:4px solid var(--warn)">
-  <div class="topline"><h2>Recommended next steps (<?= count($recs) ?>)</h2></div>
+  <div class="topline"><h2><?= e(t('Recommended next steps ({n})', ['n' => count($recs)])) ?></h2></div>
   <?php foreach ($recs as [$what, $why]): ?>
     <div style="padding:.5rem 0;border-top:1px solid var(--line)">
       <strong><?= e($what) ?></strong>

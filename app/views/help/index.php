@@ -12,7 +12,7 @@ $render = function(array $blocks): void {
     }
 };
 ?>
-<div class="wrap">
+<!--flx-notranslate--><div class="wrap">
   <div class="topline"><h1><?= e($title) ?></h1>
     <form method="get" action="<?= BASE_PATH ?>/help" style="margin:0;display:flex;gap:.4rem">
       <input name="q" value="<?= e($q) ?>" placeholder="<?= $L ? 'Buscar en la ayuda' : 'Search help' ?>" style="max-width:240px">
@@ -48,4 +48,4 @@ $render = function(array $blocks): void {
     </div>
     <style>@media (max-width:760px){.help-layout{grid-template-columns:1fr}}</style>
   <?php endif; ?>
-</div>
+</div><!--/flx-notranslate-->

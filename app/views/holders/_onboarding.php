@@ -26,7 +26,7 @@ if ($doneCount === count($steps)) return;   // fully onboarded — hide
 ?>
 <div class="panel" style="border-left:3px solid var(--accent)">
   <div class="topline"><h2><?= ($manage ?? true) ? 'Onboarding checklist' : 'Getting started' ?></h2>
-    <span class="chip <?= $doneCount >= 4 ? 'active' : 'expiring' ?>"><?= $doneCount ?>/<?= count($steps) ?> done</span></div>
+    <span class="chip <?= $doneCount >= 4 ? 'active' : 'expiring' ?>"><?= e(t('{n}/{m} done', ['n' => $doneCount, 'm' => count($steps)])) ?></span></div>
   <div style="display:grid;gap:.45rem">
     <?php foreach ($steps as $st): ?>
     <div style="display:flex;align-items:center;gap:.6rem">

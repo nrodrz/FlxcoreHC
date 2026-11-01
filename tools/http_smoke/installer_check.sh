@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# FlxCoreHC v1.172.16 — runs the REAL web installer over HTTP on an isolated database (flx_install_chk), TEST ENVIRONMENT ONLY.
+# FlxCoreHC v1.172.17 — runs the REAL web installer over HTTP on an isolated database (flx_install_chk), TEST ENVIRONMENT ONLY.
 # Uses FLX_CONFIG (a temp file) — app/config.php is never read for the install target and never modified.
 # Needs: php (pdo_mysql), python3, the mysql client, and DB credentials from FLX_CONFIG or app/config.php.
 #   bash tools/http_smoke/installer_check.sh      exit 0 = ALL PASS · 1 = failure · 3 = prerequisites missing

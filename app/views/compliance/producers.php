@@ -38,10 +38,10 @@ $authChip = fn($a)=>'<span class="chip" style="text-transform:uppercase;font-siz
     <span style="display:flex;align-items:center;gap:.8rem">
       <?php $sc = $p['score'] ?? null; ?>
       <span style="min-width:150px"><span style="display:block;height:8px;background:var(--line);border-radius:5px;overflow:hidden"><span style="display:block;height:100%;width:<?= (int)($sc ?? 0) ?>%;background:<?= ($sc??0)>=90?'var(--ok)':(($sc??0)>=60?'var(--warn)':'var(--danger)') ?>"></span></span>
-        <span class="hint"><?= $p['active'] ?>/<?= $p['total'] ?> active · score <strong><?= $sc===null?'—':$sc ?></strong>/100</span></span>
+        <span class="hint"><?= e(t('{a}/{t} active · score', ['a' => $p['active'], 't' => $p['total']])) ?> <strong><?= $sc===null?'—':$sc ?></strong>/100</span></span>
       <?php if ($p['total'] === 0): ?><span class="chip" style="opacity:.6">no requirements</span>
       <?php elseif ($gaps === 0): ?><span class="chip active">Compliant</span>
-      <?php else: ?><span class="chip expired"><?= $gaps ?> gap<?= $gaps===1?'':'s' ?></span><?php endif; ?>
+      <?php else: ?><span class="chip expired"><?= e($gaps === 1 ? t('1 gap') : t('{n} gaps', ['n' => $gaps])) ?></span><?php endif; ?>
       <?php
         // The reminder is credential-based, not requirement-based: offer it whenever this
         // holder actually has something expiring or expired on file (backend re-checks too).

@@ -20,7 +20,7 @@ final class OnboardingService
             try { $st = $pdo->prepare($sql); $st->execute([$tid]); return (int)$st->fetchColumn(); } catch (\Throwable $e) { return 0; }
         };
         $isSolo = $this->ctx->orgShape === 'solo_practice';
-        $groupWord = strtolower(GroupService::label($this->ctx->orgShape, true));
+        $groupWord = mb_strtolower(t(GroupService::label($this->ctx->orgShape, true)));
 
         $steps = [
             ['key' => 'team', 'title' => 'Invite your team', 'hint' => 'Add the people who manage credentials and give each a role.',
@@ -29,7 +29,7 @@ final class OnboardingService
              'href' => '/locations', 'done' => $cnt("SELECT COUNT(*) FROM locations WHERE tenant_id = ? AND deleted_at IS NULL") > 0],
         ];
         if (!$isSolo) {
-            $steps[] = ['key' => 'groups', 'title' => "Set up your {$groupWord}", 'hint' => 'Organize providers by client group or department.',
+            $steps[] = ['key' => 'groups', 'title' => t('Set up your {groups}', ['groups' => $groupWord]), 'hint' => 'Organize providers by client group or department.',
                         'href' => '/groups', 'done' => $cnt("SELECT COUNT(*) FROM provider_groups WHERE tenant_id = ? AND deleted_at IS NULL") > 0];
         }
         $steps[] = ['key' => 'providers', 'title' => 'Add or import your providers', 'hint' => 'Download the CSV template to load a whole roster at once.',
