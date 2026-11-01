@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 
 define('FLXCOREHC_APP', __DIR__);
-define('FLXCOREHC_VERSION', '1.172.14');   // shown on System & updates; bump with each release
+define('FLXCOREHC_VERSION', '1.172.15');   // shown on System & updates; bump with each release
 // Which vertical this installation serves: 'insurance', 'healthcare', or 'both'.
 // The edition locks registration/installer org shapes and the demo builders, so a
 // single-vertical app can never grow tenants of the other industry. Everything downstream
@@ -513,6 +513,29 @@ function local_to_utc(string $local): string {
     if (strlen($local) === 16) $local .= ':00';
     try { return (new \DateTimeImmutable($local, app_tz()))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s'); }
     catch (\Throwable $e) { return $local; }
+}
+/** v1.172.14: how a wall-clock time typed in the app zone maps onto the clock. 'ok' · 'gap' (skipped when clocks move forward,
+ *  e.g. 02:30 on the spring-forward day — it never happens) · 'ambiguous' (happens twice when clocks move back; the first one is used). */
+function local_time_status(string $local): string {
+    $local = str_replace('T', ' ', trim($local));
+    if (strlen($local) === 16) $local .= ':00';
+    try {
+        $tz = app_tz(); $utc = new \DateTimeZone('UTC');
+        $at = new \DateTimeImmutable($local, $tz);
+        $want = (new \DateTimeImmutable($local, $utc))->format('Y-m-d H:i:s');
+        if ($at->setTimezone($tz)->format('Y-m-d H:i:s') !== $want) return 'gap';
+        foreach ([-3600, 3600] as $off) {
+            if ($at->setTimestamp($at->getTimestamp() + $off)->setTimezone($tz)->format('Y-m-d H:i:s') === $want) return 'ambiguous';   // real seconds, not wall-clock arithmetic
+        }
+    } catch (\Throwable $e) {}
+    return 'ok';
+}
+/** Like local_to_utc(), but when the typed wall-clock time is the one already stored (an edit that did not touch the time) the stored
+ *  instant is kept — otherwise re-saving the second 01:30 of a clocks-back night would silently become the first. */
+function local_to_utc_keep(string $local, ?string $currentUtc): string {
+    $norm = str_replace('T', ' ', trim($local));
+    if ($currentUtc && strlen($norm) >= 16 && substr(fmt_dt($currentUtc, 'Y-m-d H:i:s'), 0, 16) === substr($norm, 0, 16)) return $currentUtc;
+    return local_to_utc($local);
 }
 function fmt_date(?string $utc): string { return fmt_dt($utc, 'm/d/Y'); }
 function fmt_time(?string $utc): string { return fmt_dt($utc, 'g:i A'); }

@@ -62,5 +62,5 @@ $cal = file_get_contents($ROOT . '/app/src/Repository/CalendarRepository.php');
 $check(!str_contains($cal, "new \\DateTimeImmutable('today')") && str_contains($cal, 'today_local_dt()'), 'T3 CalendarRepository uses the org\'s day');
 $check(str_contains($cal, 'all_day = 1 AND due_at < ?'), 'T3 overdueCount(): an all-day item is overdue only after its day');
 $check(str_contains($cal, "fmt_dt((string)\$e['due_at'], 'Y-m-d')"), 'T3 agenda buckets a timed event by its LOCAL day');
-$check(substr_count($idx, 'local_to_utc(') >= 3, 'T3 create, edit and move convert a typed time to UTC');
+$check(preg_match_all('/local_to_utc(?:_keep)?\(/', $idx) >= 3, 'T3 create, edit and move convert a typed time to UTC');
 exit($fail ? 1 : 0);

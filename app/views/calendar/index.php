@@ -142,14 +142,13 @@ foreach (($filter ?? []) as $k => $v) { if ($v) $filterQs .= '&' . $k . '=' . ur
         $cur=$gridStart->modify('+'.$i.' days'); $ds=$cur->format('Y-m-d');
         $other=$cur->format('Y-m')!==$ms->format('Y-m');
         $items=$byDate[$ds]??[];
-        $hasOver=false; foreach($items as $it){ if($__over($it)){$hasOver=true;} }
-        $cls='cal-cell'.($other?' other':'').($ds===$today?' today':'').($hasOver?' overdue':'');
+        $cls='cal-cell'.($other?' other':'').($ds===$today?' today':'');   // v1.172.14: overdue is marked on the item, not on the whole day
         echo '<div class="'.$cls.'" data-date="'.$ds.'" data-has-events="'.(!empty($items)?'1':'0').'">';
         echo '<div class="cal-daynum"><span>'.$cur->format('j').'</span><button class="cal-add" type="button" title="Add event" data-action="cal-new" data-date="'.$ds.'">+</button></div>';
         foreach(array_slice($items,0,4) as $it){
-          $stat=$it['status']!=='open'?' st-'.$it['status']:'';
+          $stat=$it['status']!=='open'?' st-'.$it['status']:''; if($__over($it)) $stat.=' ov';
           $drag=$it['source']==='manual'?'true':'false';
-          echo '<div class="cal-ev k-'.e($it['kind']).$stat.'" draggable="'.$drag.'" data-id="'.e($it['id']).'" data-action="cal-edit" title="'.e($it['title']).'">'
+          echo '<div class="cal-ev k-'.e($it['kind']).$stat.'" draggable="'.$drag.'" data-id="'.e($it['id']).'" data-action="cal-edit" title="'.e($it['title']).($__over($it)?' — '.e(t('overdue')):'').'">'
              .'<span class="pdot" style="background:'.$priDot[$it['priority']].'"></span>'.e($it['title']).'</div>';
         }
         if(($dayCounts[$ds]??0)>4){ $extra=($dayCounts[$ds]??count($items))-4; echo '<a class="cal-more" href="'.BASE_PATH.'/calendar?view=list&from='.$ds.'&to='.$ds.$filterQs.'">+'.$extra.' more</a>'; }

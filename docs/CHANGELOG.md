@@ -1,6 +1,18 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.172.14**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.172.15**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.172.15 — Daylight-saving edge cases; overdue marked per item (no migration)
+
+Source: the "not changed" list of v1.172.12–13 (owner asked to work through the date edge cases).
+
+- **A time that does not exist is refused, not changed.** Typing 02:30 on the spring-forward day (e.g. 03/14/2027 in New York) used to be saved silently as 03:30. Creating, editing or dragging an event onto such a time now shows "That time does not exist on that date (clocks move forward). Choose another time." and saves nothing. All-day items are unaffected.
+- **Re-saving the second 01:30 of a clocks-back night keeps it.** Editing an event without touching its time keeps the stored instant; before, the second 01:30 turned into the first on every save. Typing 01:30 on that night for a new event still means the first occurrence.
+- **Month grid:** a day is no longer tinted red as a whole when any item on it is overdue. Each overdue item is marked itself (red, bold, "— overdue" in its tooltip); other items on the same day stay normal.
+- Unchanged by design: events saved before v1.172.11 keep their typed-as-UTC value (see the note in the 1.172.11 entry; needs an owner decision), and the other two edge cases are now closed.
+- Tests: `tests/dates/test_v1172_14.php` (no database, stage 3a10): 26 checks. Verified live on PHP 8.3.6: create at 02:30 (spring) refused, edit of the second 01:30 kept, month cell not tinted, only the early item marked.
 
 ---
 

@@ -2985,4 +2985,6 @@ return [
     'Your plan includes {n} seats. Upgrade or remove a user to add more.' => 'Su plan incluye {n} puestos. Mejore el plan o quite a un usuario para añadir más.',
     'Invitation created for {name}.' => 'Invitación creada para {name}.',
     'Portal login created for {name}.' => 'Acceso al portal creado para {name}.',
+    'That time does not exist on that date (clocks move forward). Choose another time.' => 'Esa hora no existe en esa fecha (el reloj se adelanta). Elija otra hora.',
+    'overdue' => 'atrasado',
 ];

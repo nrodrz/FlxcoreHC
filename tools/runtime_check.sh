@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# FlxCoreHC v1.172.14 — runtime validation for Claude Code / a PHP+MySQL host.
+# FlxCoreHC v1.172.15 — runtime validation for Claude Code / a PHP+MySQL host.
 # Runs: PHP lint (all files) → isolation → agency, purge, authz, migration, HTTP smoke, installer and security suites → harness. Reports PASS/FAIL per stage.
 # Does NOT modify code. Run from the app root on a TEST environment (never production).
 set -u
@@ -57,6 +57,8 @@ line "3a8. No database-side UTC \"today\" in runnable code (incl. cron); calenda
 php tests/dates/test_v1172_12.php || { echo "DATE 1.172.12 CHECKS: FAIL — send the output to Claude."; fail=1; }
 line "3a9. Every flash/service message has a Spanish entry; placeholder messages translate; installer secure-cookie default (v1.172.13, no database needed)"
 php tests/i18n/test_v1172_13.php || { echo "I18N 1.172.13 CHECKS: FAIL — send the output to Claude."; fail=1; }
+line "3a10. Daylight-saving edge cases (gap refused, second 01:30 kept) and per-item overdue marking (v1.172.14, no database needed)"
+php tests/dates/test_v1172_14.php || { echo "DATE 1.172.14 CHECKS: FAIL — send the output to Claude."; fail=1; }
 
 line "3b. Purge + security tests (v1.170.6, isolated flx_purge DB)"
 if command -v php >/dev/null 2>&1; then

@@ -4250,6 +4250,7 @@ if ($seg[0] === 'calendar') {
         $time = substr($__ad ? (string)$ev['due_at'] : fmt_dt((string)$ev['due_at'], 'Y-m-d H:i:s'), 11, 5) ?: '09:00';
         if ($ev['source'] !== 'manual') { echo json_encode(['ok'=>false,'error'=>"Auto deadlines can't be moved"]); exit; }
         $dur = !empty($ev['end_at']) ? (strtotime($ev['end_at']) - strtotime($ev['due_at'])) : 0;
+        if (!$__ad && local_time_status($date.' '.$time.':00') === 'gap') { echo json_encode(['ok'=>false,'error'=>t('That time does not exist on that date (clocks move forward). Choose another time.')]); exit; }
         $newDue = $__ad ? $date.' '.$time.':00' : local_to_utc($date.' '.$time.':00');
         $newEnd = $dur > 0 ? gmdate('Y-m-d H:i:s', strtotime($newDue) + $dur) : null;
         $ok = $calendar->update($id, ['due_at'=>$newDue, 'end_at'=>$newEnd]);
@@ -4262,7 +4263,13 @@ if ($seg[0] === 'calendar') {
         $ev = $calendar->find($id);
         if ($ev && $ev['source'] === 'manual') {
             $due = str_replace('T', ' ', (string)($_POST['due_at'] ?? '')); if (strlen($due) === 16) $due .= ':00';
-            if ($due !== '' && (int)($ev['all_day'] ?? 1) !== 1) $due = local_to_utc($due);   // v1.172.11: typed in the organization's zone
+            if ($due !== '' && (int)($ev['all_day'] ?? 1) !== 1) {   // v1.172.11: typed in the organization's zone
+                if (local_time_status($due) === 'gap' && substr(fmt_dt((string)$ev['due_at'], 'Y-m-d H:i:s'), 0, 16) !== substr($due, 0, 16)) {
+                    flash('That time does not exist on that date (clocks move forward). Choose another time.', 'error');
+                    redirect('/calendar' . (!empty($_POST['back']) ? $_POST['back'] : ''));
+                }
+                $due = local_to_utc_keep($due, (string)$ev['due_at']);
+            }
             $calendar->update($id, [
                 'title'    => trim((string)($_POST['title'] ?? '')) ?: $ev['title'],
                 'kind'     => $calTypes->findByCode((string)($_POST['kind'] ?? '')) ? $_POST['kind'] : $ev['kind'],
@@ -4346,7 +4353,13 @@ if ($seg[0] === 'calendar') {
         FlxCoreHC\Authz::requireCap($ctx, 'records.write');   // v1.170.8
         $due = str_replace('T', ' ', (string)($_POST['due_at'] ?? '')); if (strlen($due) === 16) $due .= ':00';
         $allday = !empty($_POST['all_day']) ? 1 : 0;
-        if ($due !== '' && !$allday) $due = local_to_utc($due);   // v1.172.11: a timed event is typed in the organization's zone, stored in UTC
+        if ($due !== '' && !$allday) {   // v1.172.11: a timed event is typed in the organization's zone, stored in UTC
+            if (local_time_status($due) === 'gap') {
+                flash('That time does not exist on that date (clocks move forward). Choose another time.', 'error');
+                redirect('/calendar' . (!empty($_POST['back']) ? $_POST['back'] : ''));
+            }
+            $due = local_to_utc($due);
+        }
         $calendar->insert([
             'holder_id'=>($_POST['holder_id'] ?? '') ?: null,
             'kind'=>$calTypes->findByCode((string)($_POST['kind'] ?? '')) ? $_POST['kind'] : 'meeting',
