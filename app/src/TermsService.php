@@ -14,21 +14,131 @@ final class TermsService
 {
     public const PERMISSION = 'terms.accept';
 
-    /** @return array{version:string,title:string,draft:string,sections:array} */
+    public const ALLOWED_PLACEHOLDERS = ['organization', 'product', 'owner'];
+
+    /**
+     * The current Terms: the newest published version (Console → Terms of Use), or the files shipped with the app when none was published.
+     * @return array{version:string,en:array,es:array}   each language: title, draft (banner text, '' = final), sections [[heading,[paragraphs]]]
+     */
+    private static function current(): array
+    {
+        static $cache = null;
+        if ($cache !== null) return $cache;
+        try {
+            $row = Database::pdo()->query('SELECT version, content FROM terms_versions ORDER BY created_at DESC, id DESC LIMIT 1')->fetch();
+            if ($row) {
+                $c = json_decode((string) $row['content'], true);
+                if (is_array($c) && isset($c['en']['sections'])) return $cache = ['version' => (string) $row['version'], 'en' => $c['en'], 'es' => $c['es'] ?? []];
+            }
+        } catch (\Throwable $e) { /* table missing before migration 137: the shipped files apply */ }
+        $en = require FLXCOREHC_APP . '/terms/en.php'; $es = require FLXCOREHC_APP . '/terms/es.php';
+        return $cache = ['version' => (string) $en['version'], 'en' => $en, 'es' => $es];
+    }
+
+    /** One language of the current Terms; Spanish falls back to English wherever it has nothing. */
     private static function file(string $locale): array
     {
-        static $cache = [];
-        if (isset($cache[$locale])) return $cache[$locale];
-        $en = require FLXCOREHC_APP . '/terms/en.php';
-        $f  = FLXCOREHC_APP . '/terms/' . $locale . '.php';
-        $doc = ($locale !== 'en' && is_file($f)) ? array_replace($en, (array) require $f) : $en;
-        $doc['version'] = $en['version'];   // the version is the English file's
-        return $cache[$locale] = $doc;
+        $cur = self::current();
+        $doc = $locale === 'en' ? $cur['en'] : array_replace($cur['en'], array_filter((array) ($cur[$locale] ?? []), fn($v) => $v !== [] && $v !== null));
+        $doc['version'] = $cur['version'];
+        return $doc;
     }
 
     public static function version(): string
     {
-        return (string) self::file('en')['version'];
+        return self::current()['version'];
+    }
+
+    // ---- editing (platform operator) -------------------------------------------------------------------------
+
+    /** Sections -> the plain-text format of the editor: "# Heading" lines, paragraphs separated by a blank line. */
+    public static function toMarkup(array $sections): string
+    {
+        $out = [];
+        foreach ($sections as [$h, $paras]) $out[] = '# ' . $h . "\n\n" . implode("\n\n", $paras);
+        return implode("\n\n", $out) . "\n";
+    }
+
+    /** The editor's plain text -> [sections, error]. */
+    public static function parseMarkup(string $text): array
+    {
+        $text = str_replace(["\r\n", "\r"], "\n", trim($text));
+        if ($text === '') return [[], 'The text is empty.'];
+        $secs = []; $cur = null;
+        foreach (preg_split('/\n{2,}/', $text) as $block) {
+            $block = trim($block);
+            if ($block === '') continue;
+            if (str_starts_with($block, '# ')) {
+                $lines = explode("\n", $block, 2);
+                if ($cur !== null) $secs[] = $cur;
+                $cur = [trim(substr($lines[0], 2)), []];
+                if (isset($lines[1]) && trim($lines[1]) !== '') $cur[1][] = trim((string) preg_replace('/\s*\n\s*/', ' ', $lines[1]));
+                continue;
+            }
+            if ($cur === null) return [[], 'The text must start with a section heading: a line beginning "# ".'];
+            $cur[1][] = trim((string) preg_replace('/\s*\n\s*/', ' ', $block));
+        }
+        if ($cur !== null) $secs[] = $cur;
+        foreach ($secs as [$h, $ps]) {
+            if ($h === '') return [[], 'A section has an empty heading.'];
+            if ($ps === []) return [[], 'The section "' . $h . '" has no paragraph.'];
+        }
+        $found = [];
+        preg_match_all('/\{(\w+)\}/', json_encode($secs, JSON_UNESCAPED_UNICODE), $m);
+        foreach (array_unique($m[1]) as $ph) if (!in_array($ph, self::ALLOWED_PLACEHOLDERS, true)) $found[] = '{' . $ph . '}';
+        if ($found) return [[], 'Unknown placeholder ' . implode(', ', $found) . ' — only {organization}, {product} and {owner} are filled in.'];
+        if (strlen(json_encode($secs)) > 60000) return [[], 'The text is too long.'];
+        return [$secs, null];
+    }
+
+    /** Publish a new version. @return array{0:bool,1:string} [ok, message or new version] */
+    public static function publish(TenantContext $ctx, string $enText, string $esText, string $enDraft, string $esDraft): array
+    {
+        [$en, $err] = self::parseMarkup($enText);
+        if ($err) return [false, t('English: {msg}', ['msg' => $err])];
+        $es = [];
+        if (trim($esText) !== '') { [$es, $err] = self::parseMarkup($esText); if ($err) return [false, t('Spanish: {msg}', ['msg' => $err])]; }
+        $pdo = Database::pdo();
+        $day = gmdate('Y-m-d');
+        $n = (int) $pdo->query("SELECT COUNT(*) FROM terms_versions WHERE version LIKE '" . $day . ".%'")->fetchColumn() + 1;
+        $version = $day . '.' . $n;
+        $content = json_encode([
+            'en' => ['title' => 'Terms of Use', 'draft' => trim($enDraft), 'sections' => $en],
+            'es' => $es ? ['title' => 'Términos de uso', 'draft' => trim($esDraft), 'sections' => $es] : [],
+        ], JSON_UNESCAPED_UNICODE);
+        $pdo->prepare('INSERT INTO terms_versions (id, version, content, created_by, created_at) VALUES (?,?,?,?,?)')
+            ->execute([uuid4(), $version, $content, $ctx->userId, utc_now()]);
+        audit_log($ctx, 'terms_published', 'terms', substr($version, 0, 36), json_encode(['version' => $version, 'sections_en' => count($en), 'sections_es' => count($es)]));
+        return [true, $version];
+    }
+
+    /** Published versions, newest first. @return array<int,array{version:string,created_at:string,by:string}> */
+    public static function history(): array
+    {
+        try {
+            return Database::pdo()->query('SELECT v.version, v.created_at, COALESCE(u.full_name, \'\') AS `by` FROM terms_versions v LEFT JOIN users u ON u.id = v.created_by ORDER BY v.created_at DESC, v.id DESC LIMIT 50')->fetchAll();
+        } catch (\Throwable $e) { return []; }
+    }
+
+    /** Editor start text for one language of the current Terms. */
+    public static function editorText(string $locale): string
+    {
+        $cur = self::current(); $d = $locale === 'en' ? $cur['en'] : ($cur['es'] ?: []);
+        return isset($d['sections']) && $d['sections'] ? self::toMarkup($d['sections']) : '';
+    }
+
+    public static function editorDraft(string $locale): string
+    {
+        $cur = self::current(); return (string) (($locale === 'en' ? $cur['en'] : $cur['es'])['draft'] ?? '');
+    }
+
+    /** Raw (placeholder-free) counts for the console: users who accepted the current version / users in all tenants. */
+    public static function acceptanceTotals(): array
+    {
+        $q = Database::pdo()->prepare("SELECT COUNT(DISTINCT user_id) FROM terms_acceptances WHERE scope = 'user' AND terms_version = ?");
+        $q->execute([self::version()]);
+        $total = (int) Database::pdo()->query("SELECT COUNT(*) FROM users WHERE platform_admin = 0 AND status = 'active'")->fetchColumn();
+        return ['accepted' => (int) $q->fetchColumn(), 'users' => $total];
     }
 
     /**

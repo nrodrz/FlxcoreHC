@@ -3453,6 +3453,23 @@ if ($seg[0] === 'admin') {
         view('admin/regulatory', ['ctx' => $ctx, 'sources' => FlxCoreHC\RegulatorySources::all(), 'due' => FlxCoreHC\RegulatorySources::dueForReview(),
             'pendingCount' => count($admin->pendingTenants())]);
     }
+    // ---- Terms of Use editor (platform operator): every save publishes a NEW version that everyone accepts again
+    if ($id === 'terms') {
+        if ($method === 'POST') {
+            CsrfGuard::verify();
+            $__keepNow = ['text_en' => (string)($_POST['text_en'] ?? ''), 'text_es' => (string)($_POST['text_es'] ?? ''), 'draft_en' => (string)($_POST['draft_en'] ?? ''), 'draft_es' => (string)($_POST['draft_es'] ?? '')];
+            if (empty($_POST['confirm_publish'])) { $_SESSION['terms_edit_keep'] = $__keepNow; flash('Tick the box to confirm that everyone will have to accept the new version.', 'error'); redirect('/admin/terms'); }
+            [$__ok, $__m] = FlxCoreHC\TermsService::publish($ctx, $__keepNow['text_en'], $__keepNow['text_es'], $__keepNow['draft_en'], $__keepNow['draft_es']);
+            if (!$__ok) { $_SESSION['terms_edit_keep'] = $__keepNow; flash($__m, 'error'); redirect('/admin/terms'); }
+            flash(t('Published version {v}. Everyone accepts it at their next sign-in.', ['v' => $__m]), 'ok');
+            redirect('/admin/terms');
+        }
+        $__keep = $_SESSION['terms_edit_keep'] ?? null; unset($_SESSION['terms_edit_keep']);
+        view('admin/terms', ['ctx' => $ctx, 'version' => FlxCoreHC\TermsService::version(), 'history' => FlxCoreHC\TermsService::history(),
+            'totals' => FlxCoreHC\TermsService::acceptanceTotals(),
+            'text_en' => $__keep['text_en'] ?? FlxCoreHC\TermsService::editorText('en'), 'text_es' => $__keep['text_es'] ?? FlxCoreHC\TermsService::editorText('es'),
+            'draft_en' => $__keep['draft_en'] ?? FlxCoreHC\TermsService::editorDraft('en'), 'draft_es' => $__keep['draft_es'] ?? FlxCoreHC\TermsService::editorDraft('es')]);
+    }
     if ($id === 'database') {
         // Data dictionary + database health for the platform operator. Structure and counts only —
         // no tenant record contents are read here.

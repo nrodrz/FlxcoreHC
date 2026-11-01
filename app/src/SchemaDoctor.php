@@ -62,6 +62,8 @@ final class SchemaDoctor
         'auth_email_codes' => 'One-time sign-in / two-factor codes sent by e-mail (stored as keyed hashes, 10 minutes, single use). Keyed by user: a platform administrator has no tenant.',
         'password_resets' => 'Single-use forgot-password links (the token is stored as a SHA-256 hash, 60 minutes).',
         'requirement_sources' => 'Global catalogue of the legal or regulatory citation behind each requirement, dated and reviewed.',
+        'terms_acceptances' => 'Who accepted which version of the Terms of Use, for themselves or for their organization (append-only; each one is also an audit row).',
+        'terms_versions' => 'Published versions of the Terms of Use (product-wide text edited by the platform operator; append-only, newest is current).',
         'schema_migrations' => 'Applied migration filenames — the schema version record.',
     ];
 
@@ -75,7 +77,8 @@ final class SchemaDoctor
         'training_catalog', 'vocab', 'settings', 'tenants', 'training_library', 'training_sources',
         // v1.172.2: auth_email_codes is keyed by user_id (a platform administrator has no tenant); requirement_sources is the
         // global catalogue of legal citations. Neither holds tenant data, so a missing tenant_id is correct, not a warning.
-        'auth_email_codes', 'requirement_sources'];
+        // v1.173.3: terms_versions is the product-wide Terms text (the same for every organization), not tenant data.
+        'auth_email_codes', 'requirement_sources', 'terms_versions'];
 
     /** @return array<int,array<string,mixed>> one row per table */
     public static function dictionary(): array

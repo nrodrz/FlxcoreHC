@@ -22,6 +22,7 @@ $navGroups = [
         ['Platform data', $B . '/admin/platform', $at('/admin/platform')],
         ['Regulatory sources', $B . '/admin/regulatory', $at('/admin/regulatory')],
         ['Translations', $B . '/admin/translations', $at('/admin/translations')],
+        ['Terms of Use', $B . '/admin/terms', $at('/admin/terms')],
     ],
     'Operations' => [
         ['System & updates', $B . '/admin/system', $at('/admin/system')],

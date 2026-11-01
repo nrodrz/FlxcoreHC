@@ -36,7 +36,7 @@ def run_install(tag, hdrs):
     s, b, _ = req(op, '/install.php', data, hdrs)
     rec(f'installer[{tag}] completes', s == 200 and os.path.isfile(CFG), f'status {s}')
     mt = re.search(r'Installation complete — created (\d+) tables', b)
-    rec(f'installer[{tag}] reports the tables it created (v1.173.2: 92, incl. auth_email_codes, password_resets and terms_acceptances)', bool(mt) and mt.group(1) == '92', f'tables={mt.group(1) if mt else None}')
+    rec(f'installer[{tag}] reports the tables it created (v1.173.3: 93, incl. auth_email_codes, password_resets, terms_acceptances and terms_versions)', bool(mt) and mt.group(1) == '93', f'tables={mt.group(1) if mt else None}')
     cfg = subprocess.check_output(['php', '-r', '$c=require getenv("FLX_CONFIG"); echo json_encode([$c["app_url"]??null,$c["hsts"]??null,!empty($c["crypto_data_key"])]);']).decode() if os.path.isfile(CFG) else '[]'
     import json; url, hsts, keys = (json.loads(cfg) + [None, None, None])[:3]
     want_https = tag == 'https'

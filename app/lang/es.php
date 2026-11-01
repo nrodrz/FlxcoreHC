@@ -3199,4 +3199,10 @@ return [
     'accepted for the organization by {name} on {date}' => 'aceptados por la organización por {name} el {date}',
     'not yet accepted for the organization' => 'aún no aceptados por la organización',
     'DRAFT — for attorney review. These Terms are not final.' => 'BORRADOR — para revisión de abogado. Estos Términos no son definitivos.',
+    // v1.173.3
+    'Tick the box to confirm that everyone will have to accept the new version.' => 'Marque la casilla para confirmar que todos tendrán que aceptar la nueva versión.',
+    'Published version {v}. Everyone accepts it at their next sign-in.' => 'Versión {v} publicada. Todos la aceptan en su próximo inicio de sesión.',
+    'English: {msg}' => 'Inglés: {msg}',
+    'Spanish: {msg}' => 'Español: {msg}',
+    'Change the time zone? It changes how every date and time is shown for this organization (stored times are not altered).' => '¿Cambiar la zona horaria? Cambia cómo se muestran todas las fechas y horas de esta organización (las horas guardadas no se alteran).',
 ];

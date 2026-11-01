@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
-# FlxCoreHC v1.173.2 — runtime validation for Claude Code / a PHP+MySQL host.
+# FlxCoreHC v1.173.3 — runtime validation for Claude Code / a PHP+MySQL host.
 # Runs: PHP lint (all files) → isolation → agency, purge, authz, migration, HTTP smoke, installer and security suites → harness. Reports PASS/FAIL per stage.
 # Does NOT modify code. Run from the app root on a TEST environment (never production).
 set -u
@@ -70,6 +70,8 @@ line "3a14. LICENSE.txt, THIRD-PARTY-NOTICES.txt, ownership headers on every pro
 php tests/ownership/test_v1173_1.php || { echo "OWNERSHIP 1.173.1 CHECKS: FAIL — send the output to Claude."; fail=1; }
 line "3a15. Terms of Use acceptance: text, gate, permission, audit (v1.173.2, no database needed)"
 php tests/ownership/test_v1173_2.php || { echo "OWNERSHIP 1.173.2 CHECKS: FAIL — send the output to Claude."; fail=1; }
+line "3a16. Editable Terms (format, console-only, append-only), cron lines, time-zone change confirmation (v1.173.3, no database needed)"
+php tests/ownership/test_v1173_3.php || { echo "OWNERSHIP 1.173.3 CHECKS: FAIL — send the output to Claude."; fail=1; }
 
 line "3b. Purge + security tests (v1.170.6, isolated flx_purge DB)"
 if command -v php >/dev/null 2>&1; then

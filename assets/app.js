@@ -318,6 +318,13 @@
   function wireConfirms() {
     d.addEventListener('submit', function (e) {
       var f = e.target, msg = f.getAttribute && f.getAttribute('data-confirm');
+      /* v1.173.3: a select marked data-confirm-change asks for confirmation only when its value was actually changed (e.g. the time zone) */
+      if (!msg && f.querySelectorAll && !f.__cfok) {
+        var chg = Array.prototype.filter.call(f.querySelectorAll('select[data-confirm-change]'), function (s) {
+          return Array.prototype.some.call(s.options, function (o) { return o.selected !== o.defaultSelected; });
+        });
+        if (chg.length) msg = chg[0].getAttribute('data-confirm-change');
+      }
       if (!msg || f.__cfok) return;
       e.preventDefault();
       window.flxConfirm(msg, function (ok) { if (ok) { f.__cfok = true; f.submit(); } }, { danger: f.hasAttribute('data-confirm-danger'), confirmText: f.getAttribute('data-confirm-btn') || 'Confirm' });

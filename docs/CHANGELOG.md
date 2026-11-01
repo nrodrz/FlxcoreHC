@@ -1,6 +1,16 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.173.2**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.173.3**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.173.3 — Terms of Use editor, cron lines, time-zone confirmation (migration 137)
+
+- **Terms of Use can be edited in the app** (owner's request): Platform console → **Terms of Use**, English and Spanish side by side, in a plain-text format (`# Heading`, paragraphs separated by a blank line; `{organization}`, `{product}` and `{owner}` are filled in). Only platform administrators can open it (organization owners get 403). **Every save publishes a new version** (`YYYY-MM-DD.N`, table `terms_versions`, append-only, never edited or deleted, audited as `terms_published`) and **everyone accepts it again** at their next sign-in; a confirmation tick is required. A banner field (empty = final) controls the "DRAFT" notice per language. Text with a heading but no paragraph, or with an unknown placeholder, is refused. With no published version the Terms shipped in `app/terms/` apply. *Deviation from the standard* (which says the text cannot be edited from a screen): approved by the owner; limited to the platform operator, every version kept.
+- **Scheduled jobs (cron):** System & updates lists the four cron lines built at run time from this server's PHP binary and this installation's folder (no account path in code).
+- **Time-zone change asks for confirmation** (platform and organization pickers): the page asks only when the selected zone really changed.
+- Not built: the "minor change → notice" path (every save is a material change).
+- Tests: `tests/ownership/test_v1173_3.php` (stage 3a16) and HTTP checks TE1–TE10 (run last in the smoke test).
 
 ---
 

@@ -33,7 +33,7 @@ $initial = strtoupper(substr($brandName,0,1));
         </select>
         <div class="hint"><?= e(t('New users see the app in this language until they choose their own, and reminder emails are sent in it.')) ?></div></div>
       <div><label><?= e(t('Time zone')) ?></label>
-        <select name="timezone" style="max-width:260px">
+        <select name="timezone" style="max-width:260px" data-confirm-change="<?= e(t('Change the time zone? It changes how every date and time is shown for this organization (stored times are not altered).')) ?>">
           <?php $__otz = (string)($org['timezone'] ?? ''); ?>
           <option value="" <?= $__otz === '' ? 'selected' : '' ?>><?= e(t('Platform default')) ?> — <?= e(flx_timezones()[app_tz_platform_name()] ?? app_tz_platform_name()) ?></option>
           <?php foreach (flx_timezones() as $z => $lbl): ?>

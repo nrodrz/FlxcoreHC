@@ -183,6 +183,26 @@ $yn = function($v){ if ($v===null) return '<span class="chip pending">unknown</s
   </div>
 
   <div>
+    <?php
+      // v1.173.3: the scheduled-job lines are built at run time from this server's PHP binary and this installation's path — nothing typed in code.
+      $__php = (PHP_BINARY !== '' && preg_match('/^php[\d.]*$/', basename(PHP_BINARY))) ? PHP_BINARY : (is_file(PHP_BINDIR . '/php') ? PHP_BINDIR . '/php' : '/usr/local/bin/php');
+      $__root = rtrim(FLXCOREHC_ROOT, '/');
+      $__jobs = [
+        ['0 1 * * *', 'sweep_expiring.php', 'Credential status: expiring / expired, one organization at a time (each organization\'s own day).'],
+        ['0 2 * * *', 'screen_leie.php',     'Exclusion screening (OIG LEIE) refresh.'],
+        ['0 6 * * *', 'send_reminders.php',  'Reminder e-mails and in-app notifications, then flushes the e-mail outbox.'],
+        ['0 7 * * *', 'send_digests.php',    'Activity digests (weekly ones on Mondays).'],
+      ];
+    ?>
+    <div class="panel">
+      <div class="topline"><h2>Scheduled jobs (cron)</h2><span class="hint">built from this server's PHP and this installation's folder</span></div>
+      <p class="hint">Add these lines in cPanel → Cron Jobs (or <code>crontab -e</code>). Times are server time; each job is safe to run again.</p>
+      <div class="table-wrap"><table>
+        <?php foreach ($__jobs as [$__when, $__file, $__what]): ?>
+        <tr><td><code style="white-space:nowrap;user-select:all"><?= e($__when . ' ' . $__php . ' ' . $__root . '/cron/' . $__file) ?></code><div class="hint"><?= e($__what) ?></div></td></tr>
+        <?php endforeach; ?>
+      </table></div>
+    </div>
     <div class="panel">
       <div class="topline"><h2>Environment</h2></div>
       <div class="table-wrap"><table>
@@ -192,7 +212,7 @@ $yn = function($v){ if ($v===null) return '<span class="chip pending">unknown</s
         <tr><td>Platform time zone <span class="hint" style="font-weight:400">(default for organizations that have not chosen their own)</span></td><td class="right">
           <form method="post" action="<?= BASE_PATH ?>/admin" style="margin:0;display:inline-flex;gap:.4rem;align-items:center"><?= FlxCoreHC\Auth\CsrfGuard::field() ?>
             <input type="hidden" name="action" value="set_timezone">
-            <select name="app_timezone" style="min-width:190px">
+            <select name="app_timezone" style="min-width:190px" data-confirm-change="Change the platform time zone? It changes how every date and time is shown for organizations that follow the platform zone.">
               <?php $__cur = $diag['tz'] ?? 'America/New_York'; foreach (flx_timezones() as $z=>$lbl): ?>
                 <option value="<?= $z ?>" <?= $__cur===$z?'selected':'' ?>><?= e($lbl) ?></option>
               <?php endforeach; ?>

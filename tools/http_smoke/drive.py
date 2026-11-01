@@ -751,5 +751,30 @@ for u in ['owner','manager','staff','coord','readonly','restricted','padmin']:
     print(f'{"PASS" if not bad and not vacuous else "FAIL"} — crawl as {u}: pages={n} codes={c}' + (' — VACUOUS (too few pages / too few 200s)' if vacuous else ''))
     for b in bad[:15]: print('   BAD', b)
     if bad or vacuous: FAILS[0]+=1
+# ==== v1.173.3 — the Terms of Use editor (last: publishing a version makes every fixture user accept again) ===========
+opP=login('padmin@smoke.test')[0]
+sE0,bE0,_=req(opP,'/admin/terms'); tokE=csrf(bE0)
+rec('TE1 the platform operator opens the Terms editor with both languages and the current version', sE0==200 and 'name="text_en"' in bE0 and 'name="text_es"' in bE0 and '1.0-draft' in bE0 and '# Who these Terms are between' in bE0, f'status {sE0}')
+sEm,_,_=req(login('owner@smoke.test')[0],'/admin/terms'); rec('TE2 an organization owner cannot open the Terms editor (platform administrators only)', sEm==403, f'status {sEm}')
+nv=dbq("select count(*) from terms_versions")
+req(opP,'/admin/terms',{'_csrf':tokE,'text_en':'# Only heading','text_es':'','draft_en':'','draft_es':'','confirm_publish':'1'})
+req(opP,'/admin/terms',{'_csrf':tokE,'text_en':'# Heading\n\nUnknown {placeholder} here.','text_es':'','draft_en':'','draft_es':'','confirm_publish':'1'})
+req(opP,'/admin/terms',{'_csrf':tokE,'text_en':'# Heading\n\nFine text.','text_es':'','draft_en':'','draft_es':''})
+rec('TE3 bad text (a heading with no paragraph, an unknown placeholder) or no confirmation tick publishes nothing', dbq("select count(*) from terms_versions")==nv, '')
+EN='# First section\n\nThese Terms are between {organization} and its users of {product}.\n\n# Ownership\n\n{product} is owned by {owner}.\n'
+ES='# Primera sección\n\nEstos Términos son entre {organization} y sus usuarios de {product}.\n\n# Titularidad\n\n{product} pertenece a {owner}.\n'
+sP,_,_=req(opP,'/admin/terms',{'_csrf':tokE,'text_en':EN,'text_es':ES,'draft_en':'','draft_es':'','confirm_publish':'1'})
+vrow=dbq("select version from terms_versions order by created_at desc limit 1")
+rec('TE4 a valid save publishes one new version (YYYY-MM-DD.N) and one audit row', sP==302 and re.match(r'^\d{4}-\d{2}-\d{2}\.1$',vrow or '') and dbq("select count(*) from terms_versions")==str(int(nv)+1) and dbq("select count(*) from audit_logs where action='terms_published'")=='1', f'version={vrow}')
+sPb,bPb,_=req(client(),'/terms'); rec('TE5 the public Terms page shows the new text, with no draft banner', sPb==200 and 'These Terms are between' in bPb and 'DRAFT' not in bPb, f'status {sPb}')
+opm2=login('manager@smoke.test')[0]; sM,_,hM=req(opm2,'/')
+rec('TE6 a new version makes users who accepted the old one accept again at their next sign-in', sM==302 and (hM.get('Location') or '').endswith('/terms/accept'), f'status {sM}')
+sM2,bM2,_=req(opm2,'/terms/accept')
+rec('TE7 the acceptance page shows the new text with the organization\'s own name and the owner from the ownership file', sM2==200 and 'between Smoke' in bM2 and 'Indisse-BTS' in bM2 and 'is owned by' in bM2, f'status {sM2}')
+req(opm2,'/terms/accept',{'_csrf':csrf(bM2)})
+rec('TE8 after accepting the new version the user is let in, and the acceptance names the new version', req(opm2,'/')[0]==200 and dbq("select count(*) from terms_acceptances where terms_version='%s'"%vrow)=='1', '')
+sHx,bHx,_=req(opP,'/admin/terms'); rec('TE9 the editor lists the published version as current', vrow in bHx and 'current' in bHx, '')
+sSys,bSys,_=req(opP,'/admin/system'); rec('TE10 the System page shows cron lines built from the server\'s PHP and this installation\'s folder', sSys==200 and 'cron/sweep_expiring.php' in bSys and 'cron/send_reminders.php' in bSys and 'data-confirm-change=' in bSys, f'status {sSys}')
+dbq("delete from terms_versions"); dbq("delete from terms_acceptances where terms_version='%s'"%vrow)
 print('\nALL PASS' if FAILS[0]==0 else '\nSOME FAILED')
 sys.exit(1 if FAILS[0] else 0)
