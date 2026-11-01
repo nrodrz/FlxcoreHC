@@ -29,9 +29,11 @@ Standard: "Ownership & White-Label Standard" (Nov 1, 2026). This file holds the 
 | 8 | Sweep, made-up data | Done for people and hosting names | `tests/ownership/test_v1173_0.php` O4 (names via `FLX_SWEEP_NAMES`, kept outside the source) | 1.173.0 | sweep of all shipped files | Personal name removed from `KICKOFF.md`, a test and a form example; owner admin e-mail removed from archived memos. Regulators and payers kept (decision D5, pending) |
 | 9 | Values in settings / private directory | Partly (time zone per organization 1.172.16, branding, mail) | | 1.173.3 | | |
 | 10 | Ownership test + UI smoke, negative control | Done for steps 1–5, 7 (part), 8 | `tests/ownership/`, `tools/http_smoke/drive.py` (OW1–OW12), stage 3a13 | 1.173.0 | | |
-| 11–19 | | Not started | | see `docs/plans/OWNERSHIP_WHITE_LABEL_ADOPTION_PLAN.md` | | |
+| 11 | Terms of Use acceptance | Done for the material-change path; text is a draft | `app/src/TermsService.php`, `app/terms/en.php` + `es.php`, `/terms` (public), `/terms/accept`, gate in `index.php`, permission `terms.accept`, `terms_acceptances` (migration 136), Team column, About row | 1.173.2 | `tests/ownership/test_v1173_2.php` T1–T5 + negative controls; HTTP TA1–TA15 | Smoke fixtures must pre-accept (one user left out on purpose); the platform operator is exempt; Terms text is Claude Code's draft |
+| 12–19 | | Not started | | see `docs/plans/OWNERSHIP_WHITE_LABEL_ADOPTION_PLAN.md` | | |
 
 ## Open items
+- Terms of Use: replace the draft text (`app/terms/en.php`, `es.php`) with the owner's/attorney's; build the minor-change notice path (30-day deemed acceptance); subscription terms and data processing addendum for hosted tenants.
 - Terms of Use text and LICENSE.txt template from the owner (D3); attorney review of every legal text; Spanish courtesy translations are drafts.
 - Decision D5 (regulators and payers as reference data) before any change to catalog names.
 - D7: the platform console as the License Hub (licensing release).

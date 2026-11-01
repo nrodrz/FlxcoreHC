@@ -140,5 +140,6 @@ return [
     'database/migrations/133_signin_options.sql',
     'database/migrations/134_tenant_timezone.sql',
     'database/migrations/135_workspace_id.sql',
+    'database/migrations/136_terms_acceptances.sql',
     'database/migrations/099_document_verification.sql',
 ];

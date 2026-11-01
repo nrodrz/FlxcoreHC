@@ -437,8 +437,8 @@ if (($seg[0] ?? '') === 'logout' && $method === 'POST') {
 // status. No session, no access to anything else. Expiry + revocation checked on resolve;
 // every view is counted. This is the one place that reads across tenants, gated by the token.
 // ---- Terms of Use (public; linked from the sign-in page) — v1.173.0
-if (($seg[0] ?? '') === 'terms' && $method === 'GET') {
-    view('terms', ['bare' => true]);
+if (($seg[0] ?? '') === 'terms' && !isset($seg[1]) && $method === 'GET') {
+    view('terms/public', ['bare' => true, 'org' => 'the Organization', 'effective' => null]);
 }
 
 if (($seg[0] ?? '') === 'verify' && isset($seg[1])) {
@@ -637,6 +637,30 @@ if ($seg[0] === 'oauth' && ($seg[1] ?? '') === 'microsoft' && ($seg[2] ?? '') ==
 
 if (!$ctx) {
     redirect('/login');
+}
+
+// ---- Terms of Use (Ownership & White-Label Standard, element 10): every user accepts the current version at their first sign-in
+// (and again whenever the version changes); nothing else opens until then. The platform operator (the owner) is exempt.
+if (($seg[0] ?? '') === 'terms' && ($seg[1] ?? '') === 'accept') {
+    $__tAccepted = FlxCoreHC\TermsService::userAccepted($ctx->userId);
+    $__tOrgAcc = FlxCoreHC\TermsService::organizationAcceptance($ctx->tenantId);
+    $__tMayOrg = FlxCoreHC\Authz::can($ctx, FlxCoreHC\TermsService::PERMISSION);
+    if ($method === 'POST') {
+        CsrfGuard::verify();
+        $__done = FlxCoreHC\TermsService::accept($ctx, !empty($_POST['for_organization']) && !empty($_POST['authority']));
+        flash($__done ? 'Thank you — the Terms of Use are accepted.' : 'No change.', 'ok');
+        redirect('/');
+    }
+    $__org = (new OrgService($ctx))->get();
+    view('terms/accept', ['ctx' => $ctx, 'bare' => !$__tAccepted, 'accepted' => $__tAccepted, 'orgAcceptance' => $__tOrgAcc, 'mayAcceptForOrg' => $__tMayOrg,
+        'org' => $ctx->tenantName, 'effective' => $__org['created_at'] ?? null]);
+}
+if (!$ctx->isPlatformAdmin && empty($_SESSION['auth']['impersonated_by']) && !in_array($seg[0] ?? '', ['terms', 'logout'], true)) {
+    $__tk = $ctx->userId . '|' . FlxCoreHC\TermsService::version();
+    if (($_SESSION['terms_ok'] ?? '') !== $__tk) {
+        if (FlxCoreHC\TermsService::userAccepted($ctx->userId)) { $_SESSION['terms_ok'] = $__tk; }
+        else { redirect('/terms/accept'); }
+    }
 }
 
 // Resolve the tenant's plan features for this request (product-tier gating).
@@ -3297,7 +3321,7 @@ if ($seg[0] === 'team') {
         flash($msg . ($link ? ' Invite link: ' . $link : ''), !empty($ok) ? 'ok' : 'error');
         redirect('/team');
     }
-    view('team/index', ['ctx' => $ctx, 'users' => $team->users(),
+    view('team/index', ['ctx' => $ctx, 'users' => $team->users(), 'termsMap' => FlxCoreHC\TermsService::acceptanceMap($ctx->tenantId), 'termsVersion' => FlxCoreHC\TermsService::version(),
         'roleList'   => (new FlxCoreHC\RoleService($ctx))->assignable(),
         'holderList' => $holders->all(['holder_type' => 'individual'], 'last_name, first_name')]);
 }

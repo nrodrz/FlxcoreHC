@@ -56,5 +56,12 @@ $pdo->prepare("INSERT INTO ocs_profiles (id, tenant_id, holder_id, sicro_status,
 $pdo->prepare("INSERT INTO email_outbox (id,tenant_id,to_email,subject,body,category,status,attempts,created_at) VALUES (?,?,?,?,?,?,?,?,?)")
     ->execute([uuid4(),null,'nobody@smoke.test','SMOKE queued mail','body','general','queued',0,$now]);
 $out['custom_slug']=$slug;
+// v1.173.2: Terms of Use. Every fixture user has accepted the current version (the Terms gate would otherwise send every test to the
+// acceptance page) EXCEPT terms@smoke.test, who is made here on purpose for the acceptance tests; the organization has not accepted.
+$mkUser('terms@smoke.test', 'staff');
+$__tv = FlxCoreHC\TermsService::version();
+foreach ($pdo->query("SELECT id, tenant_id FROM users WHERE platform_admin = 0 AND email <> 'terms@smoke.test'")->fetchAll() as $__u) {
+    $pdo->prepare("INSERT INTO terms_acceptances (id, tenant_id, user_id, scope, terms_version, accepted_at) VALUES (?,?,?,'user',?,?)")->execute([uuid4(), $__u['tenant_id'], $__u['id'], $__tv, $now]);
+}
 file_put_contents(getenv('FLX_IDS') ?: sys_get_temp_dir() . '/flx_smoke_ids.json', json_encode($out, JSON_PRETTY_PRINT));
 echo "setup ok\n";

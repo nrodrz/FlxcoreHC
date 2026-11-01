@@ -47,6 +47,7 @@ $kv = function (string $label, $value): void {
         $kv('Users in use', $about['users_in_use']);
         $kv('Name shown to people', $about['name_shown']);
         $kv('Workspace ID', $about['workspace_id']);
+        $kv('Terms of Use', t('Version {v}', ['v' => $about['terms_version']]) . ' · ' . ($about['terms_accepted_by_organization'] ? t('accepted for the organization by {name} on {date}', ['name' => $about['terms_accepted_by_organization']['by'], 'date' => fmt_date($about['terms_accepted_by_organization']['at'])]) : t('not yet accepted for the organization')));
       ?>
     </table>
   </div>

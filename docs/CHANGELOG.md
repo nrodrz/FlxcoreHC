@@ -1,6 +1,22 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.173.1**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.173.2**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.173.2 — Terms of Use acceptance (migration 136)
+
+Ownership & White-Label Standard, element 10 / step 11. The Terms **text is a draft written by Claude Code** (the owner did not supply one); it is marked "DRAFT — for attorney review" everywhere it appears and is replaced by editing `app/terms/en.php` / `es.php` (nothing can edit it from a screen).
+
+- **Every user accepts at their first sign-in.** Until they do, every page except `/terms` and sign-out redirects to `/terms/accept`, which shows the full Terms with **I agree** / **Sign out**. The platform operator (the owner) is exempt. Provider-portal users accept too.
+- **Versioned.** `version` in `app/terms/en.php` ("1.0-draft"). Changing it (a material change) makes everyone accept again at their next sign-in. The session remembers the acceptance per user and per version.
+- **Accepting for the organization** is its own permission, `terms.accept` ("Terms of Use · accept for the organization"), held by the top administrator (Master Admin) only by default; it can be given to a role in the Roles editor. The person ticks "I have authority to accept these Terms for <organization>" and selects I agree; the server ignores the organization fields from anyone without the permission.
+- **Every acceptance** is a row in `terms_acceptances` (append-only: nothing updates or deletes it) and an audit row `terms_accepted` with user, organization, version and scope.
+- **Who has accepted:** Team page has a "Terms of Use" column (accepted date or "Not accepted"); About & ownership (full view) shows the version and whether, and by whom, the organization accepted.
+- **Text rules of the standard:** the Terms name only the organization (by its own name, taken from its settings) and the product; the owner is named once, in the independent-developer term, through the ownership file. Effective date = the start of the workspace. English controls; in Spanish a courtesy translation follows (draft).
+- **Not built yet (open items in the adoption record):** the "minor change → notice, use after 30 days is acceptance" path (only the material-change path exists), and the subscription terms and data processing addendum for hosted tenants (legal documents not yet drafted).
+- Test fixtures: every smoke-test user has accepted the current version, except `terms@smoke.test`, created for the acceptance tests.
+- Tests: `tests/ownership/test_v1173_2.php` (stage 3a15; negative controls run: gate removed, permission check removed) and HTTP checks TA1–TA15.
 
 ---
 

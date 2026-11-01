@@ -153,6 +153,8 @@ final class Ownership
             'license_terms'    => self::licenseTerms(),
             'license_terms_closing' => self::TERMS_CLOSING,
             'license_record'   => self::NO_LICENSE,
+            'terms_version'    => TermsService::version(),
+            'terms_accepted_by_organization' => ($ta = TermsService::organizationAcceptance($ctx->tenantId)) ? ['by' => (string) ($ta['user_name'] ?? ''), 'at' => (string) $ta['accepted_at']] : null,
             'license_text'     => self::packageFile('LICENSE.txt'),
             'third_party_notices' => self::packageFile('THIRD-PARTY-NOTICES.txt'),
         ];

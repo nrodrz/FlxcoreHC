@@ -18,7 +18,7 @@ $statusChip = ['active' => ['active', 'active'], 'suspended' => ['disabled', 'mu
 <div class="panel">
   <div class="topline"><h2>Users</h2></div>
   <div class="table-wrap"><table>
-    <tr><th>Name</th><th>Email (sign-in)</th><th style="min-width:170px">Role</th><th>Status</th><th style="text-align:right">Actions</th></tr>
+    <tr><th>Name</th><th>Email (sign-in)</th><th style="min-width:170px">Role</th><th>Status</th><th>Terms of Use</th><th style="text-align:right">Actions</th></tr>
     <?php foreach ($users as $u):
       $self       = $u['id'] === $ctx->userId;
       $isOwner    = $u['role'] === 'tenant_owner';
@@ -60,6 +60,7 @@ $statusChip = ['active' => ['active', 'active'], 'suspended' => ['disabled', 'mu
         <?php endif; ?>
       </td>
       <td><span class="chip <?= e($stCls) ?>"><?= e($stLbl) ?></span></td>
+      <td><?php $__ta = $termsMap[$u['id']] ?? null; ?><?php if ($__ta): ?><span class="hint" title="<?= e(t('Version {v}', ['v' => $termsVersion])) ?>"><?= e(t('Accepted {date}', ['date' => fmt_date($__ta)])) ?></span><?php else: ?><span class="chip warn"><?= e(t('Not accepted')) ?></span><?php endif; ?></td>
       <td style="text-align:right;white-space:nowrap">
         <?php if ($mayTouch): ?>
           <button type="button" class="btn sm line" data-action="toggle" data-target="edit-<?= e($u['id']) ?>">Edit</button>
@@ -80,7 +81,7 @@ $statusChip = ['active' => ['active', 'active'], 'suspended' => ['disabled', 'mu
     </tr>
     <?php if ($mayTouch): ?>
     <tr id="edit-<?= e($u['id']) ?>" style="display:none">
-      <td colspan="5" style="background:var(--surface-2);border-radius:10px">
+      <td colspan="6" style="background:var(--surface-2);border-radius:10px">
         <div style="display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-end;padding:.35rem .2rem">
           <form method="post" action="<?= BASE_PATH ?>/team" style="display:flex;gap:.7rem;align-items:flex-end;flex-wrap:wrap;margin:0">
             <?= FlxCoreHC\Auth\CsrfGuard::field() ?><input type="hidden" name="action" value="update_user"><input type="hidden" name="user_id" value="<?= e($u['id']) ?>">
