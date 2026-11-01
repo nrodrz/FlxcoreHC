@@ -10,7 +10,7 @@ $brandName = ($org['brand_name'] ?? '') ?: ($org['name'] ?? 'FlxCoreHC');
 $initial = strtoupper(substr($brandName,0,1));
 ?>
 <?php include __DIR__ . '/../org/_tabs.php'; ?>
-<div class="topline"><h1>Organization profile</h1></div>
+<div class="topline"><h1>Organization profile</h1><a class="btn sm line" href="<?= BASE_PATH ?>/about"><?= e(t('About & ownership')) ?></a></div>
 
 <div class="grid2" style="align-items:start">
   <!-- Organization profile -->

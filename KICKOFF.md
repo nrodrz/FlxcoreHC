@@ -15,7 +15,7 @@ FlxCoreHC is a **tracker**: it records who holds which licences/credentials, wha
 - **Claude Code** — develops in this repository (code, tests, docs) and ships each release as a zip whose root is the app root (upload to the server's root folder). Also runs the runtime and browser checks and reports evidence.
 - **Claude.ai** — optional second reviewer; no longer the sole code owner (changed by the owner at v1.172.13).
 - **ChatGPT** — second-opinion reviewer; its advice is filtered and dispositions reported.
-- **Owner (Neftali Rodriguez)** — approves scope. No new features without approval.
+- **Owner (Indisse-BTS)** — approves scope. No new features without approval.
 
 ## Status labels (use exactly)
 `EXECUTED — PASS` · `EXECUTED — FAIL` · `STATICALLY REVIEWED` · `REQUIRES EXTERNAL RUNTIME VALIDATION` · `REQUIRES BROWSER VALIDATION`.

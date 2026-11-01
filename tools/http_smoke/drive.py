@@ -486,6 +486,39 @@ got=dbq("select concat(name,'|',ifnull(brand_name,'')) from tenants where id='%s
 rec('O1 organization name and brand name are stored cleaned (invisible characters removed, spacing collapsed)', got=='Smoke Health Org|Smoke Brand', got)
 req(opo,'/settings',{'_csrf':tok,'name':name0,'brand_name':''})   # restore for the crawls
 
+# ==== v1.173.0 — Ownership & White-Label Standard (steps 1-4) over HTTP ==============================================
+import json as _json
+opn=client(); sN,_,hN=req(opn,'/about')
+rec('OW1 /about needs a sign-in (signed-out visitors are sent to the sign-in page)', sN==302 and (hN.get('Location') or '').endswith('/login'), f'status {sN}')
+sT,bT,_=req(opn,'/terms'); rec('OW2 the Terms of Use page is public and labelled as a draft', sT==200 and 'Terms of Use' in bT and 'DRAFT' in bT, f'status {sT}')
+sL,bL,_=req(opn,'/login')
+rec('OW3 the sign-in page shows the Powered-by line, "licensed, not sold" and the Terms link', 'Powered by FlxCoreHC · © 2026 Indisse-BTS. All rights reserved.' in bL and 'Proprietary software, licensed, not sold.' in bL and 'href="/terms"' in bL, f'status {sL}')
+OWN=r'^[0-9A-F]{4}(-[0-9A-F]{4}){3}$'
+opx=login('owner@smoke.test')[0]
+sF,bF,_=req(opx,'/about?format=json'); F=_json.loads(bF) if sF==200 else {}
+rec('OW4 a user with license.view (owner) gets the full view: workspace ID format, eight terms, plan fields', F.get('view')=='full' and bool(re.match(OWN,F.get('workspace_id',''))) and len(F.get('license_terms',[]))==8 and 'users_in_use' in F and F.get('owner')=='Indisse-BTS', f'status {sF} keys={sorted(F)[:6]}')
+sF2,bF2,_=req(opx,'/about?format=json'); F2=_json.loads(bF2)
+rec('OW5 the workspace ID is made once and never changes; it matches the database', F2.get('workspace_id')==F.get('workspace_id')==dbq("select workspace_id from tenants where id='%s'"%tid), F.get('workspace_id'))
+rec('OW6 the workspace ID is unique per workspace', dbq("select count(*) from tenants where workspace_id is not null")==dbq("select count(distinct workspace_id) from tenants where workspace_id is not null"), '')
+for who in ('readonly','staff','coord'):
+    opw=login(who+'@smoke.test')[0]; sW,bW,_=req(opw,'/about?format=json'); W=_json.loads(bW) if sW==200 else {}
+    leaked=[k for k in ('workspace_id','license_terms','plan','user_limit','users_in_use','name_shown','owner','modules','license_record') if k in W]
+    rec(f'OW7 {who}: short view only - the answer carries no full-view field', W.get('view')=='short' and W.get('product')=='FlxCoreHC' and not leaked and bool(W.get('independent_developer')), f'status {sW} leaked={leaked}')
+sH,bH,_=req(opx,'/about'); rec('OW8 the About page (owner) shows "This workspace" and the eight license lines', sH==200 and 'This workspace' in bH and bH.count('<li>')>=8 and F.get('workspace_id','?') in bH, f'status {sH}')
+opr=login('readonly@smoke.test')[0]; sR,bR,_=req(opr,'/about'); rec('OW9 the About page (read-only) shows the short view only', sR==200 and 'This workspace' not in bR and 'Workspace ID' not in bR and 'independent product' in bR, f'status {sR}')
+sHp,bHp,_=req(opx,'/help'); rec('OW10 the Help Center has the About & ownership button and the copyright footer', sHp==200 and 'href="/about"' in bHp and '© 2026 Indisse-BTS. All rights reserved.' in bHp, f'status {sHp}')
+# organization name: audited old -> new
+tokN=page_token(opx,'/settings')[0]; old=dbq("select name from tenants where id='%s'"%tid)
+a0=dbq("select count(*) from audit_logs where action='org_name_changed'")
+req(opx,'/settings',{'_csrf':tokN,'name':'Smoke Org Renamed'})
+a1=dbq("select count(*) from audit_logs where action='org_name_changed'")
+det=dbq("select changes from audit_logs where action='org_name_changed' order by created_at desc limit 1")
+rec('OW11 changing the organization name writes one audit row with old -> new', int(a1)==int(a0)+1 and old in det and 'Smoke Org Renamed' in det, det[:120])
+req(opx,'/settings',{'_csrf':tokN,'name':old})
+a2=dbq("select count(*) from audit_logs where action='org_name_changed'")
+req(opx,'/settings',{'_csrf':tokN,'name':old})
+rec('OW12 saving the form without changing the name writes no audit row', dbq("select count(*) from audit_logs where action='org_name_changed'")==a2, '')
+
 # ==== v1.172.0 — sign-in options and guided onboarding, over HTTP =====================================================
 MAILBOX=os.environ.get('FLX_MAILBOX','')
 def mails(to=None):

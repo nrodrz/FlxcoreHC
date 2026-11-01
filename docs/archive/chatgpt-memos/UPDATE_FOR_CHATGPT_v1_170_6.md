@@ -15,7 +15,7 @@ partially while telling the user "nothing was removed". Root causes:
 - ~15 holder-owned tables not covered (cases, attestations, education, contacts, consents, calendar…).
 - Uploaded files never removed from disk (orphaned PHI).
 - A login account linked to the provider (`users.holder_id`) was left pointing at nothing — this is the
-  live case of admin@indisse.com → holder fc486f03.
+  live case of admin@example.com → holder fc486f03.
 
 ## 2. Findings and disposition
 | # | Sev | Finding | Fix |

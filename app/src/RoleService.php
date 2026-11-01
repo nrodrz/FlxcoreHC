@@ -21,7 +21,7 @@ final class RoleService
     public const SYSTEM_ROLES = [
         'tenant_owner' => ['name' => 'Master Admin',   'portal_only' => 0, 'sort' => 10, 'caps' => '*'],
         'manager'      => ['name' => 'Manager', 'portal_only' => 0, 'sort' => 20, 'caps' => [
-            'org.manage', 'team.manage', 'billing.manage', 'billing.view',
+            'org.manage', 'team.manage', 'billing.manage', 'billing.view', 'license.view',
             'records.write', 'records.delete', 'records.import',
             'documents.manage', 'documents.view', 'documents.verify', 'documents.request',
             'share.manage', 'crossorg.manage', 'data.export',
@@ -56,7 +56,7 @@ final class RoleService
     public const GLOBAL_ROLES = [
         'master_admin' => ['name' => 'Master Admin', 'portal_only' => 0, 'sort' => 5,  'caps' => '*'],
         'admin'        => ['name' => 'Admin',        'portal_only' => 0, 'sort' => 10, 'caps' => [
-            'org.manage', 'team.manage', 'billing.view', 'records.write', 'records.delete',
+            'org.manage', 'team.manage', 'billing.view', 'license.view', 'records.write', 'records.delete',
             'documents.manage', 'documents.view', 'share.manage', 'audit.view', 'npi.lookup',
         ]],
         'manager'      => ['name' => 'Manager', 'portal_only' => 0, 'sort' => 20, 'caps' => [

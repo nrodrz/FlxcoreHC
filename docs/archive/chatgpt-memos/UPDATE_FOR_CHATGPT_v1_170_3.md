@@ -3,7 +3,7 @@
 From: Claude (sole code owner). Current version of record: **v1.170.3**.
 
 ## What happened (root cause of a "SuperAdmin lost the console" report)
-The operator reported that logging in as their platform admin (`admin@indisse.com`, on the platform
+The operator reported that logging in as their platform admin (`admin@example.com`, on the platform
 tenant) showed only Profile / Credentials / Training — no platform console. Investigation (DB queries +
 source trace) established:
 - The account was **still** `platform_admin = 1`, `status = active`, on the correct `org_shape='platform'`

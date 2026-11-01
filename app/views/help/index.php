@@ -16,7 +16,8 @@ $render = function(array $blocks): void {
   <div class="topline"><h1><?= e($title) ?></h1>
     <form method="get" action="<?= BASE_PATH ?>/help" style="margin:0;display:flex;gap:.4rem">
       <input name="q" value="<?= e($q) ?>" placeholder="<?= $L ? 'Buscar en la ayuda' : 'Search help' ?>" style="max-width:240px">
-      <button class="btn sm"><?= $L ? 'Buscar' : 'Search' ?></button></form></div>
+      <button class="btn sm"><?= $L ? 'Buscar' : 'Search' ?></button></form>
+    <a class="btn sm line" href="<?= BASE_PATH ?>/about"><?= $L ? 'Acerca de y titularidad' : 'About &amp; ownership' ?></a></div>
 
   <?php if ($q !== ''): ?>
     <div class="panel"><h2 style="margin-top:0"><?= $L ? 'Resultados' : 'Results' ?> · <?= count($hits) ?></h2>
@@ -48,4 +49,5 @@ $render = function(array $blocks): void {
     </div>
     <style>@media (max-width:760px){.help-layout{grid-template-columns:1fr}}</style>
   <?php endif; ?>
+  <p class="hint" style="margin-top:1.4rem;text-align:center"><?= e(FlxCoreHC\Ownership::copyright()) ?></p>
 </div><!--/flx-notranslate-->

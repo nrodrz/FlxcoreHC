@@ -21,4 +21,8 @@
   <div class="auth-alt"><a href="<?= BASE_PATH ?>/forgot"><?= e(t('Forgot your password?')) ?></a></div>
   <?php if (config('allow_open_registration', false)): ?><div class="auth-alt"><?= e(t('New here?')) ?> <a href="<?= BASE_PATH ?>/register"><?= e(t('Create your organization')) ?></a></div><?php endif; ?>
   <?php include __DIR__ . '/_lang.php'; ?>
+  <div class="auth-alt auth-owner" style="margin-top:.9rem;font-size:.74rem;opacity:.8;text-align:center">
+    <div><?= e(FlxCoreHC\Ownership::poweredBy()) ?></div>
+    <div><?= e(t(FlxCoreHC\Ownership::SIGNIN_STATEMENT)) ?> · <a href="<?= BASE_PATH ?>/terms"><?= e(t('Terms of Use')) ?></a></div>
+  </div>
 </div>

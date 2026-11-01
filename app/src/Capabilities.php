@@ -24,6 +24,7 @@ final class Capabilities
             'team.manage'    => 'Manage users, roles, invitations, and password resets',
             'billing.manage' => 'Change the plan and manage payment',
             'billing.view'   => 'View the plan and invoices',
+            'license.view'   => 'View the full About & ownership page (workspace ID, plan, license terms)',
         ]],
         'compliance' => ['Compliance records', [
             'records.write'  => 'Create and edit providers, credentials, and templates',

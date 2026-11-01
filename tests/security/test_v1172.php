@@ -154,7 +154,7 @@ $ck((string) $one("SELECT status FROM email_outbox WHERE category = 'security' O
 $lim->clear('otp_send|' . $uE); $sent = 0; for ($i = 0; $i < 7; $i++) { [$x, $xm] = AuthService::sendEmailCode($uE, 'enrol'); if (!str_contains($xm, 'Too many')) $sent++; }
 $ck($sent === 5, "E at most 5 codes can be requested per 15 minutes for one account (attempted: $sent)");
 SettingsService::put(['mail_enabled' => '0']); $lim->clear('otp_send|' . $uE); ini_set('error_log', (string) $prevLog);
-$ck(AuthService::maskEmail('neftali@example.com') === 'n***@example.com' && AuthService::maskEmail('') === '***', 'E the address shown on the verification page is masked');
+$ck(AuthService::maskEmail('nina@example.com') === 'n***@example.com' && AuthService::maskEmail('') === '***', 'E the address shown on the verification page is masked');
 
 // ---- R: password reset by e-mail --------------------------------------------------------------------------------------
 [$tR, $oR] = $mkTenant('v172reset'); $emR = 'o-v172reset@sec.test';

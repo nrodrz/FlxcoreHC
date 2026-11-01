@@ -35,6 +35,22 @@ final class OrgService
         return null;
     }
 
+    /** v1.173.0: the workspace ID (XXXX-XXXX-XXXX-XXXX, uppercase hex). Made once on first need and never changed: the UPDATE only fills a NULL. */
+    public static function workspaceId(string $tenantId): string
+    {
+        $pdo = Database::pdo();
+        $get = $pdo->prepare('SELECT workspace_id FROM tenants WHERE id = ? LIMIT 1');
+        for ($try = 0; $try < 5; $try++) {
+            $get->execute([$tenantId]);
+            $cur = (string) ($get->fetchColumn() ?: '');
+            if ($cur !== '') return $cur;
+            $id = strtoupper(implode('-', str_split(bin2hex(random_bytes(8)), 4)));
+            try { $pdo->prepare('UPDATE tenants SET workspace_id = ? WHERE id = ? AND workspace_id IS NULL')->execute([$id, $tenantId]); }
+            catch (\Throwable $e) { /* unique clash (practically impossible) or column missing before migration 135: try again / give up below */ }
+        }
+        return '';
+    }
+
     /** v1.172.16: the organization's own time zone (null = use the platform's). Read once per request by index.php. */
     public static function timezoneFor(string $tenantId): ?string
     {

@@ -9,7 +9,7 @@ require FLXCOREHC_APP . '/views/admin/_tabs.php';
   <form method="get" action="<?= BASE_PATH ?>/admin/users"
         style="display:flex;gap:.6rem;align-items:flex-end;margin-bottom:1rem;flex-wrap:wrap">
     <div style="flex:1;min-width:260px"><label>Name or email</label>
-      <input name="q" value="<?= e($q) ?>" placeholder="e.g. bob@ or Rodriguez" style="width:100%" autofocus></div>
+      <input name="q" value="<?= e($q) ?>" placeholder="e.g. bob@ or Smith" style="width:100%" autofocus></div>
     <button class="btn sm">Search</button>
   </form>
 

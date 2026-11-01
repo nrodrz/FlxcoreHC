@@ -436,6 +436,11 @@ if (($seg[0] ?? '') === 'logout' && $method === 'POST') {
 // Possession of the 32-char token authorises a read-only view of ONE producer's credential
 // status. No session, no access to anything else. Expiry + revocation checked on resolve;
 // every view is counted. This is the one place that reads across tenants, gated by the token.
+// ---- Terms of Use (public; linked from the sign-in page) — v1.173.0
+if (($seg[0] ?? '') === 'terms' && $method === 'GET') {
+    view('terms', ['bare' => true]);
+}
+
 if (($seg[0] ?? '') === 'verify' && isset($seg[1])) {
     $link = FlxCoreHC\ShareLinkService::resolveForView((string)$seg[1]);
     if (!$link) {
@@ -1079,6 +1084,17 @@ if ($seg[0] === 'onboarding' && ($seg[1] ?? '') === 'dismiss' && $method === 'PO
     redirect('/');
 }
 // ---- Help center (bilingual, content in app/help/{locale}.php) ------------------------
+// ---- About & ownership (Ownership & White-Label Standard, element 1) — every signed-in user; the full view needs license.view
+if ($seg[0] === 'about' && $method === 'GET') {
+    $__about = FlxCoreHC\Ownership::about($ctx);
+    if (($_GET['format'] ?? '') === 'json') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($__about, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+    view('about/index', ['ctx' => $ctx, 'about' => $__about]);
+}
+
 if ($seg[0] === 'help') {
     $loc = FlxCoreHC\I18n::locale();
     $file = FLXCOREHC_APP . '/help/' . (is_file(FLXCOREHC_APP . '/help/' . $loc . '.php') ? $loc : 'en') . '.php';
@@ -4218,7 +4234,14 @@ if ($seg[0] === 'settings') {
     if ($method === 'POST' && $sub === null) {
         CsrfGuard::verify();
         if (($__ne = OrgService::nameError($_POST)) !== null) { flash($__ne, 'error'); redirect('/settings'); }   // v1.171.10
+        $__before = $org->get();
         $org->updateInfo($_POST);
+        // Ownership standard (element: organization name): the name "Licensed to" and the name shown to people change only here, and every change is audited old -> new.
+        $__after = $org->get();
+        foreach (['name' => 'org_name_changed', 'brand_name' => 'org_display_name_changed'] as $__f => $__act) {
+            if ((string) ($__before[$__f] ?? '') !== (string) ($__after[$__f] ?? ''))
+                audit_log($ctx, $__act, 'tenants', substr($ctx->tenantId, 0, 36), json_encode(['from' => (string) ($__before[$__f] ?? ''), 'to' => (string) ($__after[$__f] ?? '')], JSON_UNESCAPED_UNICODE));
+        }
         $org->updateBrand($_POST['brand_accent'] ?? null);
         $org->updateTheme($_POST);
         [$cfOk, $cfMsg] = (new FlxCoreHC\CustomFieldService($ctx))->save('tenant', $ctx->tenantId, $_POST);

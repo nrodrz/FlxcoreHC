@@ -347,6 +347,7 @@ function runInstall(array $in): array
         __DIR__ . '/database/migrations/132_pr_regulatory_wording.sql',
         __DIR__ . '/database/migrations/133_signin_options.sql',
         __DIR__ . '/database/migrations/134_tenant_timezone.sql',
+        __DIR__ . '/database/migrations/135_workspace_id.sql',
         __DIR__ . '/database/migrations/099_document_verification.sql',
     ];
     $applied = [];

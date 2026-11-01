@@ -1,6 +1,21 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.172.17**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.173.0**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.173.0 — Ownership & White-Label Standard: steps 1–5, 7 (part), 8 (migration 135)
+
+Source: the owner's "Ownership & White-Label Standard" (Nov 1, 2026) and the adoption plan `docs/plans/OWNERSHIP_WHITE_LABEL_ADOPTION_PLAN.md`; decisions D1–D6 taken as recommended. Adoption record: `docs/OWNERSHIP_ADOPTION_RECORD.md`.
+
+- **Ownership file** `app/src/Ownership.php`: owner (Indisse-BTS), copyright line, developed-by sentence, independent-developer statement and the eight license lines, in the standard's exact wording. Nothing in the app can change them.
+- **About & ownership** (`/about`, also `?format=json`): short view for everyone signed in; the full view (this workspace: owner, licensed to, agreement number — "No license record installed" until the licensing release —, deployment model, plan and modules, user limit and users in use, name shown, workspace ID, the eight license lines) only with the new permission **`license.view`** (Master Admin, Manager and Admin by default; can be given to any role). The server decides; the short answer carries no full-view field. In Spanish the English legal text stays and a courtesy translation (informational, draft for attorney review) is shown under it.
+- **Sign-in page:** "Powered by FlxCoreHC · © 2026 Indisse-BTS. All rights reserved.", "Proprietary software, licensed, not sold." and a **Terms of Use** link to a public `/terms` page (draft notice until the Terms text is supplied).
+- **Help Center:** About & ownership button at the top and the copyright line in the footer; Settings has a link too.
+- **Organization name** changes are audited old → new (`org_name_changed`, `org_display_name_changed`); saving without a change writes nothing.
+- **Workspace ID** (migration 135, `tenants.workspace_id`): `XXXX-XXXX-XXXX-XXXX` uppercase hex, random, made once on first need, never editable, unique.
+- **Sweep:** a personal name removed from `KICKOFF.md`, a test and a form example; the owner's admin e-mail removed from archived memos; new sweep test (names passed in through `FLX_SWEEP_NAMES`, never kept in the source).
+- Tests: `tests/ownership/test_v1173_0.php` (no database, stage 3a13, negative controls run) and HTTP checks OW1–OW12 in `tools/http_smoke/drive.py`.
 
 ---
 
