@@ -1,0 +1,4 @@
+# FlxCoreHC — server-side code & config. Never web-served.
+# This package deploys flat into the web root; this deny (plus the root .htaccess
+# RewriteRule) keeps app/ unreachable over HTTP. config.php also lives here.
+Require all denied

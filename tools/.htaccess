@@ -1,0 +1,3 @@
+# FlxCoreHC — this directory must never be web-served.
+# The web docroot must be the public/ directory only.
+Require all denied

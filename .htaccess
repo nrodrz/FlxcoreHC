@@ -1,0 +1,27 @@
+# FlxCoreHC front controller. Works at the web root OR in a subfolder (e.g. /flxcred)
+# with no edits — the rules are relative to wherever this file lives.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # -MultiViews stops mod_negotiation from hijacking extensionless routes like /holders/new
+  Options +FollowSymLinks -MultiViews
+
+  # Block direct web access to server-side directories (defense in depth; each
+  # also ships its own "Require all denied" .htaccess).
+  RewriteRule ^(app|database|cron|tools|tests|docs)(/|$) - [F,L]
+
+  # Serve real files/dirs (install.php, assets, ...) directly; route everything
+  # else to the front controller. No RewriteBase so it works in any subdirectory.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . index.php [L]
+</IfModule>
+
+# Never serve config, dotfiles, or raw SQL data files even if paths are misconfigured.
+<FilesMatch "(^config.*\.php$|^\.|.*\.sql$|.*\.md$|.*\.sh$|.*\.txt$)">
+  Require all denied
+</FilesMatch>
+
+DirectoryIndex index.php
+Options -Indexes
+ServerSignature Off

@@ -1,0 +1,10 @@
+-- 122_nonclinical_catalog.sql — SUPERSEDED (see Finding B / migration 123).
+-- The original 122 omitted the `id` column and used a wrong column list, so under INSERT IGNORE only one
+-- empty-id row seeded and the rest collided on the empty primary key. It is intentionally EMPTY (comments
+-- only → zero statements); migration 123_nonclinical_catalog_fix.sql cleans up any empty-id row and seeds
+-- all 9 non-clinical catalog types correctly and idempotently. The file is kept to preserve migration
+-- numbering on installs that already recorded it.
+--
+-- v1.170.6: the previous placeholder `SELECT 1;` returned a result set that exec() never consumed, which
+-- made the NEXT statement fail with SQLSTATE HY000/2014 ("unbuffered queries are active") on a fresh
+-- install. Never put a bare SELECT in a migration.

@@ -1,0 +1,3 @@
+# Prompt for ChatGPT — second-opinion review of v1.171.6
+FlxCoreHC is a healthcare credentialing tracker (not NCQA-grade; "Production Candidate"). v1.171.6 answers Claude Code's second independent validation. Read UPDATE_FOR_CHATGPT_v1_171_6.md. No new features.
+Review: (1) is each fix backed by a behavioural DB/HTTP test (flag source-grep-only ones; note the flash-typing guard is partly a source guard plus HTTP tests); (2) the 2FA rule (enrolment can only add; replacing needs "turn off" with a current code); (3) whether any "NOT fixed" observation should become required — especially the unsealed backup download and PR content shown to FL-only tenants; (4) any claim that overstates verification. Return required vs optional changes only.

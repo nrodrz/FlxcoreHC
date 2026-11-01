@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1460" height="900" viewBox="0 0 1460 900" font-family="Inter,Segoe UI,Arial,sans-serif">
+<rect width="1460" height="900" fill="#ffffff"/>
+<text x="730.0" y="34" text-anchor="middle" font-size="22" font-weight="700" fill="#111">FlxCoreHC — Cross-Organization Sharing: consent flow</text>
+<text x="730.0" y="56" text-anchor="middle" font-size="13" fill="#555">Same provider, separate organizations. Nothing links without three consents; nothing is shared until chosen; everything is logged; anyone can revoke.</text>
+<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker></defs>
+<rect x="10" y="70" width="1440" height="184" rx="10" fill="#e8f0fe" stroke="#d0d4dc"/>
+<text x="24" y="104" font-size="14" font-weight="700" fill="#222">ORG B — Requesting organization</text>
+<text x="24" y="122" font-size="12" font-weight="400" fill="#222">(Master Admin)</text>
+<rect x="10" y="260" width="1440" height="184" rx="10" fill="#e6f4ea" stroke="#d0d4dc"/>
+<text x="24" y="294" font-size="14" font-weight="700" fill="#222">PROVIDER</text>
+<text x="24" y="312" font-size="12" font-weight="400" fill="#222">(portal, consent anchor)</text>
+<rect x="10" y="450" width="1440" height="184" rx="10" fill="#fff4e5" stroke="#d0d4dc"/>
+<text x="24" y="484" font-size="14" font-weight="700" fill="#222">ORG A — Owning organization</text>
+<text x="24" y="502" font-size="12" font-weight="400" fill="#222">(Master Admin / Manager)</text>
+<rect x="10" y="640" width="1440" height="184" rx="10" fill="#f3f4f6" stroke="#d0d4dc"/>
+<text x="24" y="674" font-size="14" font-weight="700" fill="#222">SYSTEM — privacy &amp; logging</text>
+<text x="24" y="692" font-size="12" font-weight="400" fill="#222">(same for both organizations)</text>
+<rect x="210" y="108" width="250" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<circle cx="226" cy="124" r="12" fill="#111"/><text x="226" y="129" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">0</text>
+<text x="244" y="129" font-size="12.5" font-weight="700" fill="#111">Adds provider — detection is blind</text>
+<text x="222" y="150" font-size="11.5" fill="#333">Enters NPI. App shows only:</text>
+<text x="222" y="165" font-size="11.5" fill="#333">“also managed by 1 other org”</text>
+<text x="222" y="180" font-size="11.5" fill="#333">No names, no data (blind index).</text>
+<text x="222" y="195" font-size="11.5" fill="#333">Org B keeps its OWN record.</text>
+<rect x="510" y="108" width="250" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<circle cx="526" cy="124" r="12" fill="#111"/><text x="526" y="129" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">1</text>
+<text x="544" y="129" font-size="12.5" font-weight="700" fill="#111">Request to link records</text>
+<text x="522" y="150" font-size="11.5" fill="#333">Master Admin only.</text>
+<text x="522" y="165" font-size="11.5" fill="#333">Creates a PENDING link.</text>
+<text x="522" y="180" font-size="11.5" fill="#333">One email nudge to provider</text>
+<text x="522" y="195" font-size="11.5" fill="#333">(contains no data).</text>
+<line x1="460" y1="168" x2="510" y2="168" stroke="#444" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="810" y="298" width="250" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<circle cx="826" cy="314" r="12" fill="#111"/><text x="826" y="319" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">2</text>
+<text x="844" y="319" font-size="12.5" font-weight="700" fill="#111">Provider consents (portal)</text>
+<text x="822" y="340" font-size="11.5" fill="#333">Sees BOTH org names.</text>
+<text x="822" y="355" font-size="11.5" fill="#333">Identity checked by NPI blind</text>
+<text x="822" y="370" font-size="11.5" fill="#333">index — only the real provider</text>
+<text x="822" y="385" font-size="11.5" fill="#333">can approve. Can DECLINE.</text>
+<line x1="635.0" y1="226" x2="850" y2="298" stroke="#444" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="707.0" y="255" width="76" height="15" rx="3" fill="#fff" opacity=".9"/><text x="745.0" y="266" text-anchor="middle" font-size="10.5" fill="#444" font-style="italic">pending_provider</text>
+<rect x="1110" y="488" width="250" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<circle cx="1126" cy="504" r="12" fill="#111"/><text x="1126" y="509" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">3</text>
+<text x="1144" y="509" font-size="12.5" font-weight="700" fill="#111">Owner Master Admin approves</text>
+<text x="1122" y="530" font-size="11.5" fill="#333">Organization → Linked providers</text>
+<text x="1122" y="545" font-size="11.5" fill="#333">Approve → link ACTIVE.</text>
+<text x="1122" y="560" font-size="11.5" fill="#333">Decline → nothing shared.</text>
+<text x="1122" y="575" font-size="11.5" fill="#333">STILL nothing shared yet.</text>
+<line x1="1060" y1="377.0" x2="1235.0" y2="488" stroke="#444" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="1062" y="445" width="76" height="15" rx="3" fill="#fff" opacity=".9"/><text x="1100" y="456" text-anchor="middle" font-size="10.5" fill="#444" font-style="italic">pending_owner</text>
+<rect x="810" y="488" width="250" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<circle cx="826" cy="504" r="12" fill="#111"/><text x="826" y="509" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">4</text>
+<text x="844" y="509" font-size="12.5" font-weight="700" fill="#111">Shares ONE credential (± docs)</text>
+<text x="822" y="530" font-size="11.5" fill="#333">Per credential, one direction.</text>
+<text x="822" y="545" font-size="11.5" fill="#333">Un-shared credentials stay</text>
+<text x="822" y="560" font-size="11.5" fill="#333">PRIVATE. Read-only, LIVE —</text>
+<text x="822" y="575" font-size="11.5" fill="#333">never a copy. Revocable.</text>
+<line x1="1110" y1="547.0" x2="1060" y2="547.0" stroke="#444" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="1047.0" y="528.0" width="76" height="15" rx="3" fill="#fff" opacity=".9"/><text x="1085.0" y="539.0" text-anchor="middle" font-size="10.5" fill="#444" font-style="italic">active</text>
+<rect x="810" y="108" width="250" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<circle cx="826" cy="124" r="12" fill="#111"/><text x="826" y="129" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">5</text>
+<text x="844" y="129" font-size="12.5" font-weight="700" fill="#111">Sees it live, read-only</text>
+<text x="822" y="150" font-size="11.5" fill="#333">“Shared with you — from Org A”</text>
+<text x="822" y="165" font-size="11.5" fill="#333">Views/downloads documents.</text>
+<text x="822" y="180" font-size="11.5" fill="#333">When A renews, B sees the</text>
+<text x="822" y="195" font-size="11.5" fill="#333">new expiry. Cannot edit/delete.</text>
+<path d="M840,488 L840,226" stroke="#444" stroke-width="1.8" fill="none" marker-end="url(#ah)"/>
+<rect x="836" y="428" width="60" height="15" rx="3" fill="#fff"/><text x="866" y="439" text-anchor="middle" font-size="10.5" fill="#444" font-style="italic">live view</text>
+<rect x="1110" y="108" width="250" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<circle cx="1126" cy="124" r="12" fill="#111"/><text x="1126" y="129" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">6</text>
+<text x="1144" y="129" font-size="12.5" font-weight="700" fill="#111">Revoke — anyone, any time</text>
+<text x="1122" y="150" font-size="11.5" fill="#333">Owner withdraws a share, or</text>
+<text x="1122" y="165" font-size="11.5" fill="#333">either Master Admin revokes</text>
+<text x="1122" y="180" font-size="11.5" fill="#333">the link, or the provider</text>
+<text x="1122" y="195" font-size="11.5" fill="#333">withdraws ALL consent → cascade.</text>
+<rect x="210" y="678" width="280" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<text x="222" y="699" font-size="12.5" font-weight="700" fill="#111">Isolation</text>
+<text x="222" y="720" font-size="11.5" fill="#333">One class may read across orgs;</text>
+<text x="222" y="735" font-size="11.5" fill="#333">every read re-verifies: share not</text>
+<text x="222" y="750" font-size="11.5" fill="#333">revoked + link active + caller is</text>
+<text x="222" y="765" font-size="11.5" fill="#333">the recipient. No cross-org writes.</text>
+<rect x="520" y="678" width="280" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<text x="532" y="699" font-size="12.5" font-weight="700" fill="#111">Disclosure minimization</text>
+<text x="532" y="720" font-size="11.5" fill="#333">Detection = count only.</text>
+<text x="532" y="735" font-size="11.5" fill="#333">Requester sees “Another org”</text>
+<text x="532" y="750" font-size="11.5" fill="#333">until active. Emails/notifications</text>
+<text x="532" y="765" font-size="11.5" fill="#333">carry links, never data.</text>
+<rect x="830" y="678" width="280" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<text x="842" y="699" font-size="12.5" font-weight="700" fill="#111">Logged in BOTH organizations</text>
+<text x="842" y="720" font-size="11.5" fill="#333">audit_logs (user, IP, time)</text>
+<text x="842" y="735" font-size="11.5" fill="#333">compliance_events (permanent)</text>
+<text x="842" y="750" font-size="11.5" fill="#333">cross_share_access: every view /</text>
+<text x="842" y="765" font-size="11.5" fill="#333">download, with org, user, IP.</text>
+<rect x="1140" y="678" width="280" height="118" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+<text x="1152" y="699" font-size="12.5" font-weight="700" fill="#111">Authorization</text>
+<text x="1152" y="720" font-size="11.5" fill="#333">Consent = Master Admin only.</text>
+<text x="1152" y="735" font-size="11.5" fill="#333">Share = share.manage (Manager+).</text>
+<text x="1152" y="750" font-size="11.5" fill="#333">Need-to-know still applies</text>
+<text x="1152" y="765" font-size="11.5" fill="#333">in the recipient org.</text>
+</svg>
