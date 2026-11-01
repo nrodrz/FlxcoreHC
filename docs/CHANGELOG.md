@@ -1,6 +1,16 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.172.13**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.172.14**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.172.14 — Subfolder detection no longer trusts a non-script SCRIPT_NAME (no migration)
+
+Source: first run of v1.172.13 on PHP 8.3.6 (960 passed, 1 failed: `B4 restricted user cannot export the audit log` returned 404).
+
+- **Cause:** PHP's built-in server (8.3) sets `SCRIPT_NAME` to the request path itself for a URL that has a file extension, so `/audit/export.csv` made `index.php` and `bootstrap.php` compute the subfolder base as `/audit`, strip it, and route `/export.csv` → 404 for **every** user. Apache/cPanel reports `/index.php`, so production was not affected; the fault was in the test server only, but the code trusted a value it should not.
+- **Fix:** the web base path is taken from `SCRIPT_NAME` only when it ends in `.php` (`index.php`, `bootstrap.php`). Subfolder installs are unchanged.
+- First release developed in this repository (Claude Code); `KICKOFF.md` roles updated.
 
 ---
 

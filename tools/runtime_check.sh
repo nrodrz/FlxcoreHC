@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# FlxCoreHC v1.172.13 — runtime validation for Claude Code / a PHP+MySQL host.
+# FlxCoreHC v1.172.14 — runtime validation for Claude Code / a PHP+MySQL host.
 # Runs: PHP lint (all files) → isolation → agency, purge, authz, migration, HTTP smoke, installer and security suites → harness. Reports PASS/FAIL per stage.
 # Does NOT modify code. Run from the app root on a TEST environment (never production).
 set -u

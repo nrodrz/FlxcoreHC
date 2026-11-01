@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# FlxCoreHC v1.172.13 — HTTP-level smoke test on an ISOLATED database (flx_smoke). TEST ENVIRONMENT ONLY.
+# FlxCoreHC v1.172.14 — HTTP-level smoke test on an ISOLATED database (flx_smoke). TEST ENVIRONMENT ONLY.
 # Builds a fixture (owner, manager, staff, coordinator, read-only, need-to-know-restricted staff, portal + custom portal
 # logins, two providers with credentials/documents/tasks/events/cases), starts PHP's built-in server, then:
 #   * asserts authorization probes (verify permission, cross-provider reads/writes, dashboard disclosure, portal confinement)

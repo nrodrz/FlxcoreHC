@@ -32,7 +32,9 @@ use FlxCoreHC\AccessLog;
 
 // ---- Routing ------------------------------------------------------------
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-$base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');           // supports subdirectory installs
+// v1.172.14: only a real script name (…/index.php) gives the subfolder. PHP's built-in server (8.3) reports the
+// request path itself as SCRIPT_NAME for a URL with a file extension (/audit/export.csv), which made the base '/audit'.
+$base = str_ends_with((string) ($_SERVER['SCRIPT_NAME'] ?? ''), '.php') ? rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') : '';   // supports subdirectory installs
 if ($base !== '' && str_starts_with($path, $base)) {
     $path = substr($path, strlen($base)) ?: '/';
 }

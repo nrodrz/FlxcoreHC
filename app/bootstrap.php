@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 
 define('FLXCOREHC_APP', __DIR__);
-define('FLXCOREHC_VERSION', '1.172.13');   // shown on System & updates; bump with each release
+define('FLXCOREHC_VERSION', '1.172.14');   // shown on System & updates; bump with each release
 // Which vertical this installation serves: 'insurance', 'healthcare', or 'both'.
 // The edition locks registration/installer org shapes and the demo builders, so a
 // single-vertical app can never grow tenants of the other industry. Everything downstream
@@ -64,7 +64,8 @@ if (!defined('BASE_PATH')) {
         $__p = is_array($__cfg) ? rtrim((string) parse_url((string) ($__cfg['app_url'] ?? ''), PHP_URL_PATH), '/') : '';
         define('BASE_PATH', $__p === '/' ? '' : $__p);
     } else {
-        $__b = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');
+        $__sn = (string) ($_SERVER['SCRIPT_NAME'] ?? '');   // v1.172.14: see index.php — a non-.php SCRIPT_NAME is a request path, not a script
+        $__b = str_ends_with($__sn, '.php') ? rtrim(str_replace('\\', '/', dirname($__sn)), '/') : '';
         define('BASE_PATH', $__b === '/' ? '' : $__b);
     }
 }
