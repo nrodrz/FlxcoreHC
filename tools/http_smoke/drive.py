@@ -48,9 +48,11 @@ def px(sql):
     pre=os.environ.get('FLX_DBPREFIX','')
     if not pre: return sql
     import re as _re
-    if _TBL is None: _TBL=_re.compile(r'(?<![\w.`])('+'|'.join(sorted(map(_re.escape,_tables()),key=len,reverse=True))+r')(?![\w])')
+    if _TBL is None:
+        names='|'.join(sorted(map(_re.escape,_tables()),key=len,reverse=True))
+        _TBL=(_re.compile(r'(?i)(\b(?:from|join|into|update|table|exists|references)\s+`?)('+names+r')(?![\w])'), _re.compile(r'(?<![\w.`])('+names+r')(?=\.\w)'))
     parts=_re.split(r"('(?:[^'\\]|\\.|'')*')",sql)
-    return ''.join(p if i%2 else _TBL.sub(lambda m: pre+m.group(1),p) for i,p in enumerate(parts))
+    return ''.join(p if i%2 else _TBL[1].sub(lambda m: pre+m.group(1), _TBL[0].sub(lambda m: m.group(1)+pre+m.group(2), p)) for i,p in enumerate(parts))
 
 def dbq(sql):
     sql=px(sql)
@@ -793,5 +795,24 @@ rec('TE8 after accepting the new version the user is let in, and the acceptance 
 sHx,bHx,_=req(opP,'/admin/terms'); rec('TE9 the editor lists the published version as current', vrow in bHx and 'current' in bHx, '')
 sSys,bSys,_=req(opP,'/admin/system'); rec('TE10 the System page shows cron lines built from the server\'s PHP and this installation\'s folder', sSys==200 and 'cron/sweep_expiring.php' in bSys and 'cron/send_reminders.php' in bSys and 'data-confirm-change=' in bSys, f'status {sSys}')
 dbq("delete from terms_versions"); dbq("delete from terms_acceptances where terms_version='%s'"%vrow)
+# ==== v1.175.0 — licensing over HTTP ==================================================================================
+opP2=login('padmin@smoke.test')[0]; ow=login('owner@smoke.test')[0]
+sL,bL,_=req(opP2,'/admin/licenses'); rec('LI1 the platform operator sees every organization with its state; the fixture organization is in its trial', sL==200 and 'Licenses' in bL and 'Trial' in bL and 'Smoke Org' in bL, f'status {sL}')
+sLo,_,_=req(ow,'/admin/licenses'); rec('LI2 an organization owner cannot open the Licenses screen', sLo==403, f'status {sLo}')
+sRt,_,_=req(ow,'/reports'); rec('LI3 in its trial the organization has every module (reports open)', sRt==200, f'status {sRt}')
+tidL=dbq("select id from tenants where name='%s'"%dbq("select name from tenants where id='%s'"%tid))
+tokL=csrf(bL)
+sI,_,_=req(opP2,'/admin/licenses',{'_csrf':tokL,'tenant_id':tidL,'kind':'paid','plan':'Agency','users':'5','term_start':'2020-01-01','term_end':'2099-12-31','agreement':'AGR-HTTP','modules[]':'documents'})
+rowl=dbq("select concat(serial,'|',modules,'|',users) from tenant_licenses where tenant_id='%s'"%tidL)
+rec('LI4 issuing a license from the console writes one signed record and an audit row', sI==302 and re.match(r'^LIC-\d{4}-0001\|documents\|5$',rowl or '') and dbq("select count(*) from audit_logs where action='license_issued'")=='1', rowl)
+sRl,_,hRl=req(ow,'/reports'); rec('LI5 with a license for the documents module only, the organization can no longer open Reports (a module that is not switched on)', sRl==302, f'status {sRl}')
+sAb,bAb,_=req(ow,'/about?format=json'); AB2=_json.loads(bAb)
+rec('LI6 About & ownership shows the license: state, serial, agreement, plan, modules and term', AB2.get('license_state')=='licensed' and AB2.get('agreement_number')=='AGR-HTTP' and AB2.get('modules')==['documents'] and AB2.get('user_limit')==5, str({k:AB2.get(k) for k in ('license_state','agreement_number','modules','user_limit')}))
+dbq("update tenant_licenses set modules='documents,analytics,scheduling,network' where tenant_id='%s'"%tidL)
+sAl=_json.loads(req(ow,'/about?format=json')[1]); rec('LI7 a license record changed in the database stops counting: the organization is no longer "licensed" (this one is new, so its trial applies)', sAl.get('license_state')=='trial' and sAl.get('license_serial') is None and sAl.get('agreement_number') is None, str({k:sAl.get(k) for k in ('license_state','license_serial')}))
+bL2=req(opP2,'/admin/licenses?tenant='+tidL)[1]; rec('LI8 the console flags the altered record and shows "does not verify" in the history', 'altered record' in bL2 and 'does not verify' in bL2, '')
+dbq("update tenant_licenses set modules='documents' where tenant_id='%s'"%tidL)
+sRv,_,_=req(opP2,'/admin/licenses',{'_csrf':csrf(req(opP2,'/admin/licenses')[1]),'action':'revoke','serial':rowl.split('|')[0]})
+sRt2,_,_=req(ow,'/reports'); rec('LI9 revoking the license leaves the trial in force again: Reports open', sRv==302 and sRt2==200 and dbq("select count(*) from audit_logs where action='license_revoked'")=='1', f'status {sRt2}')
 print('\nALL PASS' if FAILS[0]==0 else '\nSOME FAILED')
 sys.exit(1 if FAILS[0] else 0)

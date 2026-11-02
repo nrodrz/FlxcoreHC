@@ -138,14 +138,18 @@ final class Ownership
         $org  = (new OrgService($ctx))->get();
         $plan = PlanService::forTenant($ctx->tenantId);
         $limit = PlanService::seatLimit($ctx->tenantId);
+        $ent = Entitlement::forTenant($ctx->tenantId);
         $full = [
             'owner'            => self::OWNER,
             'licensed_to'      => $ctx->tenantName,
-            'agreement_number' => null,   // the signed license record arrives with the licensing release; until then: "No license record installed"
+            'agreement_number' => $ent['agreement'],   // null → "No license record installed" (shown with the trial / core state)
             'deployment_model' => 'hosted',
-            'term'             => null,
-            'plan'             => $plan['name'] ?? null,
-            'modules'          => array_values(PlanService::featuresFor($ctx->tenantId)),
+            'term'             => $ent['term_start'] ? ($ent['term_start'] . ' → ' . ($ent['term_end'] ?? 'no end')) : ($ent['term_end'] && $ent['state'] === 'trial' ? 'trial until ' . $ent['term_end'] : null),
+            'plan'             => $ent['plan'] ?? ($plan['name'] ?? null),
+            'modules'          => $ent['modules'],
+            'license_state'    => $ent['state'],
+            'license_serial'   => $ent['serial'],
+            'license_days_left' => $ent['days_left'],
             'user_limit'       => $limit,
             'users_in_use'     => PlanService::seatCount($ctx->tenantId),
             'name_shown'       => (string) (($org['brand_name'] ?? '') !== '' ? $org['brand_name'] : self::PRODUCT),

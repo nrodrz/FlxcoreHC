@@ -1,6 +1,20 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.174.0**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.175.0**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.175.0 — Licensing: signed license records and one entitlement check (migration 138)
+
+Ownership & White-Label Standard, licensing (step 12) for the hosted service: the platform console is the License Hub (decision D7), the license is a record per organization.
+
+- **Signed records:** Console → **Licenses**. A license has a serial (`LIC-YYYY-NNNN`), agreement number, licensee, workspace ID, kind (Paid / Free / Pilot), plan, modules, user limit, term start and end, notes, issue time and deployment (`hosted`). Those fields are signed with **Ed25519** (libsodium); the key id and signature are stored beside them. The private key is kept sealed in the platform settings; the public key is written to `app/config.php` (`license_public_key`) by the installer (an installation without one makes the pair on first use). Records are never edited: a renewal is a new record (the newest valid one wins), a revocation sets `revoked_at`. Issuing and revoking are audited.
+- **One entitlement check** (`Entitlement::forTenant`), used by the plan-feature gate, the Reports menu, the user limit and About & ownership. States: **licensed** (valid record within its term → its modules and user limit) · **grace** (term ended less than 14 days ago) · **trial** (no usable license, within 30 days of the organization's creation → every module) · **core** (no usable license and the trial is over → no optional module; nothing is deleted) · **internal** (the operator's own organization and demo organizations → everything, no end). A record that is revoked, not yet started, past its grace, whose signature does not verify, or that was issued to another workspace is ignored (and the console flags "altered record").
+- **The old fail-open is gone:** before, an organization with no plan got every feature. Now it gets its trial, then the core only.
+- **Optional modules** a license can switch on: Document management, Scheduling, Analytics & reports, Provider network. The core (providers, credentials, tasks, calendar, compliance, team, audit) is always on.
+- **About & ownership** shows License state, serial, days left, agreement number, term, plan, modules and user limit, and "No license record installed" when there is none.
+- **Not built** (self-hosted installations are not offered): the signed license *file*, link codes and the daily check-in, signed update bundles, billing/charges and the overdue read-only rule (plan steps 13–14).
+- Tests: `tests/license/` (database suite, stage 3d3, 48 checks incl. term edges, tamper, moved record, renewal, revocation; negative controls run: signature check neutered → 12 failures, workspace/tamper check removed → 2) and HTTP checks LI1–LI9.
 
 ---
 

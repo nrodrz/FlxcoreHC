@@ -182,6 +182,9 @@ function runInstall(array $in): array
     $indexKey = bin2hex(random_bytes(32));
     $keyBackup = \FlxCoreHC\KeyBackup::encrypt($dataKey, $indexKey, (string) $in['key_passphrase']);   // sealed now; shown on the last screen
     $keyFp     = \FlxCoreHC\KeyBackup::fingerprint($dataKey, $indexKey);
+    // v1.175.0: the license key pair — the public half goes into app/config.php, the private half (sealed) into the platform settings below
+    require_once __DIR__ . '/app/src/LicenseService.php';
+    [$licPub, $licPriv] = \FlxCoreHC\LicenseService::available() ? \FlxCoreHC\LicenseService::generateKeys() : ['', ''];
 
     // 4) write app/config.php — the URL scheme and HSTS follow how the installer is actually being reached (an http dev
     //    install must not be told it is https: invite/calendar links and the HSTS header depend on it).
@@ -212,6 +215,7 @@ function runInstall(array $in): array
             'expiring_window_days' => 90,
             'crypto_data_key' => $dataKey,
             'crypto_index_key' => $indexKey,
+            'license_public_key' => $licPub,     // v1.175.0: verifies the signed license records (the private half is in the database, sealed)
         ], true) . ";\n";
     if (!@file_put_contents(CONFIG_PATH, $config)) {
         return [false, ['Could not write app/config.php — make the app/ directory writable and retry.'], null];
@@ -357,6 +361,7 @@ function runInstall(array $in): array
         __DIR__ . '/database/migrations/135_workspace_id.sql',
         __DIR__ . '/database/migrations/136_terms_acceptances.sql',
         __DIR__ . '/database/migrations/137_terms_versions.sql',
+        __DIR__ . '/database/migrations/138_tenant_licenses.sql',
         __DIR__ . '/database/migrations/099_document_verification.sql',
     ];
     $applied = [];
@@ -421,6 +426,7 @@ function runInstall(array $in): array
         \FlxCoreHC\Database::pdo()->prepare(
             "UPDATE tenants SET status = 'active', approved_at = NOW() WHERE id = ?"
         )->execute([$result['tenant_id']]);
+        if ($licPriv !== '') \FlxCoreHC\LicenseService::storePrivateKey($licPriv);
     } catch (\Throwable $e) {
         error_log('[FlxCoreHC installer] admin creation: ' . $e->getMessage());
         return [false, ['Tables were created, but the admin account could not be made: ' . $e->getMessage()

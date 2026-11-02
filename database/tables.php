@@ -88,6 +88,7 @@ return [
     'source_verifications',
     'tenant_compliance',
     'tenant_domains',
+    'tenant_licenses',
     'tenant_mail_settings',
     'tenants',
     'terms_acceptances',

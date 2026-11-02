@@ -13,6 +13,7 @@ $navIcon  = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke=
 $pend = (int) ($pendingCount ?? 0);
 $navGroups = [
     'Customers' => [
+        ['Licenses', $B . '/admin/licenses', $at('/admin/licenses')],
         ['Tenants', $B . '/admin/tenants', $at('/admin/tenants') || $__path === $B . '/admin' || $__path === '/admin'],
         ['Approvals' . ($pend > 0 ? ' (' . $pend . ')' : ''), $B . '/admin/approvals', $at('/admin/approvals')],
         ['Users', $B . '/admin/users', $at('/admin/users')],

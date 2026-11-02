@@ -174,6 +174,7 @@ them, but expiry statuses, reminders and digests only update when they run.
 - **Terms of Use** — replace the draft text with your own (English and Spanish). Every save publishes a
   new version that every user must accept again. Users accept the Terms at their first sign-in; you, as
   the platform administrator, are not asked.
+- **Licenses** — a new organization has a 30-day trial with every module, then only the core. Issue its license here (plan, modules, user limit, term); the license is signed, so it can only be changed from this screen. Your own organization and demo organizations always have everything.
 - **Sign-in policy** — turn on two-factor for platform administrators before you add customers.
 
 **As an organization owner (Settings):** pick the organization's time zone (Puerto Rico does not change

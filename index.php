@@ -3453,6 +3453,24 @@ if ($seg[0] === 'admin') {
         view('admin/regulatory', ['ctx' => $ctx, 'sources' => FlxCoreHC\RegulatorySources::all(), 'due' => FlxCoreHC\RegulatorySources::dueForReview(),
             'pendingCount' => count($admin->pendingTenants())]);
     }
+    // ---- Licenses (platform operator): issue, renew and revoke the signed license of an organization
+    if ($id === 'licenses') {
+        if ($method === 'POST') {
+            CsrfGuard::verify();
+            if (($_POST['action'] ?? '') === 'revoke') {
+                [$__ok, $__m] = FlxCoreHC\LicenseService::revoke($ctx, (string)($_POST['serial'] ?? ''));
+                flash($__ok ? 'License ' . $__m . ' revoked.' : $__m, $__ok ? 'ok' : 'error');
+            } else {
+                [$__ok, $__m] = FlxCoreHC\LicenseService::issue($ctx, $_POST);
+                flash($__ok ? 'License ' . $__m . ' issued.' : $__m, $__ok ? 'ok' : 'error');
+            }
+            FlxCoreHC\Entitlement::reset();
+            redirect('/admin/licenses' . (!empty($_POST['tenant_id']) && ($_POST['action'] ?? '') !== 'revoke' ? '?tenant=' . urlencode((string)$_POST['tenant_id']) : ''));
+        }
+        $__sel = (string)($_GET['tenant'] ?? '');
+        view('admin/licenses', ['ctx' => $ctx, 'rows' => FlxCoreHC\LicenseService::overview(), 'selected' => $__sel,
+            'history' => $__sel !== '' ? FlxCoreHC\LicenseService::history($__sel) : [], 'plans' => FlxCoreHC\PlanService::all(), 'sodium' => FlxCoreHC\LicenseService::available()]);
+    }
     // ---- Terms of Use editor (platform operator): every save publishes a NEW version that everyone accepts again
     if ($id === 'terms') {
         if ($method === 'POST') {

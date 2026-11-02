@@ -58,13 +58,13 @@ final class PlanService
         return $row === false ? null : $row;
     }
 
-    /** Feature codes enabled for a tenant. Fail-open: no plan => all features. */
+    /**
+     * Feature codes enabled for a tenant — from the entitlement check (a signed license, a trial, or the core only), no longer from the plan
+     * alone and no longer open when nothing is set (v1.175.0).
+     */
     public static function featuresFor(string $tenantId): array
     {
-        $plan = self::forTenant($tenantId);
-        if (!$plan) return array_keys(self::FEATURES);
-        $f = json_decode((string) ($plan['features'] ?? '[]'), true);
-        return is_array($f) ? $f : [];
+        return Entitlement::forTenant($tenantId)['modules'];
     }
 
     public static function tenantHasFeature(string $tenantId, string $code): bool
@@ -100,6 +100,8 @@ final class PlanService
         $override = $ov->fetchColumn();
         if ($override !== null && $override !== false && (int) $override > 0) return (int) $override;
 
+        $ent = Entitlement::forTenant($tenantId);   // v1.175.0: a licensed organization's user limit is the license's
+        if (in_array($ent['state'], ['licensed', 'grace'], true)) return $ent['users'];
         $plan = self::forTenant($tenantId);
         if (!$plan || $plan['max_users'] === null) return null; // unlimited
         return (int) $plan['max_users'];

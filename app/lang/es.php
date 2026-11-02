@@ -3205,4 +3205,17 @@ return [
     'English: {msg}' => 'Inglés: {msg}',
     'Spanish: {msg}' => 'Español: {msg}',
     'Change the time zone? It changes how every date and time is shown for this organization (stored times are not altered).' => '¿Cambiar la zona horaria? Cambia cómo se muestran todas las fechas y horas de esta organización (las horas guardadas no se alteran).',
+    // v1.175.0 — licensing
+    'Grace period after the term' => 'Período de gracia tras el término',
+    'Trial' => 'Prueba',
+    'Core only (no license, trial over)' => 'Solo lo básico (sin licencia, prueba terminada)',
+    'Internal' => 'Interno',
+    '{n} days left' => '{n} días restantes',
+    'libsodium is not available on this server, so licenses cannot be signed.' => 'libsodium no está disponible en este servidor, por lo que no se pueden firmar licencias.',
+    'Choose an organization.' => 'Elija una organización.',
+    'Choose a license kind.' => 'Elija un tipo de licencia.',
+    'The user limit must be at least 1 (or empty for unlimited).' => 'El límite de usuarios debe ser al menos 1 (o vacío para ilimitado).',
+    'Enter the term start date.' => 'Ingrese la fecha de inicio del término.',
+    'The term end must be a date on or after the start.' => 'El fin del término debe ser una fecha igual o posterior al inicio.',
+    'That license is not active.' => 'Esa licencia no está activa.',
 ];

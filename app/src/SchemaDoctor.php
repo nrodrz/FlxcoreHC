@@ -62,6 +62,7 @@ final class SchemaDoctor
         'auth_email_codes' => 'One-time sign-in / two-factor codes sent by e-mail (stored as keyed hashes, 10 minutes, single use). Keyed by user: a platform administrator has no tenant.',
         'password_resets' => 'Single-use forgot-password links (the token is stored as a SHA-256 hash, 60 minutes).',
         'requirement_sources' => 'Global catalogue of the legal or regulatory citation behind each requirement, dated and reviewed.',
+        'tenant_licenses' => 'Signed license records issued to organizations by the platform operator (Ed25519 signature over the licensed fields; a row that does not verify is ignored; append-only except revocation).',
         'terms_acceptances' => 'Who accepted which version of the Terms of Use, for themselves or for their organization (append-only; each one is also an audit row).',
         'terms_versions' => 'Published versions of the Terms of Use (product-wide text edited by the platform operator; append-only, newest is current).',
         'schema_migrations' => 'Applied migration filenames — the schema version record.',

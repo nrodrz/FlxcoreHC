@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
-# FlxCoreHC v1.174.0 — runtime validation for Claude Code / a PHP+MySQL host.
+# FlxCoreHC v1.175.0 — runtime validation for Claude Code / a PHP+MySQL host.
 # Runs: PHP lint (all files) → isolation → agency, purge, authz, migration, HTTP smoke, installer and security suites → harness. Reports PASS/FAIL per stage.
 # Does NOT modify code. Run from the app root on a TEST environment (never production).
 set -u
@@ -104,6 +104,12 @@ if command -v php >/dev/null 2>&1; then
     [ $rc -ne 0 ] && { echo "TIME-ZONE SUITE (clock 06:00 UTC): FAIL (exit $rc)"; fail=1; }
   else echo "NOTE: faketime not installed — the 06:00 UTC run (days differ between zones) was skipped; the normal run still checks every zone's own day."; fi
 else echo "TIME-ZONE SUITE: SKIPPED — php not found"; fail=1; fi
+
+line "3d3. Licensing (v1.175.0, isolated flx_license DB — signed records, entitlement states, tamper, term edges, issue/revoke)"
+if command -v php >/dev/null 2>&1; then
+  php tests/license/run.php; rc=$?
+  [ $rc -ne 0 ] && { echo "LICENSE SUITE: FAIL/SKIP (exit $rc) — send the exact output to Claude; do not edit code or tests."; fail=1; }
+else echo "LICENSE SUITE: SKIPPED — php not found"; fail=1; fi
 
 line "3e. Migration scenarios A-D for 124/125 (v1.170.9, throwaway flx_mig_* DBs)"
 if command -v php >/dev/null 2>&1; then

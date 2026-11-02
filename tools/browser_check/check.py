@@ -21,9 +21,11 @@ def px(sql):
     pre=os.environ.get('FLX_DBPREFIX','')
     if not pre: return sql
     import re as _re
-    if _TBL is None: _TBL=_re.compile(r'(?<![\w.`])('+'|'.join(sorted(map(_re.escape,_tables()),key=len,reverse=True))+r')(?![\w])')
+    if _TBL is None:
+        names='|'.join(sorted(map(_re.escape,_tables()),key=len,reverse=True))
+        _TBL=(_re.compile(r'(?i)(\b(?:from|join|into|update|table|exists|references)\s+`?)('+names+r')(?![\w])'), _re.compile(r'(?<![\w.`])('+names+r')(?=\.\w)'))
     parts=_re.split(r"('(?:[^'\\]|\\.|'')*')",sql)
-    return ''.join(p if i%2 else _TBL.sub(lambda m: pre+m.group(1),p) for i,p in enumerate(parts))
+    return ''.join(p if i%2 else _TBL[1].sub(lambda m: pre+m.group(1), _TBL[0].sub(lambda m: m.group(1)+pre+m.group(2), p)) for i,p in enumerate(parts))
 
 def dbq(sql):
     sql = px(sql)

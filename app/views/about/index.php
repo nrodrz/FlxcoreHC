@@ -38,6 +38,8 @@ $kv = function (string $label, $value): void {
       <?php
         $kv('Owner', $about['owner']);
         $kv('Licensed to', $about['licensed_to']);
+        $__ls = ['licensed' => 'Licensed', 'grace' => 'Grace period after the term', 'trial' => 'Trial', 'core' => 'Core only (no license, trial over)', 'internal' => 'Internal'];
+        $kv('License', t($__ls[$about['license_state']] ?? $about['license_state']) . ($about['license_serial'] ? ' · ' . $about['license_serial'] : '') . ($about['license_days_left'] !== null && $about['license_state'] !== 'core' ? ' · ' . t('{n} days left', ['n' => $about['license_days_left']]) : ''));
         $kv('Agreement number', $about['agreement_number'] ?? t($about['license_record']));
         $kv('Deployment model', t('Hosted service'));
         $kv('Term', $about['term']);
