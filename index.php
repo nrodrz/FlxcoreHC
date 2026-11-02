@@ -539,7 +539,7 @@ if (($seg[0] ?? '') === 'ical' && isset($seg[1])) {
         (string)($row['name'] ?? ''), 'healthcare', 'medical_group', (string)($row['full_name'] ?? 'Calendar feed'));
     $feed = (new FlxCoreHC\Repository\CalendarRepository($fctx))->icsFeed((string)($row['name'] ?? 'FlxCoreHC') . ' — Compliance calendar');
     header('Content-Type: text/calendar; charset=UTF-8');
-    header('Content-Disposition: inline; filename="flxcred.ics"');
+    header('Content-Disposition: inline; filename="flxcorehc.ics"');
     header('Cache-Control: max-age=3600');
     echo $feed;
     exit;
@@ -2356,7 +2356,7 @@ if ($seg[0] === 'organization') {
         $bytes = (new FlxCoreHC\DataExportService($ctx))->build();
         audit_log($ctx, 'data_export', 'tenants', substr($ctx->tenantId, 0, 36), json_encode(['bytes' => strlen($bytes)]));
         AccessLog::record($ctx, 'data_export', 'tenants', $ctx->tenantId);
-        $fname = 'flxcred-export-' . preg_replace('/[^a-z0-9]+/i', '-', strtolower($ctx->tenantName)) . '-' . date('Y-m-d') . '.zip';
+        $fname = 'flxcorehc-export-' . preg_replace('/[^a-z0-9]+/i', '-', strtolower($ctx->tenantName)) . '-' . date('Y-m-d') . '.zip';
         header('Content-Type: application/zip');
         header('Content-Disposition: attachment; filename="' . $fname . '"');
         header('Content-Length: ' . strlen($bytes));
@@ -3762,7 +3762,7 @@ if ($seg[0] === 'admin') {
             FlxCoreHC\BackupService::markTaken();
             audit_log($ctx, 'db_backup_downloaded', 'platform_settings', null, json_encode(['sealed' => true]));
             header('Content-Type: application/octet-stream');
-            header('Content-Disposition: attachment; filename="flxcred-db-' . date('Y-m-d-His') . '.sql.gz.flxenc"');
+            header('Content-Disposition: attachment; filename="flxcorehc-db-' . date('Y-m-d-His') . '.sql.gz.flxenc"');
             header('Content-Length: ' . strlen($__sealed)); header('Cache-Control: no-store'); header('X-Content-Type-Options: nosniff');
             echo $__sealed; exit;
         }
@@ -3955,7 +3955,7 @@ if ($seg[0] === 'admin') {
     if ($id === 'backup' && ($seg[2] ?? '') === 'database') {
         $bytes = FlxCoreHC\BackupService::databaseDump();
         FlxCoreHC\BackupService::markTaken();
-        $fname = 'flxcred-db-' . date('Y-m-d-His') . '.sql.gz';
+        $fname = 'flxcorehc-db-' . date('Y-m-d-His') . '.sql.gz';
         header('Content-Type: application/gzip');
         header('Content-Disposition: attachment; filename="' . $fname . '"');
         header('Content-Length: ' . strlen($bytes));
@@ -3965,7 +3965,7 @@ if ($seg[0] === 'admin') {
     if ($id === 'backup' && ($seg[2] ?? '') === 'documents') {
         $bytes = FlxCoreHC\BackupService::documentsArchive();
         FlxCoreHC\BackupService::markTaken();
-        $fname = 'flxcred-docs-' . date('Y-m-d-His') . '.tar.gz';
+        $fname = 'flxcorehc-docs-' . date('Y-m-d-His') . '.tar.gz';
         header('Content-Type: application/gzip');
         header('Content-Disposition: attachment; filename="' . $fname . '"');
         header('Content-Length: ' . strlen($bytes));

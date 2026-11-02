@@ -496,7 +496,7 @@ code{background:#f0f0f0;padding:1px 5px;border-radius:4px;font-size:13px}
   <p class="note">Create an empty database + user in cPanel &raquo; MySQL Databases first, then enter the details here.</p>
   <div class="row">
     <div><label>Database host</label><input type="text" name="db_host" value="<?= $e($_POST['db_host'] ?? 'localhost') ?>"></div>
-    <div><label>Database name</label><input type="text" name="db_name" value="<?= $e($_POST['db_name'] ?? '') ?>" placeholder="cpaneluser_flxcred"></div>
+    <div><label>Database name</label><input type="text" name="db_name" value="<?= $e($_POST['db_name'] ?? '') ?>" placeholder="cpaneluser_flxcorehc"></div>
   </div>
   <div class="row">
     <div><label>Database user</label><input type="text" name="db_user" value="<?= $e($_POST['db_user'] ?? '') ?>" placeholder="cpaneluser_flx"></div>

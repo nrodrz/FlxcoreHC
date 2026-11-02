@@ -13,11 +13,11 @@ spl_autoload_register(function ($c) use ($ROOT) {
     if (str_starts_with($c, 'FlxCoreHC\\')) { $f = $ROOT . '/app/src/' . str_replace('\\', '/', substr($c, 10)) . '.php'; if (is_file($f)) require $f; }
 });
 // config() and t() normally come from app/bootstrap.php (which needs a config file and a database): use the same bodies here.
-if (!function_exists('config')) { function config(string $key, mixed $default = null): mixed { return $GLOBALS['flxcred_config'][$key] ?? $default; } }
+if (!function_exists('config')) { function config(string $key, mixed $default = null): mixed { return $GLOBALS['flxcorehc_config'][$key] ?? $default; } }
 if (!function_exists('t')) { function t(string $en, array $vars = []): string { return $en; } }
 $fail = false;
 $check = function (bool $ok, string $label) use (&$fail) { echo ($ok ? 'PASS' : 'FAIL') . " — $label\n"; if (!$ok) $fail = true; };
-$with = function (array $cfg): array { $GLOBALS['flxcred_config'] = $cfg; return FlxCoreHC\ReminderService::thresholds(); };
+$with = function (array $cfg): array { $GLOBALS['flxcorehc_config'] = $cfg; return FlxCoreHC\ReminderService::thresholds(); };
 
 // R1
 $check($with([]) === [60, 30, 14, 7], 'R1 no setting → the default 60/30/14/7');
@@ -31,13 +31,13 @@ $check($with(['reminder_thresholds' => 'abc']) === [60, 30, 14, 7], 'R1 not a li
 $check($with(['reminder_thresholds' => range(1, 12)]) === [12, 11, 10, 9, 8, 7, 6, 5], 'R1 at most 8 values, the largest ones');
 $check($with(['reminder_days' => [180, 90, 30]]) === [60, 30, 14, 7], 'R1 the old unused reminder_days key is ignored (an earlier installer wrote it)');
 // R2
-$GLOBALS['flxcred_config'] = [];
+$GLOBALS['flxcorehc_config'] = [];
 $check(FlxCoreHC\ReminderService::thresholdsLabel() === '60, 30, 14, and 7', 'R2 label "60, 30, 14, and 7"');
-$GLOBALS['flxcred_config'] = ['reminder_thresholds' => [30]];
+$GLOBALS['flxcorehc_config'] = ['reminder_thresholds' => [30]];
 $check(FlxCoreHC\ReminderService::thresholdsLabel() === '30', 'R2 label for one value');
-$GLOBALS['flxcred_config'] = ['reminder_thresholds' => [30, 7]];
+$GLOBALS['flxcorehc_config'] = ['reminder_thresholds' => [30, 7]];
 $check(FlxCoreHC\ReminderService::thresholdsLabel() === '30 and 7', 'R2 label for two values');
-$GLOBALS['flxcred_config'] = [];
+$GLOBALS['flxcorehc_config'] = [];
 // R3
 $rs = file_get_contents($ROOT . '/app/src/ReminderService.php');
 $check(substr_count($rs, 'self::THRESHOLDS') === 2 && substr_count($rs, 'self::thresholds()') >= 4, 'R3 scans use thresholds() (the constant is only the default)');

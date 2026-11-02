@@ -8,7 +8,7 @@ the config, and creates all tables.
 - PHP **8.1+** (8.3 recommended) with extensions: `pdo_mysql`, `mbstring`, **`intl`** (REQUIRED since v1.171.10 — Unicode NFKC name comparison; the installer refuses without it and a production install stops at start-up with a clear message), `json`, `fileinfo`
 - An encryption backend: **`sodium`** (preferred) **or** **`openssl`** (AES-256-GCM fallback). Either works; if sodium is added later, existing data stays readable.
 - MySQL 5.7+ / **MariaDB 10.4+**
-- Apache with `.htaccess` / mod_rewrite (standard on cPanel/HostDime)
+- Apache with `.htaccess` / mod_rewrite (standard on cPanel)
 
 ## Install (cPanel, ~3 minutes)
 
@@ -16,7 +16,7 @@ the config, and creates all tables.
    user, add the user to the database with **All Privileges**. Note the database name,
    user, and password (cPanel prefixes them with your account name).
 
-2. **Upload & extract.** Upload `flxcred-mvp-vX.Y.Z.zip` into your web root
+2. **Upload & extract.** Upload `flxcorehc-vX_Y_Z.zip` into your web root
    (e.g. `public_html`) and **Extract** it there. The files land directly in the folder —
    there is no wrapper folder to move. You should see `index.php`, `install.php`,
    `app/`, `assets/`, `database/`, etc. at the top level.
@@ -212,7 +212,7 @@ source files** into the plan catalog.
    the CMS landscape CSV/ZIP (from cms.gov → Medicare → Prescription Drug Coverage → downloads).
 2. Click **Sync now** to load it immediately, or automate with a cPanel cron job:
 
-       /usr/local/bin/php /home/CPANELUSER/hub.employu.info/flxcred/cron/cms_sync.php
+       /usr/local/bin/php /home/CPANELUSER/flxcorehc/cron/cms_sync.php
 
    Schedule weekly (or daily during Sept–Dec). The job upserts, so re-running never duplicates,
    and it picks up a new plan year as soon as you add that year's source.

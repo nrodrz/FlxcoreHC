@@ -68,7 +68,7 @@ $check(!str_contains($rd('app/views/settings/index.php'), 'name="workspace_id"')
 $check(str_contains($rd('database/manifest.php'), '135_workspace_id.sql') && str_contains($rd('install.php'), '135_workspace_id.sql'), 'O3 migration 135 is listed by install.php and the manifest');
 
 // ---- O4 sweep ----
-$pieces = [['Host','Gator'], ['Blue','host'], ['Go','Daddy'], ['Site','Ground'], ['Name','cheap'], ['In','Motion Hosting'], ['A2 ','Hosting']];
+$pieces = [['Host','Gator'], ['Blue','host'], ['Go','Daddy'], ['Site','Ground'], ['Name','cheap'], ['In','Motion Hosting'], ['A2 ','Hosting'], ['Host','Dime']];
 $banned = array_map(fn($p) => preg_quote(implode('', $p), '/'), $pieces);
 $names = array_filter(array_map('trim', explode(',', (string) getenv('FLX_SWEEP_NAMES'))));
 $all = array_merge($banned, array_map(fn($n) => preg_quote($n, '/'), $names));
@@ -83,5 +83,12 @@ foreach ($it as $f) {
 }
 $check($hits === [], "O4 sweep of $files files: no hosting-provider name" . ($names ? ' and none of the ' . count($names) . ' listed people' : '') . ($hits ? ' — ' . implode('; ', $hits) : ''));
 if (!$names) echo "SKIPPED — O4 people-name sweep (set FLX_SWEEP_NAMES to the list kept outside the source)\n";
+// O5 the retired product name never appears in shipped files (and a former customer's name): nowhere, history included
+$legacy = '/' . 'flx' . 'cred(?![a-z])|' . 'employ' . 'u/i'; $lh = []; $ls = 0;
+foreach ($it as $f) {
+    if (!$f->isFile() || !in_array($f->getExtension(), ['php','js','sql','md','json','txt','html','css','py','sh','htaccess'], true) && $f->getFilename() !== '.htaccess') continue;
+    $rel = substr($f->getPathname(), strlen($ROOT) + 1); $ls++; if (preg_match($legacy, (string) file_get_contents($f->getPathname()))) $lh[] = $rel;
+}
+$check($lh === [], "O5 the retired product name and the former customer's name appear in none of $ls shipped files" . ($lh ? ' — ' . implode('; ', $lh) : ''));
 echo $fail ? "OWNERSHIP 1.173.0: FAIL\n" : "OWNERSHIP 1.173.0: ALL PASS\n";
 exit($fail ? 1 : 0);

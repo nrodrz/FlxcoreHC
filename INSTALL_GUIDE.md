@@ -1,8 +1,8 @@
 # FlxCoreHC Healthcare — Installation Guide
 
-This guide covers a first installation on cPanel / HostDime shared hosting (the target environment):
-database setup, uploading the app, running the web installer, post-install security, and optional
-scheduled jobs. No Composer, shell access, or build step is required.
+This guide covers a first installation on cPanel shared hosting (the target environment):
+database setup, uploading the app, running the web installer, post-install security, the first things to
+set up inside the app, and the scheduled jobs. No Composer, shell access, or build step is required.
 
 ---
 
@@ -18,13 +18,14 @@ required ones pass.
 | PHP extension `mbstring` | Required | Text handling |
 | PHP extension `json` | Required | Data encoding |
 | PHP extension `fileinfo` | Required | Upload validation |
+| PHP extension `intl` | Required | Unicode name comparison. A production install refuses to run without it — enable it in *Select PHP Version* → *Extensions* |
 | Encryption backend | Required | `sodium` (preferred) **or** `openssl` (AES-256-GCM fallback). At least one. |
 | MySQL / MariaDB | Required | MariaDB 10.4+ / MySQL 5.7+ |
 | `app/` directory writable | Required | Installer writes `app/config.php` here |
 | `app/storage/` writable | Recommended | Document uploads |
 
 In cPanel → *Select PHP Version* → *Extensions*, make sure `pdo_mysql`, `mbstring`, `json`,
-`fileinfo`, and `sodium` (or `openssl`) are enabled.
+`fileinfo`, `intl`, and `sodium` (or `openssl`) are enabled.
 
 ---
 
@@ -33,7 +34,7 @@ In cPanel → *Select PHP Version* → *Extensions*, make sure `pdo_mysql`, `mbs
 In cPanel:
 
 1. **MySQL® Databases** → *Create New Database*. Give it a name; cPanel prefixes it with your account
-   (e.g. `cpaneluser_flxcred`). Note the full name.
+   (e.g. `cpaneluser_flxcorehc`). Note the full name.
 2. **Add New User** — create a database user with a strong password (e.g. `cpaneluser_flx`). Note the
    full username and password.
 3. **Add User To Database** — attach the user to the database and grant **ALL PRIVILEGES**.
@@ -46,10 +47,10 @@ is `database/manifest.php`; run them in that order. The installer is the support
 
 ## 3. Upload the app
 
-1. Unzip the release (`flxcred-healthcare-vX_Y_Z.zip`) locally.
+1. Unzip the release (`flxcorehc-vX_Y_Z.zip`) locally.
 2. Upload the **contents** to the directory you want to serve:
    - Web root (`public_html`) to serve at `https://yourdomain.com`, **or**
-   - a subfolder (e.g. `public_html/flxcred`) to serve at `https://yourdomain.com/flxcred` — the app
+   - a subfolder (e.g. `public_html/flxcorehc`) to serve at `https://yourdomain.com/flxcorehc` — the app
      detects its own base path, so no edits are needed either way.
 3. Confirm the bundled `.htaccess` files came across (they may be hidden): one at the app root and one
    in `app/`. These route requests and block direct web access to server-side folders.
@@ -62,22 +63,28 @@ host runs PHP as a separate user).
 
 ## 4. Run the web installer
 
-1. Visit `https://yourdomain.com/install.php` (or `.../flxcred/install.php`).
+1. Visit `https://yourdomain.com/install.php` (or `.../flxcorehc/install.php`).
 2. **Requirements screen** — resolve anything marked required (red) before continuing. Optional items
    (yellow) are safe to proceed past.
 3. **Configuration form** — enter:
    - **Database host** — usually `localhost` on cPanel.
-   - **Database name** — the full name from step 2 (e.g. `cpaneluser_flxcred`).
+   - **Database name** — the full name from step 2 (e.g. `cpaneluser_flxcorehc`).
    - **Database user / password** — from step 2.
    - **Organization name** — the name of *your* SaaS operation. Its type is fixed as **SaaS platform
      (operator)**; you'll create client organizations (billing companies, medical groups, hospitals,
      solo practices) later from the console, each with its own type.
    - **Administrator name / email / password** — this becomes the first **Master Admin** and the
      platform administrator. Use a strong password.
+   - **Platform time zone** — the default for every organization (Eastern if you leave it). Each organization
+     can choose its own later under Settings, and you can change this one under Admin → System.
+   - **Backup passphrase** (at least 12 characters, typed twice) — locks the encryption-key backup file the
+     installer offers on its last screen. Keep the passphrase and the file in a password manager.
    - **Force secure cookies** — leave on if the site is served over HTTPS (recommended).
+   - **Development mode** — leave OFF for anything real.
 4. Submit. The installer will:
    - generate fresh encryption keys (256-bit) for data-at-rest and blind-index fields,
-   - write `app/config.php` with your database credentials and those keys,
+   - write `app/config.php` with your database credentials, those keys and the platform time zone,
+   - show a passphrase-locked backup of the keys for you to download (shown once),
    - create **all tables** (every migration in the manifest), and
    - create your administrator account and activate the first organization.
 
@@ -90,7 +97,7 @@ and retry cleanly.
 
 1. **Delete `install.php`** from the server. The installer refuses to run twice, but removing the file
    is the clean step and the final screen reminds you. (`app/config.php` also acts as an install lock.)
-2. **Back up `app/config.php`** somewhere safe and keep it out of version control. It contains your
+2. **Download the key backup** on the installer's last screen (it is shown only once) and store it with its passphrase. Also **back up `app/config.php`** somewhere safe and keep it out of version control. It contains your
    database credentials **and your encryption keys** — if the keys are lost, encrypted fields
    (provider email/NPI) cannot be decrypted. Do not regenerate keys on an existing database.
 3. Confirm `https://yourdomain.com/app/config.php` returns **403/Forbidden** (the `.htaccess` in `app/`
@@ -132,25 +139,22 @@ delivery works even while platform mail is off; unconfigured tenants use the pla
 
 ---
 
-## 7. Optional: scheduled jobs (cron)
+## 7. Scheduled jobs (cron)
 
-Three maintenance scripts live in `cron/` (all CLI-only; they refuse to run over the web). Add them in
-cPanel → *Cron Jobs* using your account's PHP binary. Typical schedules:
+Four maintenance scripts live in `cron/` (all CLI-only; they refuse to run over the web). After you sign
+in, **Admin → System & updates → Scheduled jobs (cron)** lists the exact lines for *your* server — built
+from its PHP binary and the folder the app is installed in — ready to paste into cPanel → *Cron Jobs*.
+Typical schedules (server time):
 
 ```
-# Exclusion screening sweep (OIG LEIE / SAM.gov / state Medicaid) — daily 2:00 AM
-0 2 * * *  /usr/local/bin/php /home/cpaneluser/public_html/cron/screen_leie.php
-
-# Expiry reminder emails — daily 6:00 AM
-0 6 * * *  /usr/local/bin/php /home/cpaneluser/public_html/cron/send_reminders.php
-
-# Expiring-credential status sweep — daily 1:00 AM
-0 1 * * *  /usr/local/bin/php /home/cpaneluser/public_html/cron/sweep_expiring.php
+0 1 * * *  <php> <app folder>/cron/sweep_expiring.php   # credential status, one organization at a time
+0 2 * * *  <php> <app folder>/cron/screen_leie.php      # exclusion screening refresh
+0 6 * * *  <php> <app folder>/cron/send_reminders.php   # reminder e-mails and notifications
+0 7 * * *  <php> <app folder>/cron/send_digests.php     # activity digests (weekly ones on Mondays)
 ```
 
-Adjust the PHP path and app path to your account. (Find the PHP CLI path in cPanel → *Select PHP
-Version*, or ask your host.) These are optional — the app works without them; they just automate
-recurring screening and reminders.
+They are safe to run again and use each organization's own time zone for "today". The app works without
+them, but expiry statuses, reminders and digests only update when they run.
 
 ---
 
@@ -163,6 +167,17 @@ recurring screening and reminders.
 4. Optionally define **Locations** (practice sites) and **Groups** (client groups / departments), then
    affiliate providers with them.
 5. Add providers, attach credentials, and upload documents.
+
+**Also set up as the platform administrator (Admin):**
+
+- **System & updates** — check the platform time zone and add the cron lines.
+- **Terms of Use** — replace the draft text with your own (English and Spanish). Every save publishes a
+  new version that every user must accept again. Users accept the Terms at their first sign-in; you, as
+  the platform administrator, are not asked.
+- **Sign-in policy** — turn on two-factor for platform administrators before you add customers.
+
+**As an organization owner (Settings):** pick the organization's time zone (Puerto Rico does not change
+its clocks; Florida does) and review **About & ownership**.
 
 ---
 

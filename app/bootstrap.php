@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 
 define('FLXCOREHC_APP', __DIR__);
-define('FLXCOREHC_VERSION', '1.173.3');   // shown on System & updates; bump with each release
+define('FLXCOREHC_VERSION', '1.173.4');   // shown on System & updates; bump with each release
 // Which vertical this installation serves: 'insurance', 'healthcare', or 'both'.
 // The edition locks registration/installer org shapes and the demo builders, so a
 // single-vertical app can never grow tenants of the other industry. Everything downstream
@@ -53,7 +53,7 @@ function flx_config_path(): string
 // missing, malformed, or still carries an old app_env value.
 if (PHP_SAPI !== 'cli') { @ini_set('display_errors', '0'); }
 
-// Web base path — supports installs in a subfolder (e.g. /flxcred). Empty at docroot.
+// Web base path — supports installs in a subfolder (e.g. /flxcorehc). Empty at docroot.
 if (!defined('BASE_PATH')) {
     if (PHP_SAPI === 'cli') {
         // v1.170.8: under cron, SCRIPT_NAME is a filesystem path (…/cron), which used to leak into links
@@ -76,7 +76,7 @@ if (!is_file($configFile)) {
     http_response_code(500);
     exit('FlxCoreHC is not configured. Copy app/config.sample.php to app/config.php and edit it.');
 }
-$GLOBALS['flxcred_config'] = require $configFile;
+$GLOBALS['flxcorehc_config'] = require $configFile;
 
 /** The per-response CSP nonce. Put this on every script tag we emit. */
 function csp_nonce(): string
@@ -93,7 +93,7 @@ function nonce_attr(): string
 
 function config(string $key, mixed $default = null): mixed
 {
-    return $GLOBALS['flxcred_config'][$key] ?? $default;
+    return $GLOBALS['flxcorehc_config'][$key] ?? $default;
 }
 
 // ---- Error handling (fail safe: never leak stack traces to browsers) ----

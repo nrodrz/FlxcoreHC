@@ -4,7 +4,7 @@ This app is the **healthcare credentialing** fork of FlxCoreHC, split from the s
 at v1.87.0. Its sibling is the Insurance Edition; the two are now developed independently.
 
 ## How the edition lock works
-- `app/bootstrap.php` defines `FLXCRED_EDITION = 'healthcare'`, and `install.php` mirrors it in
+- `app/bootstrap.php` defines `FLXCOREHC_EDITION = 'healthcare'`, and `install.php` mirrors it in
   `FLX_INSTALL_EDITION`. Keep the two in sync.
 - `edition_shapes()` (bootstrap) returns only this edition's organization shapes (billing_company, medical_group,
   solo_practice, plus custom/platform). Registration, the installer, and `AuthService::registerTenant()`

@@ -112,7 +112,7 @@ $check(!$r['ok'] && $r['stage'] === 'connect' && str_contains(SmtpClient::explai
 $g = SmtpClient::explain(['ok' => false, 'stage' => 'auth', 'error' => 'The server rejected the login.', 'reply' => '534-5.7.9 Application-specific password required'], 'smtp.gmail.com');
 $m = SmtpClient::explain(['ok' => false, 'stage' => 'auth', 'error' => 'x', 'reply' => '535 5.7.139 basic authentication is disabled'], 'smtp.office365.com');
 $e = SmtpClient::ehloName();
-$check(str_contains($g, 'App password') && str_contains($m, 'Connect Microsoft 365') && $e !== 'flxcred.local' && preg_match('/^[a-z0-9.-]+\.[a-z0-9.-]+$/', $e) === 1,
+$check(str_contains($g, 'App password') && str_contains($m, 'Connect Microsoft 365') && $e !== 'flxcorehc.local' && preg_match('/^[a-z0-9.-]+\.[a-z0-9.-]+$/', $e) === 1,
     'M14 Gmail/Microsoft failures get the right advice; the EHLO name is a real host name (' . $e . ')');
 
 $cl = SmtpClient::clean("535 bad login for u: Pa55word! (" . base64_encode('Pa55word!') . ")\r\n\x00", 'Pa55word!');

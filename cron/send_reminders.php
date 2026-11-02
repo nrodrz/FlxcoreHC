@@ -2,7 +2,7 @@
 declare(strict_types=1);
 /**
  * Compliance reminder sweep — optional, run from cPanel cron (e.g. daily):
- *   /usr/local/bin/php /home/CPANELUSER/flxcred/cron/send_reminders.php
+ *   /usr/local/bin/php /home/CPANELUSER/flxcorehc/cron/send_reminders.php
  *
  * Sends expiry reminders for every active, non-demo tenant through the email outbox
  * (MailService), which respects the operator's SMTP settings and records delivery. This is

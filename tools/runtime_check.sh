@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
-# FlxCoreHC v1.173.3 — runtime validation for Claude Code / a PHP+MySQL host.
+# FlxCoreHC v1.173.4 — runtime validation for Claude Code / a PHP+MySQL host.
 # Runs: PHP lint (all files) → isolation → agency, purge, authz, migration, HTTP smoke, installer and security suites → harness. Reports PASS/FAIL per stage.
 # Does NOT modify code. Run from the app root on a TEST environment (never production).
 set -u

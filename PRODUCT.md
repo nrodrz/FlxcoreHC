@@ -80,7 +80,7 @@ Two orthogonal axes:
 
 ## 6. Edition lock (why no MA content appears)
 
-`FLXCRED_EDITION='healthcare'` (bootstrap) + `FLX_INSTALL_EDITION` (installer) restrict org shapes via `edition_shapes()` at registration, install, and `AuthService::registerTenant()`; the insurance demo builder is hidden and its action blocked. Since insurance tenants can't exist, per-tenant vertical gating (nav, training, templates, vocab) renders only healthcare UI. **Insurance/MA code in the tree (AEP, RTS, SOA, carriers, beneficiaries, book/commissions, CMS sync cron, DemoDataService…) is inert** — prune incrementally, only when asked. See `SPLIT.md`.
+`FLXCOREHC_EDITION='healthcare'` (bootstrap) + `FLX_INSTALL_EDITION` (installer) restrict org shapes via `edition_shapes()` at registration, install, and `AuthService::registerTenant()`; the insurance demo builder is hidden and its action blocked. Since insurance tenants can't exist, per-tenant vertical gating (nav, training, templates, vocab) renders only healthcare UI. **Insurance/MA code in the tree (AEP, RTS, SOA, carriers, beneficiaries, book/commissions, CMS sync cron, DemoDataService…) is inert** — prune incrementally, only when asked. See `SPLIT.md`.
 
 ## 7. Operations
 
@@ -88,7 +88,7 @@ Two orthogonal axes:
 - **Config flags** (`app/config.php`): mail_enabled, allow_open_registration, app_url, Stripe keys, trial_days/grace_days, reminder_days `[180,90,30]`, expiring_window_days 90, crypto keys, session timeouts, force_secure_cookies, docs_path.
 - **Cron:** `send_reminders.php` (expiry reminders), `sweep_expiring.php` (status transitions), `send_booking_reminders.php`; `cms_sync.php` is insurance-only (inert). Reminders and queued mail are sent by cron and POST actions only (no GET side effects).
 - **Backups:** admin-triggered SQL dump via `BackupService` (plain, or sealed with a passphrase — open with `database/decrypt_dump.php`), document archive, and the passphrase-sealed key backup.
-- **Prod (pre-split, shared app):** `hub.employu.info/flxcred`, DB `employu_flxcred`, PHP 8.3 via cPanel MultiPHP. The split apps will get their own paths/DBs — never share a DB between editions.
+- **Prod (pre-split, shared app):** its own web path (e.g. `/flxcorehc`) and its own database (e.g. `cpaneluser_flxcorehc`), PHP 8.3 via cPanel MultiPHP. The split apps will get their own paths/DBs — never share a DB between editions.
 
 ## 8. Known gaps & deferred (do not build unprompted)
 

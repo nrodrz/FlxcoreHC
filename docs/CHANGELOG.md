@@ -1,6 +1,15 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.173.3**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.173.4**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.173.4 — Documentation and names: a retired product name, a customer domain and a hosting provider removed (no migration)
+
+- **The product's retired working name is gone from every file in the package, history included** (install guides — zip name, folder and database examples now `flxcorehc` —, cron comments, the installer placeholder, downloaded file names `flxcorehc-export-…zip`, `flxcorehc-db-….sql.gz`, `flxcorehc-docs-….tar.gz`, `flxcorehc.ics`, the calendar-feed event ids `…@flxcorehc`, an internal config variable `flxcorehc_config`, old changelog and hand-off wording). A customer's web address and database name that appeared in `PRODUCT.md` and `INSTALL.md` are replaced by generic examples. The ownership test (O4/O5) now searches every shipped file, changelog included, for these names, so they cannot come back.
+- `PRODUCT.md` and `SPLIT.md` named constants that no longer exist; now `FLXCOREHC_EDITION`.
+- **INSTALL_GUIDE.md brought up to date**: the `intl` extension is listed as required, the installer's platform time zone, key-backup passphrase and development-mode fields are explained, the four cron jobs and the System page that prints their lines, and the first things to set up (time zone, Terms of Use, sign-in policy). The hosting-provider name is removed from the install docs and the changelog.
+- Downloaded file names and calendar-feed ids changed: nobody has subscribed or exported yet (fresh installation).
 
 ---
 
@@ -216,7 +225,7 @@ Owner report: none of the e-mail methods worked and the only message was "authen
 
 - **The Microsoft 365 connect panel was invisible.** In both the platform page (Console → Email) and the organization page, its markup sat inside another condition (database-update notice / "last test failed"), so it only appeared in error states. Moved out; always shown now.
 - **Re-saving the platform e-mail settings overwrote the SMTP password with `********`.** The form pre-filled the mask and the save handler stored it. The form no longer pre-fills it and the handler ignores a masked or blank value.
-- **New `SmtpClient`** replaces the socket code in `MailService`: chooses AUTH PLAIN or LOGIN from what the server advertises (it assumed LOGIN), proper EHLO host name (it sent `flxcred.local`), TLS 1.2+ with certificate verification, base64 bodies, header-injection stripping, and refuses to send a password without encryption to a remote host.
+- **New `SmtpClient`** replaces the socket code in `MailService`: chooses AUTH PLAIN or LOGIN from what the server advertises (it assumed LOGIN), proper EHLO host name (it sent a placeholder name), TLS 1.2+ with certificate verification, base64 bodies, header-injection stripping, and refuses to send a password without encryption to a remote host.
 - **Errors say what happened:** stage (connect / TLS / login / From / recipient / message), the server's own reply with secrets redacted, and advice (Gmail App password, Microsoft 365 basic-auth disabled, "use the full e-mail address", port/mode mismatch). Tenant-supplied hosts still get a generic connect message (no network oracle).
 - **Test tools:** Console and organization pages now have **Test connection only** (logs in, sends nothing) and a test e-mail that works while "Send email" is off and shows the exact result on the page, not "check the outbox". **Retry failed** re-queues messages that gave up (never security codes).
 - **Platform SMTP password is stored encrypted** (older plain values still read). New "Verify the server's certificate" switch for the platform sender only (some cPanel hosts present a certificate for the server name, not `mail.<domain>`). Presets (Google / Microsoft / cPanel) on the platform page too.
@@ -1010,14 +1019,14 @@ No migration.
 
 ### v1.162.0 — Deep rename to FlxCoreHC (complete)
 
-The rename is now total — the name "FlxCred" is gone from the entire product (code, data, docs, assets),
+The rename is now total — the previous working name is gone from the entire product (code, data, docs, assets),
 done now while the system is clean of client data so there is zero risk to encrypted records.
 
-- **PHP namespace** `FlxCred\` → `FlxCoreHC\` across all 100 classes and 1,121 references; the
+- **PHP namespace** the old namespace → `FlxCoreHC\` across all 100 classes and 1,121 references; the
   autoloader prefix updated to match.
-- **Constants** `FLXCRED_*` → `FLXCOREHC_*` (version, root, app, edition, app-name, tagline, cron hint).
-- **Session cookie** `FLXCREDSESSID` → `FLXCOREHCSESSID` (users re-login once).
-- **Seed data** `verified_by='FlxCred'` → `'FlxCoreHC'` on all regulatory-source rows and in the seed
+- **Constants** the old prefix → `FLXCOREHC_*` (version, root, app, edition, app-name, tagline, cron hint).
+- **Session cookie** renamed to `FLXCOREHCSESSID` (users re-login once).
+- **Seed data** `verified_by` stamps → `'FlxCoreHC'` on all regulatory-source rows and in the seed
   migrations; config sample db name/user → `flxcorehc`.
 - **Comments, docs, CSS/JS headers, installer, help (EN/ES), emails** all swept. Only the historical
   changelog entries keep the old name, as a dated record.
@@ -1042,17 +1051,15 @@ every class reference stay safe.
 
 - **Product name** → FlxCoreHC everywhere users see it: page titles, sidebar/brand, login, emails
   (sender name), PDF footers and headers, data-export README, TOTP issuer, invoices, and all docs.
-  Routed through a single `FLXCRED_APP_NAME` constant so the eventual namespace rename is a no-op here.
-- **Tagline** → "Healthcare Compliance Intelligence Platform" (login and docs), via `FLXCRED_TAGLINE`.
+  Routed through a single app-name constant so the eventual namespace rename is a no-op here.
+- **Tagline** → "Healthcare Compliance Intelligence Platform" (login and docs), via a single tagline constant.
 - **Positioning corrected** — the app now describes itself as a **credentials & compliance support
   system**, not a credentialing authority: the profile packet's "Credentialing template" is now
   "Compliance template", and the capabilities doc states plainly it is not a credentialing authority.
   Verification wording already described *recording documented verification*, not performing it.
-- 77 display strings updated across 39 files; all 674 namespace references and the `FLXCRED_*`
-  constants left intact; Spanish re-synced (566/566).
+- 77 display strings updated across 39 files; all 674 namespace references and the old constants left intact; Spanish re-synced (566/566).
 
-Deferred to its own pass (post-testing): the deep namespace rename (`FlxCoreHC\` → `FlxCoreHC\`, the
-`FLXCRED_*` constants, session cookie, and the `verified_by` seed stamps), handled with the crypto and
+Deferred to its own pass (post-testing): the deep namespace rename (the namespace, the constants, the session cookie, and the `verified_by` seed stamps), handled with the crypto and
 cookie explicitly protected and decryption re-verified.
 
 No migration.
@@ -2145,7 +2152,7 @@ Migration added: `096_tenant_mail_settings.sql`.
 
 Marks the first installation-ready build. No feature changes; this release confirms the install path
 end-to-end and ships an installation guide (INSTALL_GUIDE.md) covering database setup and app
-configuration for cPanel/HostDime shared hosting.
+configuration for cPanel shared hosting.
 
 Verified for this release: fresh full install applies all 94 migrations cleanly; the web installer
 checks requirements, generates encryption keys, writes app/config.php, and locks itself after

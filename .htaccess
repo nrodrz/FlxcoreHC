@@ -1,4 +1,4 @@
-# FlxCoreHC front controller. Works at the web root OR in a subfolder (e.g. /flxcred)
+# FlxCoreHC front controller. Works at the web root OR in a subfolder (e.g. /flxcorehc)
 # with no edits — the rules are relative to wherever this file lives.
 
 <IfModule mod_rewrite.c>

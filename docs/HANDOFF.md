@@ -24,8 +24,7 @@ authority. This distinction is legal, not cosmetic — do not let the product ov
 Primary market: **Puerto Rico** (deeply modeled, source-verified) with **Florida** planned. The app is
 bilingual **English/Spanish** with full parity (see §5).
 
-The name was "FlxCred" until v1.161–1.162; it is now "FlxCoreHC" everywhere. Only the changelog history
-still mentions the old name, deliberately. There is a separate, unrelated "FlxCore" project — do not
+The product had a different working name until v1.161–1.162; it is now "FlxCoreHC" everywhere. There is a separate, unrelated "FlxCore" project — do not
 conflate them.
 
 ---
@@ -70,7 +69,7 @@ Console → System → *Update database*.
    searchable ones also have a `*_bidx` blind index. The base repository handles encrypt-on-write /
    decrypt-on-read via `encryptedColumns()` / `blindIndexColumns()`.
    **CRITICAL:** the encryption **AAD is `tenantId | table | column`** (see `TenantRepository::aadFor`).
-   It does **not** reference the app name or any constant — which is why the FlxCred→FlxCoreHC rename
+   It does **not** reference the app name or any constant — which is why the product rename
    was safe. If you ever change how the AAD is built, you will make all existing encrypted data
    undecryptable. Don't. If you must, provide a migration and re-verify decryption end-to-end.
    Encryption keys live in `app/config.php` (see §6).

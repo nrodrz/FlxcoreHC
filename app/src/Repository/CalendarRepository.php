@@ -59,7 +59,7 @@ final class CalendarRepository extends TenantRepository
         foreach ($rows as $e) {
             $allDay = (int)($e['all_day'] ?? 0) === 1;
             $out[] = 'BEGIN:VEVENT';
-            $out[] = 'UID:' . $e['id'] . '@flxcred';
+            $out[] = 'UID:' . $e['id'] . '@flxcorehc';
             $out[] = 'DTSTAMP:' . (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Ymd\THis\Z');
             $out[] = 'DTSTART' . $fmt((string)$e['due_at'], $allDay);
             if (!empty($e['end_at']) && !$allDay) $out[] = 'DTEND' . $fmt((string)$e['end_at'], false);

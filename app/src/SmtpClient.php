@@ -10,7 +10,7 @@ namespace FlxCoreHC;
  *  - Authentication picks what the server ADVERTISES (AUTH PLAIN or AUTH LOGIN) instead of assuming LOGIN.
  *  - Every failure reports the STAGE (connect / tls / auth / from / rcpt / data) and the server's own reply,
  *    so the operator can see "535 5.7.8 credentials invalid" instead of a bare "authentication failed".
- *  - The EHLO name is a real host name (from app_url or the server), never "flxcred.local" or a Host header with a port.
+ *  - The EHLO name is a real host name (from app_url or the server), never "flxcorehc.local" or a Host header with a port.
  *  - STARTTLS requires a TLS 1.2+ handshake and verifies the certificate (platform operator may turn verification off
  *    for a mail host whose certificate names the server instead of the mail host; tenant-supplied SMTP never can).
  *  - Credentials are never sent in clear text to a remote host: AUTH over "None" is refused unless the host is local

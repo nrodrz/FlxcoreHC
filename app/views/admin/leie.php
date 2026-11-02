@@ -28,7 +28,7 @@ $title = 'LEIE screening';
       <span class="hint" style="margin-left:.4rem">Screens each active provider once per vintage; owners are emailed on potential matches.</span>
     </form>
     <p class="hint" style="margin-top:.5rem">To run continuously without clicking, schedule the cron entry (daily is fine — it only works when a new list is loaded):
-      <br><span class="mono">/usr/local/bin/php <?= e(defined('FLXCOREHC_CRON_HINT_PATH') ? FLXCOREHC_CRON_HINT_PATH : '/home/USER/flxcred') ?>/cron/screen_leie.php</span></p>
+      <br><span class="mono">/usr/local/bin/php <?= e(defined('FLXCOREHC_CRON_HINT_PATH') ? FLXCOREHC_CRON_HINT_PATH : '/home/USER/flxcorehc') ?>/cron/screen_leie.php</span></p>
   <?php else: ?>
     <p class="hint">No LEIE list is loaded yet. Until one is imported, automated screening reports that the list is unavailable.</p>
   <?php endif; ?>

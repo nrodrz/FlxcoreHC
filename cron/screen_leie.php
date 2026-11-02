@@ -2,7 +2,7 @@
 declare(strict_types=1);
 /**
  * Scheduled OIG LEIE exclusion sweep — run from cPanel cron (e.g. daily or weekly):
- *   /usr/local/bin/php /home/CPANELUSER/flxcred/cron/screen_leie.php
+ *   /usr/local/bin/php /home/CPANELUSER/flxcorehc/cron/screen_leie.php
  *
  * Screens every active provider in every active, non-demo tenant against the currently loaded LEIE
  * list. Each provider is screened once per list vintage, so running this daily is safe: it only does

@@ -241,7 +241,7 @@ $allOk = $rep !== [] && array_reduce($rep, fn($c, $r) => $c && $r['ok'], true);
 $check($allOk && (int) $pdo->query("SELECT COUNT(*) FROM schema_migrations WHERE filename LIKE '12%'")->fetchColumn() >= 5, 'B3 re-running the last migrations is idempotent: all succeed and are recorded' . ($allOk ? '' : ' — ' . json_encode(array_map(fn($r) => [$r['file'], $r['error']], array_filter($rep, fn($r) => !$r['ok'])))));
 $totalSkipped = array_sum(array_column($rep, 'skipped'));
 $check(isset($rep[0]['skipped_detail']) && count(array_merge(...array_column($rep, 'skipped_detail'))) === $totalSkipped, "B3 skipped statements are reported with their detail ($totalSkipped skipped), never silent");
-$cfg = $GLOBALS['flxcred_config'];
+$cfg = $GLOBALS['flxcorehc_config'];
 $second = new PDO("mysql:host={$cfg['db_host']};port={$cfg['db_port']};dbname={$cfg['db_name']};charset=utf8mb4", $cfg['db_user'], $cfg['db_pass'] ?? '', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 $second->query("SELECT GET_LOCK('flxcorehc_migrate', 0)")->fetchAll();
 $pdo->exec("DELETE FROM schema_migrations WHERE filename LIKE '125%'");
@@ -510,12 +510,12 @@ $r3 = $auth8->attemptLogin($em8, $pwd8);
 $check(is_string($r3) && stripos($r3, 'Too many') !== false, 'S8 a never-seen address is still held by the per-account throttle (brute force stays blocked)');
 $lim->clear('acct|' . $em8); $lim->clear($em8 . '|198.51.100.77'); $lim->clear('ip|198.51.100.77'); $lim->clear('ip|203.0.113.10'); unset($_SERVER['REMOTE_ADDR']);
 // (b) dev-plaintext marker is not honoured outside dev
-$forged = "\x00" . 'forged-plaintext'; $envWas = $GLOBALS['flxcred_config']['app_env'] ?? null;
-$GLOBALS['flxcred_config']['app_env'] = 'dev';
+$forged = "\x00" . 'forged-plaintext'; $envWas = $GLOBALS['flxcorehc_config']['app_env'] ?? null;
+$GLOBALS['flxcorehc_config']['app_env'] = 'dev';
 $devRead = FlxCoreHC\Crypto::decrypt($forged);
-$GLOBALS['flxcred_config']['app_env'] = 'production';
+$GLOBALS['flxcorehc_config']['app_env'] = 'production';
 $prodRead = FlxCoreHC\Crypto::decrypt($forged);
-$GLOBALS['flxcred_config']['app_env'] = $envWas;
+$GLOBALS['flxcorehc_config']['app_env'] = $envWas;
 $check($devRead === 'forged-plaintext' && $prodRead === null, 'S8 production refuses the dev passthrough marker (a forged 0x00 value reads as null); dev still reads it');
 // (c) invite tokens are stored hashed and still resolve; legacy raw tokens still resolve
 [$t9, $o9] = $mkTenant('invite'); $tm = new TeamService($ctx($t9, $o9, 'tenant_owner'));
@@ -865,14 +865,14 @@ $nfkc = FlxCoreHC\TextNorm::same("O\u{FB00}ice Manager", 'Office Manager') && Fl
      && FlxCoreHC\TextNorm::same("Caf\u{0065}\u{0301}", "Caf\u{00E9}") && !FlxCoreHC\TextNorm::same('Office Manager', 'Office Managers');
 $check($nfkc, 'V9 fold() applies real NFKC (ﬀ ligature, circled ①, Roman numeral Ⅸ, full-width, combining accent) and still tells different names apart');
 // the "missing" path: production refuses to compare with a weaker algorithm; dev/test falls back (documented as weaker)
-$envSave = $GLOBALS['flxcred_config']['app_env'] ?? null;
+$envSave = $GLOBALS['flxcorehc_config']['app_env'] ?? null;
 FlxCoreHC\TextNorm::$assumeNormalizerMissing = true;
-$GLOBALS['flxcred_config']['app_env'] = 'production'; $threw = false;
+$GLOBALS['flxcorehc_config']['app_env'] = 'production'; $threw = false;
 try { FlxCoreHC\TextNorm::fold('Office Manager'); } catch (\RuntimeException $e) { $threw = str_contains($e->getMessage(), 'intl'); }
 $preMsg = FlxCoreHC\TextNorm::prerequisiteError();
-$GLOBALS['flxcred_config']['app_env'] = 'dev';
+$GLOBALS['flxcorehc_config']['app_env'] = 'dev';
 $devFallback = FlxCoreHC\TextNorm::same("\u{FF2D}anager", 'Manager') && !FlxCoreHC\TextNorm::same("O\u{FB00}ice", 'Office');
-FlxCoreHC\TextNorm::$assumeNormalizerMissing = false; $GLOBALS['flxcred_config']['app_env'] = $envSave;
+FlxCoreHC\TextNorm::$assumeNormalizerMissing = false; $GLOBALS['flxcorehc_config']['app_env'] = $envSave;
 $check($threw && is_string($preMsg) && str_contains($preMsg, 'intl') && $devFallback && FlxCoreHC\TextNorm::prerequisiteError() === null,
     'V9 without Normalizer: production fold() throws a clear ext-intl error and prerequisiteError() names it; dev falls back to the weaker full-width-only rule');
 // (R2) tenant organization identity names: cleaned before storage, blank-after-clean refused
@@ -895,16 +895,16 @@ $hRM = uuid4(); $cRM = uuid4();
 $pdo->prepare("INSERT INTO credential_holders (id, tenant_id, holder_type, first_name, last_name, vertical, status, created_at) VALUES (?,?,?,?,?,?,?,?)")->execute([$hRM, $tRM, 'individual', 'Rita', 'Reminder', 'healthcare', 'active', utc_now()]);
 $pdo->prepare("INSERT INTO credentials (id, tenant_id, holder_id, credential_type, name, status, expiry_date, created_at) VALUES (?,?,?,?,?,?,DATE_ADD(CURDATE(), INTERVAL 100 DAY),?)")->execute([$cRM, $tRM, $hRM, 'state_license', 'RM License', 'active', utc_now()]);
 $remRows = static fn() => (int) $pdo->query("SELECT COUNT(*) FROM credential_reminders WHERE credential_id = " . $pdo->quote($cRM))->fetchColumn();
-unset($GLOBALS['flxcred_config']['reminder_thresholds']);
+unset($GLOBALS['flxcorehc_config']['reminder_thresholds']);
 $n0 = (new FlxCoreHC\ReminderService($ctxRM))->run();
 $check($remRows() === 0, 'RM1 default thresholds (60/30/14/7): a credential 100 days from expiry gets no expiry reminder (the scan may still queue screening/attestation notices: sent=' . $n0 . ')');
-$GLOBALS['flxcred_config']['reminder_thresholds'] = [120, 60, 30];
+$GLOBALS['flxcorehc_config']['reminder_thresholds'] = [120, 60, 30];
 $n1 = (new FlxCoreHC\ReminderService($ctxRM))->run();
 $daysB = (int) $pdo->query("SELECT days_before FROM credential_reminders WHERE credential_id = " . $pdo->quote($cRM) . " LIMIT 1")->fetchColumn();
 $check($n1 >= 1 && $remRows() === 1 && $daysB === 120, "RM2 with reminder_thresholds [120,60,30] the same credential is reminded once at the 120-day threshold (sent=$n1, rows={$remRows()}, days_before=$daysB)");
 $n2 = (new FlxCoreHC\ReminderService($ctxRM))->run();
 $check($n2 === 0 && $remRows() === 1, 'RM3 running again does not remind twice for the same threshold');
-unset($GLOBALS['flxcred_config']['reminder_thresholds']);
+unset($GLOBALS['flxcorehc_config']['reminder_thresholds']);
 
 // =========================================================================== OP — v1.172.3: creating an organization can set the Master Admin's temporary password
 $tplOP = (string) file_get_contents(__DIR__ . '/../../app/views/admin/tenants.php');

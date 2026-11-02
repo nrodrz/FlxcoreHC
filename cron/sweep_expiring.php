@@ -2,7 +2,7 @@
 declare(strict_types=1);
 /**
  * Daily sweep — run from cPanel cron:
- *   /usr/local/bin/php /home/CPANELUSER/flxcred/cron/sweep_expiring.php
+ *   /usr/local/bin/php /home/CPANELUSER/flxcorehc/cron/sweep_expiring.php
  *
  * 1. Moves credential status: active -> expiring (within window) -> expired (past date).
  * 2. Queues reminders at each configured threshold (180/90/30 by default).
