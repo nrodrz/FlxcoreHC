@@ -39,7 +39,7 @@ In cPanel:
    full username and password.
 3. **Add User To Database** — attach the user to the database and grant **ALL PRIVILEGES**.
 
-You do **not** need to import any SQL by hand — the installer creates every table. (If you prefer to
+You do **not** need to import any SQL by hand — the installer creates every table, and names each one with the prefix `fchc_` (`fchc_users`, `fchc_credentials`, …; the installer writes `db_prefix` to `app/config.php`). Use an empty database; the prefix keeps FlxCoreHC's tables recognisable and lets backups and the Database page ignore any other tables in the same database. (If you prefer to
 create tables manually, the ordered migration files are in `database/migrations/` and the load order
 is `database/manifest.php`; run them in that order. The installer is the supported path.)
 

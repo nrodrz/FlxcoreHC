@@ -24,7 +24,7 @@ final class CustomFieldService
     {
         if (self::$lvl3 !== null) return self::$lvl3;
         try {
-            $q = Database::pdo()->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'custom_field_values' AND COLUMN_NAME = 'value_enc'");
+            $q = Database::pdo()->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . Database::pdo()->quote(Database::table('custom_field_values')) . " AND COLUMN_NAME = 'value_enc'");
             self::$lvl3 = ((int) $q->fetchColumn()) > 0;
         } catch (\Throwable $e) { self::$lvl3 = false; }
         return self::$lvl3;

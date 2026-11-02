@@ -60,6 +60,8 @@ final class BackupService
         $out .= "SET FOREIGN_KEY_CHECKS=0;\nSET NAMES utf8mb4;\n\n";
 
         $tables = $pdo->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
+        // v1.174.0: only this application's tables (the database may hold others)
+        if (Database::prefix() !== '') $tables = array_values(array_filter($tables, fn($t) => str_starts_with((string) $t, Database::prefix())));
         foreach ($tables as $table) {
             $create = $pdo->query('SHOW CREATE TABLE `' . $table . '`')->fetch(\PDO::FETCH_ASSOC);
             $ddl = $create['Create Table'] ?? ($create['Create View'] ?? '');

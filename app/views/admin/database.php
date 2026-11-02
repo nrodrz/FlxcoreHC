@@ -6,7 +6,7 @@ require FLXCOREHC_APP . '/views/admin/_tabs.php';
 $mb = fn(int $b) => $b >= 1048576 ? round($b/1048576,1) . ' MB' : ($b >= 1024 ? round($b/1024) . ' KB' : $b . ' B');
 $icon = ['ok'=>'✓','warn'=>'!','bad'=>'✕']; $chip = ['ok'=>'active','warn'=>'warn','bad'=>'danger'];
 $rows = $q === '' ? $dictionary : array_values(array_filter($dictionary, fn($d) =>
-    stripos($d['table'], $q) !== false || stripos((string)$d['purpose'], $q) !== false || stripos((string)$d['note'], $q) !== false));
+    stripos($d['table'], $q) !== false || stripos((string)($d['real'] ?? ''), $q) !== false || stripos((string)$d['purpose'], $q) !== false || stripos((string)$d['note'], $q) !== false));
 $counts = ['ok'=>0,'warn'=>0,'bad'=>0]; foreach ($checks as $c) { $counts[$c['state']]++; }
 ?>
 <div class="topline"><h1>Database</h1>
@@ -55,7 +55,7 @@ $counts = ['ok'=>0,'warn'=>0,'bad'=>0]; foreach ($checks as $c) { $counts[$c['st
   <?php foreach ($rows as $d): ?>
   <details id="t-<?= e($d['table']) ?>" style="border:1px solid var(--line,#e3e1da);border-radius:8px;padding:.5rem .7rem;margin-bottom:.5rem">
     <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:.5rem;align-items:center;flex-wrap:wrap">
-      <span><strong class="mono"><?= e($d['table']) ?></strong>
+      <span><strong class="mono"><?= e($d['real'] ?? $d['table']) ?></strong>
         <?php if (!$d['tenant_scoped'] && $d['tenant_expected']): ?><span class="chip danger" style="font-size:.6rem">no tenant_id</span><?php endif; ?>
         <?php if ($d['note']): ?><span class="chip" style="font-size:.6rem">note</span><?php endif; ?></span>
       <span class="hint"><?= number_format((int)$d['rows']) ?> rows · <?= (int)$d['columns'] ?> cols · <?= (int)$d['indexes'] ?> idx · <?= e($mb((int)$d['total_bytes'])) ?></span>

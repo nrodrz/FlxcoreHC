@@ -9,7 +9,24 @@ FAILS = [0]
 def rec(label, ok, extra=''):
     print(('PASS' if ok else 'FAIL'), '—', label, extra)
     if not ok: FAILS[0] += 1
+
+def _tables():
+    import re as _re
+    src=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','..','database','tables.php'),encoding='utf-8').read()
+    return _re.findall(r"^\s*'([a-z0-9_]+)',",src,_re.M)
+_TBL=None
+def px(sql):
+    """v1.174.0: the tables carry the installation's prefix (FLX_DBPREFIX); the test SQL below names them logically. Strings in quotes are left alone."""
+    global _TBL
+    pre=os.environ.get('FLX_DBPREFIX','')
+    if not pre: return sql
+    import re as _re
+    if _TBL is None: _TBL=_re.compile(r'(?<![\w.`])('+'|'.join(sorted(map(_re.escape,_tables()),key=len,reverse=True))+r')(?![\w])')
+    parts=_re.split(r"('(?:[^'\\]|\\.|'')*')",sql)
+    return ''.join(p if i%2 else _TBL.sub(lambda m: pre+m.group(1),p) for i,p in enumerate(parts))
+
 def dbq(sql):
+    sql = px(sql)
     a = ['mysql', '-u' + os.environ.get('FLX_DBUSER', 'root'), '-h' + os.environ.get('FLX_DBHOST', '127.0.0.1'), '-N', '-e', sql, os.environ.get('FLX_DBNAME', 'flx_browser')]
     if os.environ.get('FLX_DBPASS'): a.insert(2, '-p' + os.environ['FLX_DBPASS'])
     return subprocess.check_output(a).decode().strip()

@@ -76,7 +76,7 @@ final class Migrator
         // An existing database with NO update history cannot be replayed from migration 003: later migrations retired
         // whole tables, so an early ALTER would fail mid-way. The safe path for such a database is "baseline" first.
         if ($done === []) {
-            $has = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'credential_holders'")->fetchColumn();
+            $has = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = " . $pdo->quote(Database::table('credential_holders')))->fetchColumn();
             if ((int) $has > 0) {
                 return [['file' => '(no history)', 'ok' => false, 'statements' => 0, 'skipped' => 0, 'skipped_detail' => [],
                          'error' => 'This database has tables but no update history. Use "Mark as up to date" (baseline) first if it is already current; do not replay every migration.']];

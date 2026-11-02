@@ -98,14 +98,18 @@ final class SchemaDoctor
 
         $out = [];
         foreach ($rows as $r) {
-            $t = (string) $r['TABLE_NAME'];
-            $cols = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . $pdo->quote($t))->fetchColumn();
-            $hasTenant = (bool) $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . $pdo->quote($t) . " AND COLUMN_NAME = 'tenant_id'")->fetchColumn();
-            $idx = (int) $pdo->query("SELECT COUNT(DISTINCT INDEX_NAME) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . $pdo->quote($t))->fetchColumn();
+            $real = (string) $r['TABLE_NAME'];
+            $pfx = Database::prefix();
+            if ($pfx !== '' && !str_starts_with($real, $pfx)) continue;   // v1.174.0: only this application's tables (the database may hold others)
+            $t = Database::logical($real);
+            $cols = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . $pdo->quote($real))->fetchColumn();
+            $hasTenant = (bool) $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . $pdo->quote($real) . " AND COLUMN_NAME = 'tenant_id'")->fetchColumn();
+            $idx = (int) $pdo->query("SELECT COUNT(DISTINCT INDEX_NAME) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . $pdo->quote($real))->fetchColumn();
             // exact row count (TABLE_ROWS is an estimate for InnoDB)
-            try { $exact = (int) $pdo->query("SELECT COUNT(*) FROM `$t`")->fetchColumn(); } catch (\Throwable $e) { $exact = (int) $r['TABLE_ROWS']; }
+            try { $exact = (int) $pdo->query("SELECT COUNT(*) FROM `$real`")->fetchColumn(); } catch (\Throwable $e) { $exact = (int) $r['TABLE_ROWS']; }
             $out[] = [
                 'table' => $t,
+                'real' => $real,   // v1.174.0: the name the table has in the database (fchc_users)
                 'purpose' => self::PURPOSE[$t] ?? '—',
                 'note' => $notes[$t]['note'] ?? null,
                 'note_updated' => $notes[$t]['updated_at'] ?? null,

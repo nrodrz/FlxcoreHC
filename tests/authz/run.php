@@ -24,7 +24,7 @@ try {
     $pdo->exec("CREATE DATABASE flx_authz CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
     putenv('FLX_CONFIG=' . $tmpCfg);   // the real app/config.php is never touched
     file_put_contents($tmpCfg, "<?php return " . var_export($env + ['db_name' => 'flx_authz', 'app_env' => 'dev',
-        'app_key' => str_repeat('0', 64), 'app_timezone' => 'America/Puerto_Rico', 'docs_path' => $docs], true) . ";\n");
+        'db_prefix' => 'fchc_', 'app_key' => str_repeat('0', 64), 'app_timezone' => 'America/Puerto_Rico', 'docs_path' => $docs], true) . ";\n");
     require $ROOT . '/app/bootstrap.php';
     require $ROOT . '/tests/characterization/install_into_char.php';
     $rc = require __DIR__ . '/test_authorization.php';

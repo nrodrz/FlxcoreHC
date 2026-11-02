@@ -1,6 +1,16 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.173.4**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.174.0**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.174.0 — Database tables are named `fchc_<name>` (no migration; new installations)
+
+- **Every table of a new installation carries the prefix `fchc_`** (`fchc_tenants`, `fchc_users`, `fchc_credentials`, … — 93 tables). The installer creates them that way and writes `db_prefix` to `app/config.php`; an installation without that key (made before this version) keeps its unprefixed tables and works as before.
+- **How:** the application keeps writing logical names in its SQL. All SQL goes through one door (`Database::pdo()` → `PrefixedPdo`), which runs each statement through `SqlPrefixer`, a small tokenizer that puts the prefix only where SQL expects a table (after FROM / JOIN / INTO / UPDATE / TABLE / REFERENCES / RENAME … TO, in comma-joined FROM lists, and as the qualifier of a column) — never in strings, comments, column names or aliases. It also handles `information_schema … TABLE_NAME = 'x'` comparisons and dynamic DDL kept in a string for `PREPARE`. Statements are cached.
+- **Prefix-aware places:** the installer (also: a re-install over a non-empty database now drops only `fchc_` tables, not every table in the database), backups and the demo-data remover (only `fchc_` tables), the Database page (shows the real table names, searchable by either name), the migrator's "is this an old install?" test, and three existence checks. `database/tables.php` lists the logical names and `database/tables_legacy.php` the retired tables that old migrations create or drop; `tools/db_tables.php --check` keeps both in step with the migrations.
+- **Tests:** `tests/db/test_v1174_0.php` (stage 3a17; 26 rewriter cases and all 461 migration statements rewritten without touching anything but table names), `tools/db_tables.php --check` (stage 3a18); the database suites (agency, purge, authz, security, time zone), the HTTP smoke test, the browser suite and the installer now all run on prefixed tables, and the installer check verifies that a real installation has 93 `fchc_` tables and none without the prefix.
+- Not done: converting an existing unprefixed database (there is none in production); a shared database holding several installations is still not supported.
 
 ---
 

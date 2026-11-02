@@ -11,6 +11,9 @@ FlxCoreHC is a **tracker**: it records who holds which licences/credentials, wha
 - Encrypted at rest (per-tenant AAD): provider NPI/NPN/e-mail, credential numbers, address line1/line2/phone, TOTP secrets, uploaded documents. Keys live in `app/config.php`; `KeyBackup` + `database/restore_keys.php` recover them.
 - Regulatory content must be verified against primary sources. Puerto Rico is a first-class jurisdiction. The Puerto Rico facts in migration 126 are **unverified** until confirmed by the owner or counsel.
 
+## Table prefix
+Every table of an installation is named `fchc_<name>` (config `db_prefix`, written by the installer). The code keeps writing the logical names (`users`, `credential_holders`): the one PDO door (`Database::pdo()` → `PrefixedPdo` → `SqlPrefixer`) puts the prefix in front. A new table must be added to `database/tables.php` (`php tools/db_tables.php --write`; `--check` runs in the runtime check). A table name used as a *value* (information_schema, SHOW TABLES LIKE) goes through `Database::table('name')`. Installations made before v1.174.0 have no `db_prefix` and keep unprefixed tables.
+
 ## Roles (who does what)
 - **Claude Code** — develops in this repository (code, tests, docs) and ships each release as a zip whose root is the app root (upload to the server's root folder). Also runs the runtime and browser checks and reports evidence.
 - **Claude.ai** — optional second reviewer; no longer the sole code owner (changed by the owner at v1.172.13).

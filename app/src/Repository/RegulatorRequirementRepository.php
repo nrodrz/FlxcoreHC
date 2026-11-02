@@ -32,7 +32,7 @@ final class RegulatorRequirementRepository extends TenantRepository
         if (self::$tableExists !== null) return self::$tableExists;
         try {
             $q = Database::pdo()->query(
-                "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'regulator_requirements'"
+                "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = " . Database::pdo()->quote(Database::table('regulator_requirements'))
             );
             self::$tableExists = ((int) $q->fetchColumn()) > 0;
         } catch (\Throwable $e) { self::$tableExists = false; }

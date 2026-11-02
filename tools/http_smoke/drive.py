@@ -36,7 +36,24 @@ FAILS=[0]
 _pf=client(); _s,_b,_hd=req(_pf,'/login')
 if _s!=200 or 'install.php' in (_hd.get('Location') or ''):
     print('FAIL — preflight: /login did not render (status %s, Location %s) — the app is not configured for this run'%(_s,_hd.get('Location'))); print('\nSOME FAILED'); sys.exit(1)
+
+def _tables():
+    import re as _re
+    src=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','..','database','tables.php'),encoding='utf-8').read()
+    return _re.findall(r"^\s*'([a-z0-9_]+)',",src,_re.M)
+_TBL=None
+def px(sql):
+    """v1.174.0: the tables carry the installation's prefix (FLX_DBPREFIX); the test SQL below names them logically. Strings in quotes are left alone."""
+    global _TBL
+    pre=os.environ.get('FLX_DBPREFIX','')
+    if not pre: return sql
+    import re as _re
+    if _TBL is None: _TBL=_re.compile(r'(?<![\w.`])('+'|'.join(sorted(map(_re.escape,_tables()),key=len,reverse=True))+r')(?![\w])')
+    parts=_re.split(r"('(?:[^'\\]|\\.|'')*')",sql)
+    return ''.join(p if i%2 else _TBL.sub(lambda m: pre+m.group(1),p) for i,p in enumerate(parts))
+
 def dbq(sql):
+    sql=px(sql)
     a=['mysql','-u'+os.environ.get('FLX_DBUSER','root'),'-h'+os.environ.get('FLX_DBHOST','127.0.0.1'),'-N','-e',sql,os.environ.get('FLX_DBNAME','flx_smoke')]
     if os.environ.get('FLX_DBPASS'): a.insert(2,'-p'+os.environ['FLX_DBPASS'])
     return subprocess.check_output(a).decode().strip()

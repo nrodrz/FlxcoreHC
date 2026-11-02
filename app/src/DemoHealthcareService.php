@@ -423,8 +423,9 @@ final class DemoHealthcareService
         $pdo = Database::pdo();
         $stmt = $pdo->query(
             "SELECT DISTINCT TABLE_NAME FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME = 'tenant_id' AND TABLE_NAME <> 'tenants'");
+             WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME = 'tenant_id' AND TABLE_NAME <> " . $pdo->quote(Database::table('tenants')));
         $tables = array_column($stmt->fetchAll(), 'TABLE_NAME');
+        if (Database::prefix() !== '') $tables = array_values(array_filter($tables, fn($t) => str_starts_with((string) $t, Database::prefix())));   // v1.174.0
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
         try {
             foreach ($tables as $t) {

@@ -15,6 +15,8 @@ error_reporting(E_ALL);
 // Must match FLXCOREHC_EDITION in app/bootstrap.php. Single-vertical editions refuse to
 // create a first organization of the other industry.
 const FLX_INSTALL_EDITION = 'healthcare';
+// v1.174.0: the prefix of every database table of this installation (the tables are fchc_tenants, fchc_users, …).
+const FLX_TABLE_PREFIX = 'fchc_';
 
 ini_set('display_errors', '1');           // installer only; the app itself hides errors
 mb_internal_encoding('UTF-8');
@@ -134,17 +136,20 @@ function runInstall(array $in): array
     // 1) connect
     try {
         $dsn = "mysql:host={$host};dbname={$name};charset=utf8mb4";
-        $pdo = new PDO($dsn, $user, $pass, [
+        // v1.174.0: every table is created with the prefix (fchc_users, fchc_credentials, …); the application keeps using logical names.
+        require_once __DIR__ . '/app/src/SqlPrefixer.php';
+        require_once __DIR__ . '/app/src/PrefixedPdo.php';
+        $pdo = new \FlxCoreHC\PrefixedPdo($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_EMULATE_PREPARES => false,
-        ]);
+        ], FLX_TABLE_PREFIX);
         $pdo->exec("SET time_zone = '+00:00'");
     } catch (PDOException $e) {
         return [false, ['Could not connect to the database: ' . $e->getMessage()], null];
     }
 
     // 2) fresh-install guard: refuse if core tables already exist (avoid clobbering data)
-    $exists = $pdo->query("SHOW TABLES LIKE 'tenants'")->fetchColumn();
+    $exists = $pdo->query("SHOW TABLES LIKE " . $pdo->quote(FLX_TABLE_PREFIX . 'tenants'))->fetchColumn();
     if ($exists && empty($in['confirm_overwrite'])) {
         return [false, ['This database already contains FlxCoreHC tables. Use an empty database, '
             . 'or tick "the database is empty / safe to (re)create" to proceed anyway.'], null];
@@ -157,7 +162,8 @@ function runInstall(array $in): array
     // explicitly ticked the box, so it never runs against a database they didn't mark disposable.
     if ($exists && !empty($in['confirm_overwrite'])) {
         try {
-            $tables = $pdo->query("SHOW TABLES")->fetchAll(\PDO::FETCH_COLUMN);
+            $tables = array_values(array_filter($pdo->query("SHOW TABLES")->fetchAll(\PDO::FETCH_COLUMN),   // only this application's tables
+                fn($t) => str_starts_with((string) $t, FLX_TABLE_PREFIX)));
             if ($tables) {
                 $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
                 foreach ($tables as $t) {
@@ -186,6 +192,7 @@ function runInstall(array $in): array
         . "return " . var_export([
             'db_host' => $host, 'db_name' => $name, 'db_user' => $user, 'db_pass' => $pass,
             'app_env' => $env,
+            'db_prefix' => FLX_TABLE_PREFIX,   // v1.174.0
             'app_timezone' => in_array((string) ($in['app_timezone'] ?? ''), ['America/Puerto_Rico','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Anchorage','Pacific/Honolulu','UTC'], true) ? (string) $in['app_timezone'] : 'America/New_York',   // v1.172.16
             'force_secure_cookies' => !empty($in['force_secure_cookies']) || $isHttps,   // v1.172.13: an install done over HTTPS keeps its cookies HTTPS-only
             'docs_path' => DOCS_PATH,
@@ -420,7 +427,7 @@ function runInstall(array $in): array
             . ' You can create it from the sign-in page.'], null];
     }
 
-    return [true, $applied, count($pdo->query("SHOW TABLES")->fetchAll()), $keyBackup, $keyFp];
+    return [true, $applied, count(array_filter($pdo->query("SHOW TABLES")->fetchAll(\PDO::FETCH_COLUMN), fn($t) => str_starts_with((string) $t, FLX_TABLE_PREFIX))), $keyBackup, $keyFp];
 }
 
 $done = null;
