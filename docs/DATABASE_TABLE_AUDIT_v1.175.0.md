@@ -130,8 +130,8 @@ Columns / rows after install / number of code files that mention the table / tab
 | `regulator_requirements` | 10 | 0 | 3 | 0 |  |
 | `requirement_templates` | 12 | 0 | 5 | 0 |  |
 | `requirement_template_items` | 5 | 0 | 1 | 0 | Five columns; just a list of tokens per template. |
-| `requirement_defs` | 16 | 0 | 2 | 1 | **NOT IN USE.** Only the dormant , which no page, service or job uses. |
-| `holder_requirements` | 14 | 0 | 3 | 0 | **NOT IN USE.** Same dormant  (its own source calls it "the dormant path"). |
+| `requirement_defs` | 16 | 0 | 2 | 1 | **NOT IN USE.** Only the dormant `RequirementRepository`, which no page, service or job uses. |
+| `holder_requirements` | 14 | 0 | 3 | 0 | **NOT IN USE.** Same dormant `RequirementRepository` (its own source calls it "the dormant path"). |
 | `payers` | 8 | 9 | 21 | 0 |  |
 | `training_library` | 12 | 15 | 2 | 0 |  |
 | `training_sources` | 6 | 0 | 2 | 0 |  |
