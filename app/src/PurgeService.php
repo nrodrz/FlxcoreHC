@@ -14,8 +14,8 @@ use PDO;
  * Guarantees:
  *   1. ALL-OR-NOTHING. Every row change runs inside one transaction. Any failure rolls back everything.
  *   2. FK-SAFE ORDER. Children are deleted before parents, derived from the real FK graph:
- *        credentials            <- renewal_tasks, credential_documents, credential_reminders (FK)
- *        credential_holders     <- credentials, holder_requirements (FK)
+ *        credentials            <- renewal_tasks, credential_documents (FK)
+ *        credential_holders     <- credentials (FK)
  *      plus every holder-/credential-/case-owned table that has no FK (listed below), so nothing is orphaned.
  *   3. BLOCKERS FIRST. Purge is refused (nothing touched) when:
  *        - a login account that could still be used is linked to the provider (users.holder_id)
@@ -25,7 +25,7 @@ use PDO;
  *      from disk only after the transaction commits, and only when the real path is inside this tenant's
  *      storage directory (never follows a path outside it).
  *   5. RETAINED BY DESIGN (not deleted): compliance_events (permanent timeline), audit_logs, access_logs,
- *      external_share_access, cross_share_access. Cross-org links and share rows are REVOKED, not deleted,
+ *      share_access_log. Cross-org links and share rows are REVOKED, not deleted,
  *      so the other organization's history stays intact.
  *
  * Missing tables (older installs) are skipped; any other SQL error aborts and rolls back.
@@ -44,10 +44,10 @@ final class PurgeService
 
     /** Holder-owned tables with a holder_id column and no inbound FK — deleted after credentials/cases. */
     private const HOLDER_TABLES = [
-        'holder_requirements', 'producer_requirements', 'holder_regulators', 'holder_groups', 'holder_locations',
+        'producer_requirements', 'holder_regulators', 'holder_groups', 'holder_locations',
         'holder_assignments', 'holder_attestations', 'provider_education', 'provider_work_history',
         'provider_contacts', 'provider_consents', 'calendar_events', 'exclusion_screenings', 'ce_entries',
-        'ocs_profiles', 'nipr_interest', 'program_enrollments', 'payer_credentialing', 'applications',
+        'ocs_profiles', 'program_enrollments', 'payer_credentialing', 'applications',
         'source_verifications', 'document_requests', 'credential_verifications', 'renewal_tasks',
     ];
 
@@ -135,7 +135,7 @@ final class PurgeService
             // 4) Polymorphic references (keyed by the holder's UUID).
             $this->del('addresses', "owner_type = 'provider' AND owner_id = ?", [$holderId]);
             $this->del('custom_field_values', 'record_id = ?', [$holderId]);
-            $this->del('entity_reminders', 'entity_id = ?', [$holderId]);
+            $this->del('reminder_log', 'subject_id = ?', [$holderId]);
             $this->del('notifications', 'entity_id = ?', [$holderId]);
 
             // 5) Sharing: revoke (keep rows so access logs keep their context), never delete.
@@ -207,13 +207,12 @@ final class PurgeService
             $this->del('calendar_events', "source = 'verification' AND source_ref IN (" . self::in($docIds) . ')', $docIds);
         }
         $this->del('credential_documents', "credential_id IN ($in)", $credIds);       // FK fk_doc_cred
-        $this->del('credential_reminders', "credential_id IN ($in)", $credIds);       // FK fk_rem_cred
         $this->del('renewal_tasks', "credential_id IN ($in)", $credIds);              // FK fk_renewal_cred
         $this->del('credential_verifications', "credential_id IN ($in)", $credIds);
         $this->del('source_verifications', "credential_id IN ($in)", $credIds);
         $this->del('document_requests', "credential_id IN ($in)", $credIds);
         $this->del('calendar_events', "source = 'credential' AND source_ref IN ($in)", $credIds);   // auto-synced expiry events
-        $this->del('entity_reminders', "entity_id IN ($in)", $credIds);
+        $this->del('reminder_log', "subject_id IN ($in)", $credIds);
         $this->del('notifications', "entity_id IN ($in)", $credIds);
         // Cross-org shares of these credentials: revoke (owner side), keep rows for the access log.
         $this->exec("UPDATE credential_shares SET revoked_at = ? WHERE owner_tenant_id = ? AND credential_id IN ($in) AND revoked_at IS NULL",

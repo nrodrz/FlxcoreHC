@@ -144,4 +144,5 @@ return [
     'database/migrations/137_terms_versions.sql',
     'database/migrations/138_tenant_licenses.sql',
     'database/migrations/099_document_verification.sql',
+    'database/migrations/139_table_cleanup.sql',
 ];

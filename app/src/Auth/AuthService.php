@@ -571,7 +571,7 @@ final class AuthService
         Database::pdo()->prepare(
             "UPDATE users SET totp_secret = NULL, totp_enabled = 0, mfa_method = 'totp', totp_backup_codes = NULL, totp_confirmed_at = NULL WHERE id = ?"
         )->execute([$userId]);
-        try { Database::pdo()->prepare('DELETE FROM auth_email_codes WHERE user_id = ?')->execute([$userId]); } catch (\Throwable $e) {}
+        try { Database::pdo()->prepare('DELETE FROM auth_tokens WHERE user_id = ? AND kind <> \'pwreset\'')->execute([$userId]); } catch (\Throwable $e) {}
         return [true, 'Two-factor authentication is off.'];
     }
 
@@ -650,9 +650,9 @@ final class AuthService
     {
         $pdo = Database::pdo(); $now = time();
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $pdo->prepare('DELETE FROM auth_email_codes WHERE (user_id = ? AND purpose = ?) OR expires_at < ?')
+        $pdo->prepare('DELETE FROM auth_tokens WHERE (user_id = ? AND kind = ?) OR (kind <> \'pwreset\' AND expires_at < ?)')
             ->execute([$userId, $purpose, gmdate('Y-m-d H:i:s', $now - 86400)]);
-        $pdo->prepare('INSERT INTO auth_email_codes (id, user_id, purpose, code_hash, attempts, expires_at, created_at) VALUES (?,?,?,?,0,?,?)')
+        $pdo->prepare('INSERT INTO auth_tokens (id, user_id, kind, token_hash, attempts, expires_at, created_at) VALUES (?,?,?,?,0,?,?)')
             ->execute([uuid4(), $userId, $purpose, self::codeHash($userId, $purpose, $code),
                 gmdate('Y-m-d H:i:s', $now + self::CODE_TTL), gmdate('Y-m-d H:i:s', $now)]);
         return $code;
@@ -667,16 +667,16 @@ final class AuthService
         $code = preg_replace('/\D/', '', $code) ?? '';
         if (strlen($code) !== 6) return false;
         $pdo = Database::pdo(); $now = gmdate('Y-m-d H:i:s');
-        $st = $pdo->prepare('SELECT id, code_hash, attempts FROM auth_email_codes
-                             WHERE user_id = ? AND purpose = ? AND used_at IS NULL AND expires_at > ? ORDER BY created_at DESC LIMIT 1');
+        $st = $pdo->prepare('SELECT id, token_hash AS code_hash, attempts FROM auth_tokens
+                             WHERE user_id = ? AND kind = ? AND used_at IS NULL AND expires_at > ? ORDER BY created_at DESC LIMIT 1');
         $st->execute([$userId, $purpose, $now]);
         $row = $st->fetch();
         if (!$row || (int) $row['attempts'] >= self::CODE_ATTEMPTS) return false;
         if (!hash_equals((string) $row['code_hash'], self::codeHash($userId, $purpose, $code))) {
-            $pdo->prepare('UPDATE auth_email_codes SET attempts = attempts + 1 WHERE id = ?')->execute([$row['id']]);
+            $pdo->prepare('UPDATE auth_tokens SET attempts = attempts + 1 WHERE id = ?')->execute([$row['id']]);
             return false;
         }
-        $u = $pdo->prepare('UPDATE auth_email_codes SET used_at = ? WHERE id = ? AND used_at IS NULL');
+        $u = $pdo->prepare('UPDATE auth_tokens SET used_at = ? WHERE id = ? AND used_at IS NULL');
         $u->execute([$now, $row['id']]);
         return $u->rowCount() === 1;
     }
@@ -749,7 +749,7 @@ final class AuthService
         $email = strtolower(trim($email));
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return [];
         $pdo = Database::pdo(); $now = time();
-        $pdo->prepare('DELETE FROM password_resets WHERE expires_at < ?')->execute([gmdate('Y-m-d H:i:s', $now - 86400)]);
+        $pdo->prepare('DELETE FROM auth_tokens WHERE kind = \'pwreset\' AND expires_at < ?')->execute([gmdate('Y-m-d H:i:s', $now - 86400)]);
         $st = $pdo->prepare(
             "SELECT u.id AS user_id, u.tenant_id, u.email, u.full_name, u.locale, t.name AS tenant_name
              FROM users u JOIN tenants t ON t.id = u.tenant_id
@@ -758,8 +758,8 @@ final class AuthService
         $out = [];
         foreach ($st->fetchAll() ?: [] as $u) {
             $token = bin2hex(random_bytes(32));
-            $pdo->prepare('DELETE FROM password_resets WHERE user_id = ?')->execute([$u['user_id']]);
-            $pdo->prepare('INSERT INTO password_resets (id, user_id, tenant_id, token_hash, expires_at, requested_ip, created_at) VALUES (?,?,?,?,?,?,?)')
+            $pdo->prepare('DELETE FROM auth_tokens WHERE kind = \'pwreset\' AND user_id = ?')->execute([$u['user_id']]);
+            $pdo->prepare('INSERT INTO auth_tokens (id, user_id, tenant_id, kind, token_hash, expires_at, requested_ip, created_at) VALUES (?,?,?,\'pwreset\',?,?,?,?)')
                 ->execute([uuid4(), $u['user_id'], $u['tenant_id'], hash('sha256', $token), gmdate('Y-m-d H:i:s', $now + self::RESET_TTL),
                     substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45), gmdate('Y-m-d H:i:s', $now)]);
             self::authAudit((string) $u['tenant_id'], (string) $u['user_id'], 'password_reset_requested');
@@ -774,10 +774,10 @@ final class AuthService
         if (!preg_match('/^[a-f0-9]{64}$/', $token)) return null;
         $st = Database::pdo()->prepare(
             "SELECT pr.id AS reset_id, pr.user_id, pr.tenant_id, u.email, u.full_name, t.name AS tenant_name
-             FROM password_resets pr
+             FROM auth_tokens pr
              JOIN users u ON u.id = pr.user_id AND u.tenant_id = pr.tenant_id
              JOIN tenants t ON t.id = pr.tenant_id
-             WHERE pr.token_hash = ? AND pr.used_at IS NULL AND pr.expires_at > ?
+             WHERE pr.kind = 'pwreset' AND pr.token_hash = ? AND pr.used_at IS NULL AND pr.expires_at > ?
                AND u.status = 'active' AND t.status IN ('active','pending') LIMIT 1");
         $st->execute([hash('sha256', $token), gmdate('Y-m-d H:i:s')]);
         $row = $st->fetch();
@@ -796,12 +796,12 @@ final class AuthService
         if (strlen($new) < 10) return [false, 'New password must be at least 10 characters.'];
         if ($new !== $confirm) return [false, 'The two passwords do not match.'];
         $pdo = Database::pdo();
-        $claim = $pdo->prepare('UPDATE password_resets SET used_at = ? WHERE id = ? AND used_at IS NULL');
+        $claim = $pdo->prepare('UPDATE auth_tokens SET used_at = ? WHERE id = ? AND used_at IS NULL');
         $claim->execute([gmdate('Y-m-d H:i:s'), $row['reset_id']]);
         if ($claim->rowCount() !== 1) return [false, 'This link is no longer valid. Ask for a new one.'];
         $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ? AND tenant_id = ?')
             ->execute([password_hash($new, PASSWORD_ARGON2ID), $row['user_id'], $row['tenant_id']]);
-        $pdo->prepare('DELETE FROM password_resets WHERE user_id = ? AND id <> ?')->execute([$row['user_id'], $row['reset_id']]);
+        $pdo->prepare('DELETE FROM auth_tokens WHERE kind = \'pwreset\' AND user_id = ? AND id <> ?')->execute([$row['user_id'], $row['reset_id']]);
         self::authAudit((string) $row['tenant_id'], (string) $row['user_id'], 'password_reset_completed');
         return [true, 'Password changed. Sign in with your new password.'];
     }

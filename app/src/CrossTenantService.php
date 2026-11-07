@@ -14,7 +14,7 @@ namespace FlxCoreHC;
  *  - No tenant ever writes to another tenant's rows. Sharing creates a share row; the recipient
  *    reads the owner's credential/documents through readShared() / sharedDocument(), which verify
  *    an ACTIVE link + non-revoked share for the calling tenant on every call.
- *  - Every recipient view/download is logged with tenant, user and IP (cross_share_access) and the
+ *  - Every recipient view/download is logged with tenant, user and IP (share_access_log) and the
  *    owner can see it. Every link/share transition is audit_logged and a compliance event.
  *  - The provider revoking collapses every link on their identity (npi_bidx) and all shares.
  */
@@ -256,7 +256,7 @@ final class CrossTenantService
     {
         $st = Database::pdo()->prepare(
             "SELECT s.*, c.name AS credential_name, t.name AS recipient_name,
-                    (SELECT COUNT(*) FROM cross_share_access a WHERE a.share_id = s.id) AS access_count
+                    (SELECT COUNT(*) FROM share_access_log a WHERE a.scope = 'cross' AND a.share_id = s.id) AS access_count
              FROM credential_shares s JOIN credentials c ON c.id = s.credential_id AND c.deleted_at IS NULL JOIN tenants t ON t.id = s.recipient_tenant_id
              WHERE s.owner_tenant_id = ? AND c.holder_id = ? ORDER BY s.shared_at DESC");
         $st->execute([$this->ctx->tenantId, $holderId]);
@@ -330,9 +330,9 @@ final class CrossTenantService
     public function accessLog(string $shareId): array
     {
         $st = Database::pdo()->prepare(
-            "SELECT a.*, u.full_name AS user_name, t.name AS recipient_name FROM cross_share_access a
+            "SELECT a.*, u.full_name AS user_name, t.name AS recipient_name FROM share_access_log a
              LEFT JOIN users u ON u.id = a.user_id JOIN tenants t ON t.id = a.recipient_tenant_id
-             WHERE a.share_id = ? AND a.owner_tenant_id = ? ORDER BY a.created_at DESC LIMIT 500");
+             WHERE a.scope = 'cross' AND a.share_id = ? AND a.owner_tenant_id = ? ORDER BY a.created_at DESC LIMIT 500");
         $st->execute([$shareId, $this->ctx->tenantId]);
         return $st->fetchAll();
     }
@@ -343,7 +343,7 @@ final class CrossTenantService
     {
         try {
             $o = Database::pdo()->prepare('SELECT owner_tenant_id FROM credential_shares WHERE id = ?'); $o->execute([$shareId]);
-            Database::pdo()->prepare('INSERT INTO cross_share_access (id, share_id, owner_tenant_id, recipient_tenant_id, user_id, event, document_id, ip_address, created_at) VALUES (?,?,?,?,?,?,?,?,?)')
+            Database::pdo()->prepare('INSERT INTO share_access_log (id, scope, share_id, owner_tenant_id, recipient_tenant_id, user_id, event, document_id, ip_address, created_at) VALUES (?,\'cross\',?,?,?,?,?,?,?,?)')
                 ->execute([uuid4(), $shareId, (string)$o->fetchColumn(), $ctx->tenantId, $ctx->userId, $event, $docId, substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45), utc_now()]);
         } catch (\Throwable $e) {}
     }

@@ -36,7 +36,7 @@ def run_install(tag, hdrs):
     s, b, _ = req(op, '/install.php', data, hdrs)
     rec(f'installer[{tag}] completes', s == 200 and os.path.isfile(CFG), f'status {s}')
     mt = re.search(r'Installation complete — created (\d+) tables', b)
-    rec(f'installer[{tag}] reports the tables it created (v1.175.0: 94, incl. auth_email_codes, password_resets, terms_acceptances, terms_versions and tenant_licenses)', bool(mt) and mt.group(1) == '94', f'tables={mt.group(1) if mt else None}')
+    rec(f'installer[{tag}] reports the tables it created (v1.175.1: 87, incl. auth_tokens, reminder_log, share_access_log, terms_acceptances, terms_versions and tenant_licenses)', bool(mt) and mt.group(1) == '87', f'tables={mt.group(1) if mt else None}')
     # v1.174.0: every table of the new installation carries the fchc_ prefix, and none is left without it
     def _q(sql):
         a = ['mysql', '-u' + os.environ['FLX_DBUSER'], '-h' + os.environ['FLX_DBHOST'], '-N', '-e', sql]
@@ -47,7 +47,7 @@ def run_install(tag, hdrs):
         nop = _q("select count(*) from information_schema.tables where table_schema='%s' and table_name not like 'fchc\\_%%'" % os.environ['FLX_DBNAME'])
     except Exception as e:
         withp, nop = 'err', str(e)
-    rec(f'installer[{tag}] creates every table with the fchc_ prefix (94) and none without it', withp == '94' and nop == '0', f'prefixed={withp} unprefixed={nop}')
+    rec(f'installer[{tag}] creates every table with the fchc_ prefix (87) and none without it', withp == '87' and nop == '0', f'prefixed={withp} unprefixed={nop}')
     cfgp = subprocess.check_output(['php', '-r', '$c=require getenv("FLX_CONFIG"); echo $c["db_prefix"]??"";']).decode() if os.path.isfile(CFG) else ''
     rec(f'installer[{tag}] writes db_prefix = fchc_ to the configuration', cfgp == 'fchc_', f'db_prefix={cfgp}')
     cfg = subprocess.check_output(['php', '-r', '$c=require getenv("FLX_CONFIG"); echo json_encode([$c["app_url"]??null,$c["hsts"]??null,!empty($c["crypto_data_key"])]);']).decode() if os.path.isfile(CFG) else '[]'

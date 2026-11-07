@@ -253,8 +253,11 @@ final class InvoiceService
     private static function nextNumber(): string
     {
         $pdo = Database::pdo();
-        $pdo->prepare('UPDATE invoice_counter SET next_seq = next_seq + 1 WHERE id = 1')->execute();
-        $seq = (int) $pdo->query('SELECT next_seq - 1 FROM invoice_counter WHERE id = 1')->fetchColumn();
+        // Counter lives in platform_settings ('invoice_seq'); LAST_INSERT_ID(expr) makes the increment and the read one atomic step.
+        $pdo->prepare('INSERT INTO platform_settings (skey, sval, updated_at) VALUES (\'invoice_seq\', LAST_INSERT_ID(1), ?)
+                       ON DUPLICATE KEY UPDATE sval = LAST_INSERT_ID(CAST(sval AS UNSIGNED) + 1), updated_at = VALUES(updated_at)')
+            ->execute([utc_now()]);
+        $seq = (int) $pdo->query('SELECT LAST_INSERT_ID()')->fetchColumn();
         return 'INV-' . str_pad((string) $seq, 6, '0', STR_PAD_LEFT);
     }
 

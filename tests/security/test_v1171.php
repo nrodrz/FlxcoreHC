@@ -894,13 +894,13 @@ $check($eOk && $stored1 === 'Acme Health Group|Acme Health|Acme HealthGroup, LLC
 $hRM = uuid4(); $cRM = uuid4();
 $pdo->prepare("INSERT INTO credential_holders (id, tenant_id, holder_type, first_name, last_name, vertical, status, created_at) VALUES (?,?,?,?,?,?,?,?)")->execute([$hRM, $tRM, 'individual', 'Rita', 'Reminder', 'healthcare', 'active', utc_now()]);
 $pdo->prepare("INSERT INTO credentials (id, tenant_id, holder_id, credential_type, name, status, expiry_date, created_at) VALUES (?,?,?,?,?,?,DATE_ADD(CURDATE(), INTERVAL 100 DAY),?)")->execute([$cRM, $tRM, $hRM, 'state_license', 'RM License', 'active', utc_now()]);
-$remRows = static fn() => (int) $pdo->query("SELECT COUNT(*) FROM credential_reminders WHERE credential_id = " . $pdo->quote($cRM))->fetchColumn();
+$remRows = static fn() => (int) $pdo->query("SELECT COUNT(*) FROM reminder_log WHERE subject_type = 'credential' AND subject_id = " . $pdo->quote($cRM))->fetchColumn();
 unset($GLOBALS['flxcorehc_config']['reminder_thresholds']);
 $n0 = (new FlxCoreHC\ReminderService($ctxRM))->run();
 $check($remRows() === 0, 'RM1 default thresholds (60/30/14/7): a credential 100 days from expiry gets no expiry reminder (the scan may still queue screening/attestation notices: sent=' . $n0 . ')');
 $GLOBALS['flxcorehc_config']['reminder_thresholds'] = [120, 60, 30];
 $n1 = (new FlxCoreHC\ReminderService($ctxRM))->run();
-$daysB = (int) $pdo->query("SELECT days_before FROM credential_reminders WHERE credential_id = " . $pdo->quote($cRM) . " LIMIT 1")->fetchColumn();
+$daysB = (int) $pdo->query("SELECT CAST(SUBSTRING_INDEX(marker, ':', 1) AS UNSIGNED) FROM reminder_log WHERE subject_type = 'credential' AND subject_id = " . $pdo->quote($cRM) . " LIMIT 1")->fetchColumn();
 $check($n1 >= 1 && $remRows() === 1 && $daysB === 120, "RM2 with reminder_thresholds [120,60,30] the same credential is reminded once at the 120-day threshold (sent=$n1, rows={$remRows()}, days_before=$daysB)");
 $n2 = (new FlxCoreHC\ReminderService($ctxRM))->run();
 $check($n2 === 0 && $remRows() === 1, 'RM3 running again does not remind twice for the same threshold');

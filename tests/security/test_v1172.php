@@ -80,8 +80,8 @@ $ck(str_starts_with($svg, '<svg ') && str_contains($svg, 'fill="#ffffff"') && !p
 // ---- E: e-mailed codes ------------------------------------------------------------------------------------------------
 [$tE, $oE] = $mkTenant('v172mail'); $uE = $mkUser($tE, 'staff');
 $c1 = AuthService::issueEmailCode($uE, 'login');
-$stored = (string) $one("SELECT code_hash FROM auth_email_codes WHERE user_id = ? AND purpose = 'login'", [$uE]);
-$ck(preg_match('/^\d{6}$/', $c1) === 1 && strlen($stored) === 64 && !str_contains($stored, $c1) && (int) $one('SELECT COUNT(*) FROM auth_email_codes WHERE user_id = ?', [$uE]) === 1,
+$stored = (string) $one("SELECT token_hash FROM auth_tokens WHERE user_id = ? AND kind = 'login'", [$uE]);
+$ck(preg_match('/^\d{6}$/', $c1) === 1 && strlen($stored) === 64 && !str_contains($stored, $c1) && (int) $one("SELECT COUNT(*) FROM auth_tokens WHERE kind <> 'pwreset' AND user_id = ?", [$uE]) === 1,
     'E a code is 6 digits and only its keyed hash is stored');
 $ck(AuthService::checkEmailCode($uE, 'enrol', $c1) === false && AuthService::checkEmailCode($mkUser($tE, 'staff'), 'login', $c1) === false,
     'E a code does not work for another purpose or another user');
@@ -94,7 +94,7 @@ $c4 = AuthService::issueEmailCode($uE, 'login'); $w4 = $c4 === '999999' ? '88888
 for ($i = 0; $i < 5; $i++) AuthService::checkEmailCode($uE, 'login', $w4);
 $ck(AuthService::checkEmailCode($uE, 'login', $c4) === false, 'E after 5 wrong tries the code is dead, even when the right one is then entered');
 $c5 = AuthService::issueEmailCode($uE, 'login');
-$pdo->prepare("UPDATE auth_email_codes SET expires_at = ? WHERE user_id = ? AND purpose = 'login'")->execute([gmdate('Y-m-d H:i:s', time() - 5), $uE]);
+$pdo->prepare("UPDATE auth_tokens SET expires_at = ? WHERE user_id = ? AND kind = 'login'")->execute([gmdate('Y-m-d H:i:s', time() - 5), $uE]);
 $ck(AuthService::checkEmailCode($uE, 'login', $c5) === false, 'E an expired code is refused');
 // enrolment and the second step at sign-in
 $cE = AuthService::issueEmailCode($uE, 'enrol');
@@ -124,7 +124,7 @@ $ck($aOn === false && $aOn2 === false && str_contains($mOn2, 'already on') && $o
 [$d0] = AuthService::disableTotp($uE, '000000'); $cD = AuthService::issueEmailCode($uE, 'disable'); $cLg = AuthService::issueEmailCode($uE, 'login');
 [$d1] = AuthService::disableTotp($uE, $cLg); [$d2] = AuthService::disableTotp($uE, $cD);
 $ck($d0 === false && $d1 === false && $d2 === true && (int) $one('SELECT totp_enabled FROM users WHERE id = ?', [$uE]) === 0 && $one('SELECT mfa_method FROM users WHERE id = ?', [$uE]) === 'totp'
-    && (int) $one('SELECT COUNT(*) FROM auth_email_codes WHERE user_id = ?', [$uE]) === 0,
+    && (int) $one("SELECT COUNT(*) FROM auth_tokens WHERE kind <> 'pwreset' AND user_id = ?", [$uE]) === 0,
     'E turning e-mail two-factor off needs a code issued for that purpose (a sign-in code does not do it); leftover codes are removed');
 // the reverse swap: with an authenticator on, e-mail codes cannot take over without "turn off" first
 $secT = Totp::generateSecret(); $stepT = (int) floor(time() / 30); [$tOn] = AuthService::confirmTotp($uE, $secT, Totp::codeAt($secT, $stepT));
@@ -158,16 +158,16 @@ $ck(AuthService::maskEmail('nina@example.com') === 'n***@example.com' && AuthSer
 
 // ---- R: password reset by e-mail --------------------------------------------------------------------------------------
 [$tR, $oR] = $mkTenant('v172reset'); $emR = 'o-v172reset@sec.test';
-$ck(AuthService::createPasswordResets('nobody-here@sec.test') === [] && AuthService::createPasswordResets('not-an-email') === [] && (int) $one('SELECT COUNT(*) FROM password_resets') === 0,
+$ck(AuthService::createPasswordResets('nobody-here@sec.test') === [] && AuthService::createPasswordResets('not-an-email') === [] && (int) $one("SELECT COUNT(*) FROM auth_tokens WHERE kind = 'pwreset'") === 0,
     'R an unknown or malformed address creates no reset link');
 $accts = AuthService::createPasswordResets($emR); $tok = (string) ($accts[0]['token'] ?? '');
-$hashR = (string) $one('SELECT token_hash FROM password_resets WHERE user_id = ?', [$oR]);
+$hashR = (string) $one("SELECT token_hash FROM auth_tokens WHERE kind = 'pwreset' AND user_id = ?", [$oR]);
 $ck(count($accts) === 1 && preg_match('/^[a-f0-9]{64}$/', $tok) === 1 && $hashR === hash('sha256', $tok) && $hashR !== $tok
     && (int) $one("SELECT COUNT(*) FROM audit_logs WHERE user_id = ? AND action = 'password_reset_requested'", [$oR]) === 1,
     'R a request creates one single-use link; only the SHA-256 hash of its token is stored; the request is audited');
 $ck(AuthService::findPasswordReset($tok) !== null && AuthService::findPasswordReset(str_repeat('a', 64)) === null && AuthService::findPasswordReset('x') === null, 'R a valid token resolves to its account; a guessed token does not');
 $accts2 = AuthService::createPasswordResets($emR); $tok2 = (string) $accts2[0]['token'];
-$ck(AuthService::findPasswordReset($tok) === null && AuthService::findPasswordReset($tok2) !== null && (int) $one('SELECT COUNT(*) FROM password_resets WHERE user_id = ?', [$oR]) === 1,
+$ck(AuthService::findPasswordReset($tok) === null && AuthService::findPasswordReset($tok2) !== null && (int) $one("SELECT COUNT(*) FROM auth_tokens WHERE kind = 'pwreset' AND user_id = ?", [$oR]) === 1,
     'R a new request replaces the earlier link (the old one stops working)');
 $oldHash = (string) $one('SELECT password_hash FROM users WHERE id = ?', [$oR]);
 [$r1, $m1] = AuthService::completePasswordReset($tok2, 'short', 'short'); [$r2, $m2] = AuthService::completePasswordReset($tok2, 'NewPass-123456', 'Different-123456');
@@ -187,7 +187,7 @@ $lim->clear($emR . '|203.0.113.172'); $lim->clear('acct|' . $emR);
 $ck(is_string($auth->attemptLogin($emR, 'Pass123456789')) && is_array($auth->attemptLogin($emR, 'NewPass-123456')), 'R the old password no longer signs in; the new one does');
 // expiry, inactive account, and two-factor is NOT bypassed
 $tok3 = (string) AuthService::createPasswordResets($emR)[0]['token'];
-$pdo->prepare('UPDATE password_resets SET expires_at = ? WHERE user_id = ?')->execute([gmdate('Y-m-d H:i:s', time() - 5), $oR]);
+$pdo->prepare("UPDATE auth_tokens SET expires_at = ? WHERE kind = 'pwreset' AND user_id = ?")->execute([gmdate('Y-m-d H:i:s', time() - 5), $oR]);
 [$r5] = AuthService::completePasswordReset($tok3, 'Expired-123456', 'Expired-123456');
 $ck(AuthService::findPasswordReset($tok3) === null && $r5 === false && password_verify('NewPass-123456', (string) $one('SELECT password_hash FROM users WHERE id = ?', [$oR])), 'R an expired link does nothing');
 $tok4 = (string) AuthService::createPasswordResets($emR)[0]['token'];
@@ -232,10 +232,10 @@ $ck($ei === null && ($fi['first_name'] ?? '') === 'P' && !array_key_exists('org_
 // ---- H: Database health does not warn about tables that are global on purpose ----------------------------------------------------
 $hl = FlxCoreHC\SchemaDoctor::health();
 $scope = null; foreach ($hl['checks'] as $hc) { if ($hc['label'] === 'Tenant scoping') $scope = $hc; }
-$ck($scope !== null && $scope['state'] === 'ok', 'H Database health: "Tenant scoping" is OK on a complete schema (auth_email_codes and requirement_sources are global by design)', json_encode($scope));
+$ck($scope !== null && $scope['state'] === 'ok', 'H Database health: "Tenant scoping" is OK on a complete schema (auth_tokens and requirement_sources are global by design)', json_encode($scope));
 $dd = []; foreach (FlxCoreHC\SchemaDoctor::dictionary() as $dr) $dd[$dr['table']] = $dr;
-$ck(isset($dd['password_resets']) && $dd['password_resets']['tenant_scoped'] === true && isset($dd['auth_email_codes']) && $dd['auth_email_codes']['tenant_expected'] === false,
-    'H password_resets stays tenant-scoped (it still carries tenant_id); only keyed-by-user and catalogue tables are exempt');
+$ck(isset($dd['reminder_log']) && $dd['reminder_log']['tenant_expected'] === true && isset($dd['auth_tokens']) && $dd['auth_tokens']['tenant_expected'] === false,
+    'H reminder_log must carry tenant_id; only keyed-by-user and catalogue tables (auth_tokens) are exempt');
 
 // ---- C: views carry no inline event handlers (the CSP blocks them, so they would silently do nothing) — SOURCE GUARD ----
 $inline = [];

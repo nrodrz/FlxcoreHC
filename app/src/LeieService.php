@@ -143,7 +143,7 @@ final class LeieService
     /**
      * Screen every active provider in a tenant against the current LEIE list, recording a result
      * for each provider that hasn't yet been screened against this list's vintage. Deduped via
-     * entity_reminders (marker = 'leie:<vintage>') so a fresh monthly list triggers a new sweep but
+     * reminder_log (marker = 'leie:<vintage>') so a fresh monthly list triggers a new sweep but
      * repeated cron runs against the same vintage are no-ops. Returns:
      *   ['screened'=>int,'matches'=>int,'vintage'=>?string,'loaded'=>bool]
      * On potential matches, queues one summary email to the tenant owner.
@@ -151,7 +151,7 @@ final class LeieService
     /**
      * Screen every active provider in a tenant against every loaded exclusion source (OIG LEIE +
      * SAM.gov). Each provider is screened once per source per list vintage (deduped via
-     * entity_reminders). Records one screening row per source, and emails the owner a combined
+     * reminder_log). Records one screening row per source, and emails the owner a combined
      * summary on potential matches.
      */
     public static function sweepTenant(TenantContext $ctx, ?string $ownerEmail = null): array
@@ -276,8 +276,8 @@ final class LeieService
     {
         try {
             $n = Database::pdo()->prepare(
-                'INSERT IGNORE INTO entity_reminders
-                   (id, tenant_id, entity_type, entity_id, marker, channel, queued_at, sent_at)
+                'INSERT IGNORE INTO reminder_log
+                   (id, tenant_id, subject_type, subject_id, marker, channel, queued_at, sent_at)
                  VALUES (?,?,?,?,?,\'system\',?,?)'
             );
             $now = utc_now();

@@ -5,6 +5,7 @@
  * Kept in step with the migrations by tools/db_tables.php --check.
  */
 return [
+    'auth_email_codes',
     'beneficiary_interactions',
     'booking_types',
     'bookings',
@@ -15,10 +16,19 @@ return [
     'cms_sync_log',
     'cms_sync_source',
     'commissions',
+    'credential_reminders',
+    'cross_share_access',
+    'entity_reminders',
+    'external_share_access',
+    'holder_requirements',
+    'invoice_counter',
     'network_invites',
+    'nipr_interest',
+    'password_resets',
     'platform_carrier_aliases',
     'platform_carrier_plans',
     'platform_carriers',
     'policies',
+    'requirement_defs',
     'soa_forms',
 ];

@@ -57,8 +57,8 @@ $mkCred = function (TenantContext $c, string $holderId, string $tag) use ($pdo, 
         ->execute([$docId, $c->tenantId, $credId, $file, "doc-$tag.pdf", $now]);
     $pdo->prepare('INSERT INTO renewal_tasks (id, tenant_id, credential_id, title, created_at) VALUES (?,?,?,?,?)')
         ->execute([uuid4(), $c->tenantId, $credId, "Renew $tag", $now]);
-    $pdo->prepare('INSERT INTO credential_reminders (id, tenant_id, credential_id, days_before, queued_at) VALUES (?,?,?,?,?)')
-        ->execute([uuid4(), $c->tenantId, $credId, 30, $now]);
+    $pdo->prepare('INSERT INTO reminder_log (id, tenant_id, subject_type, subject_id, marker, queued_at) VALUES (?,?,\'credential\',?,?,?)')
+        ->execute([uuid4(), $c->tenantId, $credId, '30:2030-01-01', $now]);
     return [$credId, $docId, $file];
 };
 $mkUser = function (TenantContext $c, string $holderId, string $role, string $status) use ($pdo, $now): string {
@@ -103,7 +103,7 @@ $check($cnt('SELECT COUNT(*) FROM credential_holders WHERE tenant_id=? AND id=?'
 $check($cnt('SELECT COUNT(*) FROM credentials WHERE tenant_id=? AND holder_id=?', [$t, $h1]) === 0, 'Q1 credentials gone');
 $check($cnt('SELECT COUNT(*) FROM credential_documents WHERE tenant_id=? AND credential_id IN (?,?)', [$t, $c1, $c2]) === 0, 'Q1 credential_documents gone (FK child)');
 $check($cnt('SELECT COUNT(*) FROM renewal_tasks WHERE tenant_id=? AND credential_id IN (?,?)', [$t, $c1, $c2]) === 0, 'Q1 renewal_tasks gone (FK child)');
-$check($cnt('SELECT COUNT(*) FROM credential_reminders WHERE tenant_id=? AND credential_id IN (?,?)', [$t, $c1, $c2]) === 0, 'Q1 credential_reminders gone (FK child)');
+$check($cnt('SELECT COUNT(*) FROM reminder_log WHERE tenant_id=? AND subject_id IN (?,?)', [$t, $c1, $c2]) === 0, 'Q1 reminder_log rows gone');
 $check($cnt('SELECT COUNT(*) FROM producer_requirements WHERE tenant_id=? AND holder_id=?', [$t, $h1]) === 0, 'Q1 producer_requirements gone');
 $check($cnt("SELECT COUNT(*) FROM addresses WHERE tenant_id=? AND owner_type='provider' AND owner_id=?", [$t, $h1]) === 0, 'Q1 provider addresses gone');
 $check($cnt('SELECT COUNT(*) FROM credentialing_cases WHERE tenant_id=? AND holder_id=?', [$t, $h1]) === 0, 'Q1 credentialing cases gone');
@@ -172,7 +172,7 @@ $check($ok7 === true, "Q7 credential purge succeeds ($msg7)");
 $check($cnt('SELECT COUNT(*) FROM credentials WHERE tenant_id=? AND id=?', [$t, $c7]) === 0
     && $cnt('SELECT COUNT(*) FROM credential_documents WHERE tenant_id=? AND credential_id=?', [$t, $c7]) === 0
     && $cnt('SELECT COUNT(*) FROM renewal_tasks WHERE tenant_id=? AND credential_id=?', [$t, $c7]) === 0
-    && $cnt('SELECT COUNT(*) FROM credential_reminders WHERE tenant_id=? AND credential_id=?', [$t, $c7]) === 0, 'Q7 credential + FK children gone');
+    && $cnt('SELECT COUNT(*) FROM reminder_log WHERE tenant_id=? AND subject_id=?', [$t, $c7]) === 0, 'Q7 credential + FK children gone');
 $check(!is_file($f7), 'Q7 credential file removed');
 $check($HA->find($h7) !== null, 'Q7 provider untouched by credential purge');
 [$ok7b] = (new PurgeService($B))->purgeCredential($c6);

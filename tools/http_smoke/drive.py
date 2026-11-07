@@ -532,7 +532,7 @@ tokN=page_token(opx,'/settings')[0]; old=dbq("select name from tenants where id=
 a0=dbq("select count(*) from audit_logs where action='org_name_changed'")
 req(opx,'/settings',{'_csrf':tokN,'name':'Smoke Org Renamed'})
 a1=dbq("select count(*) from audit_logs where action='org_name_changed'")
-det=dbq("select changes from audit_logs where action='org_name_changed' order by created_at desc limit 1")
+det=dbq("select changes from audit_logs where action='org_name_changed' and changes like '%Smoke Org Renamed%' limit 1")  # created_at is second-resolution: ordering by it alone can pick the previous rename
 rec('OW11 changing the organization name writes one audit row with old -> new', int(a1)==int(a0)+1 and old in det and 'Smoke Org Renamed' in det, det[:120])
 req(opx,'/settings',{'_csrf':tokN,'name':old})
 a2=dbq("select count(*) from audit_logs where action='org_name_changed'")
@@ -630,7 +630,7 @@ opl2,_,loc2=login_pw('mfaemail@smoke.test','SmokePass12345'); s,b,_=req(opl2,'/l
 rec('E7 a backup code signs in when the mailbox cannot be read', s==302 and s5==200, f'status {s} profile={s5}')
 pset('mfa_email_allowed','0'); opx=sv_login('pwreset@smoke.test'); s,b,_=req(opx,'/profile')
 s,bx,_=req(opx,'/profile',{'_csrf':csrf(b),'action':'2fa_email_start'}); s,bx,_=req(opx,'/profile')
-rec('E8 when the platform does not allow e-mailed codes, the option is hidden and a direct request is refused', 'value="2fa_email_start"' not in b and 'not allowed on this installation' in bx and dbq("select count(*) from auth_email_codes c join users u on u.id=c.user_id where u.email='pwreset@smoke.test'")=='0')
+rec('E8 when the platform does not allow e-mailed codes, the option is hidden and a direct request is refused', 'value="2fa_email_start"' not in b and 'not allowed on this installation' in bx and dbq("select count(*) from auth_tokens c join users u on u.id=c.user_id where u.email='pwreset@smoke.test'")=='0')
 pset('mfa_email_allowed','1')
 
 # ---- A: authenticator enrolment page: QR code + instructions ----------------------------------------------------------
@@ -657,13 +657,13 @@ s,_,hd=req(opn,'/forgot',{'_csrf':csrf(bU),'email':'pwreset@smoke.test'}); s,bK,
 msgK=re.search(r'role="status">([^<]+)<', bK); ms=mails('pwreset@smoke.test')
 link=re.search(r'/reset/([a-f0-9]{64})', ms[-1]['body']) if ms else None; tokR=link.group(1) if link else ''
 rec('R2 a known address gets exactly the same answer (the form does not reveal who has an account)', bool(msgK) and bool(msgU) and msgK.group(1)==msgU.group(1))
-rec('R3 the account receives one message with a single-use link; only a hash is stored and the outbox keeps no link', bool(tokR) and len(mails())==n2+1 and dbq("select count(*) from password_resets where token_hash=sha2('%s',256)"%tokR)=='1' and dbq("select count(*) from password_resets where token_hash='%s'"%tokR)=='0' and dbq("select body like '%%/reset/%%' from email_outbox where to_email='pwreset@smoke.test' order by created_at desc limit 1")=='0', f'token_found={bool(tokR)} mails+{len(mails())-n2}')
+rec('R3 the account receives one message with a single-use link; only a hash is stored and the outbox keeps no link', bool(tokR) and len(mails())==n2+1 and dbq("select count(*) from auth_tokens where kind='pwreset' and token_hash=sha2('%s',256)"%tokR)=='1' and dbq("select count(*) from auth_tokens where kind='pwreset' and token_hash='%s'"%tokR)=='0' and dbq("select body like '%%/reset/%%' from email_outbox where to_email='pwreset@smoke.test' order by created_at desc limit 1")=='0', f'token_found={bool(tokR)} mails+{len(mails())-n2}')
 s,b,_=req(opn,'/reset/'+('a'*64)); 
 rec('R4 a guessed link is refused', s==302)
 s,b,hdR=req(opn,'/reset/'+tokR)
 rec('R4 the real link opens the new-password form (address masked, no caching, no referrer)', s==200 and 'name="confirm"' in b and 'p***@smoke.test' in b and 'no-store' in (hdR.get('Cache-Control') or '') and (hdR.get('Referrer-Policy') or '')=='no-referrer', f'status {s}')
 s,b2,_=req(opn,'/reset/'+tokR,{'_csrf':csrf(b),'new':'BrandNewPass-1','confirm':'Different-Pass-1'})
-rec('R5 mismatched passwords are refused and the link stays usable', s==200 and 'do not match' in b2 and dbq("select count(*) from password_resets where token_hash=sha2('%s',256) and used_at is null"%tokR)=='1')
+rec('R5 mismatched passwords are refused and the link stays usable', s==200 and 'do not match' in b2 and dbq("select count(*) from auth_tokens where kind='pwreset' and token_hash=sha2('%s',256) and used_at is null"%tokR)=='1')
 s,_,hd=req(opn,'/reset/'+tokR,{'_csrf':csrf(b2),'new':'BrandNewPass-1','confirm':'BrandNewPass-1'}); sB,_,hdB=req(opv,'/profile')
 rec('R6 the new password is saved and the browser is sent to sign in (not signed in automatically)', s==302 and (hd.get('Location') or '').endswith('/login'), f'status {s} {hd.get("Location")}')
 rec('R6 the session that was open before the reset is ended', sA==200 and sB==302 and (hdB.get('Location') or '').endswith('/login'), f'before={sA} after={sB}')

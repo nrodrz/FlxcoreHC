@@ -250,15 +250,15 @@ final class ReminderService
     }
 
     /**
-     * Claim a reminder for a non-credential entity via entity_reminders
-     * (UNIQUE on tenant, entity_type, entity_id, marker). Returns true if newly claimed.
+     * Claim a reminder for a non-credential entity via reminder_log
+     * (UNIQUE on tenant, subject_type, subject_id, marker). Returns true if newly claimed.
      */
     private function claimEntity(string $type, string $entityId, string $marker): bool
     {
         try {
             $n = Database::pdo()->prepare(
-                'INSERT IGNORE INTO entity_reminders
-                   (id, tenant_id, entity_type, entity_id, marker, channel, queued_at, sent_at)
+                'INSERT IGNORE INTO reminder_log
+                   (id, tenant_id, subject_type, subject_id, marker, channel, queued_at, sent_at)
                  VALUES (?,?,?,?,?,\'email\',?,?)'
             );
             $now = utc_now();
@@ -270,25 +270,20 @@ final class ReminderService
     }
 
     /**
-     * Claim a reminder via credential_reminders (UNIQUE on credential_id, days_before,
-     * expiry_snapshot). Returns true if newly claimed, false if already sent this cycle.
+     * Claim a credential reminder via reminder_log; the marker is "<days_before>:<expiry date>", so each expiry date is
+     * its own cycle and a renewal starts fresh. Returns true if newly claimed, false if already sent this cycle.
      */
     private function claim(string $credId, int $threshold, string $expiry): bool
     {
         try {
             $n = Database::pdo()->prepare(
-                'INSERT IGNORE INTO credential_reminders
-                   (id, tenant_id, credential_id, days_before, expiry_snapshot, queued_at, sent_at, channel)
-                 VALUES (?,?,?,?,?,?,?,\'email\')'
+                'INSERT IGNORE INTO reminder_log
+                   (id, tenant_id, subject_type, subject_id, marker, channel, queued_at, sent_at)
+                 VALUES (?,?,\'credential\',?,?,\'email\',?,?)'
             );
             $now = utc_now();
-            $n->execute([uuid4(), $this->ctx->tenantId, $credId, $threshold, $expiry, $now, $now]);
-            if ($n->rowCount() > 0) return true;
-            // v1.170.8: a row pre-queued by an older sweep (sent_at NULL) is ours to claim, not a "sent" marker.
-            $u = Database::pdo()->prepare('UPDATE credential_reminders SET sent_at = ?, channel = \'email\'
-                 WHERE tenant_id = ? AND credential_id = ? AND days_before = ? AND sent_at IS NULL');
-            $u->execute([$now, $this->ctx->tenantId, $credId, $threshold]);
-            return $u->rowCount() > 0;
+            $n->execute([uuid4(), $this->ctx->tenantId, $credId, $threshold . ':' . $expiry, $now, $now]);
+            return $n->rowCount() > 0;
         } catch (\Throwable $e) {
             return false;
         }

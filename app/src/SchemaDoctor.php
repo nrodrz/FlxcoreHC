@@ -43,10 +43,8 @@ final class SchemaDoctor
         'applications' => 'Payer / enrollment applications being tracked.',
         'document_requests' => 'A tenant asks a provider for a document; the provider fulfils it in their portal. Tenant owns the result.',
         'external_shares' => 'Password-protected, time-limited read-only profile links for payers and agencies.',
-        'external_share_access' => 'Every view, download, failed password and lock on an external share link.',
         'provider_links' => 'Cross-organization links between two tenants\' records of the same provider. Requires three consents.',
         'credential_shares' => 'A specific credential shared along an active cross-organization link, read-only and live.',
-        'cross_share_access' => 'Every view/download by the recipient organization on a shared credential.',
         'share_links' => 'Verification links shared externally (legacy/simple sharing).',
         'tenant_mail_settings' => 'Per-tenant outbound email (SMTP host/user, password encrypted, verification state).',
         'email_outbox' => 'Queued and sent email, with delivery status and attempts.',
@@ -59,8 +57,9 @@ final class SchemaDoctor
         'regulator_requirements' => 'Requirements defined by a regulator.',
         'holder_regulators' => 'Which regulators apply to a provider.',
         'training_resources' => 'Training centre materials.',
-        'auth_email_codes' => 'One-time sign-in / two-factor codes sent by e-mail (stored as keyed hashes, 10 minutes, single use). Keyed by user: a platform administrator has no tenant.',
-        'password_resets' => 'Single-use forgot-password links (the token is stored as a SHA-256 hash, 60 minutes).',
+        'auth_tokens' => 'One-time sign-in / two-factor codes sent by e-mail (keyed hashes, 10 minutes, single use) and single-use forgot-password links (SHA-256 hash, 60 minutes). Keyed by user: a platform administrator has no tenant.',
+        'reminder_log' => 'Which expiry / compliance reminders have already been sent, so each is sent once per cycle.',
+        'share_access_log' => 'Every view, download, failed password and lock on an external share link or an organization-to-organization share.',
         'requirement_sources' => 'Global catalogue of the legal or regulatory citation behind each requirement, dated and reviewed.',
         'tenant_licenses' => 'Signed license records issued to organizations by the platform operator (Ed25519 signature over the licensed fields; a row that does not verify is ignored; append-only except revocation).',
         'terms_acceptances' => 'Who accepted which version of the Terms of Use, for themselves or for their organization (append-only; each one is also an audit row).',
@@ -70,16 +69,16 @@ final class SchemaDoctor
 
     /** Tables that intentionally have no tenant_id (platform-wide, global defaults, or keyed elsewhere). */
     private const NO_TENANT_OK = ['schema_migrations', 'plans', 'ui_translations', 'schema_notes', 'roles',
-        'external_share_access', 'cross_share_access', 'provider_links', 'credential_shares',
-        'invoice_counter', 'leie_exclusions', 'leie_imports', 'login_attempts', 'sam_exclusions',
+        'share_access_log', 'provider_links', 'credential_shares',
+        'leie_exclusions', 'leie_imports', 'login_attempts', 'sam_exclusions',
         'medicaid_exclusions', 'rate_limits', 'error_log', 'role_capabilities', 'credential_catalog',
         'compliance_items', 'domains', 'impersonation_requests',
         'medicaid_imports', 'npi_cache', 'platform_settings', 'sam_imports', 'sam_exclusion_imports',
         'training_catalog', 'vocab', 'settings', 'tenants', 'training_library', 'training_sources',
-        // v1.172.2: auth_email_codes is keyed by user_id (a platform administrator has no tenant); requirement_sources is the
+        // v1.172.2: auth_tokens (was auth_email_codes) is keyed by user_id (a platform administrator has no tenant); requirement_sources is the
         // global catalogue of legal citations. Neither holds tenant data, so a missing tenant_id is correct, not a warning.
         // v1.173.3: terms_versions is the product-wide Terms text (the same for every organization), not tenant data.
-        'auth_email_codes', 'requirement_sources', 'terms_versions'];
+        'auth_tokens', 'requirement_sources', 'terms_versions'];
 
     /** @return array<int,array<string,mixed>> one row per table */
     public static function dictionary(): array

@@ -1,6 +1,18 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.175.0**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.175.1**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.175.1 — Table clean-up: 94 → 87 tables (migration 139)
+
+A clean-database release, made before the first installation. Result of the table audit (`docs/DATABASE_TABLE_AUDIT_v1.175.0.md`).
+
+- **Three unused tables dropped:** `nipr_interest`, `requirement_defs`, `holder_requirements` (and the dead `RequirementRepository`). Nothing wrote to them.
+- **Five merges:** `credential_reminders` + `entity_reminders` → **`reminder_log`** (subject type + subject + marker; a credential marker is `<days>:<expiry date>`, so a renewal still starts a new cycle); `auth_email_codes` + `password_resets` → **`auth_tokens`** (`kind` = the code purpose, or `pwreset`); `external_share_access` + `cross_share_access` → **`share_access_log`** (`scope` = external / cross); `invoice_counter` → a `platform_settings` key (`invoice_seq`, incremented atomically).
+- Migration 139 creates the new tables, copies any existing rows, then drops the old ones, so an existing database upgrades cleanly.
+- **Not merged (deferred):** `requirement_template_items` into a JSON column. New organizations are seeded by replaying migration SQL, so this needs the seeding reworked first; it stays a separate table for now.
+- Tests: new `tests/cleanup/` suite (stage 3d4); purge, reminder, sign-in and HTTP tests updated to the new tables; installer check now expects 87 tables. One HTTP test (OW11) no longer depends on audit-row ordering within the same second.
 
 ---
 

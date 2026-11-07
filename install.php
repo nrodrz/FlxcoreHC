@@ -363,6 +363,7 @@ function runInstall(array $in): array
         __DIR__ . '/database/migrations/137_terms_versions.sql',
         __DIR__ . '/database/migrations/138_tenant_licenses.sql',
         __DIR__ . '/database/migrations/099_document_verification.sql',
+        __DIR__ . '/database/migrations/139_table_cleanup.sql',
     ];
     $applied = [];
     // When the operator ticked "safe to (re)create", the database may carry tables or keys from a

@@ -146,7 +146,7 @@ final class CredentialRepository extends TenantRepository
     public function clearReminders(string $credentialId): void
     {
         Database::pdo()->prepare(
-            "DELETE FROM credential_reminders WHERE credential_id = ? AND tenant_id = ?"
+            "DELETE FROM reminder_log WHERE subject_type = 'credential' AND subject_id = ? AND tenant_id = ?"
         )->execute([$credentialId, $this->ctx->tenantId]);
     }
 }

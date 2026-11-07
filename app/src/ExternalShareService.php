@@ -106,7 +106,7 @@ final class ExternalShareService
     /** Access log for one share. */
     public function accessLog(string $shareId): array
     {
-        $st = Database::pdo()->prepare('SELECT * FROM external_share_access WHERE share_id = ? AND tenant_id = ? ORDER BY created_at DESC LIMIT 500');
+        $st = Database::pdo()->prepare('SELECT * FROM share_access_log WHERE scope = \'external\' AND share_id = ? AND owner_tenant_id = ? ORDER BY created_at DESC LIMIT 500');
         $st->execute([$shareId, $this->ctx->tenantId]);
         return $st->fetchAll();
     }
@@ -168,7 +168,7 @@ final class ExternalShareService
     {
         try {
             Database::pdo()->prepare(
-                'INSERT INTO external_share_access (id, share_id, tenant_id, event, document_id, ip_address, user_agent, created_at) VALUES (?,?,?,?,?,?,?,?)'
+                'INSERT INTO share_access_log (id, scope, share_id, owner_tenant_id, event, document_id, ip_address, user_agent, created_at) VALUES (?,\'external\',?,?,?,?,?,?,?)'
             )->execute([uuid4(), $s['id'], $s['tenant_id'], $event, $documentId,
                         substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45), substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255), utc_now()]);
         } catch (\Throwable $e) {}

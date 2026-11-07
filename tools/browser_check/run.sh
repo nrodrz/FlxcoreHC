@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
-# FlxCoreHC v1.175.0 — REAL-BROWSER checks (headless Chromium through Playwright) on an ISOLATED database (flx_browser).
+# FlxCoreHC v1.175.1 — REAL-BROWSER checks (headless Chromium through Playwright) on an ISOLATED database (flx_browser).
 # TEST ENVIRONMENT ONLY. This is separate from tools/runtime_check.sh because it needs Playwright, which a plain PHP host
 # does not have. It covers what an HTTP client cannot see: scripts really run, the Content-Security-Policy really allows
 # them, the QR code really scans, and the onboarding wizard really switches between a person and an organization.
