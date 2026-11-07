@@ -113,6 +113,13 @@ final class PlanService
         return $limit === null || self::seatCount($tenantId) < $limit;
     }
 
+    /** How many more providers this organization can add under its plan; null = unlimited. */
+    public static function holderRoom(string $tenantId): ?int
+    {
+        $cap = self::forTenant($tenantId)['max_holders'] ?? null;
+        return $cap === null ? null : max(0, (int) $cap - self::countHolders($tenantId));
+    }
+
     private static function countHolders(string $tenantId): int
     {
         $q = Database::pdo()->prepare("SELECT COUNT(*) FROM credential_holders WHERE tenant_id = ? AND deleted_at IS NULL");

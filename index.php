@@ -1373,6 +1373,48 @@ if ($seg[0] === 'holders') {
             echo "organization,lab,,,Bayview Laboratory LLC,1003000126,,,,\n";
             exit;
         }
+        // v1.175.2: result page, the downloadable list of rows that did not come in, and the portal-invite button
+        if (($seg[2] ?? '') === 'result' && $method === 'GET') {
+            $__res = $_SESSION['import_result'] ?? null;
+            if (!$__res) redirect('/holders');
+            view('holders/import_result', ['ctx' => $ctx, 'res' => $__res, 'canInvite' => FlxCoreHC\TeamService::canManage($ctx)]);
+            exit;
+        }
+        if (($seg[2] ?? '') === 'rejected' && $method === 'GET') {
+            $__res = $_SESSION['import_result'] ?? null;
+            if (!$__res) redirect('/holders');
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="provider-import-not-imported.csv"');
+            header('X-Content-Type-Options: nosniff');
+            $out = fopen('php://output', 'w');
+            flx_fputcsv($out, ['line', 'status', 'reason', 'holder_type', 'provider_type', 'first_name', 'last_name', 'org_name', 'npi', 'email', 'group', 'location', 'role_title']);
+            foreach (($__res['rejected'] ?? []) as $__rr) {
+                $__vals = [(string) $__rr['line'], (string) $__rr['status'], (string) ($__rr['reason'] ?? ''), (string) $__rr['holder_type'], (string) ($__rr['provider_type'] ?? ''),
+                    (string) ($__rr['first_name'] ?? ''), (string) ($__rr['last_name'] ?? ''), (string) ($__rr['org_name'] ?? ''), (string) ($__rr['npi'] ?? ''),
+                    (string) ($__rr['email'] ?? ''), (string) ($__rr['group'] ?? ''), (string) ($__rr['location'] ?? ''), (string) ($__rr['role_title'] ?? '')];
+                flx_fputcsv($out, csv_safe_row($__vals));   // formula-injection guard, as every export
+            }
+            fclose($out);
+            exit;
+        }
+        if (($seg[2] ?? '') === 'invite' && $method === 'POST') {
+            CsrfGuard::verify();
+            if (!FlxCoreHC\TeamService::canManage($ctx)) { flash('A user manager can send the portal invites.', 'error'); redirect('/holders/import/result'); }
+            $__res = $_SESSION['import_result'] ?? null;
+            $__sent = 0; $__fail = 0; $__team = new FlxCoreHC\TeamService($ctx);
+            foreach (($__res['ids'] ?? []) as $__hid) {
+                $__h = $holders->find((string) $__hid);
+                if (!$__h || ($__h['holder_type'] ?? '') !== 'individual' || empty($__h['email'])) continue;
+                $__nm = trim((string) ($__h['first_name'] ?? '') . ' ' . (string) ($__h['last_name'] ?? ''));
+                [$__ok, $__m, $__tok] = $__team->ensureProducerUser((string) $__hid, $__nm, (string) $__h['email']);
+                if ($__ok && $__tok) { send_invite_email((string) $__h['email'], $__nm ?: (string) $__h['email'], invite_link($__tok), $ctx->tenantName); $__sent++; }
+                elseif (!$__ok) { $__fail++; }
+            }
+            audit_log($ctx, 'provider_import_invites', 'holders', null, json_encode(['sent' => $__sent, 'failed' => $__fail]));
+            if ($__res) { unset($_SESSION['import_result']['ids']); }   // one send per import; further invites come from each provider page
+            flash($__sent . ' portal invite(s) sent' . ($__fail ? ', ' . $__fail . ' could not be sent' : '') . '.', $__fail ? 'warn' : 'ok');
+            redirect('/holders/import/result');
+        }
         if ($method === 'GET') {
             view('holders/import', ['ctx' => $ctx, 'preview' => null, 'csv' => '']);
         }
@@ -1392,13 +1434,14 @@ if ($seg[0] === 'holders') {
             if (($_POST['step'] ?? '') === 'commit') {
                 $r = $svc->commit($csv);
                 if (!empty($r['error'])) { flash($r['error'], 'error'); redirect('/holders/import'); }
-                audit_log($ctx, 'provider_import', 'holders', null, json_encode($r));
-                $msg = $r['created'] . ' provider(s) imported';
-                if ($r['skipped']) $msg .= ', ' . $r['skipped'] . ' skipped';
-                if ($r['errors'])  $msg .= ', ' . $r['errors'] . ' with errors';
-                if (empty($r['capacity'])) $msg .= ' — stopped at your plan limit (upgrade to add more)';
-                flash($msg . '.', ($r['errors'] || ($r['skipped'] && !$r['created'])) ? (($r['created']) ? 'warn' : 'error') : 'ok');
-                redirect('/holders');
+                audit_log($ctx, 'provider_import', 'holders', null, json_encode(array_diff_key($r, ['ids' => 1, 'rejected' => 1])));
+                $__m = $r['created'] . ' provider(s) imported';
+                if ($r['skipped']) $__m .= ', ' . $r['skipped'] . ' skipped';
+                if ($r['errors'])  $__m .= ', ' . $r['errors'] . ' with errors';
+                if (empty($r['capacity'])) $__m .= ' — stopped at your plan limit (upgrade to add more)';
+                flash($__m . '.', ($r['errors'] || ($r['skipped'] && !$r['created']) || !$r['created']) ? (($r['created']) ? 'warn' : 'error') : 'ok');
+                $_SESSION['import_result'] = $r;   // shown on the result page; carries the ids for the invite button and the rows that did not come in
+                redirect('/holders/import/result');
             }
             // default: preview
             $preview = $svc->preview($csv);
@@ -1476,14 +1519,19 @@ if ($seg[0] === 'holders') {
             'status'        => 'active',
         ]);
         unset($_SESSION['ob_old']);
-        try { (new FlxCoreHC\TemplateService($ctx))->applyByProviderType((string)$obId, $obPt, $producerReqs); } catch (\Throwable $e) {}
+        $__obChk = true;
+        try { [$__obChk] = (new FlxCoreHC\TemplateService($ctx))->applyByProviderType((string)$obId, $obPt, $producerReqs); } catch (\Throwable $e) { $__obChk = false; }
         // Where the record belongs: client group / department / group, and practice location (both optional, both tenant-checked).
         $__gid = (string) ($_POST['group_id'] ?? ''); $__lid = (string) ($_POST['location_id'] ?? '');
         try { if ($__gid !== '' && $__obShape !== 'solo_practice' && (new FlxCoreHC\Repository\GroupRepository($ctx))->find($__gid)) FlxCoreHC\GroupService::add($ctx, (string) $obId, $__gid, null, true); } catch (\Throwable $e) {}
         try { if ($__lid !== '' && (new FlxCoreHC\Repository\LocationRepository($ctx))->find($__lid)) FlxCoreHC\LocationService::affiliate($ctx, (string) $obId, $__lid, null, true); } catch (\Throwable $e) {}
         audit_log($ctx, 'holder_onboard_started', 'holders', (string)$obId, json_encode(['type' => $type]));
-        flash($type === 'organization' ? 'Organization record created — the requirements for this kind of organization were added automatically.'
-                                        : 'Record created — required credentials for this profession were added automatically.', 'ok');
+        if ($__obChk) {
+            flash($type === 'organization' ? 'Organization record created — the requirements for this kind of organization were added automatically.'
+                                            : 'Record created — required credentials for this profession were added automatically.', 'ok');
+        } else {
+            flash('Record created, but no requirement checklist was added (no template matches this type). Choose a template on the next steps.', 'warn');
+        }
         redirect('/holders/' . $obId . '/onboard/identifiers');
     }
 
@@ -1510,7 +1558,9 @@ if ($seg[0] === 'holders') {
             'status'      => 'active',
         ]);
         try { (new FlxCoreHC\CustomFieldService($ctx))->save('provider', $newHolderId, $_POST); } catch (\Throwable $e) {}
-        try { $__pt = $holders->find((string)$newHolderId)['provider_type'] ?? null; if ($__pt) (new FlxCoreHC\TemplateService($ctx))->applyByProviderType((string)$newHolderId, $__pt, $producerReqs); } catch (\Throwable $e) {}
+        $__fChk = true;
+        try { $__pt = $holders->find((string)$newHolderId)['provider_type'] ?? null; if ($__pt) [$__fChk] = (new FlxCoreHC\TemplateService($ctx))->applyByProviderType((string)$newHolderId, $__pt, $producerReqs); } catch (\Throwable $e) { $__fChk = false; }
+        if (!$__fChk) flash('The provider was added, but no requirement checklist could be applied. Open the provider and choose a template.', 'warn');
         audit_log($ctx, 'provider_created', 'holders', is_string($newHolderId) ? $newHolderId : null, json_encode(['type' => $type]));
         // Provision the producer's portal login and send the invite.
         $note = ($type === 'organization' ? 'Organization' : 'Provider') . ' added.';

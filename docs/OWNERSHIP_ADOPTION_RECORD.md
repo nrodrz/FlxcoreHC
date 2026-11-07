@@ -41,3 +41,5 @@ Standard: "Ownership & White-Label Standard" (Nov 1, 2026). This file holds the 
 - Hosted-only legal documents (subscription agreement, data processing addendum, business-associate terms): owner/attorney.
 
 **v1.175.1 (table clean-up):** the schema went from 94 to 87 tables (migration 139): three unused tables dropped, five merged (`reminder_log`, `auth_tokens`, `share_access_log`, invoice counter into `platform_settings`). `requirement_template_items` stays a separate table (deferred). No ownership, licensing or terms behaviour changed.
+
+**v1.175.2 (provider intake):** CSV import hardened (duplicates, e-mail rule, row cap, plan limit, Excel formats, result page, invite button). No ownership, licensing or terms behaviour changed.

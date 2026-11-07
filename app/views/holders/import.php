@@ -3,7 +3,7 @@
 $title = 'Import providers';
 $rows = $preview['rows'] ?? [];
 $sum  = $preview['summary'] ?? [];
-$chip = ['create' => 'ok', 'skip' => 'warn', 'error' => 'danger'];
+$chip = ['create' => 'ok', 'skip' => 'warn', 'limit' => 'warn', 'error' => 'danger'];
 ?>
 <div class="crumb"><a href="<?= BASE_PATH ?>/holders">Providers</a></div>
 <div class="topline"><h1>Import providers from CSV</h1></div>
@@ -18,7 +18,8 @@ $chip = ['create' => 'ok', 'skip' => 'warn', 'error' => 'danger'];
       Recognized columns: <span class="mono">holder_type, provider_type, first_name, last_name, org_name, npi, email, group, location, role_title</span>.
       <span class="mono">group</span> (client group / department) and <span class="mono">location</span> (practice site) are matched by name or created for you, so a whole roster lands with its structure in place.
       <span class="mono">provider_type</span> accepts: <span class="mono"><?= e(implode(', ', array_keys(FlxCoreHC\Vocab::appliesToOptions('healthcare')))) ?></span>.
-      Rows with an NPI already on file are skipped automatically.</p>
+      Individuals need a first name, a last name and an e-mail (the e-mail becomes the portal login). A row whose NPI, e-mail or organization name is already on file is skipped, so uploading the same file twice is safe.
+      Files may have up to <?= (int) FlxCoreHC\ProviderImportService::MAX_ROWS ?> rows. Comma, semicolon or tab separated files from Excel are accepted.</p>
     <p><a class="btn sm line" href="<?= BASE_PATH ?>/holders/import/template">Download CSV template</a></p>
     <form method="post" action="<?= BASE_PATH ?>/holders/import" enctype="multipart/form-data" class="stack" style="max-width:720px;margin-top:.6rem">
       <?= FlxCoreHC\Auth\CsrfGuard::field() ?>
@@ -33,12 +34,19 @@ $chip = ['create' => 'ok', 'skip' => 'warn', 'error' => 'danger'];
   <div class="kpis">
     <div class="kpi ok"><span class="n"><?= (int)($sum['create'] ?? 0) ?></span><span class="l">Will be created</span></div>
     <div class="kpi <?= ($sum['skip'] ?? 0) > 0 ? 'warn' : '' ?>"><span class="n"><?= (int)($sum['skip'] ?? 0) ?></span><span class="l">Skipped (duplicates)</span></div>
+    <?php if (($sum['limit'] ?? 0) > 0): ?><div class="kpi warn"><span class="n"><?= (int)$sum['limit'] ?></span><span class="l">Over your plan limit</span></div><?php endif; ?>
     <div class="kpi <?= ($sum['error'] ?? 0) > 0 ? 'danger' : '' ?>"><span class="n"><?= (int)($sum['error'] ?? 0) ?></span><span class="l">Errors (won't import)</span></div>
   </div>
+  <?php if (!empty($preview['new_groups']) || !empty($preview['new_locations'])): ?>
+  <div class="panel" style="margin-bottom:1rem"><strong>Will be created for you:</strong>
+    <?php if (!empty($preview['new_groups'])): ?> groups — <span class="mono"><?= e(implode(', ', $preview['new_groups'])) ?></span>.<?php endif; ?>
+    <?php if (!empty($preview['new_locations'])): ?> locations — <span class="mono"><?= e(implode(', ', $preview['new_locations'])) ?></span>.<?php endif; ?>
+    <span class="hint">Check the spelling: a typo here creates a second group or location.</span></div>
+  <?php endif; ?>
   <div class="panel">
     <div class="topline"><h2 style="margin:0">Preview</h2><span class="hint">Only the "create" rows will be added.</span></div>
     <table>
-      <tr><th>Line</th><th>Provider</th><th>Type</th><th>NPI</th><th>Status</th><th>Note</th></tr>
+      <tr><th>Line</th><th>Provider</th><th>Type</th><th>NPI</th><th>Group / location</th><th>Status</th><th>Note</th></tr>
       <?php foreach ($rows as $r):
         $who = $r['org_name'] ?: trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? '')) ?: '—'; ?>
       <tr>
@@ -46,6 +54,7 @@ $chip = ['create' => 'ok', 'skip' => 'warn', 'error' => 'danger'];
         <td><?= e($who) ?></td>
         <td class="mono"><?= e($r['provider_type'] ?? '—') ?></td>
         <td class="mono"><?= e($r['npi'] ?? '—') ?></td>
+        <td class="hint"><?php if (!empty($r['group'])): ?><?= e($r['group']) ?><?= !empty($r['group_new']) ? ' ' . e(t('(new)')) : '' ?><?php endif; ?><?php if (!empty($r['location'])): ?> · <?= e($r['location']) ?><?= !empty($r['location_new']) ? ' ' . e(t('(new)')) : '' ?><?php endif; ?></td>
         <td><span class="chip <?= $chip[$r['status']] ?? '' ?>"><?= e(ucfirst($r['status'])) ?></span></td>
         <td class="hint"><?= e($r['reason'] ?? '') ?></td>
       </tr>

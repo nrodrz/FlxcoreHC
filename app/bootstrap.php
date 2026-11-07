@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 
 define('FLXCOREHC_APP', __DIR__);
-define('FLXCOREHC_VERSION', '1.175.1');   // shown on System & updates; bump with each release
+define('FLXCOREHC_VERSION', '1.175.2');   // shown on System & updates; bump with each release
 // Which vertical this installation serves: 'insurance', 'healthcare', or 'both'.
 // The edition locks registration/installer org shapes and the demo builders, so a
 // single-vertical app can never grow tenants of the other industry. Everything downstream
@@ -260,6 +260,11 @@ function flx_json(mixed $value, int $extraFlags = 0): string
 function flx_fputcsv($stream, array $fields): int|false
 {
     return fputcsv($stream, $fields, ',', '"', '');
+}
+/** Read one CSV record from a stream (handles quoted line breaks); $delimiter lets Excel's semicolon / tab exports through. */
+function flx_fgetcsv($stream, string $delimiter = ',')
+{
+    return fgetcsv($stream, 0, $delimiter, '"', '');
 }
 function flx_str_getcsv(string $line): array
 {

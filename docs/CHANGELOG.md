@@ -1,6 +1,24 @@
 # FlxCoreHC — Changelog
 
-*Current version: **1.175.1**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+*Current version: **1.175.2**. Newest first. Releases before v1.166 describe the retired insurance-agent edition; the product is healthcare-only since v1.170.7.*
+
+---
+
+### v1.175.2 — Provider intake fixes (CSV import and the add forms)
+
+From the review in `docs/NEXT_PLAN_AND_INTAKE_REVIEW_v1.175.1.md`. No schema change.
+
+- **Re-uploading a file is safe:** a row is skipped when its NPI, e-mail or (for organizations) name is already on file, or repeats inside the file. Before, only an NPI was checked against existing records.
+- **Same e-mail rule as the Add provider form:** an individual needs a first name, last name and e-mail. Imported providers no longer arrive unable to sign in.
+- **Portal invites by button:** after an import, the result page offers "Send portal invites to the N new providers". Nothing is e-mailed by the import itself. Needs the user-management permission.
+- **2,000 rows per file** (as the credential import), with a clear message.
+- **Plan limit in the preview:** rows over the plan are marked "Over your plan limit" before anything is created; the import adds exactly the rows that fit. A row that fails to save is reported and the rest carry on.
+- **Excel files:** comma, semicolon or tab separated; Windows-1252 text is converted so names such as Rodríguez keep their accents; quoted cells with line breaks are read correctly.
+- **Preview shows structure:** groups and locations that will be created are listed, with "(new)" per row, so a typo is visible before it makes a duplicate.
+- **Result page** with counts, a warning for providers that arrived without a requirement checklist, and a downloadable CSV of the rows that did not come in (with the reason).
+- **Add provider form and onboarding wizard** now say so when the requirement checklist could not be applied, instead of failing silently.
+- Tests: intake checks D1–D13 in `tests/cleanup/`; HTTP checks IM1–IM6.
+- **Not in this release:** NPI-versus-registry name check during import, extra columns (phone, license), `.xlsx` upload, a single "bring in your providers" guide page.
 
 ---
 

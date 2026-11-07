@@ -311,6 +311,22 @@ def _npi_ok(n):
         t+=x
     return t%10==0
 rec('O the provider-import CSV template only contains valid NPIs', s==200 and len(npis)>=1 and all(_npi_ok(n) for n in npis), f'npis={npis}')
+# (IM) v1.175.2 provider import: preview names new groups, result page, no e-mail until the invite button, repeat upload is safe, rejected rows download
+imcsv='holder_type,provider_type,first_name,last_name,org_name,npi,email,group,location,role_title\nindividual,physician,Imp,Ortiz,,,imp.ortiz@smoke.test,Grupo Import,,\nindividual,nurse,No,Email,,,,,,\n'
+tokI,_,_=page_token(opo,'/holders/import')
+s,b,_=req(opo,'/holders/import',{'_csrf':tokI,'csv':imcsv})
+rec('IM1 the preview shows the group that will be created and refuses the row without an e-mail', s==200 and 'Grupo Import' in b and 'Will be created for you' in b and 'needs an e-mail' in b, f'status {s}')
+req(opo,'/holders/import',{'_csrf':tokI,'csv':imcsv,'step':'commit'})
+s,b,_=req(opo,'/holders/import/result')
+rec('IM2 committing lands on the result page with the invite button', s==200 and 'Import finished' in b and 'Send portal invites' in b, f'status {s}')
+rec('IM3 nothing was e-mailed by the import itself', dbq("select count(*) from email_outbox where to_email='imp.ortiz@smoke.test'")=='0')
+tokR=csrf(b)
+s,b,_=req(opo,'/holders/import/invite',{'_csrf':tokR})
+rec('IM4 the invite button sends one invite to the imported provider', s in (200,302) and dbq("select count(*) from email_outbox where to_email='imp.ortiz@smoke.test'")=='1', f'status {s}')
+s,b,hd=req(opo,'/holders/import/rejected')
+rec('IM5 the rows that did not come in download as CSV with the reason', s==200 and 'text/csv' in (hd.get('Content-Type') or '') and 'needs an e-mail' in b, f'status {s}')
+s,b,_=req(opo,'/holders/import',{'_csrf':tokI,'csv':imcsv,'step':'commit'})
+rec('IM6 importing the same file again creates no second provider', dbq("select count(*) from credential_holders where tenant_id='%s' and first_name='Imp' and last_name='Ortiz'"%tidx)=='1')
 # (M) Roles page: Master Admin listed once, no raw slug for a Manager, one audit row per role creation
 s,b,_=req(opm,'/organization/roles'); rec('M the Roles page lists Master Admin exactly once', s==200 and b.count('<strong>Master Admin</strong>')==1, f'status {s} count={b.count("<strong>Master Admin</strong>")}')
 s,b,_=req(opm,'/team'); rec('M a Manager never sees the raw slug tenant_owner on the Team page', s==200 and 'tenant_owner' not in b, f'status {s}')

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # © 2026 Indisse-BTS. All rights reserved. Proprietary — licensed, not sold. See LICENSE.txt.
-# FlxCoreHC v1.175.1 — HTTP-level smoke test on an ISOLATED database (flx_smoke). TEST ENVIRONMENT ONLY.
+# FlxCoreHC v1.175.2 — HTTP-level smoke test on an ISOLATED database (flx_smoke). TEST ENVIRONMENT ONLY.
 # Builds a fixture (owner, manager, staff, coordinator, read-only, need-to-know-restricted staff, portal + custom portal
 # logins, two providers with credentials/documents/tasks/events/cases), starts PHP's built-in server, then:
 #   * asserts authorization probes (verify permission, cross-provider reads/writes, dashboard disclosure, portal confinement)

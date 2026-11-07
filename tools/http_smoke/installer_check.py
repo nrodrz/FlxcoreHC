@@ -36,7 +36,7 @@ def run_install(tag, hdrs):
     s, b, _ = req(op, '/install.php', data, hdrs)
     rec(f'installer[{tag}] completes', s == 200 and os.path.isfile(CFG), f'status {s}')
     mt = re.search(r'Installation complete — created (\d+) tables', b)
-    rec(f'installer[{tag}] reports the tables it created (v1.175.1: 87, incl. auth_tokens, reminder_log, share_access_log, terms_acceptances, terms_versions and tenant_licenses)', bool(mt) and mt.group(1) == '87', f'tables={mt.group(1) if mt else None}')
+    rec(f'installer[{tag}] reports the tables it created (v1.175.2: 87, incl. auth_tokens, reminder_log, share_access_log, terms_acceptances, terms_versions and tenant_licenses)', bool(mt) and mt.group(1) == '87', f'tables={mt.group(1) if mt else None}')
     # v1.174.0: every table of the new installation carries the fchc_ prefix, and none is left without it
     def _q(sql):
         a = ['mysql', '-u' + os.environ['FLX_DBUSER'], '-h' + os.environ['FLX_DBHOST'], '-N', '-e', sql]
